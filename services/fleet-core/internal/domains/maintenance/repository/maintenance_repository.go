@@ -55,7 +55,7 @@ func (r *MaintenanceRepositoryImpl) CreateSchedule(ctx context.Context, schedule
 	recurringJSON, _ := json.Marshal(schedule.Recurring)
 
 	err := r.db.QueryRow(ctx, query,
-		id, schedule.OrgID, schedule.VehicleID, schedule.Type, schedule.Name,
+		id, schedule.TenantID, schedule.VehicleID, schedule.Type, schedule.Name,
 		schedule.Description, schedule.DueDate, schedule.DueOdometer,
 		schedule.DueEngineHours, schedule.AssignedTo, schedule.Priority,
 		schedule.Status, schedule.EstimatedCost, partsRequiredJSON,
@@ -81,7 +81,7 @@ func (r *MaintenanceRepositoryImpl) GetScheduleByID(ctx context.Context, id stri
 	var partsRequiredJSON, serviceItemsJSON, remindersJSON, recurringJSON []byte
 
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&schedule.ID, &schedule.OrgID, &schedule.VehicleID, &schedule.Type,
+		&schedule.ID, &schedule.TenantID, &schedule.VehicleID, &schedule.Type,
 		&schedule.Name, &schedule.Description, &schedule.DueDate, &schedule.DueOdometer,
 		&schedule.DueEngineHours, &schedule.AssignedTo, &schedule.Priority,
 		&schedule.Status, &schedule.EstimatedCost, &schedule.ActualCost,
@@ -116,7 +116,7 @@ func (r *MaintenanceRepositoryImpl) ListSchedules(ctx context.Context, filter mo
 	var conditions []string
 	var args []interface{}
 	argIndex := 2
-	args = append(args, filter.OrgID)
+	args = append(args, filter.TenantID)
 
 	if filter.VehicleID != nil {
 		conditions = append(conditions, fmt.Sprintf("vehicle_id = $%d", argIndex))
@@ -160,7 +160,7 @@ func (r *MaintenanceRepositoryImpl) ListSchedules(ctx context.Context, filter mo
 	for rows.Next() {
 		var schedule models.MaintenanceSchedule
 		err := rows.Scan(
-			&schedule.ID, &schedule.OrgID, &schedule.VehicleID, &schedule.Type,
+			&schedule.ID, &schedule.TenantID, &schedule.VehicleID, &schedule.Type,
 			&schedule.Name, &schedule.DueDate, &schedule.Priority, &schedule.Status,
 			&schedule.EstimatedCost, &schedule.CreatedAt, &schedule.UpdatedAt,
 		)
@@ -183,15 +183,15 @@ func (r *MaintenanceRepositoryImpl) GetSchedulesByVehicle(ctx context.Context, v
 	var schedules []*models.MaintenanceSchedule
 	for rows.Next() {
 		var s models.MaintenanceSchedule
-		rows.Scan(&s.ID, &s.OrgID, &s.VehicleID, &s.Type, &s.Name, &s.DueDate)
+		rows.Scan(&s.ID, &s.TenantID, &s.VehicleID, &s.Type, &s.Name, &s.DueDate)
 		schedules = append(schedules, &s)
 	}
 	return schedules, nil
 }
 
-func (r *MaintenanceRepositoryImpl) GetSchedulesByOrg(ctx context.Context, orgID uuid.UUID, filter *ScheduleFilters) ([]*models.MaintenanceSchedule, error) {
+func (r *MaintenanceRepositoryImpl) GetSchedulesByOrg(ctx context.Context, tenantID uuid.UUID, filter *ScheduleFilters) ([]*models.MaintenanceSchedule, error) {
 	query := `SELECT id, tenant_id, vehicle_id, type, name, due_date FROM maintenance_schedules WHERE tenant_id = $1`
-	rows, err := r.db.Query(ctx, query, orgID)
+	rows, err := r.db.Query(ctx, query, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +199,7 @@ func (r *MaintenanceRepositoryImpl) GetSchedulesByOrg(ctx context.Context, orgID
 	var schedules []*models.MaintenanceSchedule
 	for rows.Next() {
 		var s models.MaintenanceSchedule
-		rows.Scan(&s.ID, &s.OrgID, &s.VehicleID, &s.Type, &s.Name, &s.DueDate)
+		rows.Scan(&s.ID, &s.TenantID, &s.VehicleID, &s.Type, &s.Name, &s.DueDate)
 		schedules = append(schedules, &s)
 	}
 	return schedules, nil
@@ -262,7 +262,7 @@ func (r *MaintenanceRepositoryImpl) CreateLog(ctx context.Context, log *models.M
 	duration := int(log.EndDate.Sub(log.StartDate).Minutes())
 
 	err := r.db.QueryRow(ctx, query,
-		id, log.OrgID, log.VehicleID, log.ScheduleID, log.Type, log.Name,
+		id, log.TenantID, log.VehicleID, log.ScheduleID, log.Type, log.Name,
 		log.Description, log.StartDate, log.EndDate, duration, log.PerformedBy,
 		log.Cost, log.Odometer, log.EngineHours, partsUsedJSON, serviceItemsJSON,
 		log.Notes, documentsJSON, log.Status, now, now,
@@ -273,7 +273,7 @@ func (r *MaintenanceRepositoryImpl) CreateLog(ctx context.Context, log *models.M
 func (r *MaintenanceRepositoryImpl) GetLogByID(ctx context.Context, id string) (*models.MaintenanceLog, error) {
 	query := `SELECT id, tenant_id, vehicle_id, type, name, status, start_date, cost FROM maintenance_logs WHERE id = $1`
 	var log models.MaintenanceLog
-	err := r.db.QueryRow(ctx, query, id).Scan(&log.ID, &log.OrgID, &log.VehicleID, &log.Type, &log.Name, &log.Status, &log.StartDate, &log.Cost)
+	err := r.db.QueryRow(ctx, query, id).Scan(&log.ID, &log.TenantID, &log.VehicleID, &log.Type, &log.Name, &log.Status, &log.StartDate, &log.Cost)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -285,7 +285,7 @@ func (r *MaintenanceRepositoryImpl) GetLogByID(ctx context.Context, id string) (
 
 func (r *MaintenanceRepositoryImpl) ListLogs(ctx context.Context, filter models.MaintenanceListFilter) ([]*models.MaintenanceLog, int, error) {
 	query := `SELECT id, tenant_id, vehicle_id, type, name, status, start_date, cost FROM maintenance_logs WHERE tenant_id = $1`
-	rows, err := r.db.Query(ctx, query, filter.OrgID)
+	rows, err := r.db.Query(ctx, query, filter.TenantID)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -293,7 +293,7 @@ func (r *MaintenanceRepositoryImpl) ListLogs(ctx context.Context, filter models.
 	var logs []*models.MaintenanceLog
 	for rows.Next() {
 		var log models.MaintenanceLog
-		rows.Scan(&log.ID, &log.OrgID, &log.VehicleID, &log.Type, &log.Name, &log.Status, &log.StartDate, &log.Cost)
+		rows.Scan(&log.ID, &log.TenantID, &log.VehicleID, &log.Type, &log.Name, &log.Status, &log.StartDate, &log.Cost)
 		logs = append(logs, &log)
 	}
 	return logs, len(logs), nil
@@ -346,15 +346,15 @@ func (r *MaintenanceRepositoryImpl) GetMaintenanceHistory(ctx context.Context, v
 	var logs []*models.MaintenanceLog
 	for rows.Next() {
 		var log models.MaintenanceLog
-		rows.Scan(&log.ID, &log.OrgID, &log.VehicleID, &log.Type, &log.Name, &log.Status, &log.StartDate, &log.Cost)
+		rows.Scan(&log.ID, &log.TenantID, &log.VehicleID, &log.Type, &log.Name, &log.Status, &log.StartDate, &log.Cost)
 		logs = append(logs, &log)
 	}
 	return logs, nil
 }
 
-func (r *MaintenanceRepositoryImpl) GetOverdueSchedules(ctx context.Context, orgID uuid.UUID) ([]*models.MaintenanceSchedule, error) {
+func (r *MaintenanceRepositoryImpl) GetOverdueSchedules(ctx context.Context, tenantID uuid.UUID) ([]*models.MaintenanceSchedule, error) {
 	query := `SELECT id, tenant_id, vehicle_id, type, name, due_date FROM maintenance_schedules WHERE tenant_id = $1 AND status = 'scheduled' AND due_date < NOW()`
-	rows, err := r.db.Query(ctx, query, orgID)
+	rows, err := r.db.Query(ctx, query, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -362,15 +362,15 @@ func (r *MaintenanceRepositoryImpl) GetOverdueSchedules(ctx context.Context, org
 	var schedules []*models.MaintenanceSchedule
 	for rows.Next() {
 		var s models.MaintenanceSchedule
-		rows.Scan(&s.ID, &s.OrgID, &s.VehicleID, &s.Type, &s.Name, &s.DueDate)
+		rows.Scan(&s.ID, &s.TenantID, &s.VehicleID, &s.Type, &s.Name, &s.DueDate)
 		schedules = append(schedules, &s)
 	}
 	return schedules, nil
 }
 
-func (r *MaintenanceRepositoryImpl) GetUpcomingSchedules(ctx context.Context, orgID uuid.UUID, days int) ([]*models.MaintenanceSchedule, error) {
+func (r *MaintenanceRepositoryImpl) GetUpcomingSchedules(ctx context.Context, tenantID uuid.UUID, days int) ([]*models.MaintenanceSchedule, error) {
 	query := `SELECT id, tenant_id, vehicle_id, type, name, due_date FROM maintenance_schedules WHERE tenant_id = $1 AND status = 'scheduled' AND due_date >= NOW() AND due_date <= NOW() + ($2 || ' days')::interval`
-	rows, err := r.db.Query(ctx, query, orgID, days)
+	rows, err := r.db.Query(ctx, query, tenantID, days)
 	if err != nil {
 		return nil, err
 	}
@@ -378,7 +378,7 @@ func (r *MaintenanceRepositoryImpl) GetUpcomingSchedules(ctx context.Context, or
 	var schedules []*models.MaintenanceSchedule
 	for rows.Next() {
 		var s models.MaintenanceSchedule
-		rows.Scan(&s.ID, &s.OrgID, &s.VehicleID, &s.Type, &s.Name, &s.DueDate)
+		rows.Scan(&s.ID, &s.TenantID, &s.VehicleID, &s.Type, &s.Name, &s.DueDate)
 		schedules = append(schedules, &s)
 	}
 	return schedules, nil
@@ -394,13 +394,13 @@ func (r *MaintenanceRepositoryImpl) GetDueByOdometer(ctx context.Context, vehicl
 	var schedules []*models.MaintenanceSchedule
 	for rows.Next() {
 		var s models.MaintenanceSchedule
-		rows.Scan(&s.ID, &s.OrgID, &s.VehicleID, &s.Type, &s.Name, &s.DueOdometer)
+		rows.Scan(&s.ID, &s.TenantID, &s.VehicleID, &s.Type, &s.Name, &s.DueOdometer)
 		schedules = append(schedules, &s)
 	}
 	return schedules, nil
 }
 
-func (r *MaintenanceRepositoryImpl) GetMaintenanceSummary(ctx context.Context, orgID uuid.UUID, fromDate, toDate time.Time) (*models.MaintenanceSummary, error) {
+func (r *MaintenanceRepositoryImpl) GetMaintenanceSummary(ctx context.Context, tenantID uuid.UUID, fromDate, toDate time.Time) (*models.MaintenanceSummary, error) {
 	return &models.MaintenanceSummary{}, nil
 }
 
@@ -416,7 +416,7 @@ func (r *MaintenanceRepositoryImpl) GetDowntimeByVehicle(ctx context.Context, ve
 	var results []*models.VehicleDowntime
 	for rows.Next() {
 		var d models.VehicleDowntime
-		rows.Scan(&d.ID, &d.OrgID, &d.VehicleID, &d.DowntimeStart, &d.DowntimeEnd, &d.DowntimeMinutes)
+		rows.Scan(&d.ID, &d.TenantID, &d.VehicleID, &d.DowntimeStart, &d.DowntimeEnd, &d.DowntimeMinutes)
 		results = append(results, &d)
 	}
 	return results, nil

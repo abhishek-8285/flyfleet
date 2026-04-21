@@ -43,7 +43,7 @@ func (c *BillingQueueClient) EnqueueGenerateInvoice(ctx context.Context, payload
 	}
 
 	c.logger.Info("Enqueued invoice generation task",
-		zap.String("tenant_id", payload.OrgID.String()),
+		zap.String("tenant_id", payload.TenantID.String()),
 		zap.String("task_id", info.ID))
 	return nil
 }

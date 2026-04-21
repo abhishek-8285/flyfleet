@@ -40,16 +40,16 @@ func (g *APIBusGateway) Handler(next http.Handler) http.Handler {
 		}()
 
 		// 2. Tenant Context Enforcement
-		orgID := middleware.GetOrgID(r.Context())
-		if orgID == uuid.Nil && !isPublicRoute(r.URL.Path) {
+		tenantID := middleware.GetTenantID(r.Context())
+		if tenantID == uuid.Nil && !isPublicRoute(r.URL.Path) {
 			// In a strict SaaS architecture, we would fail here.
 			// Currently, we'll log it as a compliance warning.
 			l := observability.WithContext(r.Context(), g.logger)
 			l.Warn("saas_compliance_warning: missing tenant context",
 				zap.String("path", r.URL.Path))
-		} else if orgID != uuid.Nil {
+		} else if tenantID != uuid.Nil {
 			// Ensure response identifies the tenant context
-			w.Header().Set("X-Tenant-ID", orgID.String())
+			w.Header().Set("X-Tenant-ID", tenantID.String())
 		}
 
 		// 3. API Versioning Header

@@ -73,7 +73,7 @@ func (r *AuditLogRepository) GetAuditLogsByInvoice(ctx context.Context, invoiceI
 }
 
 // GetAuditLogsByOrg retrieves audit logs for all invoices in an organization
-func (r *AuditLogRepository) GetAuditLogsByOrg(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]models.InvoiceAuditLog, error) {
+func (r *AuditLogRepository) GetAuditLogsByOrg(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]models.InvoiceAuditLog, error) {
 	query := `
 		SELECT ial.id, ial.invoice_id, ial.action, ial.old_value, ial.new_value,
 		       ial.changed_by, ial.changed_by_email, ial.changed_at, ial.ip_address, ial.user_agent, ial.reason
@@ -83,7 +83,7 @@ func (r *AuditLogRepository) GetAuditLogsByOrg(ctx context.Context, orgID uuid.U
 		ORDER BY ial.changed_at DESC
 		LIMIT $2 OFFSET $3`
 
-	rows, err := r.db.Query(ctx, query, orgID, limit, offset)
+	rows, err := r.db.Query(ctx, query, tenantID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query audit logs: %w", err)
 	}

@@ -50,10 +50,10 @@ type MockAuthRepository struct {
 	GetLastLoginFn func(ctx context.Context, userID uuid.UUID) (*models.LoginHistory, error)
 
 	// Org Operations
-	RevokeAllOrgTokensFn      func(ctx context.Context, orgID uuid.UUID) error
+	RevokeAllOrgTokensFn      func(ctx context.Context, tenantID uuid.UUID) error
 	GetOrganizationsByEmailFn func(ctx context.Context, email string) ([]models.Organization, error)
 	GetOrganizationByIDFn     func(ctx context.Context, id uuid.UUID) (*models.Organization, error)
-	GetUserPermissionsFn      func(ctx context.Context, userID, orgID uuid.UUID) ([]string, error)
+	GetUserPermissionsFn      func(ctx context.Context, userID, tenantID uuid.UUID) ([]string, error)
 	GetRolePermissionsFn      func(ctx context.Context, role string) ([]string, error)
 
 	// Key Operations
@@ -202,9 +202,9 @@ func (m *MockAuthRepository) RevokeSessionByID(ctx context.Context, sessionID uu
 	return nil
 }
 
-func (m *MockAuthRepository) GetUserPermissions(ctx context.Context, userID, orgID uuid.UUID) ([]string, error) {
+func (m *MockAuthRepository) GetUserPermissions(ctx context.Context, userID, tenantID uuid.UUID) ([]string, error) {
 	if m.GetUserPermissionsFn != nil {
-		return m.GetUserPermissionsFn(ctx, userID, orgID)
+		return m.GetUserPermissionsFn(ctx, userID, tenantID)
 	}
 	return nil, nil
 }
@@ -285,15 +285,15 @@ func (m *MockAuthRepository) CreateRole(ctx context.Context, role *models.Role) 
 	return nil
 }
 
-func (m *MockAuthRepository) AssignRoleToUser(ctx context.Context, userID, roleID, orgID uuid.UUID) error {
+func (m *MockAuthRepository) AssignRoleToUser(ctx context.Context, userID, roleID, tenantID uuid.UUID) error {
 	return nil
 }
 
-func (m *MockAuthRepository) GetUserRoles(ctx context.Context, userID, orgID uuid.UUID) ([]models.Role, error) {
+func (m *MockAuthRepository) GetUserRoles(ctx context.Context, userID, tenantID uuid.UUID) ([]models.Role, error) {
 	return nil, nil
 }
 
-func (m *MockAuthRepository) CheckPermission(ctx context.Context, userID, orgID uuid.UUID, permission string) (bool, error) {
+func (m *MockAuthRepository) CheckPermission(ctx context.Context, userID, tenantID uuid.UUID, permission string) (bool, error) {
 	return true, nil
 }
 
@@ -349,7 +349,7 @@ func (m *MockAuthRepository) GetAPIKeyByPrefix(ctx context.Context, prefix strin
 	return nil, nil
 }
 
-func (m *MockAuthRepository) ListAPIKeys(ctx context.Context, orgID uuid.UUID) ([]models.APIKey, error) {
+func (m *MockAuthRepository) ListAPIKeys(ctx context.Context, tenantID uuid.UUID) ([]models.APIKey, error) {
 	return nil, nil
 }
 
@@ -369,7 +369,7 @@ func (m *MockAuthRepository) CreateServiceAccount(ctx context.Context, sa *model
 	return nil
 }
 
-func (m *MockAuthRepository) ListServiceAccounts(ctx context.Context, orgID uuid.UUID) ([]models.ServiceAccount, error) {
+func (m *MockAuthRepository) ListServiceAccounts(ctx context.Context, tenantID uuid.UUID) ([]models.ServiceAccount, error) {
 	return nil, nil
 }
 
@@ -378,9 +378,9 @@ func (m *MockAuthRepository) DeleteServiceAccount(ctx context.Context, id uuid.U
 }
 
 
-func (m *MockAuthRepository) RevokeAllOrgTokens(ctx context.Context, orgID uuid.UUID) error {
+func (m *MockAuthRepository) RevokeAllOrgTokens(ctx context.Context, tenantID uuid.UUID) error {
 	if m.RevokeAllOrgTokensFn != nil {
-		return m.RevokeAllOrgTokensFn(ctx, orgID)
+		return m.RevokeAllOrgTokensFn(ctx, tenantID)
 	}
 	return nil
 }
@@ -753,10 +753,10 @@ func TestAuthService_Login_MfaEnabled_UserRole(t *testing.T) {
 func TestValidateJWT_TamperingAndAlgConfusion(t *testing.T) {
 	service, _ := setupTestService(t)
 	userID := uuid.New()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
 	// Generate a valid token
-	token, err := service.GenerateToken(userID, orgID, "user")
+	token, err := service.GenerateToken(userID, tenantID, "user")
 	assert.NoError(t, err)
 
 	// Tampered payload
@@ -805,7 +805,7 @@ func TestLogin_ProducesSecurityEventAndChecksOrgState(t *testing.T) {
 	userID := uuid.New()
 
 	mockRepo.GetUserByEmailFn = func(ctx context.Context, email string) (*models.User, error) {
-		return &models.User{ID: userID, OrgID: uuid.New()}, nil
+		return &models.User{ID: userID, TenantID: uuid.New()}, nil
 	}
 
 	// Simulate an org lookup failure or disabled org

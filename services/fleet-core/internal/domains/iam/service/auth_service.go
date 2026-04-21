@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"net"
 	"time"
 
@@ -147,7 +148,7 @@ func (s *AuthService) Login(ctx context.Context, req models.LoginRequest, ip, us
 	// Successful password check — check if MFA needed
 	if user.MFAEnabled {
 		// Generate temp action token for MFA
-		tempToken, err := s.generateActionToken(user.ID, req.OrgID, "mfa")
+		tempToken, err := s.generateActionToken(user.ID, req.TenantID, "mfa")
 		if err != nil {
 			return nil, nil, err
 		}
@@ -160,7 +161,7 @@ func (s *AuthService) Login(ctx context.Context, req models.LoginRequest, ip, us
 	}
 
 	// No MFA — generate full tokens
-	tokens, err := s.generateLoginTokens(ctx, user, req.OrgID, ip, userAgent, req.RememberDevice)
+	tokens, err := s.generateLoginTokens(ctx, user, req.TenantID, ip, userAgent, req.RememberDevice)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -182,7 +183,7 @@ func (s *AuthService) VerifyMFA(ctx context.Context, req models.MFAVerifyRequest
 
 	userIDStr, _ := claims["sub"].(string)
 	userID, _ := uuid.Parse(userIDStr)
-	orgIDStr, _ := claims["tenant_id"].(string)
+	tenantIDStr, _ := claims["tenant_id"].(string)
 
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
@@ -198,7 +199,7 @@ func (s *AuthService) VerifyMFA(ctx context.Context, req models.MFAVerifyRequest
 	}
 
 	// Generate full tokens
-	return s.generateLoginTokens(ctx, user, orgIDStr, ip, userAgent, req.RememberDevice)
+	return s.generateLoginTokens(ctx, user, tenantIDStr, ip, userAgent, req.RememberDevice)
 }
 
 // Refresh generates new access + refresh tokens with rotation-based replay protection.
@@ -215,7 +216,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken, ip, ua string) 
 	}
 
 	userIDStr, _ := claims["sub"].(string)
-	orgIDStr, _ := claims["tenant_id"].(string)
+	tenantIDStr, _ := claims["tenant_id"].(string)
 	jti, _ := claims["jti"].(string)
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
@@ -227,17 +228,28 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken, ip, ua string) 
 	// concurrent mobile refresh (within a short grace window) or a stolen token being replayed.
 	// Either way, we revoke ALL sessions and return an error.
 	if jti != "" && s.redis != nil {
-		used, err := s.redis.IsRefreshTokenUsed(ctx, jti)
+		used, consumedAt, err := s.redis.IsRefreshTokenUsed(ctx, jti)
 		if err != nil {
 			s.log.Debug("refresh token check failed", zap.Error(err))
 		} else if used {
-			// Token replay detected — revoke all sessions for security
-			s.sessionRepo.RevokeAllTokensEverywhere(ctx, userID)
-			s.log.Warn("refresh_token_replay_detected",
-				zap.String("user_id", userIDStr),
-				zap.String("jti", jti),
-			)
-			return nil, errors.New("token_revoked")
+			// GRACE PERIOD: Allow concurrent hits within a short window (e.g. 500ms) 
+			// to account for frontend race conditions during SPA initialization.
+			gracePeriod := 500 * time.Millisecond
+			if time.Since(time.UnixMilli(consumedAt)) > gracePeriod {
+				// Token replay detected — revoke all sessions for security
+				s.sessionRepo.RevokeAllTokensEverywhere(ctx, userID)
+				s.log.Warn("refresh_token_replay_detected",
+					zap.String("user_id", userIDStr),
+					zap.String("jti", jti),
+					zap.Int64("consumed_at_ms", consumedAt),
+				)
+				return nil, errors.New("token_revoked")
+			}
+			// If within grace period, we allow the refresh to proceed but we still
+			// want to rotate to a NEW token (standard flow below).
+			s.log.Debug("refresh_token_concurrent_access_allowed", 
+				zap.String("user_id", userIDStr), 
+				zap.String("jti", jti))
 		}
 	}
 
@@ -260,7 +272,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken, ip, ua string) 
 	}
 
 	// 4. Generate new tokens (new JTI, so the old refresh token cannot be reused)
-	return s.generateTokens(ctx, user, orgIDStr, ip, ua, "refresh")
+	return s.generateTokens(ctx, user, tenantIDStr, ip, ua, "refresh")
 }
 
 // ── Internal helpers ──
@@ -292,22 +304,22 @@ func (s *AuthService) handleFailedLogin(ctx context.Context, user *models.User, 
 	}
 }
 
-func (s *AuthService) generateLoginTokens(ctx context.Context, user *models.User, orgID, ip, userAgent string, rememberDevice bool) (*models.AuthTokensResponse, error) {
+func (s *AuthService) generateLoginTokens(ctx context.Context, user *models.User, tenantID, ip, userAgent string, rememberDevice bool) (*models.AuthTokensResponse, error) {
 	// Get org info
 	orgs, err := s.orgRepo.GetUserOrganizations(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	// If orgID is empty, auto-select the user's first (or primary) organization
-	if orgID == "" && len(orgs) > 0 {
-		orgID = orgs[0].ID.String()
+	// If tenantID is empty, auto-select the user's first (or primary) organization
+	if tenantID == "" && len(orgs) > 0 {
+		tenantID = orgs[0].ID.String()
 	}
 
 	var orgName string
 	var userRole string
 	for _, o := range orgs {
-		if o.ID.String() == orgID {
+		if o.ID.String() == tenantID {
 			orgName = o.Name
 			userRole = o.Role
 			break
@@ -315,14 +327,14 @@ func (s *AuthService) generateLoginTokens(ctx context.Context, user *models.User
 	}
 
 	// Compute permissions
-	if orgID == "" {
+	if tenantID == "" {
 		s.log.Warn("no_organization_for_user", zap.String("user_id", user.ID.String()))
 		return nil, errors.New("no_organization")
 	}
-	orgUUID, err := uuid.Parse(orgID)
+	orgUUID, err := uuid.Parse(tenantID)
 	if err != nil {
-		s.log.Warn("invalid_org_id_in_login", zap.String("tenant_id", orgID))
-		return nil, errors.New("invalid_org_id")
+		s.log.Warn("invalid_tenant_id_in_login", zap.String("tenant_id", tenantID))
+		return nil, errors.New("invalid_tenant_id")
 	}
 	mask, err := s.roleRepo.ComputeEffectivePermissionMask(ctx, user.ID, orgUUID)
 	if err != nil {
@@ -331,14 +343,14 @@ func (s *AuthService) generateLoginTokens(ctx context.Context, user *models.User
 	}
 
 	// Cache permissions
-	s.redis.CacheUserPermissions(ctx, user.ID.String(), orgID, mask, 5*time.Minute)
+	s.redis.CacheUserPermissions(ctx, user.ID.String(), tenantID, mask, 5*time.Minute)
 
 	// Update last login
 	s.userRepo.UpdateLastLogin(ctx, user.ID, ip)
 	s.userRepo.ResetFailedLogins(ctx, user.ID)
 
 	// Generate tokens
-	tokens, err := s.generateTokens(ctx, user, orgID, ip, userAgent, "login")
+	tokens, err := s.generateTokens(ctx, user, tenantID, ip, userAgent, "login")
 	if err != nil {
 		return nil, err
 	}
@@ -352,34 +364,46 @@ func (s *AuthService) generateLoginTokens(ctx context.Context, user *models.User
 	return tokens, nil
 }
 
-func (s *AuthService) generateTokens(ctx context.Context, user *models.User, orgID, ip, ua, eventType string) (*models.AuthTokensResponse, error) {
-	orgUUID, _ := uuid.Parse(orgID)
+func (s *AuthService) generateTokens(ctx context.Context, user *models.User, tenantID, ip, ua, eventType string) (*models.AuthTokensResponse, error) {
+	orgUUID, _ := uuid.Parse(tenantID)
 	jti := uuid.New().String()
 
-	// Get permissions
-	mask, err := s.roleRepo.ComputeEffectivePermissionMask(ctx, user.ID, orgUUID)
-	if err != nil {
-		mask = user.PermissionMask
-	}
-
-	// Get role
+	// Get role first (needed to determine if admin bypass applies)
 	roles, err := s.roleRepo.GetUserRoles(ctx, user.ID, orgUUID)
 	role := "viewer"
 	if len(roles) > 0 {
 		role = roles[0].Name
+	}
+	// Fall back to the top-level org membership role (e.g., "org_admin")
+	if role == "viewer" {
+		if orgRole, _, orgErr := s.orgRepo.GetUserOrgRole(ctx, user.ID, orgUUID); orgErr == nil && orgRole != "" {
+			role = orgRole
+		}
+	}
+
+	// Get permissions — admin roles get full mask, others compute from role table
+	var mask int64
+	if role == "org_admin" || role == "system_admin" || role == "admin" {
+		mask = 9223372036854775807
+	} else {
+		mask, err = s.roleRepo.ComputeEffectivePermissionMask(ctx, user.ID, orgUUID)
+		if err != nil || mask == 0 {
+			mask = user.PermissionMask
+		}
 	}
 
 	// Access token claims
 	accessClaims := jwt.MapClaims{
 		"sub":                user.ID.String(),
 		"user_id":            user.ID.String(),
-		"tenant_id":             orgID,
+		"tenant_id":             tenantID,
+		"org_id":                tenantID, // Legacy support for older middleware
 		"role":               role,
 		"permissions_mask":   mask,
 		"type":               "access",
 		"jti":                jti,
-		"iss":                "flyfleet-auth-service",
-		"aud":                "flyfleet-api",
+		"iss":                "FlyFleet",
+		"aud":                "fleet-dashboard",
 		"device_fingerprint": deviceFingerprint(ip),
 	}
 
@@ -393,7 +417,7 @@ func (s *AuthService) generateTokens(ctx context.Context, user *models.User, org
 	refreshClaims := jwt.MapClaims{
 		"sub":     user.ID.String(),
 		"user_id": user.ID.String(),
-		"tenant_id":  orgID,
+		"tenant_id":  tenantID,
 		"type":    "refresh",
 		"jti":     refreshJTI,
 	}
@@ -406,7 +430,7 @@ func (s *AuthService) generateTokens(ctx context.Context, user *models.User, org
 	// Store session in Redis
 	sessionData := redis2.SessionData{
 		UserID:     user.ID,
-		OrgID:      orgUUID,
+		TenantID:      orgUUID,
 		Role:       role,
 		Device:     ua,
 		IP:         ip,
@@ -418,7 +442,7 @@ func (s *AuthService) generateTokens(ctx context.Context, user *models.User, org
 	// Store in DB
 	s.sessionRepo.StoreToken(ctx, &models.AuthToken{
 		UserID:     user.ID,
-		OrgID:      orgUUID,
+		TenantID:      orgUUID,
 		TokenHash:  accessToken,
 		TokenType:  "access",
 		DeviceInfo: ua,
@@ -438,15 +462,17 @@ func (s *AuthService) generateTokens(ctx context.Context, user *models.User, org
 			Email: user.Email,
 			Name:  user.Name,
 			Role:  role,
-			OrgID: orgUUID,
+			TenantID: orgUUID,
+			MustResetPassword: user.MustResetPassword,
 		},
+		MustResetPassword: user.MustResetPassword,
 	}, nil
 }
 
-func (s *AuthService) generateActionToken(userID uuid.UUID, orgID, tokenType string) (string, error) {
+func (s *AuthService) generateActionToken(userID uuid.UUID, tenantID, tokenType string) (string, error) {
 	claims := jwt.MapClaims{
 		"sub":     userID.String(),
-		"tenant_id":  orgID,
+		"tenant_id":  tenantID,
 		"type":    tokenType,
 		"jti":     uuid.New().String(),
 		"exp":     time.Now().Add(s.config.JWTActionTTL).Unix(),
@@ -513,7 +539,7 @@ func (s *AuthService) GetUserOrganizations(ctx context.Context, userID uuid.UUID
 }
 
 // Register creates a new user account with the given credentials
-func (s *AuthService) Register(ctx context.Context, email, password, name string, orgID uuid.UUID) (*models.AuthTokensResponse, error) {
+func (s *AuthService) Register(ctx context.Context, email, password, name string, tenantID uuid.UUID) (*models.AuthTokensResponse, error) {
 	// Check if user already exists
 	existing, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
@@ -542,12 +568,12 @@ func (s *AuthService) Register(ctx context.Context, email, password, name string
 		return nil, err
 	}
 
-	// If orgID provided, create user-org association
+	// If tenantID provided, create user-org association
 	// Note: This would typically be done via a separate user_orgs repo method
 	// For now, generate tokens and let the user join org later
 
 	// Generate tokens
-	return s.generateTokens(ctx, user, orgID.String(), "", "", "register")
+	return s.generateTokens(ctx, user, tenantID.String(), "", "", "register")
 }
 
 // Logout revokes the current session
@@ -704,8 +730,48 @@ func (s *AuthService) ResetPasswordWithToken(ctx context.Context, token, newPass
 	return nil
 }
 
+// ResetPasswordForced handles password reset for new accounts with mandatory reset flag.
+func (s *AuthService) ResetPasswordForced(ctx context.Context, userID uuid.UUID, newPassword string) error {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return ErrUserNotFound
+	}
+
+	// Validate password against policy
+	if s.passwordSvc != nil {
+		if err := s.passwordSvc.Validate(ctx, userID, newPassword); err != nil {
+			return err
+		}
+	}
+
+	// Hash new password and update user (clearing the flag)
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), s.config.BcryptCost)
+	if err != nil {
+		return err
+	}
+	if err := s.userRepo.UpdatePasswordAndClearResetFlag(ctx, userID, string(hash)); err != nil {
+		return err
+	}
+
+	// Save hash to history
+	if err := s.passwordRepo.Add(ctx, userID, string(hash)); err != nil {
+		s.log.Error("failed to save password history", zap.Error(err))
+	}
+
+	// Revoke sessions except maybe the current one (but for safety revoke all)
+	if err := s.sessionRepo.RevokeAllTokensEverywhere(ctx, userID); err != nil {
+		s.log.Error("failed to revoke sessions after forced password reset", zap.Error(err))
+	}
+
+	s.log.Info("forced_password_reset_completed", zap.String("user_id", userID.String()))
+	return nil
+}
+
 // SwitchOrg validates the user belongs to the target org and issues new tokens
-func (s *AuthService) SwitchOrg(ctx context.Context, userID uuid.UUID, targetOrgID uuid.UUID, ip, ua string) (*models.OrgSwitchResponse, error) {
+func (s *AuthService) SwitchOrg(ctx context.Context, userID uuid.UUID, targetTenantID uuid.UUID, ip, ua string) (*models.OrgSwitchResponse, error) {
 	// Verify user has access to target org
 	orgs, err := s.orgRepo.GetUserOrganizations(ctx, userID)
 	if err != nil {
@@ -716,7 +782,7 @@ func (s *AuthService) SwitchOrg(ctx context.Context, userID uuid.UUID, targetOrg
 	var orgInfo models.OrgInfo
 	var userRole string
 	for _, o := range orgs {
-		if o.ID == targetOrgID {
+		if o.ID == targetTenantID {
 			found = true
 			orgInfo = o
 			userRole = o.Role
@@ -728,21 +794,28 @@ func (s *AuthService) SwitchOrg(ctx context.Context, userID uuid.UUID, targetOrg
 	}
 
 	// Compute permissions for new org
-	mask, err := s.roleRepo.ComputeEffectivePermissionMask(ctx, userID, targetOrgID)
-	if err != nil {
-		s.log.Error("failed to compute permissions for org switch", zap.Error(err))
-		mask = 0
+	var mask int64
+	if userRole == "org_admin" || userRole == "system_admin" || userRole == "admin" {
+		// Grant full permissions to administrative roles
+		mask = 9223372036854775807
+	} else {
+		m, err := s.roleRepo.ComputeEffectivePermissionMask(ctx, userID, targetTenantID)
+		if err != nil {
+			s.log.Error("failed to compute permissions for org switch", zap.Error(err))
+			return nil, fmt.Errorf("failed to compute permissions for target organization: %w", err)
+		}
+		mask = m
 	}
 
 	// Cache new permissions
-	s.redis.CacheUserPermissions(ctx, userID.String(), targetOrgID.String(), mask, 5*time.Minute)
+	s.redis.CacheUserPermissions(ctx, userID.String(), targetTenantID.String(), mask, 5*time.Minute)
 
 	// Generate new JWT with new org context
 	jti := uuid.New().String()
 	accessClaims := jwt.MapClaims{
 		"sub":              userID.String(),
 		"user_id":          userID.String(),
-		"tenant_id":           targetOrgID.String(),
+		"tenant_id":           targetTenantID.String(),
 		"role":             userRole,
 		"permissions_mask": mask,
 		"type":             "access",
@@ -761,7 +834,7 @@ func (s *AuthService) SwitchOrg(ctx context.Context, userID uuid.UUID, targetOrg
 	refreshClaims := jwt.MapClaims{
 		"sub":     userID.String(),
 		"user_id": userID.String(),
-		"tenant_id":  targetOrgID.String(),
+		"tenant_id":  targetTenantID.String(),
 		"type":    "refresh",
 		"jti":     refreshJTI,
 	}
@@ -773,7 +846,7 @@ func (s *AuthService) SwitchOrg(ctx context.Context, userID uuid.UUID, targetOrg
 	// Update session cache
 	sessionData := redis2.SessionData{
 		UserID:     userID,
-		OrgID:      targetOrgID,
+		TenantID:      targetTenantID,
 		Role:       userRole,
 		Device:     ua,
 		IP:         ip,
@@ -783,11 +856,11 @@ func (s *AuthService) SwitchOrg(ctx context.Context, userID uuid.UUID, targetOrg
 	s.redis.SetSession(ctx, jti, sessionData, s.config.JWTAccessTTL)
 
 	// Log the switch
-	s.orgRepo.LogOrgSwitch(ctx, userID, uuid.Nil, targetOrgID, ip, ua)
+	s.orgRepo.LogOrgSwitch(ctx, userID, uuid.Nil, targetTenantID, ip, ua)
 
 	s.log.Info("org_switched",
 		zap.String("user_id", userID.String()),
-		zap.String("to_org_id", targetOrgID.String()),
+		zap.String("to_tenant_id", targetTenantID.String()),
 	)
 
 	return &models.OrgSwitchResponse{

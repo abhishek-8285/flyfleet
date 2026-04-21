@@ -60,16 +60,16 @@ func (w *PredictiveMaintenanceWorker) RunEvaluation(ctx context.Context) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var vehicleID, orgID uuid.UUID
-		if err := rows.Scan(&vehicleID, &orgID); err != nil {
+		var vehicleID, tenantID uuid.UUID
+		if err := rows.Scan(&vehicleID, &tenantID); err != nil {
 			continue
 		}
 
-		w.evaluateVehicle(ctx, orgID, vehicleID)
+		w.evaluateVehicle(ctx, tenantID, vehicleID)
 	}
 }
 
-func (w *PredictiveMaintenanceWorker) evaluateVehicle(ctx context.Context, orgID, vehicleID uuid.UUID) {
+func (w *PredictiveMaintenanceWorker) evaluateVehicle(ctx context.Context, tenantID, vehicleID uuid.UUID) {
 	// Rule 1: High Failure Rate Pattern
 	// If a vehicle has > 3 corrective maintenance events in 30 days
 	var recentFailures int
@@ -78,7 +78,7 @@ func (w *PredictiveMaintenanceWorker) evaluateVehicle(ctx context.Context, orgID
 		vehicleID).Scan(&recentFailures)
 
 	if err == nil && recentFailures > 3 {
-		w.triggerPreventiveWO(ctx, orgID, vehicleID, "Predictive: High failure rate detected. Schedule comprehensive inspection.")
+		w.triggerPreventiveWO(ctx, tenantID, vehicleID, "Predictive: High failure rate detected. Schedule comprehensive inspection.")
 		return
 	}
 
@@ -95,11 +95,11 @@ func (w *PredictiveMaintenanceWorker) evaluateVehicle(ctx context.Context, orgID
 	currentHours = lastServiceHours + 550 // Mocking that threshold is exceeded
 
 	if currentHours-lastServiceHours > 500 {
-		w.triggerPreventiveWO(ctx, orgID, vehicleID, "Predictive: Engine hours threshold exceeded. Schedule oil and filter change.")
+		w.triggerPreventiveWO(ctx, tenantID, vehicleID, "Predictive: Engine hours threshold exceeded. Schedule oil and filter change.")
 	}
 }
 
-func (w *PredictiveMaintenanceWorker) triggerPreventiveWO(ctx context.Context, orgID, vehicleID uuid.UUID, description string) {
+func (w *PredictiveMaintenanceWorker) triggerPreventiveWO(ctx context.Context, tenantID, vehicleID uuid.UUID, description string) {
 	req := &models.CreateWorkOrderRequest{
 		VehicleID:       vehicleID,
 		Title:           "PREDICTIVE PREVENTIVE MAINTENANCE",
@@ -108,7 +108,7 @@ func (w *PredictiveMaintenanceWorker) triggerPreventiveWO(ctx context.Context, o
 		Priority:        models.WorkOrderPriorityMedium,
 	}
 
-	wo, err := w.woService.CreateWorkOrder(ctx, orgID, uuid.Nil, req) // System-created
+	wo, err := w.woService.CreateWorkOrder(ctx, tenantID, uuid.Nil, req) // System-created
 	if err != nil {
 		w.logger.Error("Failed to create predictive work order", zap.Error(err))
 		return

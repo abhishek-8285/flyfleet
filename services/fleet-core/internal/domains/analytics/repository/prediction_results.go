@@ -108,7 +108,7 @@ func (r *AnalyticsRepositoryImpl) CreatePredictionResult(ctx context.Context, re
 }
 
 // GetPredictionResult retrieves a prediction result by ID
-func (r *AnalyticsRepositoryImpl) GetPredictionResult(ctx context.Context, id string, orgID uuid.UUID) (*models.PredictionResult, error) {
+func (r *AnalyticsRepositoryImpl) GetPredictionResult(ctx context.Context, id string, tenantID uuid.UUID) (*models.PredictionResult, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := `
@@ -122,7 +122,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictionResult(ctx context.Context, id st
 	var predictionInputJSON, probabilityScoresJSON, featureImportanceJSON []byte
 	var anomalyScore *float64
 
-	err := r.db.QueryRow(ctx, query, id, orgID).Scan(
+	err := r.db.QueryRow(ctx, query, id, tenantID).Scan(
 		&result.ID, &result.ModelID, &predictionInputJSON, &result.PredictedValue, &result.ConfidenceScore,
 		&probabilityScoresJSON, &featureImportanceJSON, &result.AnomalyDetected, &anomalyScore,
 		&result.Explanation, &result.OrganizationID, &result.RequestID, &result.PredictedAt,
@@ -156,11 +156,11 @@ func (r *AnalyticsRepositoryImpl) GetPredictionResult(ctx context.Context, id st
 }
 
 // GetPredictionResultsByModel retrieves prediction results by model ID
-func (r *AnalyticsRepositoryImpl) GetPredictionResultsByModel(ctx context.Context, modelID string, orgID uuid.UUID, limit, offset int) ([]*models.PredictionResult, int, error) {
+func (r *AnalyticsRepositoryImpl) GetPredictionResultsByModel(ctx context.Context, modelID string, tenantID uuid.UUID, limit, offset int) ([]*models.PredictionResult, int, error) {
 	// Count query
 	countQuery := "SELECT COUNT(*) FROM prediction_results WHERE model_id = $1 AND organization_id = $2"
 	var totalCount int
-	err := r.db.QueryRow(ctx, countQuery, modelID, orgID).Scan(&totalCount)
+	err := r.db.QueryRow(ctx, countQuery, modelID, tenantID).Scan(&totalCount)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count prediction results by model: %w", err)
 	}
@@ -176,7 +176,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictionResultsByModel(ctx context.Contex
 		LIMIT $3 OFFSET $4
 	`
 
-	rows, err := r.executeWithObservability(ctx, query, modelID, orgID, limit, offset)
+	rows, err := r.executeWithObservability(ctx, query, modelID, tenantID, limit, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to query prediction results by model: %w", err)
 	}
@@ -222,11 +222,11 @@ func (r *AnalyticsRepositoryImpl) GetPredictionResultsByModel(ctx context.Contex
 }
 
 // GetPredictionResultsByOrg retrieves prediction results by organization
-func (r *AnalyticsRepositoryImpl) GetPredictionResultsByOrg(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.PredictionResult, int, error) {
+func (r *AnalyticsRepositoryImpl) GetPredictionResultsByOrg(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.PredictionResult, int, error) {
 	// Count query
 	countQuery := "SELECT COUNT(*) FROM prediction_results WHERE organization_id = $1"
 	var totalCount int
-	err := r.db.QueryRow(ctx, countQuery, orgID).Scan(&totalCount)
+	err := r.db.QueryRow(ctx, countQuery, tenantID).Scan(&totalCount)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -242,7 +242,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictionResultsByOrg(ctx context.Context,
 		LIMIT $2 OFFSET $3
 	`
 
-	rows, err := r.executeWithObservability(ctx, query, orgID, limit, offset)
+	rows, err := r.executeWithObservability(ctx, query, tenantID, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -288,7 +288,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictionResultsByOrg(ctx context.Context,
 }
 
 // UpdatePredictionResult updates an existing prediction result
-func (r *AnalyticsRepositoryImpl) UpdatePredictionResult(ctx context.Context, id string, orgID uuid.UUID, updates map[string]interface{}) error {
+func (r *AnalyticsRepositoryImpl) UpdatePredictionResult(ctx context.Context, id string, tenantID uuid.UUID, updates map[string]interface{}) error {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	setParts := []string{}
@@ -309,7 +309,7 @@ func (r *AnalyticsRepositoryImpl) UpdatePredictionResult(ctx context.Context, id
 		return errors.New("no updates provided")
 	}
 
-	args = append(args, id, orgID)
+	args = append(args, id, tenantID)
 	query := fmt.Sprintf("UPDATE prediction_results SET %s WHERE id = $%d AND organization_id = $%d",
 		strings.Join(setParts, ", "), argIndex, argIndex+1)
 
@@ -321,11 +321,11 @@ func (r *AnalyticsRepositoryImpl) UpdatePredictionResult(ctx context.Context, id
 }
 
 // DeletePredictionResult deletes a prediction result
-func (r *AnalyticsRepositoryImpl) DeletePredictionResult(ctx context.Context, id string, orgID uuid.UUID) error {
+func (r *AnalyticsRepositoryImpl) DeletePredictionResult(ctx context.Context, id string, tenantID uuid.UUID) error {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := "DELETE FROM prediction_results WHERE id = $1 AND organization_id = $2"
-	_, err := r.db.Exec(ctx, query, id, orgID)
+	_, err := r.db.Exec(ctx, query, id, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to delete prediction result %s: %w", id, err)
 	}
@@ -333,7 +333,7 @@ func (r *AnalyticsRepositoryImpl) DeletePredictionResult(ctx context.Context, id
 }
 
 // ListPredictionResults retrieves prediction results with filtering
-func (r *AnalyticsRepositoryImpl) ListPredictionResults(ctx context.Context, orgID uuid.UUID, modelID *string, anomalyDetected *bool, cursor string, limit, offset int) ([]*models.PredictionResult, int, error) {
+func (r *AnalyticsRepositoryImpl) ListPredictionResults(ctx context.Context, tenantID uuid.UUID, modelID *string, anomalyDetected *bool, cursor string, limit, offset int) ([]*models.PredictionResult, int, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 
@@ -356,7 +356,7 @@ func (r *AnalyticsRepositoryImpl) ListPredictionResults(ctx context.Context, org
 	`
 	countQuery := `SELECT COUNT(*) FROM prediction_results WHERE organization_id = $1`
 
-	args := []interface{}{orgID}
+	args := []interface{}{tenantID}
 	argIndex := 2
 	var conditions []string
 

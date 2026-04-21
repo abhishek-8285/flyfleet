@@ -39,7 +39,7 @@ func (s *EInvoiceService) GenerateIRN(invoice *models.GSTInvoice) (string, error
 func (s *EInvoiceService) GenerateEInvoice(ctx context.Context, req models.GenerateEInvoiceRequest) (*models.GSTInvoice, error) {
 	ctx, span := finTracing.StartSpan(ctx, "finance.generate_einvoice",
 		attribute.String("entity_type", req.EntityType),
-		attribute.String("tenant_id", req.OrgID.String()),
+		attribute.String("tenant_id", req.TenantID.String()),
 	)
 	defer span.End()
 
@@ -71,7 +71,7 @@ func (s *EInvoiceService) GenerateEInvoice(ctx context.Context, req models.Gener
 		InvoiceNumber: invoiceNum,
 		Status:        models.GSTInvoiceStatusPending,
 		EntityType:    req.EntityType,
-		OrgID:         req.OrgID,
+		TenantID:         req.TenantID,
 		GSTIN:         req.SellerGSTIN,
 		BuyerGSTIN:    req.BuyerGSTIN,
 		TotalAmount:   req.TotalAmount,

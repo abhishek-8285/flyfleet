@@ -70,7 +70,7 @@ func NewSequenceRepository(db *pgxpool.Pool) *SequenceRepository {
 }
 
 // GetNextInvoiceNumber increments and returns the next gapless sequential number
-func (r *SequenceRepository) GetNextInvoiceNumber(ctx context.Context, orgID uuid.UUID) (string, error) {
+func (r *SequenceRepository) GetNextInvoiceNumber(ctx context.Context, tenantID uuid.UUID) (string, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return "", err
@@ -84,7 +84,7 @@ func (r *SequenceRepository) GetNextInvoiceNumber(ctx context.Context, orgID uui
 	err = tx.QueryRow(ctx, `
 		SELECT prefix, next_value, suffix FROM billing_invoice_sequences 
 		WHERE tenant_id = $1 FOR UPDATE
-	`, orgID).Scan(&prefix, &nextValue, &suffix)
+	`, tenantID).Scan(&prefix, &nextValue, &suffix)
 
 	if err == pgx.ErrNoRows {
 		// Initialize sequence if not exists
@@ -94,13 +94,13 @@ func (r *SequenceRepository) GetNextInvoiceNumber(ctx context.Context, orgID uui
 		_, err = tx.Exec(ctx, `
 			INSERT INTO billing_invoice_sequences (tenant_id, prefix, next_value, suffix)
 			VALUES ($1, $2, $3, $4)
-		`, orgID, prefix, nextValue+1, suffix)
+		`, tenantID, prefix, nextValue+1, suffix)
 	} else if err == nil {
 		// Update existing sequence
 		_, err = tx.Exec(ctx, `
 			UPDATE billing_invoice_sequences SET next_value = next_value + 1, updated_at = CURRENT_TIMESTAMP
 			WHERE tenant_id = $1
-		`, orgID)
+		`, tenantID)
 	}
 
 	if err != nil {

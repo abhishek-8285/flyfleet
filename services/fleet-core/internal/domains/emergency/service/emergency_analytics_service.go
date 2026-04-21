@@ -17,24 +17,24 @@ func NewEmergencyAnalyticsService(repo repository.EmergencyRepository) *Emergenc
 	return &EmergencyAnalyticsService{repo: repo}
 }
 
-func (s *EmergencyAnalyticsService) GetIncidentAnalytics(ctx context.Context, orgID uuid.UUID) (*models.IncidentAnalyticsResponse, error) {
+func (s *EmergencyAnalyticsService) GetIncidentAnalytics(ctx context.Context, tenantID uuid.UUID) (*models.IncidentAnalyticsResponse, error) {
 	now := time.Now()
 	last24h := now.Add(-24 * time.Hour)
 	weekStart := now.AddDate(0, 0, -7)
 
-	todayMetrics, err := s.repo.GetIncidentMetrics(ctx, orgID, time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()), now)
+	todayMetrics, err := s.repo.GetIncidentMetrics(ctx, tenantID, time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()), now)
 	if err != nil {
 		return nil, err
 	}
 
-	weekMetrics, err := s.repo.GetIncidentMetrics(ctx, orgID, weekStart, now)
+	weekMetrics, err := s.repo.GetIncidentMetrics(ctx, tenantID, weekStart, now)
 	if err != nil {
 		return nil, err
 	}
 
-	last24hCount, _ := s.repo.GetIncidentsCount(ctx, orgID, last24h)
-	topLocations, _ := s.repo.GetTopLocations(ctx, orgID, 5)
-	typeDist, _ := s.repo.GetIncidentTypeDistribution(ctx, orgID)
+	last24hCount, _ := s.repo.GetIncidentsCount(ctx, tenantID, last24h)
+	topLocations, _ := s.repo.GetTopLocations(ctx, tenantID, 5)
+	typeDist, _ := s.repo.GetIncidentTypeDistribution(ctx, tenantID)
 
 	return &models.IncidentAnalyticsResponse{
 		TotalIncidents:         todayMetrics.TotalIncidents, // Adjust logic if "Total" means all-time or recent
@@ -49,18 +49,18 @@ func (s *EmergencyAnalyticsService) GetIncidentAnalytics(ctx context.Context, or
 	}, nil
 }
 
-func (s *EmergencyAnalyticsService) GetSafetyDashboard(ctx context.Context, orgID uuid.UUID) (map[string]interface{}, error) {
-	daily, err := s.repo.GetIncidentsByDay(ctx, orgID, 30)
+func (s *EmergencyAnalyticsService) GetSafetyDashboard(ctx context.Context, tenantID uuid.UUID) (map[string]interface{}, error) {
+	daily, err := s.repo.GetIncidentsByDay(ctx, tenantID, 30)
 	if err != nil {
 		return nil, err
 	}
 
-	dist, err := s.repo.GetIncidentTypeDistribution(ctx, orgID)
+	dist, err := s.repo.GetIncidentTypeDistribution(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
 
-	scores, err := s.repo.GetVehicleSafetyScores(ctx, orgID)
+	scores, err := s.repo.GetVehicleSafetyScores(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}

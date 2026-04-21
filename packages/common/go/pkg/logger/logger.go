@@ -98,8 +98,8 @@ func GetContextFields(ctx context.Context) []zap.Field {
 		fields = append(fields, zap.String("trace_id", traceID.(string)))
 	}
 
-	if orgID := ctx.Value("org_id"); orgID != nil {
-		fields = append(fields, zap.String("org_id", orgID.(string)))
+	if tenantID := ctx.Value("tenant_id"); tenantID != nil {
+		fields = append(fields, zap.String("tenant_id", tenantID.(string)))
 	}
 
 	if vehicleID := ctx.Value("vehicle_id"); vehicleID != nil {

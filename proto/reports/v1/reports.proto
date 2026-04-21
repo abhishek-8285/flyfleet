@@ -15,7 +15,7 @@ service ReportsService {
 
 message Report {
   string id = 1;
-  string org_id = 2;
+  string tenant_id = 2;
   string type = 3;
   string format = 4;
   string status = 5;
@@ -43,7 +43,7 @@ message GetReportResponse {
 }
 
 message ListReportsRequest {
-  string org_id = 1;
+  string tenant_id = 1;
   int32 limit = 2;
   int32 offset = 3;
 }

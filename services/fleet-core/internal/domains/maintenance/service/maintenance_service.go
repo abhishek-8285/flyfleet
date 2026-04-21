@@ -42,10 +42,10 @@ func (s *MaintenanceService) GetTechnician(ctx context.Context, id uuid.UUID) (*
 	return s.repo.GetTechnicianByID(ctx, id)
 }
 
-func (s *MaintenanceService) CreateSchedule(ctx context.Context, orgID uuid.UUID, req *models.CreateScheduleRequest, createdBy uuid.UUID) (*models.MaintenanceSchedule, error) {
+func (s *MaintenanceService) CreateSchedule(ctx context.Context, tenantID uuid.UUID, req *models.CreateScheduleRequest, createdBy uuid.UUID) (*models.MaintenanceSchedule, error) {
 	schedule := &models.MaintenanceSchedule{
 		ID:             uuid.New().String(),
-		OrgID:          orgID,
+		TenantID:          tenantID,
 		VehicleID:      req.VehicleID,
 		Type:           req.Type,
 		Name:           req.Name,
@@ -73,7 +73,7 @@ func (s *MaintenanceService) CreateSchedule(ctx context.Context, orgID uuid.UUID
 	return schedule, nil
 }
 
-func (s *MaintenanceService) GetSchedule(ctx context.Context, id string, orgID uuid.UUID) (*models.MaintenanceSchedule, error) {
+func (s *MaintenanceService) GetSchedule(ctx context.Context, id string, tenantID uuid.UUID) (*models.MaintenanceSchedule, error) {
 	return s.repo.GetScheduleByID(ctx, id)
 }
 
@@ -81,7 +81,7 @@ func (s *MaintenanceService) ListSchedules(ctx context.Context, filter models.Ma
 	return s.repo.ListSchedules(ctx, filter)
 }
 
-func (s *MaintenanceService) UpdateSchedule(ctx context.Context, id string, orgID uuid.UUID, req *models.UpdateScheduleRequest) (*models.MaintenanceSchedule, error) {
+func (s *MaintenanceService) UpdateSchedule(ctx context.Context, id string, tenantID uuid.UUID, req *models.UpdateScheduleRequest) (*models.MaintenanceSchedule, error) {
 	updates := make(map[string]interface{})
 	if req.Type != nil {
 		updates["type"] = *req.Type
@@ -114,16 +114,16 @@ func (s *MaintenanceService) UpdateSchedule(ctx context.Context, id string, orgI
 			return nil, err
 		}
 	}
-	return s.GetSchedule(ctx, id, orgID)
+	return s.GetSchedule(ctx, id, tenantID)
 }
 
-func (s *MaintenanceService) DeleteSchedule(ctx context.Context, id string, orgID uuid.UUID) error {
+func (s *MaintenanceService) DeleteSchedule(ctx context.Context, id string, tenantID uuid.UUID) error {
 	return s.repo.DeleteSchedule(ctx, id)
 }
 
-func (s *MaintenanceService) CreateLog(ctx context.Context, orgID uuid.UUID, req *models.CreateLogRequest) (*models.MaintenanceLog, error) {
+func (s *MaintenanceService) CreateLog(ctx context.Context, tenantID uuid.UUID, req *models.CreateLogRequest) (*models.MaintenanceLog, error) {
 	log := &models.MaintenanceLog{
-		OrgID:        orgID,
+		TenantID:        tenantID,
 		VehicleID:    req.VehicleID,
 		ScheduleID:   req.ScheduleID,
 		Type:         req.Type,
@@ -147,7 +147,7 @@ func (s *MaintenanceService) CreateLog(ctx context.Context, orgID uuid.UUID, req
 	return log, nil
 }
 
-func (s *MaintenanceService) GetLog(ctx context.Context, id string, orgID uuid.UUID) (*models.MaintenanceLog, error) {
+func (s *MaintenanceService) GetLog(ctx context.Context, id string, tenantID uuid.UUID) (*models.MaintenanceLog, error) {
 	return s.repo.GetLogByID(ctx, id)
 }
 
@@ -155,7 +155,7 @@ func (s *MaintenanceService) ListLogs(ctx context.Context, filter models.Mainten
 	return s.repo.ListLogs(ctx, filter)
 }
 
-func (s *MaintenanceService) UpdateLog(ctx context.Context, id string, orgID uuid.UUID, req *models.UpdateLogRequest) (*models.MaintenanceLog, error) {
+func (s *MaintenanceService) UpdateLog(ctx context.Context, id string, tenantID uuid.UUID, req *models.UpdateLogRequest) (*models.MaintenanceLog, error) {
 	updates := make(map[string]interface{})
 	if req.Type != nil {
 		updates["type"] = *req.Type
@@ -173,23 +173,23 @@ func (s *MaintenanceService) UpdateLog(ctx context.Context, id string, orgID uui
 			return nil, err
 		}
 	}
-	return s.GetLog(ctx, id, orgID)
+	return s.GetLog(ctx, id, tenantID)
 }
 
-func (s *MaintenanceService) DeleteLog(ctx context.Context, id string, orgID uuid.UUID) error {
+func (s *MaintenanceService) DeleteLog(ctx context.Context, id string, tenantID uuid.UUID) error {
 	return s.repo.DeleteLog(ctx, id)
 }
 
-func (s *MaintenanceService) GetMaintenanceHistory(ctx context.Context, vehicleID, orgID uuid.UUID, limit int) ([]*models.MaintenanceLog, error) {
+func (s *MaintenanceService) GetMaintenanceHistory(ctx context.Context, vehicleID, tenantID uuid.UUID, limit int) ([]*models.MaintenanceLog, error) {
 	return s.repo.GetMaintenanceHistory(ctx, vehicleID, limit)
 }
 
-func (s *MaintenanceService) GetOverdueSchedules(ctx context.Context, orgID uuid.UUID) ([]*models.MaintenanceSchedule, error) {
-	return s.repo.GetOverdueSchedules(ctx, orgID)
+func (s *MaintenanceService) GetOverdueSchedules(ctx context.Context, tenantID uuid.UUID) ([]*models.MaintenanceSchedule, error) {
+	return s.repo.GetOverdueSchedules(ctx, tenantID)
 }
 
-func (s *MaintenanceService) GetUpcomingSchedules(ctx context.Context, orgID uuid.UUID, days int) ([]*models.MaintenanceSchedule, error) {
-	return s.repo.GetUpcomingSchedules(ctx, orgID, days)
+func (s *MaintenanceService) GetUpcomingSchedules(ctx context.Context, tenantID uuid.UUID, days int) ([]*models.MaintenanceSchedule, error) {
+	return s.repo.GetUpcomingSchedules(ctx, tenantID, days)
 }
 
 func (s *MaintenanceService) CreateWarranty(ctx context.Context, w *models.ComponentWarranty) error {
@@ -200,10 +200,10 @@ func (s *MaintenanceService) CheckWarrantyCoverage(ctx context.Context, vehicleI
 	return s.repo.GetWarrantyCoverage(ctx, vehicleID, parts)
 }
 
-func (s *MaintenanceService) GetWarrantyExpiryAlerts(ctx context.Context, orgID uuid.UUID, days int) ([]models.ComponentWarranty, error) {
-	return s.repo.GetWarrantyExpiryAlerts(ctx, orgID, days)
+func (s *MaintenanceService) GetWarrantyExpiryAlerts(ctx context.Context, tenantID uuid.UUID, days int) ([]models.ComponentWarranty, error) {
+	return s.repo.GetWarrantyExpiryAlerts(ctx, tenantID, days)
 }
 
-func (s *MaintenanceService) GetMaintenanceSummary(ctx context.Context, orgID uuid.UUID, fromDate, toDate time.Time) (*models.MaintenanceSummary, error) {
-	return s.repo.GetMaintenanceSummary(ctx, orgID, fromDate, toDate)
+func (s *MaintenanceService) GetMaintenanceSummary(ctx context.Context, tenantID uuid.UUID, fromDate, toDate time.Time) (*models.MaintenanceSummary, error) {
+	return s.repo.GetMaintenanceSummary(ctx, tenantID, fromDate, toDate)
 }

@@ -15,7 +15,7 @@ type Event struct {
 }
 
 type Metadata struct {
-	OrgID uuid.UUID `json:"tenant_id"`
+	TenantID uuid.UUID `json:"tenant_id"`
 }
 
 type EventPublisher interface {

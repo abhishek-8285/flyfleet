@@ -200,7 +200,7 @@ func main() {
 	fmt.Println("--- END PREVIEW ---")
 
 	// 4. PDF generation
-	gen := pdf.NewPDFGenerator(60 * time.Second)
+	gen := pdf.NewPDFGenerator(60*time.Second, os.Getenv("CHROME_PATH"))
 	pdfData, err := gen.GenerateFromHTML(context.Background(), html, pdf.DefaultA4Portrait())
 	if err != nil {
 		log.Fatalf("❌ Generation Failed: %v", err)

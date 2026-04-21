@@ -16,9 +16,9 @@ func (h *BillingHandler) RecordUsage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ensure OrgID is set from context if missing
-	if event.OrgID == uuid.Nil {
-		event.OrgID = h.getOrgID(r)
+	// Ensure TenantID is set from context if missing
+	if event.TenantID == uuid.Nil {
+		event.TenantID = h.getTenantID(r)
 	}
 
 	err := h.meterService.RecordUsage(r.Context(), &event)
@@ -32,13 +32,13 @@ func (h *BillingHandler) RecordUsage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *BillingHandler) GenerateDraftInvoice(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
 		return
 	}
 
-	invoice, err := h.service.GenerateDraftInvoice(r.Context(), orgID)
+	invoice, err := h.service.GenerateDraftInvoice(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("Failed to generate draft invoice", zap.Error(err))
 		h.errorJSON(w, r, err.Error(), http.StatusInternalServerError)

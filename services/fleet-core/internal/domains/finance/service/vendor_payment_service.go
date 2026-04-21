@@ -23,13 +23,13 @@ func NewVendorPaymentService(repo *repository.FinanceRepository, tds *TDSTaxServ
 }
 
 // CreatePayment records a vendor payment and applies TDS.
-func (s *VendorPaymentService) CreatePayment(ctx context.Context, orgID uuid.UUID, createdBy uuid.UUID, req models.CreateVendorPaymentRequest) (*models.VendorPayment, error) {
+func (s *VendorPaymentService) CreatePayment(ctx context.Context, tenantID uuid.UUID, createdBy uuid.UUID, req models.CreateVendorPaymentRequest) (*models.VendorPayment, error) {
 	// Deduct TDS (194C rate for contractors by default)
 	tdsReq := models.DeductTDSRequest{
 		EntityType:  "vendor_payment",
 		EntityID:    uuid.New(), // placeholder, will be updated after creation
 		VendorID:    &req.VendorID,
-		OrgID:       orgID,
+		TenantID:       tenantID,
 		GrossAmount: req.Amount,
 		TDSSection:  "194C",
 	}
@@ -41,7 +41,7 @@ func (s *VendorPaymentService) CreatePayment(ctx context.Context, orgID uuid.UUI
 	payment := &models.VendorPayment{
 		ID:            uuid.New(),
 		VendorID:      req.VendorID,
-		OrgID:         orgID,
+		TenantID:         tenantID,
 		InvoiceNumber: req.InvoiceNumber,
 		Amount:        req.Amount,
 		Currency:      "INR",
@@ -71,6 +71,6 @@ func (s *VendorPaymentService) CreatePayment(ctx context.Context, orgID uuid.UUI
 }
 
 // ListPayments returns payments for an org with optional vendor filter.
-func (s *VendorPaymentService) ListPayments(ctx context.Context, orgID uuid.UUID, vendorID *uuid.UUID) ([]models.VendorPayment, error) {
-	return s.repo.ListVendorPayments(ctx, orgID, vendorID)
+func (s *VendorPaymentService) ListPayments(ctx context.Context, tenantID uuid.UUID, vendorID *uuid.UUID) ([]models.VendorPayment, error) {
+	return s.repo.ListVendorPayments(ctx, tenantID, vendorID)
 }

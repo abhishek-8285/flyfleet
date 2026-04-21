@@ -29,27 +29,27 @@ func NewAlertsHandlers(service *service.AlertsService, repo repository.Repositor
 	}
 }
 
-// getOrgID extracts organization ID from context and returns error if missing
-func (h *AlertsHandlers) getOrgID(c *gin.Context) uuid.UUID {
-	orgID := middleware.GetOrgID(c.Request.Context())
-	if orgID == uuid.Nil {
+// getTenantID extracts organization ID from context and returns error if missing
+func (h *AlertsHandlers) getTenantID(c *gin.Context) uuid.UUID {
+	tenantID := middleware.GetTenantID(c.Request.Context())
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware",
 			zap.String("path", c.Request.URL.Path))
 	}
-	return orgID
+	return tenantID
 }
 
 // requireOrgAccess checks that the resource belongs to the user's organization
-func (h *AlertsHandlers) requireOrgAccess(c *gin.Context, resourceOrgID uuid.UUID) bool {
-	orgID := h.getOrgID(c)
-	if orgID == uuid.Nil {
+func (h *AlertsHandlers) requireOrgAccess(c *gin.Context, resourceTenantID uuid.UUID) bool {
+	tenantID := h.getTenantID(c)
+	if tenantID == uuid.Nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Organization ID required"})
 		return false
 	}
-	if resourceOrgID != orgID {
+	if resourceTenantID != tenantID {
 		h.logger.Warn("unauthorized cross-org access attempt",
-			zap.String("requested_org", orgID.String()),
-			zap.String("resource_org", resourceOrgID.String()),
+			zap.String("requested_org", tenantID.String()),
+			zap.String("resource_org", resourceTenantID.String()),
 			zap.String("path", c.Request.URL.Path))
 		c.JSON(http.StatusNotFound, gin.H{"error": "Resource not found"})
 		return false
@@ -59,8 +59,8 @@ func (h *AlertsHandlers) requireOrgAccess(c *gin.Context, resourceOrgID uuid.UUI
 
 // TriggerAlert handles POST /v1/alerts/trigger
 func (h *AlertsHandlers) TriggerAlert(c *gin.Context) {
-	orgID := h.getOrgID(c)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(c)
+	if tenantID == uuid.Nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Organization context required"})
 		return
 	}
@@ -78,7 +78,7 @@ func (h *AlertsHandlers) TriggerAlert(c *gin.Context) {
 	}
 
 	// Convert DTO to model with tenant_id injected
-	modelReq := req.ToModel(orgID)
+	modelReq := req.ToModel(tenantID)
 
 	if err := h.service.TriggerAlert(c.Request.Context(), modelReq); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to trigger alert"})
@@ -102,13 +102,13 @@ func (h *AlertsHandlers) GetPreferences(c *gin.Context) {
 		return
 	}
 
-	orgID := h.getOrgID(c)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(c)
+	if tenantID == uuid.Nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Organization ID required"})
 		return
 	}
 
-	prefs, err := h.repo.GetUserPreferences(c.Request.Context(), userID, orgID)
+	prefs, err := h.repo.GetUserPreferences(c.Request.Context(), userID, tenantID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch preferences"})
 		return
@@ -137,8 +137,8 @@ func (h *AlertsHandlers) UpdatePreference(c *gin.Context) {
 		return
 	}
 
-	orgID := h.getOrgID(c)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(c)
+	if tenantID == uuid.Nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Organization ID required"})
 		return
 	}
@@ -155,7 +155,7 @@ func (h *AlertsHandlers) UpdatePreference(c *gin.Context) {
 	}
 
 	// Convert DTO to model
-	pref := req.ToModel(userID, orgID)
+	pref := req.ToModel(userID, tenantID)
 
 	if err := h.repo.UpsertUserPreference(c.Request.Context(), &pref); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update preference"})
@@ -168,8 +168,8 @@ func (h *AlertsHandlers) UpdatePreference(c *gin.Context) {
 
 // CreateTemplate handles POST /v1/alerts/templates
 func (h *AlertsHandlers) CreateTemplate(c *gin.Context) {
-	orgID := h.getOrgID(c)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(c)
+	if tenantID == uuid.Nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Organization ID required"})
 		return
 	}
@@ -186,7 +186,7 @@ func (h *AlertsHandlers) CreateTemplate(c *gin.Context) {
 	}
 
 	// Convert DTO to model
-	tmpl := req.ToModel(orgID)
+	tmpl := req.ToModel(tenantID)
 
 	if err := h.repo.CreateTemplate(c.Request.Context(), &tmpl); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create template"})

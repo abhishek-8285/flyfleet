@@ -60,15 +60,15 @@ type IndiaIntegrationService interface {
 	GetGSTComplianceByGSTIN(ctx context.Context, gstin string) (*models.GSTCompliance, error)
 	UpdateGSTCompliance(ctx context.Context, id string, updates map[string]interface{}) error
 	DeleteGSTCompliance(ctx context.Context, id string) error
-	ListGSTCompliances(ctx context.Context, orgID uuid.UUID, status *string, limit, offset int) ([]*models.GSTCompliance, int, error)
+	ListGSTCompliances(ctx context.Context, tenantID uuid.UUID, status *string, limit, offset int) ([]*models.GSTCompliance, int, error)
 
 	// Integration Config operations
 	CreateIntegrationConfig(ctx context.Context, config *models.IntegrationConfig) error
 	GetIntegrationConfig(ctx context.Context, id string) (*models.IntegrationConfig, error)
-	GetIntegrationConfigByServiceType(ctx context.Context, orgID uuid.UUID, serviceType string) (*models.IntegrationConfig, error)
+	GetIntegrationConfigByServiceType(ctx context.Context, tenantID uuid.UUID, serviceType string) (*models.IntegrationConfig, error)
 	UpdateIntegrationConfig(ctx context.Context, id string, updates map[string]interface{}) error
 	DeleteIntegrationConfig(ctx context.Context, id string) error
-	ListIntegrationConfigs(ctx context.Context, orgID uuid.UUID, serviceType *string, active *bool, limit, offset int) ([]*models.IntegrationConfig, int, error)
+	ListIntegrationConfigs(ctx context.Context, tenantID uuid.UUID, serviceType *string, active *bool, limit, offset int) ([]*models.IntegrationConfig, int, error)
 
 	HealthCheck(ctx context.Context) error
 }
@@ -695,7 +695,7 @@ func (s *IndiaIntegrationServiceImpl) DeleteGSTCompliance(ctx context.Context, i
 }
 
 // ListGSTCompliances retrieves GST compliance records with filtering
-func (s *IndiaIntegrationServiceImpl) ListGSTCompliances(ctx context.Context, orgID uuid.UUID, status *string, limit, offset int) ([]*models.GSTCompliance, int, error) {
+func (s *IndiaIntegrationServiceImpl) ListGSTCompliances(ctx context.Context, tenantID uuid.UUID, status *string, limit, offset int) ([]*models.GSTCompliance, int, error) {
 	if limit <= 0 {
 		limit = 10
 	}
@@ -703,7 +703,7 @@ func (s *IndiaIntegrationServiceImpl) ListGSTCompliances(ctx context.Context, or
 		offset = 0
 	}
 
-	return s.repo.ListGSTCompliances(ctx, orgID, status, limit, offset)
+	return s.repo.ListGSTCompliances(ctx, tenantID, status, limit, offset)
 }
 
 // CreateIntegrationConfig creates a new integration configuration with validation
@@ -735,15 +735,15 @@ func (s *IndiaIntegrationServiceImpl) GetIntegrationConfig(ctx context.Context, 
 }
 
 // GetIntegrationConfigByServiceType retrieves an integration configuration by service type and organization
-func (s *IndiaIntegrationServiceImpl) GetIntegrationConfigByServiceType(ctx context.Context, orgID uuid.UUID, serviceType string) (*models.IntegrationConfig, error) {
-	if orgID == uuid.Nil {
+func (s *IndiaIntegrationServiceImpl) GetIntegrationConfigByServiceType(ctx context.Context, tenantID uuid.UUID, serviceType string) (*models.IntegrationConfig, error) {
+	if tenantID == uuid.Nil {
 		return nil, errors.New("organization ID is required")
 	}
 	if serviceType == "" {
 		return nil, errors.New("service type is required")
 	}
 
-	return s.repo.GetIntegrationConfigByServiceType(ctx, orgID, serviceType)
+	return s.repo.GetIntegrationConfigByServiceType(ctx, tenantID, serviceType)
 }
 
 // UpdateIntegrationConfig updates an existing integration configuration with validation
@@ -771,8 +771,8 @@ func (s *IndiaIntegrationServiceImpl) DeleteIntegrationConfig(ctx context.Contex
 }
 
 // ListIntegrationConfigs retrieves integration configurations with filtering
-func (s *IndiaIntegrationServiceImpl) ListIntegrationConfigs(ctx context.Context, orgID uuid.UUID, serviceType *string, active *bool, limit, offset int) ([]*models.IntegrationConfig, int, error) {
-	if orgID == uuid.Nil {
+func (s *IndiaIntegrationServiceImpl) ListIntegrationConfigs(ctx context.Context, tenantID uuid.UUID, serviceType *string, active *bool, limit, offset int) ([]*models.IntegrationConfig, int, error) {
+	if tenantID == uuid.Nil {
 		return nil, 0, errors.New("organization ID is required")
 	}
 	if limit <= 0 {
@@ -782,7 +782,7 @@ func (s *IndiaIntegrationServiceImpl) ListIntegrationConfigs(ctx context.Context
 		offset = 0
 	}
 
-	return s.repo.ListIntegrationConfigs(ctx, orgID, serviceType, active, limit, offset)
+	return s.repo.ListIntegrationConfigs(ctx, tenantID, serviceType, active, limit, offset)
 }
 
 func (s *IndiaIntegrationServiceImpl) getUserID(ctx context.Context) uuid.UUID {

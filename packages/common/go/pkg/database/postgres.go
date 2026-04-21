@@ -34,7 +34,7 @@ type Database interface {
 	Query(ctx context.Context, sql string, args ...interface{}) ([]map[string]interface{}, error)
 	QueryRow(ctx context.Context, sql string, args ...interface{}) Scanner
 	Execute(ctx context.Context, sql string, args ...interface{}) error
-	WithTenant(ctx context.Context, orgID string, fn func(ctx context.Context, tx Transaction) error) error
+	WithTenant(ctx context.Context, tenantID string, fn func(ctx context.Context, tx Transaction) error) error
 	Ping(ctx context.Context) error
 	Close() error
 }
@@ -184,7 +184,7 @@ type PostgresTransaction struct {
 	logger *zap.Logger
 }
 
-func (pg *Postgres) WithTenant(ctx context.Context, orgID string, fn func(ctx context.Context, tx Transaction) error) error {
+func (pg *Postgres) WithTenant(ctx context.Context, tenantID string, fn func(ctx context.Context, tx Transaction) error) error {
 	tx, err := pg.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -192,7 +192,7 @@ func (pg *Postgres) WithTenant(ctx context.Context, orgID string, fn func(ctx co
 	defer tx.Rollback(ctx)
 
 	// Set the session variable for RLS
-	_, err = tx.Exec(ctx, fmt.Sprintf("SET LOCAL app.current_org_id = '%s'", orgID))
+	_, err = tx.Exec(ctx, fmt.Sprintf("SET LOCAL app.current_tenant_id = '%s'", tenantID))
 	if err != nil {
 		return fmt.Errorf("failed to set tenant context: %w", err)
 	}

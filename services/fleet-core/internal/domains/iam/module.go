@@ -137,6 +137,7 @@ func (m *Module) RegisterAuthRoutes(r chi.Router, logger *zap.Logger) {
 	r.Get("/auth/password-policy", m.AuthHandler.GetPolicy)
 	r.Post("/auth/orgs/{orgId}/switch", m.AuthHandler.SwitchOrg)
 	r.Get("/auth/orgs", m.AuthHandler.ListOrgs)
+	r.Post("/auth/reset-password-forced", m.AuthHandler.ResetPasswordForced)
 
 	// Profile
 	r.Get("/auth/profile", m.ProfileHandler.GetProfile)
@@ -154,34 +155,31 @@ func (m *Module) RegisterAuthRoutes(r chi.Router, logger *zap.Logger) {
 	r.Get("/auth/mfa/backup-codes", m.MFAHandler.GetBackupCodes)
 
 	// Admin - User management (requires user:read)
-	// TODO: Replace PermReadVehicles with a proper PermReadUsers IAM permission
 	r.Group(func(r chi.Router) {
-		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermReadVehicles))
+		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermReadUsers))
 		r.Get("/admin/users", m.UserHandler.ListUsers)
 		r.Get("/admin/users/{id}", m.UserHandler.GetUser)
 		r.Get("/admin/users/{id}/audit-log", m.UserHandler.GetUserAuditLog)
 	})
 
-	// Admin - User status update (requires user:write)
-	// TODO: Replace PermWriteVehicles with a proper PermWriteUsers IAM permission
+	// Admin - User status update (requires user:update)
 	r.Group(func(r chi.Router) {
-		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermWriteVehicles))
+		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermUpdateUsers))
 		r.Put("/admin/users/{id}/status", m.UserHandler.UpdateStatus)
 		r.Put("/admin/users/{id}", m.UserHandler.UpdatePreferences)
 	})
 
 	// Admin - User delete (requires user:delete)
-	// TODO: Replace PermWriteVehicles with a proper PermDeleteUsers IAM permission
 	r.Group(func(r chi.Router) {
-		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermWriteVehicles))
+		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermDeleteUsers))
 		r.Delete("/admin/users/{id}", m.UserHandler.DeleteUser)
 	})
 
-	// Admin - Invitations (requires user:write)
-	// TODO: Replace PermWriteVehicles with a proper PermWriteUsers IAM permission
+	// Admin - Invitations (requires user:create)
 	r.Group(func(r chi.Router) {
-		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermWriteVehicles))
+		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermCreateUsers))
 		r.Post("/admin/users/invite", m.InviteHandler.CreateInvite)
+		r.Post("/admin/users/create", m.UserHandler.CreateUser)
 		r.Post("/admin/users/invite/{id}/resend", m.InviteHandler.ResendInvite)
 		r.Delete("/admin/users/invite/{id}", m.InviteHandler.RevokeInvite)
 	})
@@ -197,10 +195,9 @@ func (m *Module) RegisterAuthRoutes(r chi.Router, logger *zap.Logger) {
 		r.Get("/admin/rbac/users/{id}/permissions", m.RBACHandler.GetUserPermissions)
 	})
 
-	// Admin - RBAC writes (requires role:write)
-	// TODO: Replace PermWriteVehicles with a proper PermWriteRoles IAM permission
+	// Admin - RBAC writes (requires roles:update)
 	r.Group(func(r chi.Router) {
-		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermWriteVehicles))
+		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermUpdateRoles))
 		r.Post("/admin/rbac/roles", m.RBACHandler.CreateRole)
 		r.Put("/admin/rbac/roles/{id}", m.RBACHandler.UpdateRole)
 		r.Post("/admin/rbac/roles/{id}/clone", m.RBACHandler.CloneRole)
@@ -210,10 +207,9 @@ func (m *Module) RegisterAuthRoutes(r chi.Router, logger *zap.Logger) {
 		r.Delete("/admin/rbac/users/unassign", m.RBACHandler.UnassignRole)
 	})
 
-	// Admin - RBAC deletes (requires role:delete)
-	// TODO: Replace PermWriteVehicles with a proper PermDeleteRoles IAM permission
+	// Admin - RBAC deletes (requires roles:delete)
 	r.Group(func(r chi.Router) {
-		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermWriteVehicles))
+		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermDeleteRoles))
 		r.Delete("/admin/rbac/roles/{id}", m.RBACHandler.DeleteRole)
 	})
 }

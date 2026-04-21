@@ -145,8 +145,8 @@ func (h *TripHandler) GetTrip(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TripHandler) CreateTrip(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == "" {
+	tenantID := h.getTenantID(r)
+	if tenantID == "" {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant context missing", nil)
 		return
 	}
@@ -184,7 +184,7 @@ func (h *TripHandler) CreateTrip(w http.ResponseWriter, r *http.Request) {
 		GSTClassification:    dto.GSTClassification,
 	}
 
-	trip, err := h.service.Create(r.Context(), orgID, req)
+	trip, err := h.service.Create(r.Context(), tenantID, req)
 	if err != nil {
 		h.logger.Error("failed to create trip", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -197,15 +197,15 @@ func (h *TripHandler) CreateTrip(w http.ResponseWriter, r *http.Request) {
 // ListTrips godoc
 func (h *TripHandler) ListTrips(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("DEBUG: Executing TRIP DOMAIN TripHandler.ListTrips")
-	orgID := h.getOrgID(r)
-	if orgID == "" {
+	tenantID := h.getTenantID(r)
+	if tenantID == "" {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant context missing", nil)
 		return
 	}
 
 	query := r.URL.Query()
 	filter := models.TripListFilter{
-		OrgID:        orgID,
+		TenantID:        tenantID,
 		Status:       query.Get("status"),
 		TripType:     query.Get("trip_type"),
 		VehicleID:    query.Get("vehicle_id"),
@@ -593,8 +593,8 @@ func (h *TripHandler) OptimizeRoute(w http.ResponseWriter, r *http.Request) {
 
 // GetTripSummary godoc
 func (h *TripHandler) GetTripSummary(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == "" {
+	tenantID := h.getTenantID(r)
+	if tenantID == "" {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant context missing", nil)
 		return
 	}
@@ -609,7 +609,7 @@ func (h *TripHandler) GetTripSummary(w http.ResponseWriter, r *http.Request) {
 		end = time.Now()
 	}
 
-	summary, err := h.service.GetTripSummary(r.Context(), orgID, start, end)
+	summary, err := h.service.GetTripSummary(r.Context(), tenantID, start, end)
 	if err != nil {
 		h.logger.Error("failed to get trip summary", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -621,13 +621,13 @@ func (h *TripHandler) GetTripSummary(w http.ResponseWriter, r *http.Request) {
 
 // GetDriverStats godoc
 func (h *TripHandler) GetDriverStats(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == "" {
+	tenantID := h.getTenantID(r)
+	if tenantID == "" {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant context missing", nil)
 		return
 	}
 
-	stats, err := h.service.GetDriverStats(r.Context(), orgID)
+	stats, err := h.service.GetDriverStats(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("failed to get driver stats", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -639,13 +639,13 @@ func (h *TripHandler) GetDriverStats(w http.ResponseWriter, r *http.Request) {
 
 // GetTripStats godoc
 func (h *TripHandler) GetTripStats(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == "" {
+	tenantID := h.getTenantID(r)
+	if tenantID == "" {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant context missing", nil)
 		return
 	}
 
-	stats, err := h.service.GetTripStats(r.Context(), orgID)
+	stats, err := h.service.GetTripStats(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("failed to get trip stats", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -657,13 +657,13 @@ func (h *TripHandler) GetTripStats(w http.ResponseWriter, r *http.Request) {
 
 // GetTripCustomers returns distinct customer names for filter dropdown
 func (h *TripHandler) GetTripCustomers(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == "" {
+	tenantID := h.getTenantID(r)
+	if tenantID == "" {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant context missing", nil)
 		return
 	}
 
-	customers, err := h.service.GetTripCustomers(r.Context(), orgID)
+	customers, err := h.service.GetTripCustomers(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("failed to get trip customers", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -735,20 +735,16 @@ func (h *TripHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, 
 	h.writeJSONResponse(w, statusCode, resp)
 }
 
-func (h *TripHandler) getOrgID(r *http.Request) string {
-	if val := r.Context().Value(ctxkeys.OrgIDKey); val != nil {
-		if orgIDStr, ok := val.(string); ok {
-			return orgIDStr
-		}
+func (h *TripHandler) getTenantID(r *http.Request) string {
+	if id, ok := ctxkeys.GetTenantID(r.Context()); ok {
+		return id.String()
 	}
 	return ""
 }
 
 func (h *TripHandler) getDriverID(r *http.Request) string {
-	if val := r.Context().Value(ctxkeys.UserIDKey); val != nil {
-		if userIDStr, ok := val.(string); ok {
-			return userIDStr
-		}
+	if id, ok := ctxkeys.GetUserID(r.Context()); ok {
+		return id.String()
 	}
 	return ""
 }

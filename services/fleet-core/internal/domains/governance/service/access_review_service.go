@@ -12,7 +12,7 @@ import (
 )
 
 type AccessReviewService interface {
-	GenerateReport(ctx context.Context, orgID uuid.UUID) (interface{}, error)
+	GenerateReport(ctx context.Context, tenantID uuid.UUID) (interface{}, error)
 }
 
 type accessReviewService struct {
@@ -25,7 +25,7 @@ func NewAccessReviewService(repo repository.GovernanceRepository, db *pgxpool.Po
 	return &accessReviewService{repo: repo, db: db, logger: logger}
 }
 
-func (s *accessReviewService) GenerateReport(ctx context.Context, orgID uuid.UUID) (interface{}, error) {
+func (s *accessReviewService) GenerateReport(ctx context.Context, tenantID uuid.UUID) (interface{}, error) {
 	// 1. Get users from organization
 	// 2. Get roles and permissions (Assume we query from RBAC tables)
 
@@ -36,7 +36,7 @@ func (s *accessReviewService) GenerateReport(ctx context.Context, orgID uuid.UUI
 		WHERE u.tenant_id = $1
 		GROUP BY u.id, u.role
 	`
-	rows, err := s.db.Query(ctx, usersQuery, orgID)
+	rows, err := s.db.Query(ctx, usersQuery, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -59,14 +59,14 @@ func (s *accessReviewService) GenerateReport(ctx context.Context, orgID uuid.UUI
 
 	report := map[string]interface{}{
 		"generated_at":    time.Now(),
-		"tenant_id": orgID,
+		"tenant_id": tenantID,
 		"users":           users,
 	}
 
 	// Log audit log
 	s.repo.CreateAuditLog(ctx, &models.GovernanceAuditLog{
 		ID:             uuid.New(),
-		OrganizationID: orgID,
+		OrganizationID: tenantID,
 		Action:         "GENERATE_ACCESS_REVIEW",
 		Module:         "SECURITY_REPORTING",
 		CreatedAt:      time.Now(),

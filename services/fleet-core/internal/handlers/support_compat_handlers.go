@@ -18,24 +18,22 @@ import (
 // Security: Check if user has permission to access target user
 func (h *SupportCompatHandlers) canAccessUser(r *http.Request, targetUserID uuid.UUID) (bool, error) {
 	// Get authenticated user from context
-	authUserIDStr, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
-	if !ok || authUserIDStr == "" {
+	authUserID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		return false, errors.New("unauthorized")
 	}
-	authUserID, _ := uuid.Parse(authUserIDStr)
 
 	// Allow users to access their own data
 	if authUserID == targetUserID {
 		return true, nil
 	}
 
-	// Check if the authenticated user has admin or super_admin role
+	// Check if the authenticated user has an administrative role
 	role, ok := r.Context().Value(ctxkeys.RoleKey).(string)
-	if ok && (role == "admin" || role == "super_admin") {
+	if ok && (role == "admin" || role == "super_admin" || role == "org_admin" || role == "fleet_manager") {
 		// Admins can access any user in the same org
 		// Verify if target user belongs to the same org as the authenticated admin
-		authOrgIDStr, _ := r.Context().Value(ctxkeys.OrgIDKey).(string)
-		authOrgID, _ := uuid.Parse(authOrgIDStr)
+		authTenantID, _ := ctxkeys.GetTenantID(r.Context())
 
 		targetUser, err := h.authSvc.GetUserByID(r.Context(), targetUserID)
 		if err != nil {
@@ -45,17 +43,17 @@ func (h *SupportCompatHandlers) canAccessUser(r *http.Request, targetUserID uuid
 			return false, err
 		}
 
-		if targetUser.OrgID != authOrgID && role != "super_admin" {
+		if targetUser.TenantID != authTenantID && role != "super_admin" {
 			h.logger.Warn("Access denied: Admin from different org attempted access",
-				zap.String("auth_user_id", authUserIDStr),
-				zap.String("auth_org_id", authOrgIDStr),
+				zap.String("auth_user_id", authUserID.String()),
+				zap.String("auth_tenant_id", authTenantID.String()),
 				zap.String("target_user_id", targetUserID.String()),
-				zap.String("target_org_id", targetUser.OrgID.String()))
+				zap.String("target_tenant_id", targetUser.TenantID.String()))
 			return false, errors.New("forbidden: user belongs to a different organization")
 		}
 
 		h.logger.Debug("Admin access granted to user data",
-			zap.String("auth_user_id", authUserIDStr),
+			zap.String("auth_user_id", authUserID.String()),
 			zap.String("target_user_id", targetUserID.String()),
 			zap.String("role", role))
 		return true, nil
@@ -63,7 +61,7 @@ func (h *SupportCompatHandlers) canAccessUser(r *http.Request, targetUserID uuid
 
 	// Access denied - user is not self and not admin
 	h.logger.Warn("Access denied: user lacks permission to access target user",
-		zap.String("auth_user_id", authUserIDStr),
+		zap.String("auth_user_id", authUserID.String()),
 		zap.String("target_user_id", targetUserID.String()),
 		zap.String("role", role))
 	return false, nil
@@ -122,26 +120,29 @@ func (h *SupportCompatHandlers) GetUserProfile(w http.ResponseWriter, r *http.Re
 	}
 
 	// Get authenticated user from context (set by auth middleware)
-	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
-	if !ok || authUserID == "" {
+	authUserUUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	authUserUUID, _ := uuid.Parse(authUserID)
 
-	// Allow users to access their own profile
-	if authUserUUID == userId {
-		goto fetchUser
+	// Allow users to access their own profile or admins within their organization
+	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
+	isAdmin := role == "super_admin" || role == "admin" || role == "org_admin" || role == "fleet_manager"
+	
+	if authUserUUID == userId || isAdmin {
+		allowed := authUserUUID == userId
+		if !allowed && isAdmin {
+			allowed, _ = h.canAccessUser(r, userId)
+		}
+		
+		if allowed {
+			goto fetchUser
+		}
 	}
 
-	// SECURITY FIX: Prevent cross-tenant access
-	// For now, reject admin cross-tenant access until proper RBAC is implemented
-	// In a full implementation, we would check:
-	// 1. If authenticated user has admin role
-	// 2. If target user belongs to same organization as admin
-	//     via org membership check using authUser's org_id from context
-	h.logger.Warn("Cross-tenant access attempt blocked",
-		zap.String("auth_user", authUserID),
+	h.logger.Warn("Profile access denied",
+		zap.String("auth_user", authUserUUID.String()),
 		zap.String("target_user", userIdStr))
 	http.Error(w, "Access denied", http.StatusForbidden)
 	return
@@ -176,16 +177,18 @@ func (h *SupportCompatHandlers) GetUserSecurity(w http.ResponseWriter, r *http.R
 	}
 
 	// SECURITY FIX: Prevent cross-tenant access - only self-access allowed
-	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
-	if !ok || authUserID == "" {
+	authUserUUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	authUserUUID, _ := uuid.Parse(authUserID)
 
-	if authUserUUID != userId {
+	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
+	isAdmin := role == "super_admin" || role == "admin" || role == "org_admin" || role == "fleet_manager"
+
+	if authUserUUID != userId && !isAdmin {
 		h.logger.Warn("Cross-tenant security data access blocked",
-			zap.String("auth_user", authUserID),
+			zap.String("auth_user", authUserUUID.String()),
 			zap.String("target_user", userIdStr))
 		http.Error(w, "Access denied", http.StatusForbidden)
 		return
@@ -216,16 +219,18 @@ func (h *SupportCompatHandlers) GetUserSessions(w http.ResponseWriter, r *http.R
 	}
 
 	// SECURITY FIX: Prevent cross-tenant access
-	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
-	if !ok || authUserID == "" {
+	authUserUUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	authUserUUID, _ := uuid.Parse(authUserID)
 
-	if authUserUUID != userId {
+	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
+	isAdmin := role == "super_admin" || role == "admin" || role == "org_admin" || role == "fleet_manager"
+
+	if authUserUUID != userId && !isAdmin {
 		h.logger.Warn("Cross-tenant sessions access blocked",
-			zap.String("auth_user", authUserID),
+			zap.String("auth_user", authUserUUID.String()),
 			zap.String("target_user", userIdStr))
 		http.Error(w, "Access denied", http.StatusForbidden)
 		return
@@ -250,16 +255,18 @@ func (h *SupportCompatHandlers) GetUserLoginHistory(w http.ResponseWriter, r *ht
 	}
 
 	// SECURITY FIX: Prevent cross-tenant access
-	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
-	if !ok || authUserID == "" {
+	authUserUUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	authUserUUID, _ := uuid.Parse(authUserID)
 
-	if authUserUUID != userId {
+	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
+	isAdmin := role == "super_admin" || role == "admin" || role == "org_admin" || role == "fleet_manager"
+
+	if authUserUUID != userId && !isAdmin {
 		h.logger.Warn("Cross-tenant login history access blocked",
-			zap.String("auth_user", authUserID),
+			zap.String("auth_user", authUserUUID.String()),
 			zap.String("target_user", userIdStr))
 		http.Error(w, "Access denied", http.StatusForbidden)
 		return
@@ -284,16 +291,18 @@ func (h *SupportCompatHandlers) GetUserRoles(w http.ResponseWriter, r *http.Requ
 	}
 
 	// SECURITY FIX: Prevent cross-tenant access
-	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
-	if !ok || authUserID == "" {
+	authUserUUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	authUserUUID, _ := uuid.Parse(authUserID)
 
-	if authUserUUID != userId {
+	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
+	isAdmin := role == "super_admin" || role == "admin" || role == "org_admin" || role == "fleet_manager"
+
+	if authUserUUID != userId && !isAdmin {
 		h.logger.Warn("Cross-tenant roles access blocked",
-			zap.String("auth_user", authUserID),
+			zap.String("auth_user", authUserUUID.String()),
 			zap.String("target_user", userIdStr))
 		http.Error(w, "Access denied", http.StatusForbidden)
 		return
@@ -333,16 +342,18 @@ func (h *SupportCompatHandlers) GetUserNotes(w http.ResponseWriter, r *http.Requ
 	}
 
 	// SECURITY FIX: Prevent cross-tenant access
-	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
-	if !ok || authUserID == "" {
+	authUserUUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	authUserUUID, _ := uuid.Parse(authUserID)
 
-	if authUserUUID != userId {
+	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
+	isAdmin := role == "super_admin" || role == "admin" || role == "org_admin" || role == "fleet_manager"
+
+	if authUserUUID != userId && !isAdmin {
 		h.logger.Warn("Cross-tenant notes access blocked",
-			zap.String("auth_user", authUserID),
+			zap.String("auth_user", authUserUUID.String()),
 			zap.String("target_user", userIdStr))
 		http.Error(w, "Access denied", http.StatusForbidden)
 		return
@@ -367,16 +378,18 @@ func (h *SupportCompatHandlers) AddUserNote(w http.ResponseWriter, r *http.Reque
 	}
 
 	// SECURITY FIX: Prevent cross-tenant access
-	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
-	if !ok || authUserID == "" {
+	authUserUUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	authUserUUID, _ := uuid.Parse(authUserID)
 
-	if authUserUUID != userId {
+	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
+	isAdmin := role == "super_admin" || role == "admin" || role == "org_admin" || role == "fleet_manager"
+
+	if authUserUUID != userId && !isAdmin {
 		h.logger.Warn("Cross-tenant add note blocked",
-			zap.String("auth_user", authUserID),
+			zap.String("auth_user", authUserUUID.String()),
 			zap.String("target_user", userIdStr))
 		http.Error(w, "Access denied", http.StatusForbidden)
 		return
@@ -401,11 +414,12 @@ func (h *SupportCompatHandlers) AddUserNote(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Log Audit
-	agentID, _ := r.Context().Value(ctxkeys.UserIDKey).(string)
-	orgID, _ := r.Context().Value(ctxkeys.OrgIDKey).(string)
-	agentUID, _ := uuid.Parse(agentID)
-	orgUID, _ := uuid.Parse(orgID)
+	agentUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	orgUID, _ := ctxkeys.GetTenantID(r.Context())
 
 	h.supportRepo.LogAudit(r.Context(), &repository.AuditLog{
 		OrganizationID: orgUID,
@@ -437,16 +451,18 @@ func (h *SupportCompatHandlers) RevokeSession(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
-	if !ok || authUserID == "" {
+	authUserUUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	authUserUUID, _ := uuid.Parse(authUserID)
 
-	if authUserUUID != userId {
+	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
+	isAdmin := role == "super_admin" || role == "admin" || role == "org_admin" || role == "fleet_manager"
+
+	if authUserUUID != userId && !isAdmin {
 		h.logger.Warn("Cross-tenant session revocation blocked",
-			zap.String("auth_user", authUserID),
+			zap.String("auth_user", authUserUUID.String()),
 			zap.String("target_user", userIdStr))
 		http.Error(w, "Access denied", http.StatusForbidden)
 		return
@@ -461,10 +477,12 @@ func (h *SupportCompatHandlers) RevokeSession(w http.ResponseWriter, r *http.Req
 	// Log Audit
 	userIdStr = chi.URLParam(r, "id")
 	userId, _ = uuid.Parse(userIdStr)
-	agentID, _ := r.Context().Value(ctxkeys.UserIDKey).(string)
-	orgID, _ := r.Context().Value(ctxkeys.OrgIDKey).(string)
-	agentUID, _ := uuid.Parse(agentID)
-	orgUID, _ := uuid.Parse(orgID)
+	agentUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	orgUID, _ := ctxkeys.GetTenantID(r.Context())
 
 	h.supportRepo.LogAudit(r.Context(), &repository.AuditLog{
 		OrganizationID: orgUID,
@@ -489,25 +507,29 @@ func (h *SupportCompatHandlers) ResetPassword(w http.ResponseWriter, r *http.Req
 	}
 
 	// SECURITY FIX: Prevent cross-tenant password reset
-	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
-	if !ok || authUserID == "" {
+	authUserUUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	authUserUUID, _ := uuid.Parse(authUserID)
 
-	if authUserUUID != userId {
+	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
+	isAdmin := role == "super_admin" || role == "admin" || role == "org_admin" || role == "fleet_manager"
+
+	if authUserUUID != userId && !isAdmin {
 		h.logger.Warn("Cross-tenant password reset blocked",
-			zap.String("auth_user", authUserID),
+			zap.String("auth_user", authUserUUID.String()),
 			zap.String("target_user", userIdStr))
 		http.Error(w, "Access denied", http.StatusForbidden)
 		return
 	}
 
-	agentID, _ := r.Context().Value(ctxkeys.UserIDKey).(string)
-	orgID, _ := r.Context().Value(ctxkeys.OrgIDKey).(string)
-	agentUID, _ := uuid.Parse(agentID)
-	orgUID, _ := uuid.Parse(orgID)
+	agentUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	orgUID, _ := ctxkeys.GetTenantID(r.Context())
 
 	h.supportRepo.LogAudit(r.Context(), &repository.AuditLog{
 		OrganizationID: orgUID,
@@ -530,25 +552,29 @@ func (h *SupportCompatHandlers) UnlockAccount(w http.ResponseWriter, r *http.Req
 	}
 
 	// SECURITY FIX: Prevent cross-tenant account unlock
-	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
-	if !ok || authUserID == "" {
+	authUserUUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	authUserUUID, _ := uuid.Parse(authUserID)
 
-	if authUserUUID != userId {
+	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
+	isAdmin := role == "super_admin" || role == "admin" || role == "org_admin" || role == "fleet_manager"
+
+	if authUserUUID != userId && !isAdmin {
 		h.logger.Warn("Cross-tenant account unlock blocked",
-			zap.String("auth_user", authUserID),
+			zap.String("auth_user", authUserUUID.String()),
 			zap.String("target_user", userIdStr))
 		http.Error(w, "Access denied", http.StatusForbidden)
 		return
 	}
 
-	agentID, _ := r.Context().Value(ctxkeys.UserIDKey).(string)
-	orgID, _ := r.Context().Value(ctxkeys.OrgIDKey).(string)
-	agentUID, _ := uuid.Parse(agentID)
-	orgUID, _ := uuid.Parse(orgID)
+	agentUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	orgUID, _ := ctxkeys.GetTenantID(r.Context())
 
 	h.supportRepo.LogAudit(r.Context(), &repository.AuditLog{
 		OrganizationID: orgUID,
@@ -571,25 +597,26 @@ func (h *SupportCompatHandlers) ResetMFA(w http.ResponseWriter, r *http.Request)
 	}
 
 	// SECURITY FIX: Prevent cross-tenant MFA reset
-	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
-	if !ok || authUserID == "" {
+	authUserUUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	authUserUUID, _ := uuid.Parse(authUserID)
 
 	if authUserUUID != userId {
 		h.logger.Warn("Cross-tenant MFA reset blocked",
-			zap.String("auth_user", authUserID),
+			zap.String("auth_user", authUserUUID.String()),
 			zap.String("target_user", userIdStr))
 		http.Error(w, "Access denied", http.StatusForbidden)
 		return
 	}
 
-	agentID, _ := r.Context().Value(ctxkeys.UserIDKey).(string)
-	orgID, _ := r.Context().Value(ctxkeys.OrgIDKey).(string)
-	agentUID, _ := uuid.Parse(agentID)
-	orgUID, _ := uuid.Parse(orgID)
+	agentUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	orgUID, _ := ctxkeys.GetTenantID(r.Context())
 
 	h.supportRepo.LogAudit(r.Context(), &repository.AuditLog{
 		OrganizationID: orgUID,
@@ -612,25 +639,29 @@ func (h *SupportCompatHandlers) ForceLogout(w http.ResponseWriter, r *http.Reque
 	}
 
 	// SECURITY FIX: Prevent cross-tenant force logout
-	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
-	if !ok || authUserID == "" {
+	authUserUUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	authUserUUID, _ := uuid.Parse(authUserID)
 
-	if authUserUUID != userId {
+	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
+	isAdmin := role == "super_admin" || role == "admin" || role == "org_admin" || role == "fleet_manager"
+
+	if authUserUUID != userId && !isAdmin {
 		h.logger.Warn("Cross-tenant force logout blocked",
-			zap.String("auth_user", authUserID),
+			zap.String("auth_user", authUserUUID.String()),
 			zap.String("target_user", userIdStr))
 		http.Error(w, "Access denied", http.StatusForbidden)
 		return
 	}
 
-	agentID, _ := r.Context().Value(ctxkeys.UserIDKey).(string)
-	orgID, _ := r.Context().Value(ctxkeys.OrgIDKey).(string)
-	agentUID, _ := uuid.Parse(agentID)
-	orgUID, _ := uuid.Parse(orgID)
+	agentUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	orgUID, _ := ctxkeys.GetTenantID(r.Context())
 
 	h.supportRepo.LogAudit(r.Context(), &repository.AuditLog{
 		OrganizationID: orgUID,
@@ -646,10 +677,9 @@ func (h *SupportCompatHandlers) ForceLogout(w http.ResponseWriter, r *http.Reque
 
 func (h *SupportCompatHandlers) GetIncidents(w http.ResponseWriter, r *http.Request) {
 	// For compat, we use a default org ID if not provided, or fetch from context
-	orgIDStr, _ := r.Context().Value(ctxkeys.OrgIDKey).(string)
-	orgID, _ := uuid.Parse(orgIDStr)
+	tenantID, _ := ctxkeys.GetTenantID(r.Context())
 
-	tickets, err := h.supportRepo.GetTickets(r.Context(), orgID)
+	tickets, err := h.supportRepo.GetTickets(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("Failed to fetch tickets", zap.Error(err))
 		tickets = []*repository.SupportTicket{} // Fallback to empty for UI stability
@@ -691,9 +721,8 @@ func (h *SupportCompatHandlers) GetIncidentDetail(w http.ResponseWriter, r *http
 }
 
 func (h *SupportCompatHandlers) GetIncidentMetrics(w http.ResponseWriter, r *http.Request) {
-	orgIDStr, _ := r.Context().Value(ctxkeys.OrgIDKey).(string)
-	orgID, _ := uuid.Parse(orgIDStr)
-	metrics, err := h.supportRepo.GetDashboardMetrics(r.Context(), orgID)
+	tenantID, _ := ctxkeys.GetTenantID(r.Context())
+	metrics, err := h.supportRepo.GetDashboardMetrics(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("Failed to fetch metrics", zap.Error(err))
 		// Fallback to static metrics for UI stability
@@ -708,9 +737,8 @@ func (h *SupportCompatHandlers) GetIncidentMetrics(w http.ResponseWriter, r *htt
 }
 
 func (h *SupportCompatHandlers) GetIncidentFeed(w http.ResponseWriter, r *http.Request) {
-	orgIDStr, _ := r.Context().Value(ctxkeys.OrgIDKey).(string)
-	orgID, _ := uuid.Parse(orgIDStr)
-	tickets, _ := h.supportRepo.GetTickets(r.Context(), orgID)
+	tenantID, _ := ctxkeys.GetTenantID(r.Context())
+	tickets, _ := h.supportRepo.GetTickets(r.Context(), tenantID)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{

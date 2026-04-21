@@ -61,15 +61,15 @@ func (r *SubscriptionRepository) IdentifyOrganizationsForInvoicing(ctx context.C
 	}
 	defer rows.Close()
 
-	var orgIDs []uuid.UUID
+	var tenantIDs []uuid.UUID
 	for rows.Next() {
 		var id uuid.UUID
 		if err := rows.Scan(&id); err != nil {
 			return nil, fmt.Errorf("failed to scan tenant_id: %w", err)
 		}
-		orgIDs = append(orgIDs, id)
+		tenantIDs = append(tenantIDs, id)
 	}
-	return orgIDs, nil
+	return tenantIDs, nil
 }
 
 func (r *SubscriptionRepository) getPlanComponents(ctx context.Context, planID uuid.UUID) ([]models.PricingComponent, error) {
@@ -95,13 +95,13 @@ func (r *SubscriptionRepository) getPlanComponents(ctx context.Context, planID u
 }
 
 // GetSubscription retrieves the current subscription for an organization
-func (r *SubscriptionRepository) GetSubscription(ctx context.Context, orgID uuid.UUID) (*models.Subscription, error) {
+func (r *SubscriptionRepository) GetSubscription(ctx context.Context, tenantID uuid.UUID) (*models.Subscription, error) {
 	var s models.Subscription
 	query := `SELECT id, tenant_id, plan_id, status, current_period_start, current_period_end, trial_end, cancel_at_period_end, metadata, created_at, updated_at 
 	          FROM billing_subscriptions WHERE tenant_id = $1`
 
-	err := r.db.QueryRow(ctx, query, orgID).Scan(
-		&s.ID, &s.OrgID, &s.PlanID, &s.Status,
+	err := r.db.QueryRow(ctx, query, tenantID).Scan(
+		&s.ID, &s.TenantID, &s.PlanID, &s.Status,
 		&s.CurrentPeriodStart, &s.CurrentPeriodEnd, &s.TrialEnd,
 		&s.CancelAtPeriodEnd, &s.Metadata, &s.CreatedAt, &s.UpdatedAt,
 	)
@@ -153,7 +153,7 @@ func (r *SubscriptionRepository) CreateSubscription(ctx context.Context, sub *mo
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
 
 	_, err := r.db.Exec(ctx, query,
-		sub.ID, sub.OrgID, sub.PlanID, sub.Status,
+		sub.ID, sub.TenantID, sub.PlanID, sub.Status,
 		sub.CurrentPeriodStart, sub.CurrentPeriodEnd, sub.TrialEnd,
 		sub.CancelAtPeriodEnd, sub.Metadata, sub.CreatedAt, sub.UpdatedAt,
 	)

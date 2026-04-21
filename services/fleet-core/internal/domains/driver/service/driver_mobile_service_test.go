@@ -109,8 +109,8 @@ func (m *MockDriverRepository) ListExpenses(ctx context.Context, driverID string
 	return args.Get(0).([]*models.DriverExpense), args.Error(1)
 }
 
-func (m *MockDriverRepository) LogBehaviorScoreChange(ctx context.Context, driverID, orgID uuid.UUID, oldScore, newScore int, reason, eventType string, userID uuid.UUID, userEmail string) error {
-	args := m.Called(ctx, driverID, orgID, oldScore, newScore, reason, eventType, userID, userEmail)
+func (m *MockDriverRepository) LogBehaviorScoreChange(ctx context.Context, driverID, tenantID uuid.UUID, oldScore, newScore int, reason, eventType string, userID uuid.UUID, userEmail string) error {
+	args := m.Called(ctx, driverID, tenantID, oldScore, newScore, reason, eventType, userID, userEmail)
 	return args.Error(0)
 }
 
@@ -158,13 +158,13 @@ func (m *MockDriverRepository) GetAttendanceByID(ctx context.Context, id uuid.UU
 	return args.Get(0).(*models.DriverAttendance), args.Error(1)
 }
 
-func (m *MockDriverRepository) GetAttendanceByDriver(ctx context.Context, driverID, orgID uuid.UUID, from, to time.Time) ([]*models.DriverAttendance, error) {
-	args := m.Called(ctx, driverID, orgID, from, to)
+func (m *MockDriverRepository) GetAttendanceByDriver(ctx context.Context, driverID, tenantID uuid.UUID, from, to time.Time) ([]*models.DriverAttendance, error) {
+	args := m.Called(ctx, driverID, tenantID, from, to)
 	return args.Get(0).([]*models.DriverAttendance), args.Error(1)
 }
 
-func (m *MockDriverRepository) UpdateCheckOut(ctx context.Context, id, orgID uuid.UUID, checkOut time.Time, remarks string) error {
-	args := m.Called(ctx, id, orgID, checkOut, remarks)
+func (m *MockDriverRepository) UpdateCheckOut(ctx context.Context, id, tenantID uuid.UUID, checkOut time.Time, remarks string) error {
+	args := m.Called(ctx, id, tenantID, checkOut, remarks)
 	return args.Error(0)
 }
 
@@ -181,8 +181,8 @@ func (m *MockDriverRepository) GetScheduleByID(ctx context.Context, id uuid.UUID
 	return args.Get(0).(*models.DriverSchedule), args.Error(1)
 }
 
-func (m *MockDriverRepository) GetSchedulesByDriver(ctx context.Context, driverID, orgID uuid.UUID) ([]*models.DriverSchedule, error) {
-	args := m.Called(ctx, driverID, orgID)
+func (m *MockDriverRepository) GetSchedulesByDriver(ctx context.Context, driverID, tenantID uuid.UUID) ([]*models.DriverSchedule, error) {
+	args := m.Called(ctx, driverID, tenantID)
 	return args.Get(0).([]*models.DriverSchedule), args.Error(1)
 }
 
@@ -191,8 +191,8 @@ func (m *MockDriverRepository) UpdateSchedule(ctx context.Context, schedule *mod
 	return args.Error(0)
 }
 
-func (m *MockDriverRepository) DeleteSchedule(ctx context.Context, id, orgID uuid.UUID) error {
-	args := m.Called(ctx, id, orgID)
+func (m *MockDriverRepository) DeleteSchedule(ctx context.Context, id, tenantID uuid.UUID) error {
+	args := m.Called(ctx, id, tenantID)
 	return args.Error(0)
 }
 
@@ -203,7 +203,7 @@ func TestUpdateDutyStatus(t *testing.T) {
 
 	ctx := context.Background()
 	driverID := uuid.New().String()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	req := &models.DutyStatusLog{
 		Status:   "ON_DUTY",
 		Location: &models.Location{Latitude: 28.6, Longitude: 77.2},
@@ -216,7 +216,7 @@ func TestUpdateDutyStatus(t *testing.T) {
 		return log.DriverID == driverID && log.Status == "ON_DUTY"
 	})).Return(nil)
 
-	err := service.UpdateDutyStatus(ctx, driverID, orgID, req)
+	err := service.UpdateDutyStatus(ctx, driverID, tenantID, req)
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
 }
@@ -228,12 +228,12 @@ func TestSendMessage(t *testing.T) {
 
 	ctx := context.Background()
 	driverID := "driver-123"
-	orgID := "org-123"
+	tenantID := "org-123"
 
-	mockRepo.On("GetByID", ctx, driverID).Return(&models.Driver{ID: driverID, OrgID: orgID}, nil)
+	mockRepo.On("GetByID", ctx, driverID).Return(&models.Driver{ID: driverID, TenantID: tenantID}, nil)
 	mockRepo.On("CreateMessage", ctx, mock.AnythingOfType("*models.DriverMessage")).Return(nil)
 
-	msg, err := service.SendMessage(ctx, driverID, orgID, "Hello Dispatch", "CHAT", "")
+	msg, err := service.SendMessage(ctx, driverID, tenantID, "Hello Dispatch", "CHAT", "")
 	assert.NoError(t, err)
 	assert.NotNil(t, msg)
 	assert.Equal(t, "Hello Dispatch", msg.Content)
@@ -248,13 +248,13 @@ func TestSubmitExpense(t *testing.T) {
 
 	ctx := context.Background()
 	driverID := "driver-123"
-	orgID := "org-123"
+	tenantID := "org-123"
 	req := &models.DriverExpense{Amount: 50.0, Currency: "USD"}
 
-	mockRepo.On("GetByID", ctx, driverID).Return(&models.Driver{ID: driverID, OrgID: orgID}, nil)
+	mockRepo.On("GetByID", ctx, driverID).Return(&models.Driver{ID: driverID, TenantID: tenantID}, nil)
 	mockRepo.On("CreateExpense", ctx, mock.AnythingOfType("*models.DriverExpense")).Return(nil)
 
-	res, err := service.SubmitExpense(ctx, driverID, orgID, req)
+	res, err := service.SubmitExpense(ctx, driverID, tenantID, req)
 	assert.NoError(t, err)
 	assert.NotNil(t, res)
 	assert.Equal(t, "PENDING", res.Status)

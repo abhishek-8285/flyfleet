@@ -12,6 +12,7 @@ import (
 	"github.com/flyfleet/fleet-core/internal/domains/alert/domains/alerts/repository"
 	"github.com/flyfleet/fleet-core/internal/domains/alert/domains/alerts/rule_engine"
 	"github.com/flyfleet/fleet-core/internal/domains/alert/providers"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 )
 
 type AlertService struct {
@@ -36,7 +37,7 @@ func NewAlertService(
 }
 
 // CreateRule creates a new alert rule
-func (s *AlertService) CreateRule(ctx context.Context, orgID uuid.UUID, req *models.CreateRuleRequest) (*models.AlertRule, error) {
+func (s *AlertService) CreateRule(ctx context.Context, tenantID uuid.UUID, req *models.CreateRuleRequest) (*models.AlertRule, error) {
 	// Validate rule type
 	validTypes := map[string]bool{
 		models.AlertTypeOverspeed:            true,
@@ -80,7 +81,7 @@ func (s *AlertService) CreateRule(ctx context.Context, orgID uuid.UUID, req *mod
 	userID := s.getUserID(ctx)
 	rule := &models.AlertRule{
 		ID:          uuid.New().String(),
-		OrgID:       orgID,
+		TenantID:       tenantID,
 		Name:        req.Name,
 		Type:        req.Type,
 		Description: req.Description,
@@ -106,16 +107,10 @@ func (s *AlertService) CreateRule(ctx context.Context, orgID uuid.UUID, req *mod
 }
 
 func (s *AlertService) getUserID(ctx context.Context) uuid.UUID {
-	val := ctx.Value("user_id")
-	if val == nil {
-		return uuid.Nil
+	if id, ok := ctxkeys.GetUserID(ctx); ok {
+		return id
 	}
-	uidStr, ok := val.(string)
-	if !ok {
-		return uuid.Nil
-	}
-	uid, _ := uuid.Parse(uidStr)
-	return uid
+	return uuid.Nil
 }
 
 // GetRule retrieves an alert rule by ID
@@ -129,8 +124,8 @@ func (s *AlertService) GetRule(ctx context.Context, id string) (*models.AlertRul
 }
 
 // ListRules retrieves alert rules with filtering and pagination
-func (s *AlertService) ListRules(ctx context.Context, orgID uuid.UUID, filter models.AlertListFilter) ([]*models.AlertRule, int, error) {
-	rules, totalCount, err := s.repo.ListRules(ctx, orgID, filter)
+func (s *AlertService) ListRules(ctx context.Context, tenantID uuid.UUID, filter models.AlertListFilter) ([]*models.AlertRule, int, error) {
+	rules, totalCount, err := s.repo.ListRules(ctx, tenantID, filter)
 	if err != nil {
 		s.logger.Error("failed to list alert rules", zap.Error(err))
 		return nil, 0, fmt.Errorf("failed to list alert rules: %w", err)
@@ -407,8 +402,8 @@ func (s *AlertService) EscalateAlert(ctx context.Context, id string, escalateTo 
 }
 
 // GetAlertSummary retrieves alert statistics
-func (s *AlertService) GetAlertSummary(ctx context.Context, orgID uuid.UUID, fromDate, toDate time.Time) (*models.AlertSummary, error) {
-	summary, err := s.repo.GetAlertSummary(ctx, orgID, fromDate, toDate)
+func (s *AlertService) GetAlertSummary(ctx context.Context, tenantID uuid.UUID, fromDate, toDate time.Time) (*models.AlertSummary, error) {
+	summary, err := s.repo.GetAlertSummary(ctx, tenantID, fromDate, toDate)
 	if err != nil {
 		s.logger.Error("failed to get alert summary", zap.Error(err))
 		return nil, fmt.Errorf("failed to get alert summary: %w", err)
@@ -417,7 +412,7 @@ func (s *AlertService) GetAlertSummary(ctx context.Context, orgID uuid.UUID, fro
 }
 
 // GetAlertTrends retrieves alert trends over time
-func (s *AlertService) GetAlertTrends(ctx context.Context, orgID uuid.UUID, fromDate, toDate time.Time) ([]*models.AlertTrend, error) {
+func (s *AlertService) GetAlertTrends(ctx context.Context, tenantID uuid.UUID, fromDate, toDate time.Time) ([]*models.AlertTrend, error) {
 	// This would aggregate alerts by date
 	// Implementation would depend on specific requirements for trend analysis
 	return []*models.AlertTrend{}, nil

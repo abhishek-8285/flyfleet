@@ -22,8 +22,8 @@ func (m *MockRepo) CreateRequest(ctx context.Context, req *models.GovernanceRequ
 	return args.Error(0)
 }
 
-func (m *MockRepo) GetRequestByID(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*models.GovernanceRequest, error) {
-	args := m.Called(ctx, id, orgID)
+func (m *MockRepo) GetRequestByID(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) (*models.GovernanceRequest, error) {
+	args := m.Called(ctx, id, tenantID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -39,13 +39,13 @@ func (m *MockRepo) ListRequests(ctx context.Context, filter models.GovernanceReq
 	return nil, nil
 }
 
-func (m *MockRepo) UpdateRequestStatus(ctx context.Context, id uuid.UUID, orgID uuid.UUID, status models.GovernanceRequestStatus, comments *string, expiryDate *time.Time) error {
-	args := m.Called(ctx, id, orgID, status, comments, expiryDate)
+func (m *MockRepo) UpdateRequestStatus(ctx context.Context, id uuid.UUID, tenantID uuid.UUID, status models.GovernanceRequestStatus, comments *string, expiryDate *time.Time) error {
+	args := m.Called(ctx, id, tenantID, status, comments, expiryDate)
 	return args.Error(0)
 }
 
-func (m *MockRepo) GetSettings(ctx context.Context, orgID uuid.UUID) (*models.GovernanceSettings, error) {
-	args := m.Called(ctx, orgID)
+func (m *MockRepo) GetSettings(ctx context.Context, tenantID uuid.UUID) (*models.GovernanceSettings, error) {
+	args := m.Called(ctx, tenantID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -60,7 +60,7 @@ func (m *MockRepo) CreateAuditLog(ctx context.Context, log *models.GovernanceAud
 	return nil
 }
 
-func (m *MockRepo) ListAuditLogs(ctx context.Context, orgID uuid.UUID, page, pageSize int) ([]models.GovernanceAuditLog, int, error) {
+func (m *MockRepo) ListAuditLogs(ctx context.Context, tenantID uuid.UUID, page, pageSize int) ([]models.GovernanceAuditLog, int, error) {
 	return nil, 0, nil
 }
 
@@ -95,16 +95,16 @@ func (m *MockRepo) SaveComplianceReport(ctx context.Context, report *models.Comp
 	args := m.Called(ctx, report)
 	return args.Error(0)
 }
-func (m *MockRepo) UpdateVerificationStatus(ctx context.Context, id, orgID uuid.UUID, status string, verifiedBy uuid.UUID) error {
-	args := m.Called(ctx, id, orgID, status, verifiedBy)
+func (m *MockRepo) UpdateVerificationStatus(ctx context.Context, id, tenantID uuid.UUID, status string, verifiedBy uuid.UUID) error {
+	args := m.Called(ctx, id, tenantID, status, verifiedBy)
 	return args.Error(0)
 }
 func (m *MockRepo) ListAllSettings(ctx context.Context) ([]models.GovernanceSettings, error) {
 	args := m.Called(ctx)
 	return args.Get(0).([]models.GovernanceSettings), args.Error(1)
 }
-func (m *MockRepo) EnforceRetentionPolicy(ctx context.Context, orgID uuid.UUID, tableName string, retentionDays int) (int64, error) {
-	args := m.Called(ctx, orgID, tableName, retentionDays)
+func (m *MockRepo) EnforceRetentionPolicy(ctx context.Context, tenantID uuid.UUID, tableName string, retentionDays int) (int64, error) {
+	args := m.Called(ctx, tenantID, tableName, retentionDays)
 	return args.Get(0).(int64), args.Error(1)
 }
 

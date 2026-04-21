@@ -23,14 +23,14 @@ func NewBillingRepository(db *pgxpool.Pool) *BillingRepository {
 	return &BillingRepository{db: db}
 }
 
-func (r *BillingRepository) ListInvoices(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.Invoice, int, error) {
+func (r *BillingRepository) ListInvoices(ctx context.Context, tenantID uuid.UUID, page, size int) ([]models.Invoice, int, error) {
 	offset := (page - 1) * size
 
 	query := `SELECT id, tenant_id, invoice_number, customer_name, invoice_date, due_date, status, currency, total_amount, amount_paid, balance_due, created_at, updated_at
 	          FROM invoices WHERE tenant_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT $2 OFFSET $3`
 
 	start := time.Now()
-	rows, err := r.db.Query(ctx, query, orgID, size, offset)
+	rows, err := r.db.Query(ctx, query, tenantID, size, offset)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to query invoices: %w", err)
@@ -40,7 +40,7 @@ func (r *BillingRepository) ListInvoices(ctx context.Context, orgID uuid.UUID, p
 	var invoices []models.Invoice
 	for rows.Next() {
 		var i models.Invoice
-		err := rows.Scan(&i.ID, &i.OrgID, &i.InvoiceNumber, &i.CustomerName, &i.InvoiceDate, &i.DueDate, &i.Status, &i.Currency, &i.TotalAmount, &i.AmountPaid, &i.BalanceDue, &i.CreatedAt, &i.UpdatedAt)
+		err := rows.Scan(&i.ID, &i.TenantID, &i.InvoiceNumber, &i.CustomerName, &i.InvoiceDate, &i.DueDate, &i.Status, &i.Currency, &i.TotalAmount, &i.AmountPaid, &i.BalanceDue, &i.CreatedAt, &i.UpdatedAt)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan invoice: %w", err)
 		}
@@ -49,7 +49,7 @@ func (r *BillingRepository) ListInvoices(ctx context.Context, orgID uuid.UUID, p
 
 	start2 := time.Now()
 	var total int
-	err = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM invoices WHERE tenant_id = $1 AND deleted_at IS NULL", orgID).Scan(&total)
+	err = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM invoices WHERE tenant_id = $1 AND deleted_at IS NULL", tenantID).Scan(&total)
 	metrics.RecordDBQuery("SELECT COUNT(*) FROM invoices WHERE tenant_id = $1 AND deleted_at IS NULL", time.Since(start2))
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count invoices: %w", err)
@@ -72,7 +72,7 @@ func (r *BillingRepository) CreateInvoice(ctx context.Context, inv *models.Invoi
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING created_at, updated_at`
 
 	start1 := time.Now()
-	err = tx.QueryRow(ctx, query, inv.ID, inv.OrgID, inv.InvoiceNumber, inv.CustomerName, inv.InvoiceDate, inv.DueDate, inv.Status, inv.Currency, inv.TotalAmount, inv.AmountPaid, inv.BalanceDue, inv.Notes, inv.CustomFields).Scan(&inv.CreatedAt, &inv.UpdatedAt)
+	err = tx.QueryRow(ctx, query, inv.ID, inv.TenantID, inv.InvoiceNumber, inv.CustomerName, inv.InvoiceDate, inv.DueDate, inv.Status, inv.Currency, inv.TotalAmount, inv.AmountPaid, inv.BalanceDue, inv.Notes, inv.CustomFields).Scan(&inv.CreatedAt, &inv.UpdatedAt)
 	metrics.RecordDBQuery(query, time.Since(start1))
 	if err != nil {
 		return fmt.Errorf("failed to insert invoice: %w", err)
@@ -124,7 +124,7 @@ func (r *BillingRepository) GetInvoice(ctx context.Context, id uuid.UUID) (*mode
 	          FROM invoices WHERE id = $1 AND deleted_at IS NULL`
 
 	start := time.Now()
-	err := r.db.QueryRow(ctx, query, id).Scan(&i.ID, &i.OrgID, &i.InvoiceNumber, &i.CustomerName, &i.InvoiceDate, &i.DueDate, &i.Status, &i.Currency, &i.TotalAmount, &i.AmountPaid, &i.BalanceDue, &notes, &customFields, &i.CreatedAt, &i.UpdatedAt)
+	err := r.db.QueryRow(ctx, query, id).Scan(&i.ID, &i.TenantID, &i.InvoiceNumber, &i.CustomerName, &i.InvoiceDate, &i.DueDate, &i.Status, &i.Currency, &i.TotalAmount, &i.AmountPaid, &i.BalanceDue, &notes, &customFields, &i.CreatedAt, &i.UpdatedAt)
 	if notes.Valid {
 		i.Notes = notes.String
 	}
@@ -231,13 +231,13 @@ func (r *BillingRepository) DeleteInvoice(ctx context.Context, id uuid.UUID) err
 	return nil
 }
 
-func (r *BillingRepository) GetSettings(ctx context.Context, orgID uuid.UUID) (*models.BillingSettings, error) {
+func (r *BillingRepository) GetSettings(ctx context.Context, tenantID uuid.UUID) (*models.BillingSettings, error) {
 	var s models.BillingSettings
 	query := `SELECT tenant_id, default_tax_rate, base_currency, grace_period_days, auto_invoicing_enabled, tax_country, tax_state, invoice_prefix, next_invoice_number, render_config, created_at, updated_at
 	          FROM billing_settings WHERE tenant_id = $1`
 
 	start := time.Now()
-	err := r.db.QueryRow(ctx, query, orgID).Scan(&s.OrgID, &s.DefaultTaxRate, &s.BaseCurrency, &s.GracePeriodDays, &s.AutoInvoicingEnabled, &s.TaxCountry, &s.TaxState, &s.InvoicePrefix, &s.NextInvoiceNumber, &s.RenderConfig, &s.CreatedAt, &s.UpdatedAt)
+	err := r.db.QueryRow(ctx, query, tenantID).Scan(&s.TenantID, &s.DefaultTaxRate, &s.BaseCurrency, &s.GracePeriodDays, &s.AutoInvoicingEnabled, &s.TaxCountry, &s.TaxState, &s.InvoicePrefix, &s.NextInvoiceNumber, &s.RenderConfig, &s.CreatedAt, &s.UpdatedAt)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -264,7 +264,7 @@ func (r *BillingRepository) UpdateSettings(ctx context.Context, s *models.Billin
 	          updated_at = EXCLUDED.updated_at`
 
 	start := time.Now()
-	_, err := r.db.Exec(ctx, query, s.OrgID, s.DefaultTaxRate, s.BaseCurrency, s.GracePeriodDays, s.AutoInvoicingEnabled, s.TaxCountry, s.TaxState, s.InvoicePrefix, s.NextInvoiceNumber, s.RenderConfig)
+	_, err := r.db.Exec(ctx, query, s.TenantID, s.DefaultTaxRate, s.BaseCurrency, s.GracePeriodDays, s.AutoInvoicingEnabled, s.TaxCountry, s.TaxState, s.InvoicePrefix, s.NextInvoiceNumber, s.RenderConfig)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("failed to update billing settings: %w", err)
@@ -272,13 +272,13 @@ func (r *BillingRepository) UpdateSettings(ctx context.Context, s *models.Billin
 	return nil
 }
 
-func (r *BillingRepository) GetMetrics(ctx context.Context, orgID uuid.UUID) (*models.BillingMetrics, error) {
+func (r *BillingRepository) GetMetrics(ctx context.Context, tenantID uuid.UUID) (*models.BillingMetrics, error) {
 	var m models.BillingMetrics
 
 	// Total Invoiced MTD
 	mtdQuery := `SELECT COALESCE(SUM(total_amount), 0) FROM invoices WHERE tenant_id = $1 AND invoice_date >= date_trunc('month', CURRENT_DATE) AND deleted_at IS NULL`
 	start1 := time.Now()
-	err := r.db.QueryRow(ctx, mtdQuery, orgID).Scan(&m.TotalInvoicedMTD)
+	err := r.db.QueryRow(ctx, mtdQuery, tenantID).Scan(&m.TotalInvoicedMTD)
 	metrics.RecordDBQuery(mtdQuery, time.Since(start1))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get MTD invoiced: %w", err)
@@ -287,7 +287,7 @@ func (r *BillingRepository) GetMetrics(ctx context.Context, orgID uuid.UUID) (*m
 	// Pending Payment
 	pendingQuery := `SELECT COALESCE(SUM(balance_due), 0), COUNT(*) FROM invoices WHERE tenant_id = $1 AND (status = 'PENDING' OR status = 'PARTIAL') AND deleted_at IS NULL`
 	start2 := time.Now()
-	err = r.db.QueryRow(ctx, pendingQuery, orgID).Scan(&m.PendingPayment, &m.OpenCount)
+	err = r.db.QueryRow(ctx, pendingQuery, tenantID).Scan(&m.PendingPayment, &m.OpenCount)
 	metrics.RecordDBQuery(pendingQuery, time.Since(start2))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get pending payments: %w", err)
@@ -296,7 +296,7 @@ func (r *BillingRepository) GetMetrics(ctx context.Context, orgID uuid.UUID) (*m
 	// Overdue Amount
 	overdueQuery := `SELECT COALESCE(SUM(balance_due), 0) FROM invoices WHERE tenant_id = $1 AND status = 'OVERDUE' AND deleted_at IS NULL`
 	start3 := time.Now()
-	err = r.db.QueryRow(ctx, overdueQuery, orgID).Scan(&m.OverdueAmount)
+	err = r.db.QueryRow(ctx, overdueQuery, tenantID).Scan(&m.OverdueAmount)
 	metrics.RecordDBQuery(overdueQuery, time.Since(start3))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get overdue amount: %w", err)
@@ -305,7 +305,7 @@ func (r *BillingRepository) GetMetrics(ctx context.Context, orgID uuid.UUID) (*m
 	// Paid Count (last 30 days)
 	paidQuery := `SELECT COUNT(*) FROM invoices WHERE tenant_id = $1 AND status = 'PAID' AND updated_at >= CURRENT_DATE - INTERVAL '30 days' AND deleted_at IS NULL`
 	start4 := time.Now()
-	err = r.db.QueryRow(ctx, paidQuery, orgID).Scan(&m.PaidCount)
+	err = r.db.QueryRow(ctx, paidQuery, tenantID).Scan(&m.PaidCount)
 	metrics.RecordDBQuery(paidQuery, time.Since(start4))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get paid count: %w", err)

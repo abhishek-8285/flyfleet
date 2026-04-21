@@ -28,43 +28,43 @@ func NewRBACService(repo *repository.RBACRepository, auditRepo *repository.Audit
 }
 
 // CanCreateInvoice checks if user can create invoices
-func (s *RBACService) CanCreateInvoice(ctx context.Context, orgID, userID uuid.UUID) (bool, error) {
-	return s.repo.HasPermission(ctx, orgID, userID, models.PermCreateInvoice)
+func (s *RBACService) CanCreateInvoice(ctx context.Context, tenantID, userID uuid.UUID) (bool, error) {
+	return s.repo.HasPermission(ctx, tenantID, userID, models.PermCreateInvoice)
 }
 
 // CanEditInvoice checks if user can edit invoices
-func (s *RBACService) CanEditInvoice(ctx context.Context, orgID, userID uuid.UUID) (bool, error) {
-	return s.repo.HasPermission(ctx, orgID, userID, models.PermEditInvoice)
+func (s *RBACService) CanEditInvoice(ctx context.Context, tenantID, userID uuid.UUID) (bool, error) {
+	return s.repo.HasPermission(ctx, tenantID, userID, models.PermEditInvoice)
 }
 
 // CanDeleteInvoice checks if user can delete invoices
-func (s *RBACService) CanDeleteInvoice(ctx context.Context, orgID, userID uuid.UUID) (bool, error) {
-	return s.repo.HasPermission(ctx, orgID, userID, models.PermDeleteInvoice)
+func (s *RBACService) CanDeleteInvoice(ctx context.Context, tenantID, userID uuid.UUID) (bool, error) {
+	return s.repo.HasPermission(ctx, tenantID, userID, models.PermDeleteInvoice)
 }
 
 // CanIssueInvoice checks if user can issue invoices
-func (s *RBACService) CanIssueInvoice(ctx context.Context, orgID, userID uuid.UUID) (bool, error) {
-	return s.repo.HasPermission(ctx, orgID, userID, models.PermIssueInvoice)
+func (s *RBACService) CanIssueInvoice(ctx context.Context, tenantID, userID uuid.UUID) (bool, error) {
+	return s.repo.HasPermission(ctx, tenantID, userID, models.PermIssueInvoice)
 }
 
 // CanCancelInvoice checks if user can cancel invoices
-func (s *RBACService) CanCancelInvoice(ctx context.Context, orgID, userID uuid.UUID) (bool, error) {
-	return s.repo.HasPermission(ctx, orgID, userID, models.PermCancelInvoice)
+func (s *RBACService) CanCancelInvoice(ctx context.Context, tenantID, userID uuid.UUID) (bool, error) {
+	return s.repo.HasPermission(ctx, tenantID, userID, models.PermCancelInvoice)
 }
 
 // CanRecordPayment checks if user can record payments
-func (s *RBACService) CanRecordPayment(ctx context.Context, orgID, userID uuid.UUID) (bool, error) {
-	return s.repo.HasPermission(ctx, orgID, userID, models.PermRecordPayment)
+func (s *RBACService) CanRecordPayment(ctx context.Context, tenantID, userID uuid.UUID) (bool, error) {
+	return s.repo.HasPermission(ctx, tenantID, userID, models.PermRecordPayment)
 }
 
 // CanApproveInvoice checks if user can approve invoices and amount
-func (s *RBACService) CanApproveInvoice(ctx context.Context, orgID, userID uuid.UUID, amount float64) (bool, error) {
-	return s.repo.CanApproveAmount(ctx, orgID, userID, amount)
+func (s *RBACService) CanApproveInvoice(ctx context.Context, tenantID, userID uuid.UUID, amount float64) (bool, error) {
+	return s.repo.CanApproveAmount(ctx, tenantID, userID, amount)
 }
 
 // RequiresApproval checks if an invoice requires approval before issuing
-func (s *RBACService) RequiresApproval(ctx context.Context, orgID, userID uuid.UUID, amount float64) (bool, error) {
-	requires, _, err := s.repo.RequiresApproval(ctx, orgID, userID, amount)
+func (s *RBACService) RequiresApproval(ctx context.Context, tenantID, userID uuid.UUID, amount float64) (bool, error) {
+	requires, _, err := s.repo.RequiresApproval(ctx, tenantID, userID, amount)
 	return requires, err
 }
 
@@ -149,9 +149,9 @@ func (s *RBACService) GetPendingApprovals(ctx context.Context, userID uuid.UUID)
 }
 
 // InitializeDefaultRoles creates default role permissions for an organization
-func (s *RBACService) InitializeDefaultRoles(ctx context.Context, orgID uuid.UUID) error {
+func (s *RBACService) InitializeDefaultRoles(ctx context.Context, tenantID uuid.UUID) error {
 	for _, roleName := range models.StandardRoles() {
-		perms := models.DefaultRolePermissions(orgID, roleName)
+		perms := models.DefaultRolePermissions(tenantID, roleName)
 		err := s.repo.CreateOrUpdateRolePermissions(ctx, perms)
 		if err != nil {
 			return fmt.Errorf("failed to create permissions for role %s: %w", roleName, err)
@@ -159,19 +159,19 @@ func (s *RBACService) InitializeDefaultRoles(ctx context.Context, orgID uuid.UUI
 	}
 
 	s.logger.Info("Default role permissions initialized",
-		zap.String("tenant_id", orgID.String()),
+		zap.String("tenant_id", tenantID.String()),
 	)
 
 	return nil
 }
 
 // UpdateRolePermissions updates permissions for a role
-func (s *RBACService) UpdateRolePermissions(ctx context.Context, orgID uuid.UUID, roleName string, perms *models.InvoicePermission) error {
+func (s *RBACService) UpdateRolePermissions(ctx context.Context, tenantID uuid.UUID, roleName string, perms *models.InvoicePermission) error {
 	if !models.IsValidRole(roleName) {
 		return errors.New("invalid role name")
 	}
 
-	perms.OrgID = orgID
+	perms.TenantID = tenantID
 	perms.RoleName = roleName
 
 	err := s.repo.CreateOrUpdateRolePermissions(ctx, perms)
@@ -180,7 +180,7 @@ func (s *RBACService) UpdateRolePermissions(ctx context.Context, orgID uuid.UUID
 	}
 
 	s.logger.Info("Role permissions updated",
-		zap.String("tenant_id", orgID.String()),
+		zap.String("tenant_id", tenantID.String()),
 		zap.String("role", roleName),
 	)
 
@@ -196,7 +196,7 @@ func (s *RBACService) SetUserAccessOverride(ctx context.Context, access *models.
 
 	s.logger.Info("User access override set",
 		zap.String("user_id", access.UserID.String()),
-		zap.String("tenant_id", access.OrgID.String()),
+		zap.String("tenant_id", access.TenantID.String()),
 		zap.Bool("override_role", access.OverrideRole),
 	)
 
@@ -204,12 +204,12 @@ func (s *RBACService) SetUserAccessOverride(ctx context.Context, access *models.
 }
 
 // GetUserPermissions gets effective permissions for a user
-func (s *RBACService) GetUserPermissions(ctx context.Context, orgID, userID uuid.UUID) (*models.InvoicePermission, error) {
-	return s.repo.GetUserPermissions(ctx, orgID, userID)
+func (s *RBACService) GetUserPermissions(ctx context.Context, tenantID, userID uuid.UUID) (*models.InvoicePermission, error) {
+	return s.repo.GetUserPermissions(ctx, tenantID, userID)
 }
 
 // CheckInvoicePermission is a helper to check permission before invoice operations
-func (s *RBACService) CheckInvoicePermission(ctx context.Context, orgID, userID uuid.UUID, action string) error {
+func (s *RBACService) CheckInvoicePermission(ctx context.Context, tenantID, userID uuid.UUID, action string) error {
 	var perm models.InvoicePermissionType
 
 	switch action {
@@ -229,7 +229,7 @@ func (s *RBACService) CheckInvoicePermission(ctx context.Context, orgID, userID 
 		return errors.New("unknown action")
 	}
 
-	hasPerm, err := s.repo.HasPermission(ctx, orgID, userID, perm)
+	hasPerm, err := s.repo.HasPermission(ctx, tenantID, userID, perm)
 	if err != nil {
 		return err
 	}

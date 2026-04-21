@@ -23,8 +23,8 @@ type MockVehicleService struct {
 	mock.Mock
 }
 
-func (m *MockVehicleService) CreateVehicle(ctx context.Context, req *models.CreateVehicleRequest, orgID uuid.UUID) (*models.Vehicle, error) {
-	args := m.Called(ctx, req, orgID)
+func (m *MockVehicleService) CreateVehicle(ctx context.Context, req *models.CreateVehicleRequest, tenantID uuid.UUID) (*models.Vehicle, error) {
+	args := m.Called(ctx, req, tenantID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -39,8 +39,8 @@ func (m *MockVehicleService) GetVehicle(ctx context.Context, id uuid.UUID) (*mod
 	return args.Get(0).(*models.Vehicle), args.Error(1)
 }
 
-func (m *MockVehicleService) ListVehicles(ctx context.Context, orgID uuid.UUID, page, limit int) ([]models.Vehicle, int64, error) {
-	args := m.Called(ctx, orgID, page, limit)
+func (m *MockVehicleService) ListVehicles(ctx context.Context, tenantID uuid.UUID, page, limit int) ([]models.Vehicle, int64, error) {
+	args := m.Called(ctx, tenantID, page, limit)
 	if args.Get(0) == nil {
 		return nil, 0, args.Error(2)
 	}
@@ -55,13 +55,13 @@ func (m *MockVehicleService) UpdateVehicle(ctx context.Context, id uuid.UUID, re
 	return args.Get(0).(*models.Vehicle), args.Error(1)
 }
 
-func (m *MockVehicleService) DeleteVehicle(ctx context.Context, id, orgID uuid.UUID) error {
-	args := m.Called(ctx, id, orgID)
+func (m *MockVehicleService) DeleteVehicle(ctx context.Context, id, tenantID uuid.UUID) error {
+	args := m.Called(ctx, id, tenantID)
 	return args.Error(0)
 }
 
-func (m *MockVehicleService) AssignDriver(ctx context.Context, vehicleID, orgID, driverID uuid.UUID) (*models.Vehicle, error) {
-	args := m.Called(ctx, vehicleID, orgID, driverID)
+func (m *MockVehicleService) AssignDriver(ctx context.Context, vehicleID, tenantID, driverID uuid.UUID) (*models.Vehicle, error) {
+	args := m.Called(ctx, vehicleID, tenantID, driverID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -102,7 +102,7 @@ func setupHandlerTest(t *testing.T) (*VehicleHandlers, *MockVehicleService) {
 func TestVehicleHandlers_CreateVehicle_Success(t *testing.T) {
 	handler, mockService := setupHandlerTest(t)
 
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	reqBody := &models.CreateVehicleRequest{
 		RegistrationNumber: "ABC-1234",
 		VehicleType:        "TRUCK",
@@ -115,11 +115,11 @@ func TestVehicleHandlers_CreateVehicle_Success(t *testing.T) {
 		RegistrationNumber: "ABC-1234",
 	}
 
-	mockService.On("CreateVehicle", mock.Anything, mock.Anything, orgID).Return(expectedVehicle, nil)
+	mockService.On("CreateVehicle", mock.Anything, mock.Anything, tenantID).Return(expectedVehicle, nil)
 
 	body, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest(http.MethodPost, "/vehicles", bytes.NewReader(body))
-	req = req.WithContext(context.WithValue(req.Context(), middleware.OrgIDKey, orgID.String()))
+	req = req.WithContext(context.WithValue(req.Context(), middleware.TenantIDKey, tenantID.String()))
 	rr := httptest.NewRecorder()
 
 	handler.CreateVehicle(rr, req)
@@ -227,15 +227,15 @@ func TestVehicleHandlers_GetVehicle_NotFound(t *testing.T) {
 func TestVehicleHandlers_ListVehicles_Success(t *testing.T) {
 	handler, mockService := setupHandlerTest(t)
 
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	expectedVehicles := []models.Vehicle{
 		{ID: uuid.New(), RegistrationNumber: "ABC-1234"},
 		{ID: uuid.New(), RegistrationNumber: "XYZ-5678"},
 	}
 
-	mockService.On("ListVehicles", mock.Anything, orgID, 1, 20).Return(expectedVehicles, int64(2), nil)
+	mockService.On("ListVehicles", mock.Anything, tenantID, 1, 20).Return(expectedVehicles, int64(2), nil)
 
-	req := httptest.NewRequest(http.MethodGet, "/vehicles?tenant_id="+orgID.String()+"&page=1&limit=20", nil)
+	req := httptest.NewRequest(http.MethodGet, "/vehicles?tenant_id="+tenantID.String()+"&page=1&limit=20", nil)
 	rr := httptest.NewRecorder()
 
 	handler.ListVehicles(rr, req)
@@ -283,11 +283,11 @@ func TestVehicleHandlers_DeleteVehicle_Success(t *testing.T) {
 	handler, mockService := setupHandlerTest(t)
 
 	vehicleID := uuid.New()
-	orgID := uuid.New()
-	mockService.On("DeleteVehicle", mock.Anything, vehicleID, orgID).Return(nil)
+	tenantID := uuid.New()
+	mockService.On("DeleteVehicle", mock.Anything, vehicleID, tenantID).Return(nil)
 
 	req := httptest.NewRequest(http.MethodDelete, "/vehicles/"+vehicleID.String(), nil)
-	req = req.WithContext(context.WithValue(req.Context(), middleware.OrgIDKey, orgID.String()))
+	req = req.WithContext(context.WithValue(req.Context(), middleware.TenantIDKey, tenantID.String()))
 	rr := httptest.NewRecorder()
 
 	rctx := chi.NewRouteContext()
@@ -304,7 +304,7 @@ func TestVehicleHandlers_AssignDriver_Success(t *testing.T) {
 	handler, mockService := setupHandlerTest(t)
 
 	vehicleID := uuid.New()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	driverID := uuid.New()
 	reqBody := &models.AssignDriverRequest{
 		DriverID: driverID,
@@ -315,11 +315,11 @@ func TestVehicleHandlers_AssignDriver_Success(t *testing.T) {
 		Status: models.StatusActive,
 	}
 
-	mockService.On("AssignDriver", mock.Anything, vehicleID, orgID, driverID).Return(expectedVehicle, nil)
+	mockService.On("AssignDriver", mock.Anything, vehicleID, tenantID, driverID).Return(expectedVehicle, nil)
 
 	body, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest(http.MethodPost, "/vehicles/"+vehicleID.String()+"/assign-driver", bytes.NewReader(body))
-	req = req.WithContext(context.WithValue(req.Context(), middleware.OrgIDKey, orgID.String()))
+	req = req.WithContext(context.WithValue(req.Context(), middleware.TenantIDKey, tenantID.String()))
 	rr := httptest.NewRecorder()
 
 	rctx := chi.NewRouteContext()

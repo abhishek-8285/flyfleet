@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/flyfleet/fleet-core/internal/domains/customer/models"
 	"github.com/flyfleet/fleet-core/internal/domains/customer/repository"
 	"github.com/flyfleet/fleet-core/internal/domains/customer/service"
-	"github.com/flyfleet/fleet-core/internal/domains/billing/middleware"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
+	"github.com/flyfleet/fleet-core/internal/platform/response"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -52,7 +54,10 @@ type createShipmentRequestDTO struct {
 type CustomerService interface {
 	CreateCustomer(ctx context.Context, c *models.Customer) error
 	GetCustomerByID(ctx context.Context, id uuid.UUID) (*models.Customer, error)
-	ListCustomers(ctx context.Context, orgID uuid.UUID) ([]models.Customer, error)
+	ListCustomers(ctx context.Context, tenantID uuid.UUID, filters map[string]interface{}, limit, offset int) ([]models.Customer, error)
+	CountCustomers(ctx context.Context, tenantID uuid.UUID, filters map[string]interface{}) (int, error)
+	GetCustomerSummary(ctx context.Context, customerID uuid.UUID) (map[string]interface{}, error)
+	UpdateCustomer(ctx context.Context, c *models.Customer) error
 }
 
 type CustomerV2Handler struct {
@@ -91,8 +96,10 @@ func NewCustomerV2Handler(
 func (h CustomerV2Handler) RegisterRoutes(r chi.Router) {
 	// Customers
 	r.Post("/", h.CreateCustomer)
-	r.Get("/customers", h.ListCustomers)
-	r.Get("/customers/{id}", h.GetCustomer)
+	r.Get("/", h.ListCustomers)
+	r.Put("/{id}", h.UpdateCustomer)
+	r.Get("/{id}/summary", h.GetCustomerSummary)
+	r.Get("/{id}", h.GetCustomer)
 
 	// Bookings
 	r.Post("/bookings", h.CreateBooking)
@@ -164,35 +171,59 @@ func (h CustomerV2Handler) APIGetInvoices(w http.ResponseWriter, r *http.Request
 }
 
 func (h CustomerV2Handler) ListCustomers(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	orgID, ok := r.Context().Value(middleware.OrgIDKey).(uuid.UUID)
+	// Extract TenantID from context (set by TenantMiddleware)
+	tenantID, ok := ctxkeys.GetTenantID(r.Context())
 	if !ok {
-		// Fallback for different middleware conventions
-		orgIDStr, okStr := r.Context().Value(middleware.OrgIDKey).(string)
-		if okStr {
-			var err error
-			orgID, err = uuid.Parse(orgIDStr)
-			if err != nil {
-				http.Error(w, "invalid organization context", http.StatusUnauthorized)
-				return
-			}
-			ok = true
-		}
-	}
-
-	if !ok {
-		http.Error(w, "organization context required", http.StatusUnauthorized)
+		h.respondError(w, http.StatusUnauthorized, "Organization context missing")
 		return
 	}
 
-	customers, err := h.customerService.ListCustomers(ctx, orgID)
+	// Parse query params for pagination and filtering
+	query := r.URL.Query()
+	page, _ := strconv.Atoi(query.Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	size, _ := strconv.Atoi(query.Get("size"))
+	if size < 1 || size > 100 {
+		size = 20
+	}
+	offset := (page - 1) * size
+
+	filters := map[string]interface{}{}
+	if name := query.Get("name"); name != "" {
+		filters["name"] = name
+	}
+	if status := query.Get("status"); status != "" {
+		filters["status"] = status
+	}
+
+	customers, err := h.customerService.ListCustomers(r.Context(), tenantID, filters, size, offset)
 	if err != nil {
-		http.Error(w, "failed to list customers: "+err.Error(), http.StatusInternalServerError)
+		h.logger.Error("Failed to list customers", zap.Error(err))
+		response.Error500(w, "Failed to list customers")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(customers)
+	total, err := h.customerService.CountCustomers(r.Context(), tenantID, filters)
+	if err != nil {
+		h.logger.Error("Failed to count customers", zap.Error(err))
+		total = len(customers) // Fallback
+	}
+
+	// Standardize response for DataGrid compatibility
+	totalPages := (total + size - 1) / size
+	meta := map[string]interface{}{
+		"total":      total,
+		"page":       page,
+		"size":       size,
+		"total_page": totalPages,
+	}
+
+	response.Success200(w, map[string]interface{}{
+		"data": customers,
+		"meta": meta,
+	})
 }
 
 func (h CustomerV2Handler) CreateCustomer(w http.ResponseWriter, r *http.Request) {
@@ -202,11 +233,19 @@ func (h CustomerV2Handler) CreateCustomer(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// Extract TenantID from context (set by TenantMiddleware)
+	tenantID, ok := ctxkeys.GetTenantID(r.Context())
+	if !ok {
+		h.respondError(w, http.StatusUnauthorized, "Organization context missing")
+		return
+	}
+
 	// Map DTO to model
 	c := &models.Customer{
-		CompanyName:    dto.CompanyName,
+		TenantID:       tenantID,
+		Name:           dto.CompanyName,
 		GSTNumber:      dto.GSTNumber,
-		BillingAddress: []byte(dto.BillingAddress),
+		BillingAddress: dto.BillingAddress,
 		ContactEmail:   dto.ContactEmail,
 		ContactPhone:   dto.ContactPhone,
 		Status:         dto.Status,
@@ -237,6 +276,65 @@ func (h CustomerV2Handler) GetCustomer(w http.ResponseWriter, r *http.Request) {
 	}
 	if c == nil {
 		h.respondError(w, http.StatusNotFound, "Customer not found")
+		return
+	}
+
+	c.NormalizeStatus()
+	h.respondJSON(w, http.StatusOK, c)
+}
+
+func (h CustomerV2Handler) GetCustomerSummary(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		h.respondError(w, http.StatusBadRequest, "Invalid ID format")
+		return
+	}
+
+	metrics, err := h.customerService.GetCustomerSummary(r.Context(), id)
+	if err != nil {
+		h.logger.Error("Failed to fetch customer metrics", zap.Error(err))
+		h.respondError(w, http.StatusInternalServerError, "Failed to fetch metrics")
+		return
+	}
+
+	h.respondJSON(w, http.StatusOK, metrics)
+}
+
+func (h CustomerV2Handler) UpdateCustomer(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		h.respondError(w, http.StatusBadRequest, "Invalid ID format")
+		return
+	}
+
+	var dto createCustomerRequestDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
+		h.respondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	tenantID, ok := ctxkeys.GetTenantID(r.Context())
+	if !ok {
+		h.respondError(w, http.StatusUnauthorized, "Organization context missing")
+		return
+	}
+
+	c := &models.Customer{
+		ID:             id,
+		TenantID:       tenantID,
+		Name:           dto.CompanyName,
+		GSTNumber:      dto.GSTNumber,
+		BillingAddress: dto.BillingAddress,
+		ContactEmail:   dto.ContactEmail,
+		ContactPhone:   dto.ContactPhone,
+		Status:         dto.Status,
+	}
+
+	if err := h.customerService.UpdateCustomer(r.Context(), c); err != nil {
+		h.logger.Error("Failed to update customer", zap.Error(err), zap.String("id", idStr))
+		h.respondError(w, http.StatusInternalServerError, "Failed to update customer")
 		return
 	}
 

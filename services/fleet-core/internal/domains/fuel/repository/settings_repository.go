@@ -14,9 +14,9 @@ import (
 )
 
 type SettingsRepository interface {
-	Get(ctx context.Context, orgID uuid.UUID) (*models.FuelSettings, error)
+	Get(ctx context.Context, tenantID uuid.UUID) (*models.FuelSettings, error)
 	Upsert(ctx context.Context, settings *models.FuelSettings) error
-	GetOrDefault(ctx context.Context, orgID uuid.UUID) (*models.FuelSettings, error)
+	GetOrDefault(ctx context.Context, tenantID uuid.UUID) (*models.FuelSettings, error)
 }
 
 type settingsRepository struct {
@@ -27,7 +27,7 @@ func NewSettingsRepository(db *pgxpool.Pool) SettingsRepository {
 	return &settingsRepository{db: db}
 }
 
-func (r *settingsRepository) Get(ctx context.Context, orgID uuid.UUID) (*models.FuelSettings, error) {
+func (r *settingsRepository) Get(ctx context.Context, tenantID uuid.UUID) (*models.FuelSettings, error) {
 	query := `
 		SELECT
 			organization_id, default_currency, allowed_fuel_types,
@@ -37,7 +37,7 @@ func (r *settingsRepository) Get(ctx context.Context, orgID uuid.UUID) (*models.
 	`
 	var s models.FuelSettings
 	start := time.Now()
-	err := r.db.QueryRow(ctx, query, orgID).Scan(
+	err := r.db.QueryRow(ctx, query, tenantID).Scan(
 		&s.OrganizationID, &s.DefaultCurrency, &s.AllowedFuelTypes,
 		&s.ValidationRules, &s.AutoSyncEnabled, &s.CreatedAt, &s.UpdatedAt,
 	)
@@ -76,15 +76,15 @@ func (r *settingsRepository) Upsert(ctx context.Context, s *models.FuelSettings)
 	return nil
 }
 
-func (r *settingsRepository) GetOrDefault(ctx context.Context, orgID uuid.UUID) (*models.FuelSettings, error) {
-	s, err := r.Get(ctx, orgID)
+func (r *settingsRepository) GetOrDefault(ctx context.Context, tenantID uuid.UUID) (*models.FuelSettings, error) {
+	s, err := r.Get(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
 	if s == nil {
 		// Return defaults
 		return &models.FuelSettings{
-			OrganizationID:   orgID,
+			OrganizationID:   tenantID,
 			DefaultCurrency:  "USD",
 			AllowedFuelTypes: []byte(`["diesel", "petrol-95", "adblue", "ev"]`),
 			ValidationRules:  []byte(`{"odometer_check": true, "cost_calculation_verify": true}`),

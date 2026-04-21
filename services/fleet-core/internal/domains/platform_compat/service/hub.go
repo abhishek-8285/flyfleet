@@ -28,7 +28,7 @@ var upgrader = websocket.Upgrader{
 type Client struct {
 	hub   *Hub
 	conn  *websocket.Conn
-	orgID uuid.UUID
+	tenantID uuid.UUID
 	send  chan []byte
 }
 
@@ -58,28 +58,28 @@ func (h *Hub) Run(ctx context.Context) {
 			return
 		case client := <-h.register:
 			h.mu.Lock()
-			if h.clients[client.orgID] == nil {
-				h.clients[client.orgID] = make(map[*Client]bool)
+			if h.clients[client.tenantID] == nil {
+				h.clients[client.tenantID] = make(map[*Client]bool)
 			}
-			h.clients[client.orgID][client] = true
+			h.clients[client.tenantID][client] = true
 			h.mu.Unlock()
-			h.logger.Info("Websocket client registered", zap.String("tenant_id", client.orgID.String()))
+			h.logger.Info("Websocket client registered", zap.String("tenant_id", client.tenantID.String()))
 		case client := <-h.unregister:
 			h.mu.Lock()
-			if _, ok := h.clients[client.orgID][client]; ok {
-				delete(h.clients[client.orgID], client)
+			if _, ok := h.clients[client.tenantID][client]; ok {
+				delete(h.clients[client.tenantID], client)
 				close(client.send)
-				if len(h.clients[client.orgID]) == 0 {
-					delete(h.clients, client.orgID)
+				if len(h.clients[client.tenantID]) == 0 {
+					delete(h.clients, client.tenantID)
 				}
 			}
 			h.mu.Unlock()
-			h.logger.Info("Websocket client unregistered", zap.String("tenant_id", client.orgID.String()))
+			h.logger.Info("Websocket client unregistered", zap.String("tenant_id", client.tenantID.String()))
 		}
 	}
 }
 
-func (h *Hub) BroadcastToOrg(orgID uuid.UUID, message interface{}) error {
+func (h *Hub) BroadcastToOrg(tenantID uuid.UUID, message interface{}) error {
 	payload, err := json.Marshal(message)
 	if err != nil {
 		return err
@@ -88,7 +88,7 @@ func (h *Hub) BroadcastToOrg(orgID uuid.UUID, message interface{}) error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
-	clients, ok := h.clients[orgID]
+	clients, ok := h.clients[tenantID]
 	if !ok {
 		return nil // No clients connected for this org
 	}
@@ -104,7 +104,7 @@ func (h *Hub) BroadcastToOrg(orgID uuid.UUID, message interface{}) error {
 	return nil
 }
 
-func (h *Hub) HandleWebsocket(w http.ResponseWriter, r *http.Request, orgID uuid.UUID) {
+func (h *Hub) HandleWebsocket(w http.ResponseWriter, r *http.Request, tenantID uuid.UUID) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		h.logger.Error("Websocket upgrade failed", zap.Error(err))
@@ -114,7 +114,7 @@ func (h *Hub) HandleWebsocket(w http.ResponseWriter, r *http.Request, orgID uuid
 	client := &Client{
 		hub:   h,
 		conn:  conn,
-		orgID: orgID,
+		tenantID: tenantID,
 		send:  make(chan []byte, 256),
 	}
 	h.register <- client

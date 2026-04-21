@@ -38,10 +38,10 @@ func NewAnalyticsQueueClient(redisAddr string) *AnalyticsQueueClient {
 	return &AnalyticsQueueClient{client: client}
 }
 
-func (c *AnalyticsQueueClient) EnqueueAnalyticsJob(jobID string, orgID, userID uuid.UUID) error {
+func (c *AnalyticsQueueClient) EnqueueAnalyticsJob(jobID string, tenantID, userID uuid.UUID) error {
 	payload, err := json.Marshal(AnalyticsJobPayload{
 		JobID:          jobID,
-		OrganizationID: orgID,
+		OrganizationID: tenantID,
 		UserID:         userID,
 	})
 	if err != nil {
@@ -55,9 +55,9 @@ func (c *AnalyticsQueueClient) EnqueueAnalyticsJob(jobID string, orgID, userID u
 }
 
 // EnqueueCacheInvalidate enqueues a task to invalidate cache patterns
-func (c *AnalyticsQueueClient) EnqueueCacheInvalidate(orgID uuid.UUID, pattern, resourceType, resourceID string) error {
+func (c *AnalyticsQueueClient) EnqueueCacheInvalidate(tenantID uuid.UUID, pattern, resourceType, resourceID string) error {
 	payload, err := json.Marshal(CacheInvalidatePayload{
-		OrganizationID: orgID,
+		OrganizationID: tenantID,
 		Pattern:        pattern,
 		ResourceType:   resourceType,
 		ResourceID:     resourceID,

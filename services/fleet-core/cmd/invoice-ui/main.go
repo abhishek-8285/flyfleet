@@ -73,7 +73,7 @@ func main() {
 
 		invoice := &models.Invoice{
 			ID:             uuid.New(),
-			OrgID:          uuid.New(),
+			TenantID:          uuid.New(),
 			InvoiceNumber:  req.InvoiceNumber,
 			CustomerName:   req.CustomerName,
 			CustomerEmail:  req.CustomerEmail,

@@ -65,18 +65,18 @@ func (s *BillingScheduler) RunBillingCycle(ctx context.Context) error {
 	s.logger.Info("Starting recurring billing cycle check")
 
 	// 1. Identify organizations that need invoicing
-	orgIDs, err := s.provider.IdentifyOrganizationsForInvoicing(ctx)
+	tenantIDs, err := s.provider.IdentifyOrganizationsForInvoicing(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to identify orgs: %w", err)
 	}
 
-	s.logger.Info("Identified organizations for invoicing", zap.Int("count", len(orgIDs)))
+	s.logger.Info("Identified organizations for invoicing", zap.Int("count", len(tenantIDs)))
 
 	// 2. Enqueue individual tasks
-	for _, orgID := range orgIDs {
-		err := s.queue.EnqueueGenerateInvoice(ctx, models.GenerateInvoicePayload{OrgID: orgID})
+	for _, tenantID := range tenantIDs {
+		err := s.queue.EnqueueGenerateInvoice(ctx, models.GenerateInvoicePayload{TenantID: tenantID})
 		if err != nil {
-			s.logger.Error("Failed to enqueue invoice task", zap.String("tenant_id", orgID.String()), zap.Error(err))
+			s.logger.Error("Failed to enqueue invoice task", zap.String("tenant_id", tenantID.String()), zap.Error(err))
 			continue
 		}
 	}

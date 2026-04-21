@@ -9,8 +9,8 @@ import (
 )
 
 func (h *BillingHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		h.errorJSON(w, r, "Unauthorized: organization context required", http.StatusUnauthorized)
 		return
@@ -20,7 +20,7 @@ func (h *BillingHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 		currency = "USD"
 	}
 
-	balance, err := h.ledgerService.GetBalance(r.Context(), orgID, currency)
+	balance, err := h.ledgerService.GetBalance(r.Context(), tenantID, currency)
 	if err != nil {
 		h.logger.Error("Failed to get balance", zap.Error(err))
 		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
@@ -31,8 +31,8 @@ func (h *BillingHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *BillingHandler) ApplyCredit(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		h.errorJSON(w, r, "Unauthorized: organization context required", http.StatusUnauthorized)
 		return
@@ -57,7 +57,7 @@ func (h *BillingHandler) ApplyCredit(w http.ResponseWriter, r *http.Request) {
 		req.Type = "MANUAL"
 	}
 
-	if err := h.ledgerService.ApplyCredit(r.Context(), orgID, req.Amount, req.Currency, req.Type, nil, &req.Desc); err != nil {
+	if err := h.ledgerService.ApplyCredit(r.Context(), tenantID, req.Amount, req.Currency, req.Type, nil, &req.Desc); err != nil {
 		h.logger.Error("Failed to apply credit", zap.Error(err))
 		h.errorJSON(w, r, "Failed to apply credit", http.StatusInternalServerError)
 		return

@@ -239,7 +239,7 @@ func TestRegisterDevice_WithOrganizationAndVehicle(t *testing.T) {
 	service, mockRepo := setupTestService(t)
 	ctx := context.WithValue(context.Background(), "user_id", uuid.New().String())
 
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	vehicleID := uuid.New()
 
 	req := &models.DeviceRegisterRequest{
@@ -247,7 +247,7 @@ func TestRegisterDevice_WithOrganizationAndVehicle(t *testing.T) {
 		HardwareAttestation: "attestation-hash",
 		AndroidVersion:      "13",
 		DeviceModel:         "Fleet Tab Pro",
-		OrganizationID:      orgID.String(),
+		OrganizationID:      tenantID.String(),
 		VehicleID:           vehicleID.String(),
 	}
 
@@ -258,7 +258,7 @@ func TestRegisterDevice_WithOrganizationAndVehicle(t *testing.T) {
 
 	storedDevice := mockRepo.Devices["DEV-002"]
 	assert.NotNil(t, storedDevice)
-	assert.Equal(t, orgID, storedDevice.OrganizationID)
+	assert.Equal(t, tenantID, storedDevice.OrganizationID)
 	assert.Equal(t, vehicleID, storedDevice.VehicleID)
 }
 

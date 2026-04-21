@@ -21,7 +21,7 @@ type mockTripServiceForStub struct {
 	lastReq   interface{}
 }
 
-func (m *mockTripServiceForStub) Create(ctx context.Context, orgID string, req interface{}) (*mockCreatedTrip, error) {
+func (m *mockTripServiceForStub) Create(ctx context.Context, tenantID string, req interface{}) (*mockCreatedTrip, error) {
 	m.callCount++
 	m.lastReq = req
 	return &mockCreatedTrip{
@@ -43,14 +43,14 @@ type mockEventBus struct {
 type publishedEvent struct {
 	subject string
 	data    interface{}
-	orgID   string
+	tenantID   string
 }
 
-func (m *mockEventBus) Publish(ctx context.Context, subject string, data interface{}, orgID string) error {
+func (m *mockEventBus) Publish(ctx context.Context, subject string, data interface{}, tenantID string) error {
 	m.published = append(m.published, publishedEvent{
 		subject: subject,
 		data:    data,
-		orgID:   orgID,
+		tenantID:   tenantID,
 	})
 	return nil
 }
@@ -69,14 +69,14 @@ func TestAssignShipment_UsesRealTripCreation(t *testing.T) {
 	shipmentID := uuid.New()
 	vehicleID := uuid.New()
 	driverID := uuid.New()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
 	// 1. Verify shipment is CONFIRMED
 	status := "CONFIRMED"
 	require.Equal(t, "CONFIRMED", status, "Shipment must be CONFIRMED before dispatch")
 
 	// 2. Call TripService.Create (the FIXED path — not uuid.New())
-	trip, err := tripSvc.Create(context.Background(), orgID.String(), nil)
+	trip, err := tripSvc.Create(context.Background(), tenantID.String(), nil)
 	require.NoError(t, err)
 	require.Equal(t, 1, tripSvc.callCount, "TripService.Create must be called exactly once")
 
@@ -92,13 +92,13 @@ func TestAssignShipment_UsesRealTripCreation(t *testing.T) {
 		"trip_id":     trip.ID,
 		"vehicle_id":  vehicleID.String(),
 		"driver_id":   driverID.String(),
-		"tenant_id":      orgID.String(),
-	}, orgID.String())
+		"tenant_id":      tenantID.String(),
+	}, tenantID.String())
 
 	require.Len(t, eventBus.published, 1, "NATS event must be published (not commented out)")
 	assert.Equal(t, "shipment.assigned", eventBus.published[0].subject)
-	assert.Equal(t, orgID.String(), eventBus.published[0].orgID,
-		"Publish must include 4th orgID parameter")
+	assert.Equal(t, tenantID.String(), eventBus.published[0].tenantID,
+		"Publish must include 4th tenantID parameter")
 }
 
 // TestAssignShipment_PublishesNATS verifies EventBus.Publish is active.
@@ -113,8 +113,8 @@ func TestAssignShipment_PublishesNATS(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, eventBus.published, 1)
 	assert.Equal(t, "shipment.assigned", eventBus.published[0].subject)
-	assert.Equal(t, "org-123", eventBus.published[0].orgID,
-		"Publish must include orgID as 4th param")
+	assert.Equal(t, "org-123", eventBus.published[0].tenantID,
+		"Publish must include tenantID as 4th param")
 }
 
 // TestAssignShipment_UpdatesShipment verifies trip_id is set on shipment.

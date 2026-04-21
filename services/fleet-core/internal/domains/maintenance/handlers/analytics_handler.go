@@ -37,15 +37,15 @@ func (h *AnalyticsHandler) RegisterRoutes(r chi.Router) {
 }
 
 func (h *AnalyticsHandler) GetMaintenanceSummary(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return
 	}
 
 	// This is just a placeholder to satisfy the test for now if GetSummary doesn't exist
 	// In a real scenario, we'd have a service method for this.
-	summary, err := h.analyticsSvc.GetCostPerVehicle(r.Context(), orgID)
+	summary, err := h.analyticsSvc.GetCostPerVehicle(r.Context(), tenantID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to fetch summary", err)
 		return
@@ -55,13 +55,13 @@ func (h *AnalyticsHandler) GetMaintenanceSummary(w http.ResponseWriter, r *http.
 }
 
 func (h *AnalyticsHandler) GetCostAnalytics(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return
 	}
 
-	costs, err := h.analyticsSvc.GetCostPerVehicle(r.Context(), orgID)
+	costs, err := h.analyticsSvc.GetCostPerVehicle(r.Context(), tenantID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to fetch cost analytics", err)
 		return
@@ -71,13 +71,13 @@ func (h *AnalyticsHandler) GetCostAnalytics(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *AnalyticsHandler) GetVendorComparison(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return
 	}
 
-	vendors, err := h.analyticsSvc.GetVendorRepairComparison(r.Context(), orgID)
+	vendors, err := h.analyticsSvc.GetVendorRepairComparison(r.Context(), tenantID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to fetch vendor comparison", err)
 		return
@@ -140,10 +140,10 @@ func (h *AnalyticsHandler) writeErrorResponse(w http.ResponseWriter, statusCode 
 	h.writeJSONResponse(w, statusCode, resp)
 }
 
-func (h *AnalyticsHandler) getOrgID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
-		if orgIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(orgIDStr); err == nil {
+func (h *AnalyticsHandler) getTenantID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.TenantIDKey); val != nil {
+		if tenantIDStr, ok := val.(string); ok {
+			if id, err := uuid.Parse(tenantIDStr); err == nil {
 				return id
 			}
 		}

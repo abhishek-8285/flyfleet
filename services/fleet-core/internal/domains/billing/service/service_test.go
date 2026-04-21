@@ -35,13 +35,13 @@ func newMockRepo() *mockBillingRepo {
 	}
 }
 
-func (m *mockBillingRepo) ListInvoices(_ context.Context, orgID uuid.UUID, page, size int) ([]models.Invoice, int, error) {
+func (m *mockBillingRepo) ListInvoices(_ context.Context, tenantID uuid.UUID, page, size int) ([]models.Invoice, int, error) {
 	if m.listErr != nil {
 		return nil, 0, m.listErr
 	}
 	var result []models.Invoice
 	for _, inv := range m.invoices {
-		if inv.OrgID == orgID {
+		if inv.TenantID == tenantID {
 			result = append(result, *inv)
 		}
 	}
@@ -86,11 +86,11 @@ func (m *mockBillingRepo) DeleteInvoice(_ context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (m *mockBillingRepo) GetSettings(_ context.Context, orgID uuid.UUID) (*models.BillingSettings, error) {
+func (m *mockBillingRepo) GetSettings(_ context.Context, tenantID uuid.UUID) (*models.BillingSettings, error) {
 	if m.settingsErr != nil {
 		return nil, m.settingsErr
 	}
-	s, ok := m.settings[orgID]
+	s, ok := m.settings[tenantID]
 	if !ok {
 		return nil, nil
 	}
@@ -98,7 +98,7 @@ func (m *mockBillingRepo) GetSettings(_ context.Context, orgID uuid.UUID) (*mode
 }
 
 func (m *mockBillingRepo) UpdateSettings(_ context.Context, s *models.BillingSettings) error {
-	m.settings[s.OrgID] = s
+	m.settings[s.TenantID] = s
 	return nil
 }
 
@@ -144,10 +144,10 @@ func mustParseDate(s string) time.Time {
 	return t
 }
 
-func newTestInvoice(orgID uuid.UUID, status string) *models.Invoice {
+func newTestInvoice(tenantID uuid.UUID, status string) *models.Invoice {
 	return &models.Invoice{
 		ID:            uuid.New(),
-		OrgID:         orgID,
+		TenantID:         tenantID,
 		CustomerName:  "Test Customer",
 		InvoiceDate:   mustParseDate("2026-04-01"),
 		DueDate:       mustParseDate("2026-05-01"),
@@ -166,7 +166,7 @@ func newTestInvoice(orgID uuid.UUID, status string) *models.Invoice {
 // ─── TestCreateInvoice ──────────────────────────────────────────────────────
 
 func TestCreateInvoice(t *testing.T) {
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
 	tests := []struct {
 		name    string
@@ -176,7 +176,7 @@ func TestCreateInvoice(t *testing.T) {
 		{
 			name: "valid invoice with items",
 			invoice: &models.Invoice{
-				OrgID:         orgID,
+				TenantID:         tenantID,
 				CustomerName:  "Acme Corp",
 				InvoiceDate:   mustParseDate("2026-04-01"),
 				DueDate:       mustParseDate("2026-05-01"),
@@ -192,7 +192,7 @@ func TestCreateInvoice(t *testing.T) {
 		{
 			name: "due date before invoice date",
 			invoice: &models.Invoice{
-				OrgID:         orgID,
+				TenantID:         tenantID,
 				CustomerName:  "Acme Corp",
 				InvoiceDate:   mustParseDate("2026-04-01"),
 				DueDate:       mustParseDate("2026-03-01"),
@@ -205,7 +205,7 @@ func TestCreateInvoice(t *testing.T) {
 		{
 			name: "due date equals invoice date",
 			invoice: &models.Invoice{
-				OrgID:         orgID,
+				TenantID:         tenantID,
 				CustomerName:  "Acme Corp",
 				InvoiceDate:   mustParseDate("2026-04-01"),
 				DueDate:       mustParseDate("2026-04-01"),
@@ -218,7 +218,7 @@ func TestCreateInvoice(t *testing.T) {
 		{
 			name: "item with zero quantity",
 			invoice: &models.Invoice{
-				OrgID:         orgID,
+				TenantID:         tenantID,
 				CustomerName:  "Acme Corp",
 				InvoiceDate:   mustParseDate("2026-04-01"),
 				DueDate:       mustParseDate("2026-05-01"),
@@ -231,7 +231,7 @@ func TestCreateInvoice(t *testing.T) {
 		{
 			name: "item with negative unit price",
 			invoice: &models.Invoice{
-				OrgID:         orgID,
+				TenantID:         tenantID,
 				CustomerName:  "Acme Corp",
 				InvoiceDate:   mustParseDate("2026-04-01"),
 				DueDate:       mustParseDate("2026-05-01"),
@@ -244,7 +244,7 @@ func TestCreateInvoice(t *testing.T) {
 		{
 			name: "invalid status",
 			invoice: &models.Invoice{
-				OrgID:         orgID,
+				TenantID:         tenantID,
 				CustomerName:  "Acme Corp",
 				InvoiceDate:   mustParseDate("2026-04-01"),
 				DueDate:       mustParseDate("2026-05-01"),
@@ -258,7 +258,7 @@ func TestCreateInvoice(t *testing.T) {
 		{
 			name: "negative discount value",
 			invoice: &models.Invoice{
-				OrgID:         orgID,
+				TenantID:         tenantID,
 				CustomerName:  "Acme Corp",
 				InvoiceDate:   mustParseDate("2026-04-01"),
 				DueDate:       mustParseDate("2026-05-01"),
@@ -272,7 +272,7 @@ func TestCreateInvoice(t *testing.T) {
 		{
 			name: "percentage discount exceeds 100",
 			invoice: &models.Invoice{
-				OrgID:         orgID,
+				TenantID:         tenantID,
 				CustomerName:  "Acme Corp",
 				InvoiceDate:   mustParseDate("2026-04-01"),
 				DueDate:       mustParseDate("2026-05-01"),
@@ -286,7 +286,7 @@ func TestCreateInvoice(t *testing.T) {
 		{
 			name: "invalid discount type",
 			invoice: &models.Invoice{
-				OrgID:         orgID,
+				TenantID:         tenantID,
 				CustomerName:  "Acme Corp",
 				InvoiceDate:   mustParseDate("2026-04-01"),
 				DueDate:       mustParseDate("2026-05-01"),
@@ -299,7 +299,7 @@ func TestCreateInvoice(t *testing.T) {
 		{
 			name: "default status is PENDING when empty",
 			invoice: &models.Invoice{
-				OrgID:         orgID,
+				TenantID:         tenantID,
 				CustomerName:  "Acme Corp",
 				InvoiceDate:   mustParseDate("2026-04-01"),
 				DueDate:       mustParseDate("2026-05-01"),
@@ -312,7 +312,7 @@ func TestCreateInvoice(t *testing.T) {
 		{
 			name: "valid DRAFT status",
 			invoice: &models.Invoice{
-				OrgID:         orgID,
+				TenantID:         tenantID,
 				CustomerName:  "Acme Corp",
 				InvoiceDate:   mustParseDate("2026-04-01"),
 				DueDate:       mustParseDate("2026-05-01"),
@@ -326,7 +326,7 @@ func TestCreateInvoice(t *testing.T) {
 		{
 			name: "valid PAID status",
 			invoice: &models.Invoice{
-				OrgID:         orgID,
+				TenantID:         tenantID,
 				CustomerName:  "Acme Corp",
 				InvoiceDate:   mustParseDate("2026-04-01"),
 				DueDate:       mustParseDate("2026-05-01"),
@@ -367,7 +367,7 @@ func TestCreateInvoice(t *testing.T) {
 // ─── TestRecordPayment ──────────────────────────────────────────────────────
 
 func TestRecordPayment(t *testing.T) {
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
 	tests := []struct {
 		name         string
@@ -379,7 +379,7 @@ func TestRecordPayment(t *testing.T) {
 		{
 			name: "full payment on pending invoice",
 			setupInvoice: func() *models.Invoice {
-				return newTestInvoice(orgID, "PENDING")
+				return newTestInvoice(tenantID, "PENDING")
 			},
 			amount:     10000.0,
 			wantErr:    nil,
@@ -388,7 +388,7 @@ func TestRecordPayment(t *testing.T) {
 		{
 			name: "partial payment on pending invoice",
 			setupInvoice: func() *models.Invoice {
-				return newTestInvoice(orgID, "PENDING")
+				return newTestInvoice(tenantID, "PENDING")
 			},
 			amount:     5000.0,
 			wantErr:    nil,
@@ -397,7 +397,7 @@ func TestRecordPayment(t *testing.T) {
 		{
 			name: "complete partial payment",
 			setupInvoice: func() *models.Invoice {
-				inv := newTestInvoice(orgID, "PARTIAL")
+				inv := newTestInvoice(tenantID, "PARTIAL")
 				inv.AmountPaid = 5000.0
 				inv.BalanceDue = 5000.0
 				return inv
@@ -409,7 +409,7 @@ func TestRecordPayment(t *testing.T) {
 		{
 			name: "payment on already paid invoice",
 			setupInvoice: func() *models.Invoice {
-				inv := newTestInvoice(orgID, "PAID")
+				inv := newTestInvoice(tenantID, "PAID")
 				inv.AmountPaid = 10000.0
 				inv.BalanceDue = 0
 				return inv
@@ -420,7 +420,7 @@ func TestRecordPayment(t *testing.T) {
 		{
 			name: "payment exceeds outstanding balance",
 			setupInvoice: func() *models.Invoice {
-				return newTestInvoice(orgID, "PENDING")
+				return newTestInvoice(tenantID, "PENDING")
 			},
 			amount:  15000.0,
 			wantErr: ErrPaymentExceedsOutstanding,
@@ -428,7 +428,7 @@ func TestRecordPayment(t *testing.T) {
 		{
 			name: "zero payment amount",
 			setupInvoice: func() *models.Invoice {
-				return newTestInvoice(orgID, "PENDING")
+				return newTestInvoice(tenantID, "PENDING")
 			},
 			amount:  0,
 			wantErr: ErrNegativeAmount,
@@ -436,7 +436,7 @@ func TestRecordPayment(t *testing.T) {
 		{
 			name: "negative payment amount",
 			setupInvoice: func() *models.Invoice {
-				return newTestInvoice(orgID, "PENDING")
+				return newTestInvoice(tenantID, "PENDING")
 			},
 			amount:  -500.0,
 			wantErr: ErrNegativeAmount,
@@ -489,12 +489,12 @@ func TestRecordPayment(t *testing.T) {
 // ─── TestUpdateInvoice ──────────────────────────────────────────────────────
 
 func TestUpdateInvoice(t *testing.T) {
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
-	draftInv := newTestInvoice(orgID, "DRAFT")
+	draftInv := newTestInvoice(tenantID, "DRAFT")
 	draftInv.Status = "draft" // IsInvoiceEditable checks lowercase
-	issuedInv := newTestInvoice(orgID, "issued")
-	paidInv := newTestInvoice(orgID, "paid")
+	issuedInv := newTestInvoice(tenantID, "issued")
+	paidInv := newTestInvoice(tenantID, "paid")
 
 	tests := []struct {
 		name    string
@@ -573,7 +573,7 @@ func TestUpdateInvoice(t *testing.T) {
 // ─── TestGetSettings ────────────────────────────────────────────────────────
 
 func TestGetSettings(t *testing.T) {
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
 	tests := []struct {
 		name           string
@@ -592,7 +592,7 @@ func TestGetSettings(t *testing.T) {
 		{
 			name: "returns stored settings",
 			preseed: &models.BillingSettings{
-				OrgID:                orgID,
+				TenantID:                tenantID,
 				DefaultTaxRate:       28.0,
 				BaseCurrency:         "INR",
 				GracePeriodDays:      30,
@@ -608,11 +608,11 @@ func TestGetSettings(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := newMockRepo()
 			if tt.preseed != nil {
-				repo.settings[orgID] = tt.preseed
+				repo.settings[tenantID] = tt.preseed
 			}
 			svc := newTestService(repo)
 
-			settings, err := svc.GetSettings(context.Background(), orgID)
+			settings, err := svc.GetSettings(context.Background(), tenantID)
 			if err != nil {
 				t.Fatalf("GetSettings() error = %v", err)
 			}
@@ -726,8 +726,8 @@ func TestIsInvoiceTerminal(t *testing.T) {
 // ─── TestDeleteInvoice ──────────────────────────────────────────────────────
 
 func TestDeleteInvoice(t *testing.T) {
-	orgID := uuid.New()
-	inv := newTestInvoice(orgID, "draft")
+	tenantID := uuid.New()
+	inv := newTestInvoice(tenantID, "draft")
 
 	repo := newMockRepo()
 	repo.invoices[inv.ID] = inv
@@ -745,15 +745,15 @@ func TestDeleteInvoice(t *testing.T) {
 // ─── TestListInvoices ───────────────────────────────────────────────────────
 
 func TestListInvoices(t *testing.T) {
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	repo := newMockRepo()
-	repo.invoices[uuid.New()] = newTestInvoice(orgID, "PENDING")
-	repo.invoices[uuid.New()] = newTestInvoice(orgID, "PAID")
+	repo.invoices[uuid.New()] = newTestInvoice(tenantID, "PENDING")
+	repo.invoices[uuid.New()] = newTestInvoice(tenantID, "PAID")
 	repo.listTotal = 2
 
 	svc := newTestService(repo)
 
-	invoices, total, err := svc.ListInvoices(context.Background(), orgID, 1, 10)
+	invoices, total, err := svc.ListInvoices(context.Background(), tenantID, 1, 10)
 	if err != nil {
 		t.Fatalf("ListInvoices() error = %v", err)
 	}

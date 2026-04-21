@@ -32,7 +32,7 @@ func TestS3Storage_MinioIntegration(t *testing.T) {
 
 	inv := &models.Invoice{
 		ID:            uuid.New(),
-		OrgID:         uuid.New(),
+		TenantID:         uuid.New(),
 		InvoiceNumber: "INV-MINIO-001",
 		InvoiceDate:   time.Now(),
 	}
@@ -72,7 +72,7 @@ func TestS3Storage_SignedURLExpiration(t *testing.T) {
 
 	inv := &models.Invoice{
 		ID:            uuid.New(),
-		OrgID:         uuid.New(),
+		TenantID:         uuid.New(),
 		InvoiceNumber: "INV-EXP-TEST",
 		InvoiceDate:   time.Now(),
 	}

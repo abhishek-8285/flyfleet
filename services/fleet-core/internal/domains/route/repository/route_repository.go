@@ -14,7 +14,7 @@ type RouteOptimizationRepository interface {
 	GetOptimizationRequest(ctx context.Context, id string) (*models.RouteOptimizationRequest, error)
 	UpdateOptimizationRequest(ctx context.Context, id string, updates map[string]interface{}) error
 	DeleteOptimizationRequest(ctx context.Context, id string) error
-	ListOptimizationRequests(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.RouteOptimizationRequest, int, error)
+	ListOptimizationRequests(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.RouteOptimizationRequest, int, error)
 
 	CreateOptimizationResult(ctx context.Context, result *models.RouteOptimizationResult) error
 	GetOptimizationResult(ctx context.Context, id string) (*models.RouteOptimizationResult, error)

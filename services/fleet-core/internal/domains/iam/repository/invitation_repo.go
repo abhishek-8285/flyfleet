@@ -40,7 +40,7 @@ func (r *InvitationRepository) Create(ctx context.Context, inv *models.Invitatio
 		INSERT INTO invitations (tenant_id, email, invited_by, token, role_ids, message, status, expires_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, created_at, updated_at`,
-		inv.OrgID, inv.Email, inv.InvitedBy, inv.Token, inv.RoleIDs, inv.Message,
+		inv.TenantID, inv.Email, inv.InvitedBy, inv.Token, inv.RoleIDs, inv.Message,
 		inv.Status, inv.ExpiresAt,
 	).Scan(&inv.ID, &inv.CreatedAt, &inv.UpdatedAt)
 }
@@ -51,7 +51,7 @@ func (r *InvitationRepository) GetByToken(ctx context.Context, token string) (*m
 		SELECT id, tenant_id, email, invited_by, token, role_ids, message, status,
 		       expires_at, accepted_at, accepted_user_id, created_at, updated_at
 		FROM invitations WHERE token = $1`, token).Scan(
-		&inv.ID, &inv.OrgID, &inv.Email, &inv.InvitedBy, &inv.Token, &inv.RoleIDs,
+		&inv.ID, &inv.TenantID, &inv.Email, &inv.InvitedBy, &inv.Token, &inv.RoleIDs,
 		&inv.Message, &inv.Status, &inv.ExpiresAt, &inv.AcceptedAt, &inv.AcceptedUserID,
 		&inv.CreatedAt, &inv.UpdatedAt,
 	)
@@ -85,11 +85,11 @@ func (r *InvitationRepository) Resend(ctx context.Context, id uuid.UUID, newExpi
 	return err
 }
 
-func (r *InvitationRepository) ListPending(ctx context.Context, orgID uuid.UUID) ([]models.Invitation, error) {
+func (r *InvitationRepository) ListPending(ctx context.Context, tenantID uuid.UUID) ([]models.Invitation, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, tenant_id, email, invited_by, token, role_ids, message, status,
 		       expires_at, accepted_at, accepted_user_id, created_at, updated_at
-		FROM invitations WHERE tenant_id = $1 AND status = 'pending' ORDER BY created_at DESC`, orgID)
+		FROM invitations WHERE tenant_id = $1 AND status = 'pending' ORDER BY created_at DESC`, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func (r *InvitationRepository) ListPending(ctx context.Context, orgID uuid.UUID)
 	var invites []models.Invitation
 	for rows.Next() {
 		var inv models.Invitation
-		if err := rows.Scan(&inv.ID, &inv.OrgID, &inv.Email, &inv.InvitedBy, &inv.Token,
+		if err := rows.Scan(&inv.ID, &inv.TenantID, &inv.Email, &inv.InvitedBy, &inv.Token,
 			&inv.RoleIDs, &inv.Message, &inv.Status, &inv.ExpiresAt, &inv.AcceptedAt,
 			&inv.AcceptedUserID, &inv.CreatedAt, &inv.UpdatedAt); err != nil {
 			return nil, err
@@ -108,10 +108,10 @@ func (r *InvitationRepository) ListPending(ctx context.Context, orgID uuid.UUID)
 	return invites, nil
 }
 
-func (r *InvitationRepository) ExistsForEmail(ctx context.Context, orgID uuid.UUID, email string) (bool, error) {
+func (r *InvitationRepository) ExistsForEmail(ctx context.Context, tenantID uuid.UUID, email string) (bool, error) {
 	var exists bool
 	err := r.pool.QueryRow(ctx, `
 		SELECT EXISTS(SELECT 1 FROM invitations WHERE tenant_id = $1 AND email = $2 AND status = 'pending')`,
-		orgID, email).Scan(&exists)
+		tenantID, email).Scan(&exists)
 	return exists, err
 }

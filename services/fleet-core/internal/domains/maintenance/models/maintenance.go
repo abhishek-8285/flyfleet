@@ -9,7 +9,7 @@ import (
 // MaintenanceSchedule represents a scheduled maintenance task
 type MaintenanceSchedule struct {
 	ID             string            `json:"id" db:"id"`
-	OrgID          uuid.UUID         `json:"tenant_id" db:"tenant_id"`
+	TenantID          uuid.UUID         `json:"tenant_id" db:"tenant_id"`
 	VehicleID      uuid.UUID         `json:"vehicle_id" db:"vehicle_id"`
 	Type           string            `json:"type" db:"type"` // routine, preventive, corrective, emergency
 	Name           string            `json:"name" db:"name"`
@@ -37,7 +37,7 @@ type MaintenanceSchedule struct {
 // MaintenanceLog represents a completed maintenance record
 type MaintenanceLog struct {
 	ID              string        `json:"id" db:"id"`
-	OrgID           uuid.UUID     `json:"tenant_id" db:"tenant_id"`
+	TenantID           uuid.UUID     `json:"tenant_id" db:"tenant_id"`
 	VehicleID       uuid.UUID     `json:"vehicle_id" db:"vehicle_id"`
 	ScheduleID      *string       `json:"schedule_id,omitempty" db:"schedule_id"`
 	Type            string        `json:"type" db:"type"` // routine, preventive, corrective, emergency
@@ -182,7 +182,7 @@ type UpdateLogRequest struct {
 
 // MaintenanceListFilter represents filters for listing maintenance records
 type MaintenanceListFilter struct {
-	OrgID      uuid.UUID  `json:"tenant_id" form:"tenant_id"`
+	TenantID      uuid.UUID  `json:"tenant_id" form:"tenant_id"`
 	VehicleID  *uuid.UUID `json:"vehicle_id" form:"vehicle_id"`
 	Type       []string   `json:"type" form:"type"`
 	Status     []string   `json:"status" form:"status"`

@@ -31,9 +31,9 @@ func NewSessionService(
 
 // ListSessions returns all active sessions for a user in an organization.
 // It merges DB-persisted tokens with Redis-cached session data.
-func (s *SessionService) ListSessions(ctx context.Context, userID, orgID uuid.UUID) ([]models.Session, error) {
+func (s *SessionService) ListSessions(ctx context.Context, userID, tenantID uuid.UUID) ([]models.Session, error) {
 	// Get active tokens from DB
-	tokens, err := s.sessionRepo.GetActiveTokens(ctx, userID, orgID)
+	tokens, err := s.sessionRepo.GetActiveTokens(ctx, userID, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (s *SessionService) ListSessions(ctx context.Context, userID, orgID uuid.UU
 		session := models.Session{
 			ID:         t.ID.String(),
 			UserID:     t.UserID,
-			OrgID:      t.OrgID,
+			TenantID:      t.TenantID,
 			Device:     t.DeviceInfo,
 			IP:         t.IPAddress,
 			CreatedAt:  t.CreatedAt,
@@ -65,14 +65,14 @@ func (s *SessionService) ListSessions(ctx context.Context, userID, orgID uuid.UU
 
 // RevokeSession revokes a single session by ID, verifying ownership first.
 // Returns "not_owner" error if the session belongs to a different user.
-func (s *SessionService) RevokeSession(ctx context.Context, userID, orgID uuid.UUID, sessionID string) error {
+func (s *SessionService) RevokeSession(ctx context.Context, userID, tenantID uuid.UUID, sessionID string) error {
 	sUUID, err := uuid.Parse(sessionID)
 	if err != nil {
 		return err
 	}
 
 	// Verify ownership: check that the session belongs to this user and org
-	tokens, err := s.sessionRepo.GetActiveTokens(ctx, userID, orgID)
+	tokens, err := s.sessionRepo.GetActiveTokens(ctx, userID, tenantID)
 	if err != nil {
 		return err
 	}

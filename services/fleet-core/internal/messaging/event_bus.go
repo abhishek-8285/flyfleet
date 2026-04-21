@@ -15,13 +15,13 @@ type Event struct {
 	ID        string    `json:"id"`
 	Subject   string    `json:"subject"`
 	Data      any       `json:"data"`
-	OrgID     string    `json:"org_id"`
+	TenantID     string    `json:"tenant_id"`
 	Timestamp time.Time `json:"timestamp"`
 }
 
 // EventBus defines the interface for standardized platform messaging
 type EventBus interface {
-	Publish(ctx context.Context, subject string, data any, orgID string) error
+	Publish(ctx context.Context, subject string, data any, tenantID string) error
 	Subscribe(subject string, handler func(event Event)) (*nats.Subscription, error)
 }
 
@@ -40,12 +40,12 @@ func NewNatsEventBus(nc *nats.Conn, logger *zap.Logger) EventBus {
 }
 
 // Publish publishes an event to a subject with multi-tenant context
-func (b *NatsEventBus) Publish(ctx context.Context, subject string, data any, orgID string) error {
+func (b *NatsEventBus) Publish(ctx context.Context, subject string, data any, tenantID string) error {
 	event := Event{
 		ID:        fmt.Sprintf("evt_%d", time.Now().UnixNano()),
 		Subject:   subject,
 		Data:      data,
-		OrgID:     orgID,
+		TenantID:     tenantID,
 		Timestamp: time.Now(),
 	}
 
@@ -58,7 +58,7 @@ func (b *NatsEventBus) Publish(ctx context.Context, subject string, data any, or
 		return fmt.Errorf("failed to publish %s to NATS: %w", subject, err)
 	}
 
-	b.logger.Debug("event published", zap.String("subject", subject), zap.String("org_id", orgID))
+	b.logger.Debug("event published", zap.String("subject", subject), zap.String("tenant_id", tenantID))
 	return nil
 }
 

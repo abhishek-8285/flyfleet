@@ -28,7 +28,7 @@ func (r *AdvancedSubRepository) CreateCycle(ctx context.Context, cycle *models.B
 	_, err := r.db.Exec(ctx, `
 		INSERT INTO billing_cycles (id, tenant_id, subscription_id, cycle_start, cycle_end, status, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
-	`, cycle.ID, cycle.OrgID, cycle.SubscriptionID, cycle.CycleStart, cycle.CycleEnd, cycle.Status)
+	`, cycle.ID, cycle.TenantID, cycle.SubscriptionID, cycle.CycleStart, cycle.CycleEnd, cycle.Status)
 
 	return err
 }
@@ -41,7 +41,7 @@ func (r *AdvancedSubRepository) GetActiveCycle(ctx context.Context, subID uuid.U
 		FROM billing_cycles
 		WHERE subscription_id = $1 AND status = 'ACTIVE'
 		ORDER BY cycle_end DESC LIMIT 1
-	`, subID).Scan(&c.ID, &c.OrgID, &c.SubscriptionID, &c.CycleStart, &c.CycleEnd, &c.Status, &c.CreatedAt)
+	`, subID).Scan(&c.ID, &c.TenantID, &c.SubscriptionID, &c.CycleStart, &c.CycleEnd, &c.Status, &c.CreatedAt)
 
 	if err == pgx.ErrNoRows {
 		return nil, nil // No active cycle
@@ -125,7 +125,7 @@ func (r *AdvancedSubRepository) RedeemCoupon(ctx context.Context, cr *models.Cou
 	_, err = tx.Exec(ctx, `
 		INSERT INTO billing_coupon_redemptions (id, coupon_id, tenant_id, subscription_id, invoice_id)
 		VALUES ($1, $2, $3, $4, $5)
-	`, cr.ID, cr.CouponID, cr.OrgID, cr.SubscriptionID, cr.InvoiceID)
+	`, cr.ID, cr.CouponID, cr.TenantID, cr.SubscriptionID, cr.InvoiceID)
 	if err != nil {
 		return err
 	}

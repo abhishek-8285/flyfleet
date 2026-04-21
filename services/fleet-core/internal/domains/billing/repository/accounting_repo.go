@@ -29,7 +29,7 @@ func (r *AccountingRepository) CreateExport(ctx context.Context, export *models.
 		INSERT INTO billing_accounting_exports (
 			id, tenant_id, external_system, export_type, status, file_key, records_count, created_at, created_by
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-	`, export.ID, export.OrgID, export.ExternalSystem, export.ExportType, export.Status, export.FileKey, export.RecordsCount, export.CreatedAt, export.CreatedBy)
+	`, export.ID, export.TenantID, export.ExternalSystem, export.ExportType, export.Status, export.FileKey, export.RecordsCount, export.CreatedAt, export.CreatedBy)
 
 	return err
 }
@@ -44,14 +44,14 @@ func (r *AccountingRepository) UpdateExportStatus(ctx context.Context, id uuid.U
 	return err
 }
 
-func (r *AccountingRepository) GetExportHistory(ctx context.Context, orgID uuid.UUID, limit int) ([]models.AccountingExport, error) {
+func (r *AccountingRepository) GetExportHistory(ctx context.Context, tenantID uuid.UUID, limit int) ([]models.AccountingExport, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT id, tenant_id, external_system, export_type, status, file_key, records_count, error_message, created_at, completed_at, created_by
 		FROM billing_accounting_exports
 		WHERE tenant_id = $1
 		ORDER BY created_at DESC
 		LIMIT $2
-	`, orgID, limit)
+	`, tenantID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (r *AccountingRepository) GetExportHistory(ctx context.Context, orgID uuid.
 	for rows.Next() {
 		var e models.AccountingExport
 		err := rows.Scan(
-			&e.ID, &e.OrgID, &e.ExternalSystem, &e.ExportType, &e.Status, &e.FileKey, &e.RecordsCount, &e.ErrorMessage, &e.CreatedAt, &e.CompletedAt, &e.CreatedBy,
+			&e.ID, &e.TenantID, &e.ExternalSystem, &e.ExportType, &e.Status, &e.FileKey, &e.RecordsCount, &e.ErrorMessage, &e.CreatedAt, &e.CompletedAt, &e.CreatedBy,
 		)
 		if err != nil {
 			return nil, err

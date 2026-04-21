@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/flyfleet/fleet-core/internal/domains/fuel/models"
 	"github.com/flyfleet/fleet-core/internal/domains/fuel/service"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 )
 
 // DTOs for request payloads (separate from models to prevent mass assignment)
@@ -85,9 +85,9 @@ func (h *FuelHandler) RegisterRoutes(r chi.Router) {
 
 // CreateLog godoc
 func (h *FuelHandler) CreateLog(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	userID := h.getUserID(r)
-	if !h.ensureAuthIDs(w, orgID, userID) {
+	if !h.ensureAuthIDs(w, tenantID, userID) {
 		return
 	}
 
@@ -120,7 +120,7 @@ func (h *FuelHandler) CreateLog(w http.ResponseWriter, r *http.Request) {
 		Notes:           dto.Notes,
 	}
 
-	log, err := h.svc.CreateLog(r.Context(), orgID, userID, req)
+	log, err := h.svc.CreateLog(r.Context(), tenantID, userID, req)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
@@ -131,9 +131,9 @@ func (h *FuelHandler) CreateLog(w http.ResponseWriter, r *http.Request) {
 
 // GetLog godoc
 func (h *FuelHandler) GetLog(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	userID := h.getUserID(r)
-	if !h.ensureAuthIDs(w, orgID, userID) {
+	if !h.ensureAuthIDs(w, tenantID, userID) {
 		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -142,7 +142,7 @@ func (h *FuelHandler) GetLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log, err := h.svc.GetLog(r.Context(), id, orgID)
+	log, err := h.svc.GetLog(r.Context(), id, tenantID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
@@ -153,15 +153,15 @@ func (h *FuelHandler) GetLog(w http.ResponseWriter, r *http.Request) {
 
 // ListLogs godoc
 func (h *FuelHandler) ListLogs(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	userID := h.getUserID(r)
-	if !h.ensureAuthIDs(w, orgID, userID) {
+	if !h.ensureAuthIDs(w, tenantID, userID) {
 		return
 	}
 
 	query := r.URL.Query()
 	filter := models.FuelLogFilter{
-		OrganizationID: orgID,
+		OrganizationID: tenantID,
 		Search:         query.Get("search"),
 	}
 
@@ -193,9 +193,9 @@ func (h *FuelHandler) ListLogs(w http.ResponseWriter, r *http.Request) {
 
 // UpdateLog godoc
 func (h *FuelHandler) UpdateLog(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	userID := h.getUserID(r)
-	if !h.ensureAuthIDs(w, orgID, userID) {
+	if !h.ensureAuthIDs(w, tenantID, userID) {
 		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -231,7 +231,7 @@ func (h *FuelHandler) UpdateLog(w http.ResponseWriter, r *http.Request) {
 		Notes:           dto.Notes,
 	}
 
-	log, err := h.svc.UpdateLog(r.Context(), id, orgID, req)
+	log, err := h.svc.UpdateLog(r.Context(), id, tenantID, req)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
@@ -242,9 +242,9 @@ func (h *FuelHandler) UpdateLog(w http.ResponseWriter, r *http.Request) {
 
 // DeleteLog godoc
 func (h *FuelHandler) DeleteLog(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	userID := h.getUserID(r)
-	if !h.ensureAuthIDs(w, orgID, userID) {
+	if !h.ensureAuthIDs(w, tenantID, userID) {
 		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -253,7 +253,7 @@ func (h *FuelHandler) DeleteLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.svc.DeleteLog(r.Context(), id, orgID); err != nil {
+	if err := h.svc.DeleteLog(r.Context(), id, tenantID); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
@@ -263,9 +263,9 @@ func (h *FuelHandler) DeleteLog(w http.ResponseWriter, r *http.Request) {
 
 // ChangeStatus godoc
 func (h *FuelHandler) ChangeStatus(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	userID := h.getUserID(r)
-	if !h.ensureAuthIDs(w, orgID, userID) {
+	if !h.ensureAuthIDs(w, tenantID, userID) {
 		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
@@ -290,7 +290,7 @@ func (h *FuelHandler) ChangeStatus(w http.ResponseWriter, r *http.Request) {
 		Notes:  dto.Notes,
 	}
 
-	if err := h.svc.ChangeStatus(r.Context(), id, orgID, req); err != nil {
+	if err := h.svc.ChangeStatus(r.Context(), id, tenantID, req); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
@@ -300,12 +300,12 @@ func (h *FuelHandler) ChangeStatus(w http.ResponseWriter, r *http.Request) {
 
 // GetStats godoc
 func (h *FuelHandler) GetStats(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	userID := h.getUserID(r)
-	if !h.ensureAuthIDs(w, orgID, userID) {
+	if !h.ensureAuthIDs(w, tenantID, userID) {
 		return
 	}
-	stats, err := h.svc.GetStats(r.Context(), orgID, models.FuelLogFilter{})
+	stats, err := h.svc.GetStats(r.Context(), tenantID, models.FuelLogFilter{})
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -315,12 +315,12 @@ func (h *FuelHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 
 // GetSettings godoc
 func (h *FuelHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	userID := h.getUserID(r)
-	if !h.ensureAuthIDs(w, orgID, userID) {
+	if !h.ensureAuthIDs(w, tenantID, userID) {
 		return
 	}
-	settings, err := h.svc.GetSettings(r.Context(), orgID)
+	settings, err := h.svc.GetSettings(r.Context(), tenantID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -330,9 +330,9 @@ func (h *FuelHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
 
 // UpdateSettings godoc
 func (h *FuelHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	userID := h.getUserID(r)
-	if !h.ensureAuthIDs(w, orgID, userID) {
+	if !h.ensureAuthIDs(w, tenantID, userID) {
 		return
 	}
 
@@ -353,7 +353,7 @@ func (h *FuelHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	settings, err := h.svc.UpdateSettings(r.Context(), orgID, req)
+	settings, err := h.svc.UpdateSettings(r.Context(), tenantID, req)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -382,53 +382,32 @@ func (h *FuelHandler) writeErrorResponse(w http.ResponseWriter, statusCode int, 
 	h.writeJSONResponse(w, statusCode, resp)
 }
 
-func (h *FuelHandler) getOrgID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
-		switch v := val.(type) {
-		case uuid.UUID:
-			return v
-		case string:
-			if id, err := uuid.Parse(v); err == nil {
-				return id
-			}
-		}
+func (h *FuelHandler) getTenantID(r *http.Request) uuid.UUID {
+	if id, ok := ctxkeys.GetTenantID(r.Context()); ok {
+		return id
 	}
-	// SECURITY FIX: Removed fallback to X-Organization-ID header to prevent header spoofing
-	// The org ID must come from validated JWT context only
 	h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 	return uuid.Nil
 }
 
 func (h *FuelHandler) getUserID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.UserIDKey); val != nil {
-		switch v := val.(type) {
-		case uuid.UUID:
-			return v
-		case string:
-			if id, err := uuid.Parse(v); err == nil {
-				return id
-			}
-		}
+	if id, ok := ctxkeys.GetUserID(r.Context()); ok {
+		return id
 	}
-	// SECURITY FIX: Removed fallback to X-User-ID header to prevent header spoofing
-	// The user ID must come from validated JWT context only
 	h.logger.Warn("Missing user_id in context - request likely bypassed authentication middleware")
 	return uuid.Nil
 }
 
 func (h *FuelHandler) getUserRole(r *http.Request) string {
-	if val := r.Context().Value(middleware.RoleKey); val != nil {
-		if role, ok := val.(string); ok {
-			return role
-		}
+	role := ctxkeys.GetRole(r.Context())
+	if role == "" {
+		h.logger.Warn("Missing role in context - request likely bypassed authentication middleware")
 	}
-	// Default should be empty to indicate no role, not "admin"
-	h.logger.Warn("Missing role in context - request likely bypassed authentication middleware")
-	return ""
+	return role
 }
 
-func (h *FuelHandler) ensureAuthIDs(w http.ResponseWriter, orgID uuid.UUID, userID uuid.UUID) bool {
-	if orgID == uuid.Nil {
+func (h *FuelHandler) ensureAuthIDs(w http.ResponseWriter, tenantID uuid.UUID, userID uuid.UUID) bool {
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "missing organization id", nil)
 		return false
 	}

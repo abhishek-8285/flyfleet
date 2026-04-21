@@ -5,11 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/fleet-platform/shared/pkg/middleware"
+	sharedmiddleware "github.com/fleet-platform/shared/pkg/middleware"
 	billingMiddleware "github.com/flyfleet/fleet-core/internal/domains/billing/middleware"
 	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
-	iamCtx "github.com/flyfleet/fleet-core/internal/platform/iam/middleware"
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -31,42 +29,34 @@ func TenantMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
 				return
 			}
 
-			// Extract OrgID from JWT via auth middleware (IAM or legacy)
-			var orgID uuid.UUID
-			var ok bool
-
-			// Try IAM context first (UUID)
-			if orgID, ok = ctx.Value(iamCtx.OrgIDKey).(uuid.UUID); !ok {
-				// Try string context fallback
-				if orgIDStr, okStr := ctx.Value(ctxkeys.OrgIDKey).(string); okStr {
-					if id, err := uuid.Parse(orgIDStr); err == nil {
-						orgID = id
-						ok = true
-					}
-				}
-			} else {
-				ok = true
-			}
+			// Extract TenantID from context (populated by Auth middleware)
+			tenantID, ok := ctxkeys.GetTenantID(ctx)
 
 			if !ok {
-				// No valid org_id from authentication - reject request
+				// No valid tenant_id from authentication - check for header as fallback ONLY for logging purposes
+				// so we can see what the client was TRYING to do.
+				headerTenantID := r.Header.Get("X-Tenant-ID")
 				logger.Warn("organization context missing for authenticated request",
 					zap.String("path", r.URL.Path),
-					zap.String("method", r.Method))
+					zap.String("method", r.Method),
+					zap.String("header_tenant_id", headerTenantID))
+				
 				http.Error(w, "Organization context required", http.StatusUnauthorized)
 				return
 			}
 
-			// Ensure org_id is available in all required formats/keys for compatibility
-			ctx = context.WithValue(ctx, ctxkeys.TenantIDKey, orgID.String())
-			ctx = context.WithValue(ctx, ctxkeys.OrgIDKey, orgID.String())
-			ctx = context.WithValue(ctx, iamCtx.OrgIDKey, orgID)
+			// Ensure tenant_id is available in standardized format for all handlers.
+			// We set it using the typed contextKey to avoid any shadowing.
+			ctx = context.WithValue(ctx, ctxkeys.TenantIDKey, tenantID)
 			
-			// Compatibility with Shared Library
-			ctx = context.WithValue(ctx, middleware.OrgIDKey, orgID.String())
+			// Also ensure it is in the raw string format for handlers that might still rely on it.
+			ctx = context.WithValue(ctx, "tenant_id", tenantID.String())
 			
-			// Compatibility with Billing Domain internal keys
-			ctx = context.WithValue(ctx, billingMiddleware.OrgIDKey, orgID)
+			// Shared Library Compatibility
+			ctx = context.WithValue(ctx, sharedmiddleware.TenantIDKey, tenantID)
+			
+			// Billing Domain Compatibility
+			ctx = context.WithValue(ctx, billingMiddleware.TenantIDKey, tenantID)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

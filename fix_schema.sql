@@ -3,7 +3,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE IF NOT EXISTS ip_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    org_id UUID, -- Nullable for system-wide rules
+    tenant_id UUID, -- Nullable for system-wide rules
     cidr VARCHAR(50) NOT NULL,
     action VARCHAR(20) NOT NULL,
     added_by UUID,
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS ip_rules (
 
 CREATE TABLE IF NOT EXISTS access_reviews (
    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-   org_id UUID,
+   tenant_id UUID,
    title VARCHAR(255),
    status VARCHAR(50) DEFAULT 'pending',
    created_by UUID,
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS access_review_items (
 
 CREATE TABLE IF NOT EXISTS login_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    org_id UUID,
+    tenant_id UUID,
     user_id UUID,
     ip_address VARCHAR(50),
     status VARCHAR(20), -- 'success', 'failure'
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS login_events (
 
 CREATE TABLE IF NOT EXISTS threat_alerts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    org_id UUID,
+    tenant_id UUID,
     type VARCHAR(50),
     severity VARCHAR(20),
     description TEXT,

@@ -39,14 +39,14 @@ func (r *OrgRepository) GetUserOrganizations(ctx context.Context, userID uuid.UU
 	return orgs, nil
 }
 
-func (r *OrgRepository) GetUserOrgRole(ctx context.Context, userID, orgID uuid.UUID) (string, uuid.UUID, error) {
+func (r *OrgRepository) GetUserOrgRole(ctx context.Context, userID, tenantID uuid.UUID) (string, uuid.UUID, error) {
 	var role string
 	var roleID uuid.UUID
 	err := r.pool.QueryRow(ctx, `
 		SELECT uo.role, COALESCE(uo.role_id, '00000000-0000-0000-0000-000000000000'::uuid)
 		FROM user_organizations uo
 		WHERE uo.user_id = $1 AND uo.tenant_id = $2`,
-		userID, orgID,
+		userID, tenantID,
 	).Scan(&role, &roleID)
 	if err != nil {
 		return "", uuid.Nil, err
@@ -67,11 +67,11 @@ func (r *OrgRepository) GetOrgByID(ctx context.Context, id uuid.UUID) (*models.O
 	return &o, nil
 }
 
-func (r *OrgRepository) LogOrgSwitch(ctx context.Context, userID, fromOrgID, toOrgID uuid.UUID, ip, userAgent string) error {
+func (r *OrgRepository) LogOrgSwitch(ctx context.Context, userID, fromTenantID, toTenantID uuid.UUID, ip, userAgent string) error {
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO org_switch_events (user_id, from_org_id, to_org_id, ip_address, user_agent)
+		INSERT INTO org_switch_events (user_id, from_tenant_id, to_tenant_id, ip_address, user_agent)
 		VALUES ($1, $2, $3, $4, $5)`,
-		userID, fromOrgID, toOrgID, ip, userAgent,
+		userID, fromTenantID, toTenantID, ip, userAgent,
 	)
 	return err
 }

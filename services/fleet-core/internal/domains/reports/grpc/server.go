@@ -25,11 +25,11 @@ func NewReportsServer(service *service.ReportService, logger *zap.Logger) *Repor
 }
 
 func (s *ReportsServer) CreateReport(ctx context.Context, req *pb.CreateReportRequest) (*pb.CreateReportResponse, error) {
-	// orgID should come from context
-	orgID, _ := uuid.Parse("00000000-0000-0000-0000-000000000001") // Placeholder
+	// tenantID should come from context
+	tenantID, _ := uuid.Parse("00000000-0000-0000-0000-000000000001") // Placeholder
 
 	report := &models.ScheduledReport{
-		OrganizationID: orgID,
+		OrganizationID: tenantID,
 		Name:           "Generated Report", // Missing in proto, using default
 		ReportType:     req.Type,
 		Format:         req.Format,
@@ -91,7 +91,7 @@ func (s *ReportsServer) DownloadReport(ctx context.Context, req *pb.DownloadRepo
 func (s *ReportsServer) mapReportToProto(r *models.ScheduledReport) *pb.Report {
 	return &pb.Report{
 		Id:        r.ID.String(),
-		OrgId:     r.OrganizationID.String(),
+		TenantId:     r.OrganizationID.String(),
 		Type:      r.ReportType,
 		Format:    r.Format,
 		Status:    r.Status,

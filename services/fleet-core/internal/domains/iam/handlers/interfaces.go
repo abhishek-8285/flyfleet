@@ -16,13 +16,14 @@ type authService interface {
 	Login(ctx context.Context, req models.LoginRequest, ip, userAgent string) (*models.AuthTokensResponse, *models.MFARequiredResponse, error)
 	VerifyMFA(ctx context.Context, req models.MFAVerifyRequest, ip, userAgent string) (*models.AuthTokensResponse, error)
 	Refresh(ctx context.Context, refreshToken, ip, ua string) (*models.AuthTokensResponse, error)
-	Register(ctx context.Context, email, password, name string, orgID uuid.UUID) (*models.AuthTokensResponse, error)
+	Register(ctx context.Context, email, password, name string, tenantID uuid.UUID) (*models.AuthTokensResponse, error)
 	ForgotPassword(ctx context.Context, email string) error
 	ResetPasswordWithToken(ctx context.Context, token, newPassword string) error
 	Logout(ctx context.Context, userID uuid.UUID, tokenJTI string) error
-	SwitchOrg(ctx context.Context, userID uuid.UUID, targetOrgID uuid.UUID, ip, ua string) (*models.OrgSwitchResponse, error)
+	SwitchOrg(ctx context.Context, userID uuid.UUID, targetTenantID uuid.UUID, ip, ua string) (*models.OrgSwitchResponse, error)
 	GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]models.OrgInfo, error)
 	VerifyEmail(ctx context.Context, token string) error
+	ResetPasswordForced(ctx context.Context, userID uuid.UUID, newPassword string) error
 }
 
 type passwordService interface {
@@ -33,39 +34,40 @@ type passwordService interface {
 }
 
 type sessionService interface {
-	ListSessions(ctx context.Context, userID, orgID uuid.UUID) ([]models.Session, error)
-	RevokeSession(ctx context.Context, userID, orgID uuid.UUID, sessionID string) error
+	ListSessions(ctx context.Context, userID, tenantID uuid.UUID) ([]models.Session, error)
+	RevokeSession(ctx context.Context, userID, tenantID uuid.UUID, sessionID string) error
 	RevokeAllSessions(ctx context.Context, userID uuid.UUID) error
 }
 
 type rbacService interface {
-	ListRoles(ctx context.Context, orgID uuid.UUID) ([]models.Role, error)
+	ListRoles(ctx context.Context, tenantID uuid.UUID) ([]models.Role, error)
 	GetRole(ctx context.Context, id uuid.UUID) (*models.Role, error)
-	CreateRole(ctx context.Context, orgID uuid.UUID, name, description string, perms []string, createdBy uuid.UUID) (*models.Role, error)
-	UpdateRole(ctx context.Context, id, orgID uuid.UUID, name, description string) error
-	UpdateRolePermissions(ctx context.Context, id, orgID uuid.UUID, perms []string) error
-	CloneRole(ctx context.Context, sourceID, orgID uuid.UUID, name, description string, createdBy uuid.UUID) (*models.Role, error)
-	DeleteRole(ctx context.Context, id, orgID uuid.UUID) error
-	GetPermissionMatrix(ctx context.Context, orgID uuid.UUID) ([]models.RolePermissionMatrixEntry, error)
-	AssignRole(ctx context.Context, userID, roleID, orgID, assignedBy uuid.UUID) error
-	BulkAssignRoles(ctx context.Context, userIDs, roleIDs []uuid.UUID, orgID, assignedBy uuid.UUID) *service.BulkAssignResult
-	UnassignRole(ctx context.Context, userID, roleID, orgID uuid.UUID) error
-	GetUserRoles(ctx context.Context, userID, orgID uuid.UUID) ([]models.Role, error)
-	GetUserPermissions(ctx context.Context, userID, orgID uuid.UUID) ([]string, error)
+	CreateRole(ctx context.Context, tenantID uuid.UUID, name, description string, perms []string, createdBy uuid.UUID) (*models.Role, error)
+	UpdateRole(ctx context.Context, id, tenantID uuid.UUID, name, description string) error
+	UpdateRolePermissions(ctx context.Context, id, tenantID uuid.UUID, perms []string) error
+	CloneRole(ctx context.Context, sourceID, tenantID uuid.UUID, name, description string, createdBy uuid.UUID) (*models.Role, error)
+	DeleteRole(ctx context.Context, id, tenantID uuid.UUID) error
+	GetPermissionMatrix(ctx context.Context, tenantID uuid.UUID) ([]models.RolePermissionMatrixEntry, error)
+	AssignRole(ctx context.Context, userID, roleID, tenantID, assignedBy uuid.UUID) error
+	BulkAssignRoles(ctx context.Context, userIDs, roleIDs []uuid.UUID, tenantID, assignedBy uuid.UUID) *service.BulkAssignResult
+	UnassignRole(ctx context.Context, userID, roleID, tenantID uuid.UUID) error
+	GetUserRoles(ctx context.Context, userID, tenantID uuid.UUID) ([]models.Role, error)
+	GetUserPermissions(ctx context.Context, userID, tenantID uuid.UUID) ([]string, error)
 	ListAllPermissions(ctx context.Context) ([]models.Permission, error)
 }
 
 type userService interface {
 	ListUsers(ctx context.Context, params models.ListUsersParams) (*models.ListUsersResponse, error)
 	GetUser(ctx context.Context, id uuid.UUID) (*models.User, error)
-	UpdateUserStatus(ctx context.Context, userID uuid.UUID, status string, actorID uuid.UUID) error
-	UpdateUserPreferences(ctx context.Context, userID uuid.UUID, sidebarCollapsed *bool, language *string, actorID uuid.UUID) error
-	DeleteUser(ctx context.Context, userID uuid.UUID, actorID uuid.UUID) error
+	UpdateUserStatus(ctx context.Context, userID, tenantID uuid.UUID, status string, actorID uuid.UUID) error
+	UpdateUserPreferences(ctx context.Context, userID, tenantID uuid.UUID, sidebarCollapsed *bool, language *string, actorID uuid.UUID) error
+	DeleteUser(ctx context.Context, userID, tenantID uuid.UUID, actorID uuid.UUID) error
 	GetUserAuditLog(ctx context.Context, userID uuid.UUID, limit int) ([]models.AuditLog, error)
+	CreateUser(ctx context.Context, tenantID uuid.UUID, req models.CreateUserRequest, actorID uuid.UUID) (*models.User, error)
 }
 
 type invitationService interface {
-	CreateInvite(ctx context.Context, orgID, invitedBy uuid.UUID, email string, roleIDs []uuid.UUID, message string) (*models.Invitation, error)
+	CreateInvite(ctx context.Context, tenantID, invitedBy uuid.UUID, email string, roleIDs []uuid.UUID, message string) (*models.Invitation, error)
 	AcceptInvite(ctx context.Context, token, name, password string) (*models.User, error)
 	ResendInvite(ctx context.Context, inviteID, actorID uuid.UUID) error
 	RevokeInvite(ctx context.Context, inviteID, actorID uuid.UUID) error
@@ -82,7 +84,7 @@ type mfaService interface {
 type userRepo interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	UpdateProfile(ctx context.Context, id uuid.UUID, name, phone, avatarURL string) error
-	UpdatePreferences(ctx context.Context, id uuid.UUID, sidebarCollapsed *bool, language *string) error
+	UpdatePreferences(ctx context.Context, id, tenantID uuid.UUID, sidebarCollapsed *bool, language *string) error
 	GetOrganizations(ctx context.Context, id uuid.UUID) ([]models.OrgInfo, error)
 }
 

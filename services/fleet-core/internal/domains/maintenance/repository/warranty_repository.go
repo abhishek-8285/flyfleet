@@ -21,7 +21,7 @@ func (r *MaintenanceRepositoryImpl) CreateWarranty(ctx context.Context, w *model
 	w.CreatedAt = time.Now()
 
 	_, err := r.db.Exec(ctx, query,
-		w.ID, w.OrgID, w.VehicleID, w.PartNumber, w.WarrantyProvider,
+		w.ID, w.TenantID, w.VehicleID, w.PartNumber, w.WarrantyProvider,
 		w.WarrantyStart, w.WarrantyEnd, w.WarrantyTerms, w.ClaimContact, w.CreatedAt,
 	)
 	return err
@@ -37,7 +37,7 @@ func (r *MaintenanceRepositoryImpl) CheckWarranty(ctx context.Context, vehicleID
 
 	var w models.ComponentWarranty
 	err := r.db.QueryRow(ctx, query, vehicleID, partNumber).Scan(
-		&w.ID, &w.OrgID, &w.VehicleID, &w.PartNumber, &w.WarrantyProvider,
+		&w.ID, &w.TenantID, &w.VehicleID, &w.PartNumber, &w.WarrantyProvider,
 		&w.WarrantyStart, &w.WarrantyEnd, &w.WarrantyTerms, &w.ClaimContact, &w.CreatedAt,
 	)
 	if err != nil {
@@ -63,7 +63,7 @@ func (r *MaintenanceRepositoryImpl) GetWarrantyCoverage(ctx context.Context, veh
 	for rows.Next() {
 		var w models.ComponentWarranty
 		err := rows.Scan(
-			&w.ID, &w.OrgID, &w.VehicleID, &w.PartNumber, &w.WarrantyProvider,
+			&w.ID, &w.TenantID, &w.VehicleID, &w.PartNumber, &w.WarrantyProvider,
 			&w.WarrantyStart, &w.WarrantyEnd, &w.WarrantyTerms, &w.ClaimContact, &w.CreatedAt,
 		)
 		if err != nil {
@@ -74,7 +74,7 @@ func (r *MaintenanceRepositoryImpl) GetWarrantyCoverage(ctx context.Context, veh
 	return results, nil
 }
 
-func (r *MaintenanceRepositoryImpl) GetWarrantyExpiryAlerts(ctx context.Context, orgID uuid.UUID, days int) ([]models.ComponentWarranty, error) {
+func (r *MaintenanceRepositoryImpl) GetWarrantyExpiryAlerts(ctx context.Context, tenantID uuid.UUID, days int) ([]models.ComponentWarranty, error) {
 	query := `
 		SELECT id, tenant_id, vehicle_id, part_number, warranty_provider,
 			   warranty_start, warranty_end, warranty_terms, claim_contact, created_at
@@ -82,7 +82,7 @@ func (r *MaintenanceRepositoryImpl) GetWarrantyExpiryAlerts(ctx context.Context,
 		WHERE tenant_id = $1 AND warranty_end >= CURRENT_DATE AND warranty_end <= CURRENT_DATE + ($2 * interval '1 day')
 		ORDER BY warranty_end ASC`
 
-	rows, err := r.db.Query(ctx, query, orgID, days)
+	rows, err := r.db.Query(ctx, query, tenantID, days)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,7 @@ func (r *MaintenanceRepositoryImpl) GetWarrantyExpiryAlerts(ctx context.Context,
 	for rows.Next() {
 		var w models.ComponentWarranty
 		err := rows.Scan(
-			&w.ID, &w.OrgID, &w.VehicleID, &w.PartNumber, &w.WarrantyProvider,
+			&w.ID, &w.TenantID, &w.VehicleID, &w.PartNumber, &w.WarrantyProvider,
 			&w.WarrantyStart, &w.WarrantyEnd, &w.WarrantyTerms, &w.ClaimContact, &w.CreatedAt,
 		)
 		if err != nil {

@@ -30,13 +30,13 @@ import InitiateRestorePage from "./pages/admin/dr/InitiateRestorePage";
 import RestorePointsPage from "./pages/admin/dr/RestorePointsPage";
 import { DriverList } from "./pages/admin/DriverList";
 import { DriverDetail } from "./pages/admin/DriverDetail";
-import { AddDriver } from "./pages/admin/AddDriver";
+import AddDriver from "./pages/admin/Drivers/AddDriver";
 import { EditDriver } from "./pages/admin/EditDriver";
 import { Drivers as AdminDrivers } from "./pages/admin/Drivers";
 import { EditOrganization } from "./pages/admin/EditOrganization";
-import { AddVehicle as FleetAddVehicle } from "./pages/admin/FleetCommand/AddVehicle";
-import { EditVehicle as FleetEditVehicle } from "./pages/admin/FleetCommand/EditVehicle";
-import { VehicleDetail as FleetVehicleDetail } from "./pages/admin/FleetCommand/VehicleDetail";
+import FleetAddVehicle from "./pages/admin/FleetCommand/AddVehicle";
+import FleetEditVehicle from "./pages/admin/FleetCommand/EditVehicle";
+import FleetVehicleDetail from "./pages/admin/FleetCommand/VehicleDetail";
 import { VehicleList as FleetVehicleList } from "./pages/admin/VehicleList";
 import { GlobalAdminDashboard } from "./pages/admin/GlobalAdminDashboard";
 import GlobalNotificationSettings from "./pages/admin/notifications/GlobalNotificationSettings";
@@ -139,8 +139,10 @@ import Trips from "./pages/Trips";
 import TrustedDevices from "./pages/TrustedDevices";
 import VehicleDetails from "./pages/VehicleDetails";
 import VerifyEmail from "./pages/VerifyEmail";
+import ResetPasswordForced from "./pages/ResetPasswordForced";
 import { CustomerList } from "./pages/admin/CustomerList";
 import { AddCustomer } from "./pages/admin/AddCustomer";
+import { CustomerDetail } from "./pages/admin/CustomerDetail";
 import { store } from "./store";
 import { setToken, setUser as setReduxUser } from "./store/authSlice";
 import { LoadingSpinner } from "./components/common/LoadingSpinner";
@@ -240,24 +242,29 @@ const DynamicAdminLayout: React.FC = () => {
   const isLoading = useSelector((state: RootState) => state.auth.loading);
   const token = useSelector((state: RootState) => state.auth.token);
 
+  // Always wait for auth hydration to complete before making routing decisions
   if (isLoading) return <LoadingSpinner />;
 
   const effectiveUser = user || JSON.parse(localStorage.getItem('user_data') || 'null');
   const hasToken = !!token || !!localStorage.getItem('access_token');
 
-  // If we have a token but no user data, it's a stale/corrupted session.
-  // Clear it and force login to prevent silent dashboard redirects.
-  if (!effectiveUser && hasToken) {
-    console.warn('[DynamicAdminLayout] Stale session: token exists but user is missing. Redirecting to login.');
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user_data');
-    store.dispatch(setToken(null));
-    store.dispatch(setReduxUser(null));
+  // No session at all — go to login
+  if (!hasToken) {
     return <Navigate to="/login" replace />;
   }
 
-  if (!effectiveUser && !hasToken) {
+  // Token exists but user not yet in state — may be a render race during org switch.
+  // If user_data is also missing from localStorage, then it truly is a bad session.
+  if (!effectiveUser) {
+    const savedUser = localStorage.getItem('user_data');
+    if (!savedUser) {
+      // Genuinely corrupt session — clear and login
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      store.dispatch(setToken(null));
+      store.dispatch(setReduxUser(null));
+    }
+    // In both cases redirect to login — but only clear storage if truly corrupt
     return <Navigate to="/login" replace />;
   }
 
@@ -307,6 +314,7 @@ function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/mfa-verify" element={<MFAVerify />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/reset-password-forced" element={<ResetPasswordForced />} />
               {/* Fix 7: Deduplicated /verify-email — was declared twice */}
               <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/account-locked" element={<AccountLocked />} />
@@ -476,14 +484,14 @@ function App() {
                   element={<RoleGuard allowed={["super_admin"]}><OrganizationVehicles /></RoleGuard>}
                 />
                 <Route path="users" element={
-                  <RoleGuard allowed={["admin", "super_admin"]}><Users /></RoleGuard>
+                  <RoleGuard allowed={["admin", "super_admin", "org_admin", "fleet_manager"]}><OrganizationUsers /></RoleGuard>
                 } />
                 <Route path="vehicles" element={<FleetVehicleList />} />
                 <Route path="vehicles/new" element={<FleetAddVehicle />} />
                 <Route path="vehicles/:id" element={<FleetVehicleDetail />} />
                 <Route
                   path="vehicles/:id/edit"
-                  element={<FleetEditVehicle />}
+                  element={<FleetVehicleList />} 
                 />
                 <Route path="drivers" element={<DriverList />} />
                 <Route path="drivers/new" element={<AddDriver />} />
@@ -510,6 +518,7 @@ function App() {
                 {/* Customer Management */}
                 <Route path="customers" element={<CustomerList />} />
                 <Route path="customers/new" element={<AddCustomer />} />
+                <Route path="customers/:id" element={<CustomerDetail />} />
 
                 {/* Maintenance Module */}
                 <Route

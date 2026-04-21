@@ -23,11 +23,11 @@ func NewFuelCardReconciliationService(repo *repository.FinanceRepository, logger
 }
 
 // RunReconciliation matches unreconciled card transactions with internal fuel logs.
-func (s *FuelCardReconciliationService) RunReconciliation(ctx context.Context, orgID uuid.UUID) (int, int, error) {
-	s.logger.Info("Starting fuel card reconciliation", zap.String("tenant_id", orgID.String()))
+func (s *FuelCardReconciliationService) RunReconciliation(ctx context.Context, tenantID uuid.UUID) (int, int, error) {
+	s.logger.Info("Starting fuel card reconciliation", zap.String("tenant_id", tenantID.String()))
 
 	// Get unreconciled card transactions (external)
-	cardTxs, err := s.repo.GetUnreconciledFuelCardTransactions(ctx, orgID.String())
+	cardTxs, err := s.repo.GetUnreconciledFuelCardTransactions(ctx, tenantID.String())
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to get card transactions: %w", err)
 	}
@@ -37,14 +37,14 @@ func (s *FuelCardReconciliationService) RunReconciliation(ctx context.Context, o
 		recon := &models.FuelCardReconciliation{
 			ID:                uuid.New(),
 			CardTransactionID: &cardTx.ID,
-			OrgID:             orgID,
+			TenantID:             tenantID,
 			Status:            models.ReconciliationStatusUnmatched,
 			CardAmount:        &cardTx.Amount,
 			CreatedAt:         time.Now(),
 		}
 
 		// Attempt amount+time window matching
-		internalLog, err := s.repo.GetFuelLogForMatching(ctx, orgID.String(), cardTx.Amount, cardTx.TransactionTime)
+		internalLog, err := s.repo.GetFuelLogForMatching(ctx, tenantID.String(), cardTx.Amount, cardTx.TransactionTime)
 		if err == nil && internalLog != nil {
 			recon.InternalTransactionID = &internalLog.ID
 			recon.Status = models.ReconciliationStatusMatched

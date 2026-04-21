@@ -30,13 +30,13 @@ type VehicleRecord struct {
 }
 
 // GetOrgVehicles returns all active vehicles for an organization.
-func (r *VehicleRepository) GetOrgVehicles(ctx context.Context, orgID uuid.UUID) ([]VehicleRecord, error) {
+func (r *VehicleRepository) GetOrgVehicles(ctx context.Context, tenantID uuid.UUID) ([]VehicleRecord, error) {
 	q := `SELECT id, registration, make, model, COALESCE(current_driver_id, '00000000-0000-0000-0000-000000000000')
 	      FROM vehicles
 	      WHERE tenant_id = $1 AND status = 'active'
 	      ORDER BY registration`
 
-	rows, err := r.pool.Query(ctx, q, orgID)
+	rows, err := r.pool.Query(ctx, q, tenantID)
 	if err != nil {
 		return nil, fmt.Errorf("query org vehicles: %w", err)
 	}

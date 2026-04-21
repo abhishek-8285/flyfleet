@@ -49,15 +49,15 @@ func (h *WorkOrderHandler) RegisterRoutes(r chi.Router) {
 
 // ListWorkOrders godoc
 func (h *WorkOrderHandler) ListWorkOrders(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
 		return
 	}
 
 	query := r.URL.Query()
 	filter := models.WorkOrderFilter{
-		OrgID:   orgID,
+		TenantID:   tenantID,
 		Search:  query.Get("search"),
 		SortBy:  query.Get("sort_by"),
 		SortDir: query.Get("sort_dir"),
@@ -107,8 +107,8 @@ func (h *WorkOrderHandler) ListWorkOrders(w http.ResponseWriter, r *http.Request
 
 // CreateWorkOrder godoc
 func (h *WorkOrderHandler) CreateWorkOrder(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
 		return
 	}
@@ -125,7 +125,7 @@ func (h *WorkOrderHandler) CreateWorkOrder(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	wo, err := h.service.CreateWorkOrder(r.Context(), orgID, userID, &req)
+	wo, err := h.service.CreateWorkOrder(r.Context(), tenantID, userID, &req)
 	if err != nil {
 		h.logger.Error("failed to create work order", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -143,13 +143,13 @@ func (h *WorkOrderHandler) GetWorkOrder(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
 		return
 	}
 
-	wo, err := h.service.GetWorkOrder(r.Context(), id, orgID)
+	wo, err := h.service.GetWorkOrder(r.Context(), id, tenantID)
 	if err != nil {
 		h.logger.Error("failed to get work order", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -171,8 +171,8 @@ func (h *WorkOrderHandler) UpdateWorkOrder(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
 		return
 	}
@@ -183,7 +183,7 @@ func (h *WorkOrderHandler) UpdateWorkOrder(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	wo, err := h.service.UpdateWorkOrder(r.Context(), id, orgID, &req)
+	wo, err := h.service.UpdateWorkOrder(r.Context(), id, tenantID, &req)
 	if err != nil {
 		h.logger.Error("failed to update work order", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
@@ -205,8 +205,8 @@ func (h *WorkOrderHandler) ChangeStatus(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
 		return
 	}
@@ -217,7 +217,7 @@ func (h *WorkOrderHandler) ChangeStatus(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := h.service.ChangeStatus(r.Context(), id, orgID, req.Status); err != nil {
+	if err := h.service.ChangeStatus(r.Context(), id, tenantID, req.Status); err != nil {
 		h.logger.Error("failed to change status", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
@@ -234,13 +234,13 @@ func (h *WorkOrderHandler) CloseWorkOrder(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
 		return
 	}
 
-	if err := h.service.CloseWorkOrder(r.Context(), id, orgID); err != nil {
+	if err := h.service.CloseWorkOrder(r.Context(), id, tenantID); err != nil {
 		h.logger.Error("failed to close work order", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
@@ -257,8 +257,8 @@ func (h *WorkOrderHandler) ApproveWorkOrder(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
 		return
 	}
@@ -271,7 +271,7 @@ func (h *WorkOrderHandler) ApproveWorkOrder(w http.ResponseWriter, r *http.Reque
 
 	role := h.getUserRole(r)
 
-	if err := h.service.ApproveWorkOrder(r.Context(), id, orgID, userID, role); err != nil {
+	if err := h.service.ApproveWorkOrder(r.Context(), id, tenantID, userID, role); err != nil {
 		h.logger.Error("failed to approve work order", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
@@ -288,8 +288,8 @@ func (h *WorkOrderHandler) RejectWorkOrder(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
 		return
 	}
@@ -308,7 +308,7 @@ func (h *WorkOrderHandler) RejectWorkOrder(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := h.service.RejectWorkOrder(r.Context(), id, orgID, userID, req.Reason); err != nil {
+	if err := h.service.RejectWorkOrder(r.Context(), id, tenantID, userID, req.Reason); err != nil {
 		h.logger.Error("failed to reject work order", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
@@ -325,13 +325,13 @@ func (h *WorkOrderHandler) GetWorkOrderParts(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
 		return
 	}
 
-	wo, err := h.service.GetWorkOrder(r.Context(), id, orgID)
+	wo, err := h.service.GetWorkOrder(r.Context(), id, tenantID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -352,8 +352,8 @@ func (h *WorkOrderHandler) AssignPart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
 		return
 	}
@@ -364,7 +364,7 @@ func (h *WorkOrderHandler) AssignPart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	part, err := h.service.AssignPart(r.Context(), id, orgID, &req)
+	part, err := h.service.AssignPart(r.Context(), id, tenantID, &req)
 	if err != nil {
 		h.logger.Error("failed to assign part", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
@@ -382,8 +382,8 @@ func (h *WorkOrderHandler) RemovePart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
 		return
 	}
@@ -394,7 +394,7 @@ func (h *WorkOrderHandler) RemovePart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.RemovePart(r.Context(), id, orgID, partID); err != nil {
+	if err := h.service.RemovePart(r.Context(), id, tenantID, partID); err != nil {
 		h.logger.Error("failed to remove part", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
@@ -405,13 +405,13 @@ func (h *WorkOrderHandler) RemovePart(w http.ResponseWriter, r *http.Request) {
 
 // GetStats godoc
 func (h *WorkOrderHandler) GetStats(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
 		return
 	}
 
-	stats, err := h.service.GetStats(r.Context(), orgID)
+	stats, err := h.service.GetStats(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("failed to get stats", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -441,10 +441,10 @@ func (h *WorkOrderHandler) writeErrorResponse(w http.ResponseWriter, statusCode 
 	h.writeJSONResponse(w, statusCode, resp)
 }
 
-func (h *WorkOrderHandler) getOrgID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
-		if orgIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(orgIDStr); err == nil {
+func (h *WorkOrderHandler) getTenantID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.TenantIDKey); val != nil {
+		if tenantIDStr, ok := val.(string); ok {
+			if id, err := uuid.Parse(tenantIDStr); err == nil {
 				return id
 			}
 		}

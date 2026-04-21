@@ -688,13 +688,13 @@ func (h *VideoHandler) DeleteRetentionPolicy(w http.ResponseWriter, r *http.Requ
 // ListRetentionPolicies handles GET /api/v1/video/retention/policies
 func (h *VideoHandler) ListRetentionPolicies(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	orgIDStr := query.Get("organization_id")
-	if orgIDStr == "" {
+	tenantIDStr := query.Get("organization_id")
+	if tenantIDStr == "" {
 		h.writeErrorResponse(w, http.StatusBadRequest, "organization_id query parameter is required", nil)
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr)
+	tenantID, err := uuid.Parse(tenantIDStr)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid organization_id", err)
 		return
@@ -717,7 +717,7 @@ func (h *VideoHandler) ListRetentionPolicies(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	policies, totalCount, err := h.service.ListRetentionPolicies(r.Context(), orgID, limit, offset)
+	policies, totalCount, err := h.service.ListRetentionPolicies(r.Context(), tenantID, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list retention policies", err)
 		return

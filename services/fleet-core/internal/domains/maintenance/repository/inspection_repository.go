@@ -33,7 +33,7 @@ func (r *InspectionRepository) CreateTemplate(ctx context.Context, template *mod
 		RETURNING id, created_at, updated_at
 	`
 	return r.db.QueryRow(ctx, query,
-		template.OrgID, template.Name, template.Description,
+		template.TenantID, template.Name, template.Description,
 		template.ApplicableVehicleTypes, template.ChecklistItems, template.IsActive,
 	).Scan(&template.ID, &template.CreatedAt, &template.UpdatedAt)
 }
@@ -47,7 +47,7 @@ func (r *InspectionRepository) GetTemplateByID(ctx context.Context, id uuid.UUID
 	`
 	t := &models.InspectionTemplate{}
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&t.ID, &t.OrgID, &t.Name, &t.Description, &t.ApplicableVehicleTypes,
+		&t.ID, &t.TenantID, &t.Name, &t.Description, &t.ApplicableVehicleTypes,
 		&t.ChecklistItems, &t.IsActive, &t.CreatedAt, &t.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {
@@ -57,13 +57,13 @@ func (r *InspectionRepository) GetTemplateByID(ctx context.Context, id uuid.UUID
 }
 
 // ListTemplates retrieves templates for an organization
-func (r *InspectionRepository) ListTemplates(ctx context.Context, orgID uuid.UUID, vehicleType string) ([]models.InspectionTemplate, error) {
+func (r *InspectionRepository) ListTemplates(ctx context.Context, tenantID uuid.UUID, vehicleType string) ([]models.InspectionTemplate, error) {
 	var conditions []string
 	var args []interface{}
 	argIdx := 1
 
 	conditions = append(conditions, fmt.Sprintf("tenant_id = $%d", argIdx))
-	args = append(args, orgID)
+	args = append(args, tenantID)
 	argIdx++
 
 	if vehicleType != "" {
@@ -89,7 +89,7 @@ func (r *InspectionRepository) ListTemplates(ctx context.Context, orgID uuid.UUI
 	for rows.Next() {
 		var t models.InspectionTemplate
 		if err := rows.Scan(
-			&t.ID, &t.OrgID, &t.Name, &t.Description, &t.ApplicableVehicleTypes,
+			&t.ID, &t.TenantID, &t.Name, &t.Description, &t.ApplicableVehicleTypes,
 			&t.ChecklistItems, &t.IsActive, &t.CreatedAt, &t.UpdatedAt,
 		); err != nil {
 			return nil, err
@@ -111,7 +111,7 @@ func (r *InspectionRepository) CreateInspection(ctx context.Context, inspection 
 		RETURNING id, created_at, updated_at
 	`
 	return r.db.QueryRow(ctx, query,
-		inspection.OrgID, inspection.VehicleID, inspection.TemplateID,
+		inspection.TenantID, inspection.VehicleID, inspection.TemplateID,
 		inspection.InspectorID, inspection.Status, inspection.Results,
 		inspection.Notes, inspection.OdometerAtInspection,
 	).Scan(&inspection.ID, &inspection.CreatedAt, &inspection.UpdatedAt)
@@ -126,7 +126,7 @@ func (r *InspectionRepository) GetInspectionByID(ctx context.Context, id uuid.UU
 	`
 	i := &models.VehicleInspection{}
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&i.ID, &i.OrgID, &i.VehicleID, &i.TemplateID, &i.InspectorID,
+		&i.ID, &i.TenantID, &i.VehicleID, &i.TemplateID, &i.InspectorID,
 		&i.Status, &i.Results, &i.Notes, &i.OdometerAtInspection, &i.CreatedAt, &i.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {
@@ -154,7 +154,7 @@ func (r *InspectionRepository) ListByVehicle(ctx context.Context, vehicleID uuid
 	for rows.Next() {
 		var i models.VehicleInspection
 		if err := rows.Scan(
-			&i.ID, &i.OrgID, &i.VehicleID, &i.TemplateID, &i.InspectorID,
+			&i.ID, &i.TenantID, &i.VehicleID, &i.TemplateID, &i.InspectorID,
 			&i.Status, &i.Results, &i.Notes, &i.OdometerAtInspection, &i.CreatedAt, &i.UpdatedAt,
 		); err != nil {
 			return nil, err

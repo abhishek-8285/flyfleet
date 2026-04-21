@@ -30,7 +30,7 @@ func NewProcurementService(
 }
 
 // AutoCreatePOIfLowStock checks inventory and creates a PO if stock is below reorder level
-func (s *ProcurementService) AutoCreatePOIfLowStock(ctx context.Context, orgID uuid.UUID, partID uuid.UUID) error {
+func (s *ProcurementService) AutoCreatePOIfLowStock(ctx context.Context, tenantID uuid.UUID, partID uuid.UUID) error {
 	part, err := s.inventoryRepo.GetByID(ctx, partID)
 	if err != nil {
 		return err
@@ -42,7 +42,7 @@ func (s *ProcurementService) AutoCreatePOIfLowStock(ctx context.Context, orgID u
 	if part.QuantityAvailable <= part.ReorderLevel {
 		// Create Draft PO
 		po := &models.PurchaseOrder{
-			OrgID:       orgID,
+			TenantID:       tenantID,
 			OrderNumber: fmt.Sprintf("AUTO-PO-%d", time.Now().Unix()),
 			Status:      models.POStatusDraft,
 			TotalCost:   float64(part.ReorderLevel*2) * part.UnitCost, // Simple heuristic for order quantity

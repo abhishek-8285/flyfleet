@@ -17,13 +17,13 @@ func TestFailure_Recovery(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("Command Failure Triggers Backoff", func(t *testing.T) {
-		orgID := uuid.New()
+		tenantID := uuid.New()
 		deviceID := uuid.New()
 		cmdID := uuid.New()
 
 		// Setup device
 		_ = repo.CreateDevice(ctx, &models.Device{
-			ID: deviceID, OrgID: orgID, DeviceIMEI: ptr("fail-test-imei"), Status: ptr("ACTIVE"),
+			ID: deviceID, TenantID: tenantID, DeviceIMEI: ptr("fail-test-imei"), Status: ptr("ACTIVE"),
 		})
 
 		// Create command

@@ -12,7 +12,7 @@ import (
 type contextKey string
 
 const (
-	OrgIDKey  contextKey = "tenant_id"
+	TenantIDKey  contextKey = "tenant_id"
 	UserIDKey contextKey = "user_id"
 	RoleKey   contextKey = "role"
 )
@@ -48,14 +48,14 @@ func Auth(secret []byte) func(http.Handler) http.Handler {
 				return
 			}
 
-			orgIDStr, _ := claims["tenant_id"].(string)
+			tenantIDStr, _ := claims["tenant_id"].(string)
 			userIDStr, _ := claims["sub"].(string)
 			role, _ := claims["role"].(string)
 
 			ctx := r.Context()
-			if orgIDStr != "" {
-				orgID, _ := uuid.Parse(orgIDStr)
-				ctx = context.WithValue(ctx, OrgIDKey, orgID)
+			if tenantIDStr != "" {
+				tenantID, _ := uuid.Parse(tenantIDStr)
+				ctx = context.WithValue(ctx, TenantIDKey, tenantID)
 			}
 			if userIDStr != "" {
 				userID, _ := uuid.Parse(userIDStr)
@@ -68,7 +68,7 @@ func Auth(secret []byte) func(http.Handler) http.Handler {
 	}
 }
 
-func GetOrgID(ctx context.Context) (uuid.UUID, bool) {
-	id, ok := ctx.Value(OrgIDKey).(uuid.UUID)
+func GetTenantID(ctx context.Context) (uuid.UUID, bool) {
+	id, ok := ctx.Value(TenantIDKey).(uuid.UUID)
 	return id, ok
 }

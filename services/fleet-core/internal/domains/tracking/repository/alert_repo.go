@@ -40,7 +40,7 @@ func (r *AlertRepository) SaveAlert(ctx context.Context, alert *models.VehicleAl
 	_, err := r.db.Exec(ctx, query,
 		alert.ID,
 		alert.VehicleID,
-		alert.OrgID,
+		alert.TenantID,
 		alert.Type,
 		alert.Severity,
 		alert.Description,
@@ -87,7 +87,7 @@ func (r *AlertRepository) GetAlerts(ctx context.Context, vehicleID string, from,
 		var processedAt sql.NullTime
 
 		if err := rows.Scan(
-			&alert.ID, &alert.VehicleID, &alert.OrgID, &alert.Type, &alert.Severity,
+			&alert.ID, &alert.VehicleID, &alert.TenantID, &alert.Type, &alert.Severity,
 			&alert.Description, &alert.Latitude, &alert.Longitude, &alert.Timestamp,
 			&metadataJSON, &alert.Processed, &processedAt, &alert.CreatedAt,
 		); err != nil {
@@ -131,7 +131,7 @@ func (r *AlertRepository) GetUnprocessedAlerts(ctx context.Context, vehicleID st
 		var processedAt sql.NullTime
 
 		if err := rows.Scan(
-			&alert.ID, &alert.VehicleID, &alert.OrgID, &alert.Type, &alert.Severity,
+			&alert.ID, &alert.VehicleID, &alert.TenantID, &alert.Type, &alert.Severity,
 			&alert.Description, &alert.Latitude, &alert.Longitude, &alert.Timestamp,
 			&metadataJSON, &alert.Processed, &processedAt, &alert.CreatedAt,
 		); err != nil {

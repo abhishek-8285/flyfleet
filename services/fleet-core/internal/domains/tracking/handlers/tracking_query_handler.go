@@ -40,7 +40,7 @@ func (h *TrackingQueryHandler) GetLiveLocation(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	tenantID := middleware.GetOrgID(r.Context())
+	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.error(w, "tenant context missing", http.StatusUnauthorized)
 		return
@@ -64,7 +64,7 @@ func (h *TrackingQueryHandler) GetHistory(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	tenantID := middleware.GetOrgID(r.Context())
+	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.error(w, "tenant context missing", http.StatusUnauthorized)
 		return
@@ -94,7 +94,7 @@ func (h *TrackingQueryHandler) GetReplay(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	tenantID := middleware.GetOrgID(r.Context())
+	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.error(w, "tenant context missing", http.StatusUnauthorized)
 		return
@@ -121,7 +121,7 @@ func (h *TrackingQueryHandler) GetNearby(w http.ResponseWriter, r *http.Request)
 	lng, _ := strconv.ParseFloat(r.URL.Query().Get("lng"), 64)
 	radius, _ := strconv.ParseFloat(r.URL.Query().Get("radius"), 64)
 
-	tenantID := middleware.GetOrgID(r.Context())
+	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.error(w, "tenant context missing", http.StatusUnauthorized)
 		return

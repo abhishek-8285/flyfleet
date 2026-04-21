@@ -75,23 +75,23 @@ func (h *IndiaIntegrationHandlers) writeErrorResponse(w http.ResponseWriter, sta
 // CreateFASTagTransaction creates a new FASTag transaction
 func (h *IndiaIntegrationHandlers) CreateFASTagTransaction(w http.ResponseWriter, r *http.Request) {
 	reqID := r.Header.Get("X-Request-ID")
-	orgID := r.Context().Value("tenant_id") // standard flyfleet context extraction
+	tenantID := r.Context().Value("tenant_id") // standard flyfleet context extraction
 
 	// SECURITY FIX: Do not trust X-Org-ID header (CWE-284/290) - only use authenticated context
-	var orgIDStr string
-	if orgID != nil {
-		if oid, ok := orgID.(string); ok {
-			orgIDStr = oid
-		} else if uuidVal, ok := orgID.(uuid.UUID); ok {
-			orgIDStr = uuidVal.String()
+	var tenantIDStr string
+	if tenantID != nil {
+		if oid, ok := tenantID.(string); ok {
+			tenantIDStr = oid
+		} else if uuidVal, ok := tenantID.(uuid.UUID); ok {
+			tenantIDStr = uuidVal.String()
 		}
 	} else {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
 		return
 	}
 
-	if h.idempotency != nil && reqID != "" && orgIDStr != "" {
-		acquired, err := h.idempotency.CheckAndLock(r.Context(), orgIDStr, reqID, 24*time.Hour)
+	if h.idempotency != nil && reqID != "" && tenantIDStr != "" {
+		acquired, err := h.idempotency.CheckAndLock(r.Context(), tenantIDStr, reqID, 24*time.Hour)
 		if err != nil {
 			h.writeErrorResponse(w, http.StatusInternalServerError, "Idempotency check failed", err)
 			return
@@ -125,14 +125,14 @@ func (h *IndiaIntegrationHandlers) CreateFASTagTransaction(w http.ResponseWriter
 func (h *IndiaIntegrationHandlers) GetFASTagTransaction(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	// Get orgID from context for authorization
-	orgID := r.Context().Value("tenant_id")
-	var orgIDStr string
-	if orgID != nil {
-		if oid, ok := orgID.(string); ok {
-			orgIDStr = oid
-		} else if uuidVal, ok := orgID.(uuid.UUID); ok {
-			orgIDStr = uuidVal.String()
+	// Get tenantID from context for authorization
+	tenantID := r.Context().Value("tenant_id")
+	var tenantIDStr string
+	if tenantID != nil {
+		if oid, ok := tenantID.(string); ok {
+			tenantIDStr = oid
+		} else if uuidVal, ok := tenantID.(uuid.UUID); ok {
+			tenantIDStr = uuidVal.String()
 		}
 	} else {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context missing", nil)
@@ -146,12 +146,12 @@ func (h *IndiaIntegrationHandlers) GetFASTagTransaction(w http.ResponseWriter, r
 	}
 
 	// Verify transaction belongs to the authenticated organization
-	reqOrgID, err := uuid.Parse(orgIDStr)
+	reqTenantID, err := uuid.Parse(tenantIDStr)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Internal error", nil)
 		return
 	}
-	if transaction.OrganizationID != reqOrgID {
+	if transaction.OrganizationID != reqTenantID {
 		h.writeErrorResponse(w, http.StatusNotFound, "FASTag transaction not found or access denied", nil)
 		return
 	}
@@ -774,12 +774,12 @@ func (h *IndiaIntegrationHandlers) DeleteGSTCompliance(w http.ResponseWriter, r 
 // ListGSTCompliances retrieves GST compliance records with filtering
 func (h *IndiaIntegrationHandlers) ListGSTCompliances(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	orgIDStr := query.Get("tenant_id")
+	tenantIDStr := query.Get("tenant_id")
 	status := query.Get("status")
 	limitStr := query.Get("limit")
 	offsetStr := query.Get("offset")
 
-	orgID, err := uuid.Parse(orgIDStr)
+	tenantID, err := uuid.Parse(tenantIDStr)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "invalid organization ID", err)
 		return
@@ -795,7 +795,7 @@ func (h *IndiaIntegrationHandlers) ListGSTCompliances(w http.ResponseWriter, r *
 		offset = 0
 	}
 
-	compliances, totalCount, err := h.service.ListGSTCompliances(r.Context(), orgID, &status, limit, offset)
+	compliances, totalCount, err := h.service.ListGSTCompliances(r.Context(), tenantID, &status, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list GST compliance records", err)
 		return
@@ -849,16 +849,16 @@ func (h *IndiaIntegrationHandlers) GetIntegrationConfig(w http.ResponseWriter, r
 
 // GetIntegrationConfigByServiceType retrieves an integration configuration by service type and organization
 func (h *IndiaIntegrationHandlers) GetIntegrationConfigByServiceType(w http.ResponseWriter, r *http.Request) {
-	orgIDStr := chi.URLParam(r, "tenant_id")
+	tenantIDStr := chi.URLParam(r, "tenant_id")
 	serviceType := chi.URLParam(r, "service_type")
 
-	orgID, err := uuid.Parse(orgIDStr)
+	tenantID, err := uuid.Parse(tenantIDStr)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "invalid organization ID", err)
 		return
 	}
 
-	config, err := h.service.GetIntegrationConfigByServiceType(r.Context(), orgID, serviceType)
+	config, err := h.service.GetIntegrationConfigByServiceType(r.Context(), tenantID, serviceType)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, "Integration config not found", err)
 		return
@@ -1088,8 +1088,8 @@ func parsePaginationParams(query map[string][]string) (int, int) {
 	return limit, offset
 }
 
-func (h *IndiaIntegrationHandlers) getOrgID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value("orgID"); val != nil {
+func (h *IndiaIntegrationHandlers) getTenantID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value("tenantID"); val != nil {
 		switch v := val.(type) {
 		case uuid.UUID:
 			return v

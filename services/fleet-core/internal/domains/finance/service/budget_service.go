@@ -26,8 +26,8 @@ func NewBudgetService(repo *repository.FinanceRepository, currencyService *Curre
 }
 
 // TrackExpense updates the budget for a given category and org
-func (s *BudgetService) TrackExpense(ctx context.Context, orgID, category string, amount float64, currency string) error {
-	budget, err := s.repo.GetBudget(ctx, orgID, category, time.Now())
+func (s *BudgetService) TrackExpense(ctx context.Context, tenantID, category string, amount float64, currency string) error {
+	budget, err := s.repo.GetBudget(ctx, tenantID, category, time.Now())
 	if err != nil {
 		return err
 	}
@@ -59,12 +59,12 @@ func (s *BudgetService) TrackExpense(ctx context.Context, orgID, category string
 	usagePct := (newSpent / budget.LimitAmount) * 100
 	if usagePct >= float64(budget.AlertThresholdPct) {
 		s.logger.Warn("Budget threshold reached",
-			zap.String("tenant_id", orgID),
+			zap.String("tenant_id", tenantID),
 			zap.String("category", category),
 			zap.Float64("usage_pct", usagePct),
 			zap.Float64("limit", budget.LimitAmount),
 			zap.Float64("spent", newSpent))
-		orgUUID, parseErr := uuid.Parse(orgID)
+		orgUUID, parseErr := uuid.Parse(tenantID)
 		if parseErr == nil && s.alertingService != nil {
 			_ = s.alertingService.Publish(ctx, eventBudgetLimitExceeded, orgUUID, map[string]interface{}{
 				"category":        category,

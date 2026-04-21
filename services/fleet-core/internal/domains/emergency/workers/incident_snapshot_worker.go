@@ -62,7 +62,7 @@ func (w *EmergencySnapshotWorker) takeSnapshots(ctx context.Context) {
 			ID:           uuid.New(),
 			IncidentID:   inc.ID,
 			VehicleID:    inc.VehicleID,
-			OrgID:        inc.OrgID,
+			TenantID:        inc.TenantID,
 			IncidentType: inc.IncidentType,
 			Severity:     inc.Severity,
 			Status:       inc.Status,

@@ -20,28 +20,28 @@ func NewHandlers(s service.IntegrationsService) *Handlers {
 	return &Handlers{service: s}
 }
 
-// getOrgID extracts and parses the organization ID from context
-func (h *Handlers) getOrgID(r *http.Request) (uuid.UUID, error) {
-	orgIDStr := middleware.GetOrgID(r.Context())
-	if orgIDStr == "" {
+// getTenantID extracts and parses the organization ID from context
+func (h *Handlers) getTenantID(r *http.Request) (uuid.UUID, error) {
+	tenantIDStr := middleware.GetTenantID(r.Context())
+	if tenantIDStr == "" {
 		return uuid.Nil, fmt.Errorf("unauthorized: organization context required")
 	}
-	orgID, err := uuid.Parse(orgIDStr)
+	tenantID, err := uuid.Parse(tenantIDStr)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("invalid organization ID")
 	}
-	return orgID, nil
+	return tenantID, nil
 }
 
 // Integrations Handlers
 
 func (h *Handlers) ListIntegrations(w http.ResponseWriter, r *http.Request) {
-	orgID, err := h.getOrgID(r)
+	tenantID, err := h.getTenantID(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	integrations, err := h.service.ListIntegrations(r.Context(), orgID)
+	integrations, err := h.service.ListIntegrations(r.Context(), tenantID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -50,7 +50,7 @@ func (h *Handlers) ListIntegrations(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) CreateIntegration(w http.ResponseWriter, r *http.Request) {
-	orgID, err := h.getOrgID(r)
+	tenantID, err := h.getTenantID(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -66,7 +66,7 @@ func (h *Handlers) CreateIntegration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	integration, err := h.service.CreateIntegration(r.Context(), orgID, req.Name, req.Type, req.Provider, req.Config)
+	integration, err := h.service.CreateIntegration(r.Context(), tenantID, req.Name, req.Type, req.Provider, req.Config)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -75,7 +75,7 @@ func (h *Handlers) CreateIntegration(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) UpdateIntegration(w http.ResponseWriter, r *http.Request) {
-	orgID, err := h.getOrgID(r)
+	tenantID, err := h.getTenantID(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -99,7 +99,7 @@ func (h *Handlers) UpdateIntegration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.service.UpdateIntegration(r.Context(), id, orgID, req.Name, req.Type, req.Provider, req.Status, req.Config)
+	err = h.service.UpdateIntegration(r.Context(), id, tenantID, req.Name, req.Type, req.Provider, req.Status, req.Config)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -108,7 +108,7 @@ func (h *Handlers) UpdateIntegration(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) TestConnection(w http.ResponseWriter, r *http.Request) {
-	orgID, err := h.getOrgID(r)
+	tenantID, err := h.getTenantID(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -117,7 +117,7 @@ func (h *Handlers) TestConnection(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	id, _ := uuid.Parse(idStr)
 
-	success, msg, err := h.service.TestConnection(r.Context(), id, orgID)
+	success, msg, err := h.service.TestConnection(r.Context(), id, tenantID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -128,12 +128,12 @@ func (h *Handlers) TestConnection(w http.ResponseWriter, r *http.Request) {
 // API Client Handlers
 
 func (h *Handlers) ListAPIClients(w http.ResponseWriter, r *http.Request) {
-	orgID, err := h.getOrgID(r)
+	tenantID, err := h.getTenantID(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	clients, err := h.service.ListAPIClients(r.Context(), orgID)
+	clients, err := h.service.ListAPIClients(r.Context(), tenantID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -142,7 +142,7 @@ func (h *Handlers) ListAPIClients(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) CreateAPIClient(w http.ResponseWriter, r *http.Request) {
-	orgID, err := h.getOrgID(r)
+	tenantID, err := h.getTenantID(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -157,7 +157,7 @@ func (h *Handlers) CreateAPIClient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client, rawKey, err := h.service.CreateAPIClient(r.Context(), orgID, req.Name, req.Scopes, req.ExpiryDays)
+	client, rawKey, err := h.service.CreateAPIClient(r.Context(), tenantID, req.Name, req.Scopes, req.ExpiryDays)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -168,12 +168,12 @@ func (h *Handlers) CreateAPIClient(w http.ResponseWriter, r *http.Request) {
 // Webhook Handlers
 
 func (h *Handlers) ListWebhooks(w http.ResponseWriter, r *http.Request) {
-	orgID, err := h.getOrgID(r)
+	tenantID, err := h.getTenantID(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	webhooks, err := h.service.ListWebhooks(r.Context(), orgID)
+	webhooks, err := h.service.ListWebhooks(r.Context(), tenantID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -182,7 +182,7 @@ func (h *Handlers) ListWebhooks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) CreateWebhook(w http.ResponseWriter, r *http.Request) {
-	orgID, err := h.getOrgID(r)
+	tenantID, err := h.getTenantID(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -196,7 +196,7 @@ func (h *Handlers) CreateWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	webhook, err := h.service.CreateWebhook(r.Context(), orgID, req.URL, req.Events)
+	webhook, err := h.service.CreateWebhook(r.Context(), tenantID, req.URL, req.Events)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -205,7 +205,7 @@ func (h *Handlers) CreateWebhook(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) DeleteWebhook(w http.ResponseWriter, r *http.Request) {
-	orgID, err := h.getOrgID(r)
+	tenantID, err := h.getTenantID(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -217,7 +217,7 @@ func (h *Handlers) DeleteWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.service.DeleteWebhook(r.Context(), id, orgID)
+	err = h.service.DeleteWebhook(r.Context(), id, tenantID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -228,7 +228,7 @@ func (h *Handlers) DeleteWebhook(w http.ResponseWriter, r *http.Request) {
 // Log Handlers
 
 func (h *Handlers) ListLogs(w http.ResponseWriter, r *http.Request) {
-	orgID, err := h.getOrgID(r)
+	tenantID, err := h.getTenantID(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -245,7 +245,7 @@ func (h *Handlers) ListLogs(w http.ResponseWriter, r *http.Request) {
 		integrationID = &parsed
 	}
 
-	logs, err := h.service.ListLogs(r.Context(), orgID, integrationID, limit, offset)
+	logs, err := h.service.ListLogs(r.Context(), tenantID, integrationID, limit, offset)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

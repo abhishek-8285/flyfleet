@@ -16,8 +16,8 @@ import (
 
 // SarathiIntegrationService defines the interface for SARATHI driver license verification integration
 type SarathiIntegrationService interface {
-	VerifyDriver(ctx context.Context, orgID uuid.UUID, driverID uuid.UUID, licenseNumber string, dob string) (*models.DriverVerification, error)
-	BulkVerifyDriver(ctx context.Context, orgID uuid.UUID, requests []models.VerifyDriverRequest) ([]*models.DriverVerification, error)
+	VerifyDriver(ctx context.Context, tenantID uuid.UUID, driverID uuid.UUID, licenseNumber string, dob string) (*models.DriverVerification, error)
+	BulkVerifyDriver(ctx context.Context, tenantID uuid.UUID, requests []models.VerifyDriverRequest) ([]*models.DriverVerification, error)
 }
 
 type SarathiIntegrationServiceImpl struct {
@@ -36,7 +36,7 @@ func NewSarathiIntegrationService(repo repository.IndiaIntegrationRepository, re
 	}
 }
 
-func (s *SarathiIntegrationServiceImpl) VerifyDriver(ctx context.Context, orgID uuid.UUID, driverID uuid.UUID, licenseNumber string, dob string) (*models.DriverVerification, error) {
+func (s *SarathiIntegrationServiceImpl) VerifyDriver(ctx context.Context, tenantID uuid.UUID, driverID uuid.UUID, licenseNumber string, dob string) (*models.DriverVerification, error) {
 	// Try Redis cache first
 	if s.redis != nil {
 		cacheKey := fmt.Sprintf("sarathi:verify:%s", licenseNumber)
@@ -60,7 +60,7 @@ func (s *SarathiIntegrationServiceImpl) VerifyDriver(ctx context.Context, orgID 
 	verification := &models.DriverVerification{
 		ID:               uuid.New().String(),
 		DriverID:         driverID,
-		OrganizationID:   orgID,
+		OrganizationID:   tenantID,
 		LicenseNumber:    licenseNumber,
 		Status:           "verified",
 		VerificationDate: time.Now(),
@@ -75,7 +75,7 @@ func (s *SarathiIntegrationServiceImpl) VerifyDriver(ctx context.Context, orgID 
 		RequestPayload:  map[string]string{"license_number": licenseNumber, "dob": dob},
 		ResponsePayload: verification,
 		Status:          200,
-		OrganizationID:  &orgID,
+		OrganizationID:  &tenantID,
 	}
 	_ = s.repo.CreateIntegrationLog(ctx, log)
 
@@ -94,7 +94,7 @@ func (s *SarathiIntegrationServiceImpl) VerifyDriver(ctx context.Context, orgID 
 	return verification, nil
 }
 
-func (s *SarathiIntegrationServiceImpl) BulkVerifyDriver(ctx context.Context, orgID uuid.UUID, requests []models.VerifyDriverRequest) ([]*models.DriverVerification, error) {
+func (s *SarathiIntegrationServiceImpl) BulkVerifyDriver(ctx context.Context, tenantID uuid.UUID, requests []models.VerifyDriverRequest) ([]*models.DriverVerification, error) {
 	if len(requests) > 100 {
 		return nil, fmt.Errorf("batch size exceeds maximum of 100")
 	}
@@ -103,7 +103,7 @@ func (s *SarathiIntegrationServiceImpl) BulkVerifyDriver(ctx context.Context, or
 	for _, req := range requests {
 		// In a real scenario, we might want to do this in parallel or use a bulk API if available.
 		// For now, we'll iterate and collect results, then bulk save.
-		v, err := s.VerifyDriver(ctx, orgID, req.DriverID, req.LicenseNumber, req.DateOfBirth)
+		v, err := s.VerifyDriver(ctx, tenantID, req.DriverID, req.LicenseNumber, req.DateOfBirth)
 		if err != nil {
 			s.logger.Error("failed to verify driver in bulk", zap.String("license_number", req.LicenseNumber), zap.Error(err))
 			continue

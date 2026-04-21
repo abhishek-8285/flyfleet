@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fleet-platform/shared/pkg/middleware"
 	authmetrics "github.com/flyfleet/fleet-core/internal/domains/auth"
 	authservice "github.com/flyfleet/fleet-core/internal/domains/auth/service"
 	internalmw "github.com/flyfleet/fleet-core/internal/middleware"
@@ -111,9 +110,9 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 			r.Get("/organizations", h.ListOrganizations)
 
 			// Admin endpoints
-			r.With(internalmw.RequireRole(h.logger, "super_admin", "admin")).Get("/stats", h.GetStats)
-			r.With(internalmw.RequireRole(h.logger, "super_admin", "admin")).Get("/security-telemetry", h.GetSecurityTelemetry)
-			r.With(internalmw.RequireRole(h.logger, "super_admin", "admin")).Get("/audit-logs", h.GetAuditLogs)
+			r.With(internalmw.RequireRole(h.logger, "super_admin", "admin", "org_admin", "fleet_manager")).Get("/stats", h.GetStats)
+			r.With(internalmw.RequireRole(h.logger, "super_admin", "admin", "org_admin", "fleet_manager")).Get("/security-telemetry", h.GetSecurityTelemetry)
+			r.With(internalmw.RequireRole(h.logger, "super_admin", "admin", "org_admin", "fleet_manager")).Get("/audit-logs", h.GetAuditLogs)
 
 			// Admin Console endpoints
 			r.Post("/api-keys", h.CreateAPIKey)
@@ -123,7 +122,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router) {
 			r.Post("/service-accounts", h.CreateServiceAccount)
 			r.Get("/service-accounts", h.ListServiceAccounts)
 
-			r.With(internalmw.RequireRole(h.logger, "super_admin")).Post("/emergency-revoke", h.EmergencyRevoke)
+			r.With(internalmw.RequireRole(h.logger, "super_admin", "admin")).Post("/emergency-revoke", h.EmergencyRevoke)
 		})
 
 		r.Get("/.well-known/jwks.json", h.GetJWKS)
@@ -146,7 +145,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
-		OrgID    string `json:"tenant_id"`
+		TenantID    string `json:"tenant_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
@@ -156,14 +155,14 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	// Record auth metrics
 	start := time.Now()
 	method := "password"
-	orgIDLabel := req.OrgID
-	if orgIDLabel == "" {
-		orgIDLabel = "unknown"
+	tenantIDLabel := req.TenantID
+	if tenantIDLabel == "" {
+		tenantIDLabel = "unknown"
 	}
 	// Count attempt (we'll increment either success or failure after service call)
 	defer func() {
 		duration := time.Since(start).Seconds()
-		authmetrics.LoginDuration.WithLabelValues(orgIDLabel, method).Observe(duration)
+		authmetrics.LoginDuration.WithLabelValues(tenantIDLabel, method).Observe(duration)
 	}()
 
 	// We pass empty string for IP and UA as they are captured by middleware now
@@ -174,11 +173,11 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	ua := r.UserAgent()
 
-	resp, err := h.svc.Login(r.Context(), req.Email, req.Password, req.OrgID, ip, ua)
+	resp, err := h.svc.Login(r.Context(), req.Email, req.Password, req.TenantID, ip, ua)
 	if err != nil {
 		h.logger.Error("auth login failed", zap.Error(err))
 		// Increment failed login attempts metric
-		authmetrics.LoginAttemptsTotal.WithLabelValues(orgIDLabel, method, "failure").Inc()
+		authmetrics.LoginAttemptsTotal.WithLabelValues(tenantIDLabel, method, "failure").Inc()
 		if strings.Contains(err.Error(), "locked") {
 			h.errorJSON(w, http.StatusForbidden, "account_locked")
 			return
@@ -188,8 +187,8 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Success: increment both attempts (with success) and success metric
-	authmetrics.LoginAttemptsTotal.WithLabelValues(orgIDLabel, method, "success").Inc()
-	authmetrics.LoginSuccessTotal.WithLabelValues(orgIDLabel, method, "user").Inc()
+	authmetrics.LoginAttemptsTotal.WithLabelValues(tenantIDLabel, method, "success").Inc()
+	authmetrics.LoginSuccessTotal.WithLabelValues(tenantIDLabel, method, "user").Inc()
 
 	// SECURITY FIX: Set refresh token as HttpOnly cookie to prevent XSS theft
 	// Access token is returned in body and should be stored in memory only (not localStorage)
@@ -271,9 +270,9 @@ func (h *Handlers) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	secure := (os.Getenv("ENVIRONMENT") == "production" || os.Getenv("SECURE_COOKIES") == "true") && !isLocalhost
 
 	// Extract optional organization context from header (used for organization switching)
-	orgID := r.Header.Get("X-Org-ID")
-	if orgID == "" {
-		orgID = r.Header.Get("X-Organization-ID")
+	tenantID := r.Header.Get("X-Org-ID")
+	if tenantID == "" {
+		tenantID = r.Header.Get("X-Organization-ID")
 	}
 
 	ip := r.RemoteAddr
@@ -282,7 +281,7 @@ func (h *Handlers) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	}
 	ua := r.UserAgent()
 
-	resp, err := h.svc.RefreshToken(r.Context(), refreshToken, orgID, ip, ua)
+	resp, err := h.svc.RefreshToken(r.Context(), refreshToken, tenantID, ip, ua)
 	if err != nil {
 		h.logger.Error("token refresh failed", zap.Error(err))
 		// Clear invalid refresh cookie
@@ -400,12 +399,12 @@ func (h *Handlers) ValidateToken(w http.ResponseWriter, r *http.Request) {
 // Response: {"allowed": true/false}
 func (h *Handlers) CheckPermission(w http.ResponseWriter, r *http.Request) {
 	// Get user and org from context (set by JWKSAuthGate)
-	userID, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := ctxkeys.GetUserID(r.Context())
 	if !ok {
 		h.errorJSON(w, http.StatusUnauthorized, "user not authenticated")
 		return
 	}
-	orgID, ok := r.Context().Value(middleware.OrgIDKey).(uuid.UUID)
+	tenantID, ok := ctxkeys.GetTenantID(r.Context())
 	if !ok {
 		h.errorJSON(w, http.StatusBadRequest, "organization context required")
 		return
@@ -420,13 +419,13 @@ func (h *Handlers) CheckPermission(w http.ResponseWriter, r *http.Request) {
 
 	permission := resource + ":" + action
 
-	allowed, err := h.svc.CheckPermission(r.Context(), userID, orgID, permission)
+	allowed, err := h.svc.CheckPermission(r.Context(), userID, tenantID, permission)
 	if err != nil {
 		h.logger.Error("CheckPermission failed",
 			zap.Error(err),
 			zap.String("permission", permission),
 			zap.String("user_id", userID.String()),
-			zap.String("tenant_id", orgID.String()),
+			zap.String("tenant_id", tenantID.String()),
 		)
 		h.errorJSON(w, http.StatusInternalServerError, "permission check failed")
 		return
@@ -580,13 +579,7 @@ func (h *Handlers) GenerateMFASecret(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	// Try extracting from context first (modern)
-	if val := r.Context().Value(ctxkeys.UserIDKey); val != nil {
-		if id, ok := val.(uuid.UUID); ok {
-			userID = id
-		} else if idStr, ok := val.(string); ok {
-			userID, _ = uuid.Parse(idStr)
-		}
-	}
+	userID, _ = ctxkeys.GetUserID(r.Context())
 
 	if userID == uuid.Nil {
 		h.errorJSON(w, http.StatusBadRequest, "user ID required")
@@ -622,13 +615,7 @@ func (h *Handlers) EnableMFA(w http.ResponseWriter, r *http.Request) {
 
 	// Try extracting userID from context
 	var userID uuid.UUID
-	if val := r.Context().Value(ctxkeys.UserIDKey); val != nil {
-		if id, ok := val.(uuid.UUID); ok {
-			userID = id
-		} else if idStr, ok := val.(string); ok {
-			userID, _ = uuid.Parse(idStr)
-		}
-	}
+	userID, _ = ctxkeys.GetUserID(r.Context())
 
 	if userID == uuid.Nil {
 		h.errorJSON(w, http.StatusBadRequest, "user ID required")
@@ -661,13 +648,7 @@ func (h *Handlers) EnableMFA(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) DisableMFA(w http.ResponseWriter, r *http.Request) {
 	var userID uuid.UUID
 	// Extract from context (set by JWKS auth)
-	if val := r.Context().Value(ctxkeys.UserIDKey); val != nil {
-		if id, ok := val.(uuid.UUID); ok {
-			userID = id
-		} else if idStr, ok := val.(string); ok {
-			userID, _ = uuid.Parse(idStr)
-		}
-	}
+	userID, _ = ctxkeys.GetUserID(r.Context())
 
 	if userID == uuid.Nil {
 		h.errorJSON(w, http.StatusBadRequest, "user ID required")
@@ -728,13 +709,7 @@ func (h *Handlers) VerifyMFAAuthenticated(w http.ResponseWriter, r *http.Request
 
 	// Try extracting userID from context
 	var userID uuid.UUID
-	if val := r.Context().Value(ctxkeys.UserIDKey); val != nil {
-		if id, ok := val.(uuid.UUID); ok {
-			userID = id
-		} else if idStr, ok := val.(string); ok {
-			userID, _ = uuid.Parse(idStr)
-		}
-	}
+	userID, _ = ctxkeys.GetUserID(r.Context())
 
 	if userID == uuid.Nil {
 		h.errorJSON(w, http.StatusBadRequest, "user ID required")
@@ -864,7 +839,7 @@ func (h *Handlers) ResolveOrgs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type orgResp struct {
-		OrgID   uuid.UUID `json:"tenant_id"`
+		TenantID   uuid.UUID `json:"tenant_id"`
 		OrgName string    `json:"org_name"`
 		OrgLogo string    `json:"org_logo"`
 	}
@@ -872,7 +847,7 @@ func (h *Handlers) ResolveOrgs(w http.ResponseWriter, r *http.Request) {
 	result := make([]orgResp, 0, len(orgs))
 	for _, o := range orgs {
 		result = append(result, orgResp{
-			OrgID:   o.ID,
+			TenantID:   o.ID,
 			OrgName: o.Name,
 			OrgLogo: o.LogoURL,
 		})
@@ -954,35 +929,16 @@ func (h *Handlers) GetJWKS(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
-	orgID, ok := r.Context().Value(middleware.OrgIDKey).(uuid.UUID)
+	tenantID, ok := ctxkeys.GetTenantID(r.Context())
 	if !ok {
-		// Fallback to legacy string if needed, but primary should be UUID
-		orgIDStr, okStr := r.Context().Value(ctxkeys.OrgIDKey).(string)
-		if !okStr {
-			h.errorJSON(w, http.StatusUnauthorized, "organization context missing")
-			return
-		}
-		var err error
-		orgID, err = uuid.Parse(orgIDStr)
-		if err != nil {
-			h.errorJSON(w, http.StatusUnauthorized, "invalid organization id")
-			return
-		}
+		h.errorJSON(w, http.StatusUnauthorized, "organization context missing")
+		return
 	}
 
-	userID, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID)
+	userID, ok := ctxkeys.GetUserID(r.Context())
 	if !ok {
-		userIDStr, okStr := r.Context().Value(ctxkeys.UserIDKey).(string)
-		if !okStr {
-			h.errorJSON(w, http.StatusUnauthorized, "user context missing")
-			return
-		}
-		var err error
-		userID, err = uuid.Parse(userIDStr)
-		if err != nil {
-			h.errorJSON(w, http.StatusUnauthorized, "invalid user id")
-			return
-		}
+		h.errorJSON(w, http.StatusUnauthorized, "user context missing")
+		return
 	}
 
 	var req struct {
@@ -994,7 +950,7 @@ func (h *Handlers) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	key, err := h.svc.CreateAPIKey(r.Context(), userID, orgID, req.Name, req.ExpiresAt)
+	key, err := h.svc.CreateAPIKey(r.Context(), userID, tenantID, req.Name, req.ExpiresAt)
 	if err != nil {
 		h.logger.Error("failed to create api key", zap.Error(err))
 		h.errorJSON(w, http.StatusInternalServerError, "failed to create api key")
@@ -1005,22 +961,13 @@ func (h *Handlers) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) ListAPIKeys(w http.ResponseWriter, r *http.Request) {
-	orgID, ok := r.Context().Value(middleware.OrgIDKey).(uuid.UUID)
+	tenantID, ok := ctxkeys.GetTenantID(r.Context())
 	if !ok {
-		orgIDStr, okStr := r.Context().Value(ctxkeys.OrgIDKey).(string)
-		if !okStr {
-			h.errorJSON(w, http.StatusUnauthorized, "organization context missing")
-			return
-		}
-		var err error
-		orgID, err = uuid.Parse(orgIDStr)
-		if err != nil {
-			h.errorJSON(w, http.StatusUnauthorized, "invalid organization id")
-			return
-		}
+		h.errorJSON(w, http.StatusUnauthorized, "organization context missing")
+		return
 	}
 
-	keys, err := h.svc.ListAPIKeys(r.Context(), orgID)
+	keys, err := h.svc.ListAPIKeys(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("failed to list api keys", zap.Error(err))
 		h.errorJSON(w, http.StatusInternalServerError, "failed to list api keys")
@@ -1048,19 +995,10 @@ func (h *Handlers) RevokeAPIKey(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) CreateServiceAccount(w http.ResponseWriter, r *http.Request) {
-	orgID, ok := r.Context().Value(middleware.OrgIDKey).(uuid.UUID)
+	tenantID, ok := ctxkeys.GetTenantID(r.Context())
 	if !ok {
-		orgIDStr, okStr := r.Context().Value(ctxkeys.OrgIDKey).(string)
-		if !okStr {
-			h.errorJSON(w, http.StatusUnauthorized, "organization context missing")
-			return
-		}
-		var err error
-		orgID, err = uuid.Parse(orgIDStr)
-		if err != nil {
-			h.errorJSON(w, http.StatusUnauthorized, "invalid organization id")
-			return
-		}
+		h.errorJSON(w, http.StatusUnauthorized, "organization context missing")
+		return
 	}
 
 	var req struct {
@@ -1072,7 +1010,7 @@ func (h *Handlers) CreateServiceAccount(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	sa, _, err := h.svc.CreateServiceAccount(r.Context(), orgID, req.Name, req.Description)
+	sa, _, err := h.svc.CreateServiceAccount(r.Context(), tenantID, req.Name, req.Description)
 	if err != nil {
 		h.logger.Error("failed to create service account", zap.Error(err))
 		h.errorJSON(w, http.StatusInternalServerError, "failed to create service account")
@@ -1083,22 +1021,13 @@ func (h *Handlers) CreateServiceAccount(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *Handlers) ListServiceAccounts(w http.ResponseWriter, r *http.Request) {
-	orgID, ok := r.Context().Value(middleware.OrgIDKey).(uuid.UUID)
+	tenantID, ok := ctxkeys.GetTenantID(r.Context())
 	if !ok {
-		orgIDStr, okStr := r.Context().Value(ctxkeys.OrgIDKey).(string)
-		if !okStr {
-			h.errorJSON(w, http.StatusUnauthorized, "organization context missing")
-			return
-		}
-		var err error
-		orgID, err = uuid.Parse(orgIDStr)
-		if err != nil {
-			h.errorJSON(w, http.StatusUnauthorized, "invalid organization id")
-			return
-		}
+		h.errorJSON(w, http.StatusUnauthorized, "organization context missing")
+		return
 	}
 
-	accounts, err := h.svc.ListServiceAccounts(r.Context(), orgID)
+	accounts, err := h.svc.ListServiceAccounts(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("failed to list service accounts", zap.Error(err))
 		h.errorJSON(w, http.StatusInternalServerError, "failed to list service accounts")

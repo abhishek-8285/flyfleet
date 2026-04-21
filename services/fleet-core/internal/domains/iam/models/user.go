@@ -32,7 +32,8 @@ type User struct {
 	LastLoginIP     string     `json:"-"`
 	PermissionMask  int64      `json:"-"`
 	SidebarCollapsed bool      `json:"sidebar_collapsed"`
-	Language        string     `json:"language"`
+	Language         string     `json:"language"`
+	MustResetPassword bool      `json:"must_reset_password"`
 	CreatedAt       time.Time  `json:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`
 }

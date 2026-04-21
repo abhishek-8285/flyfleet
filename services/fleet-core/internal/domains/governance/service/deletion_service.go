@@ -165,7 +165,7 @@ func (s *dataDeletionService) publishEvent(subject string, data interface{}) {
 
 // cleanupUserCache removes all Redis cache entries related to the deleted user and their vehicles
 func (s *dataDeletionService) cleanupUserCache(ctx context.Context, req *models.GovernanceRequest) {
-	orgID := req.OrganizationID
+	tenantID := req.OrganizationID
 	userID := req.RequesterID
 
 	// Fetch all vehicles associated with this user to target vehicle-specific cache
@@ -173,7 +173,7 @@ func (s *dataDeletionService) cleanupUserCache(ctx context.Context, req *models.
 		SELECT id, registration_number
 		FROM vehicles
 		WHERE driver_id = $1 AND tenant_id = $2`,
-		userID, orgID,
+		userID, tenantID,
 	)
 	if err != nil {
 		s.logger.Warn("Failed to query vehicles for cache cleanup", zap.Error(err))
@@ -197,8 +197,8 @@ func (s *dataDeletionService) cleanupUserCache(ctx context.Context, req *models.
 
 	// Delete cache entries for each vehicle
 	for _, v := range vehicles {
-		// 1. VAHAN verification cache: vahan:verify:{orgID}:{regNumber}
-		vahanKey := fmt.Sprintf("vahan:verify:%s:%s", orgID.String(), v.RegistrationNumber)
+		// 1. VAHAN verification cache: vahan:verify:{tenantID}:{regNumber}
+		vahanKey := fmt.Sprintf("vahan:verify:%s:%s", tenantID.String(), v.RegistrationNumber)
 		if err := s.redis.Del(ctx, vahanKey).Err(); err != nil {
 			s.logger.Warn("Failed to delete vahan cache", zap.Error(err), zap.String("key", vahanKey))
 		}
@@ -220,8 +220,8 @@ func (s *dataDeletionService) cleanupUserCache(ctx context.Context, req *models.
 			}
 		}
 
-		// 4. Analytics vehicle cache: analytics:{orgID}:vehicle:{id}:*
-		analyticsVehPattern := fmt.Sprintf("analytics:%s:vehicle:%s:*", orgID.String(), v.ID.String())
+		// 4. Analytics vehicle cache: analytics:{tenantID}:vehicle:{id}:*
+		analyticsVehPattern := fmt.Sprintf("analytics:%s:vehicle:%s:*", tenantID.String(), v.ID.String())
 		keys, err = s.redis.Keys(ctx, analyticsVehPattern).Result()
 		if err != nil {
 			s.logger.Warn("Failed to list analytics vehicle cache keys", zap.Error(err), zap.String("pattern", analyticsVehPattern))
@@ -232,8 +232,8 @@ func (s *dataDeletionService) cleanupUserCache(ctx context.Context, req *models.
 		}
 	}
 
-	// 5. Analytics driver cache: analytics:{orgID}:driver:{userID}:*
-	analyticsDrvPattern := fmt.Sprintf("analytics:%s:driver:%s:*", orgID.String(), userID.String())
+	// 5. Analytics driver cache: analytics:{tenantID}:driver:{userID}:*
+	analyticsDrvPattern := fmt.Sprintf("analytics:%s:driver:%s:*", tenantID.String(), userID.String())
 	keys, err := s.redis.Keys(ctx, analyticsDrvPattern).Result()
 	if err != nil {
 		s.logger.Warn("Failed to list analytics driver cache keys", zap.Error(err), zap.String("pattern", analyticsDrvPattern))

@@ -9,7 +9,7 @@ var (
 	ErrTripAlreadyExists = errors.New("trip already exists")
 	ErrInvalidTripID     = errors.New("invalid trip ID")
 	ErrUnauthorized      = errors.New("unauthorized access")
-	ErrInvalidOrgID      = errors.New("invalid organization ID")
+	ErrInvalidTenantID      = errors.New("invalid organization ID")
 
 	// Trip lifecycle errors
 	ErrInvalidTripStatus     = errors.New("invalid trip status")

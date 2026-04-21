@@ -19,7 +19,7 @@ func (e *QuickBooksExporter) GetName() models.ExternalSystem {
 	return models.SystemQuickBooks
 }
 
-func (e *QuickBooksExporter) ExportLedger(orgID uuid.UUID, entries []models.LedgerEntry) ([]byte, string, error) {
+func (e *QuickBooksExporter) ExportLedger(tenantID uuid.UUID, entries []models.LedgerEntry) ([]byte, string, error) {
 	var buf bytes.Buffer
 	w := csv.NewWriter(&buf)
 
@@ -46,7 +46,7 @@ func (e *QuickBooksExporter) ExportLedger(orgID uuid.UUID, entries []models.Ledg
 	return buf.Bytes(), "ledger_quickbooks.csv", nil
 }
 
-func (e *QuickBooksExporter) ExportInvoices(orgID uuid.UUID, invoices []models.Invoice) ([]byte, string, error) {
+func (e *QuickBooksExporter) ExportInvoices(tenantID uuid.UUID, invoices []models.Invoice) ([]byte, string, error) {
 	var buf bytes.Buffer
 	w := csv.NewWriter(&buf)
 
@@ -57,7 +57,7 @@ func (e *QuickBooksExporter) ExportInvoices(orgID uuid.UUID, invoices []models.I
 		taxAmount := inv.TotalAmount - inv.Subtotal
 		_ = w.Write([]string{
 			inv.InvoiceNumber,
-			inv.OrgID.String(),
+			inv.TenantID.String(),
 			inv.InvoiceDate.Format("2006-01-02"),
 			inv.DueDate.Format("2006-01-02"),
 			fmt.Sprintf("%.2f", inv.Subtotal),
@@ -82,7 +82,7 @@ func (e *XeroExporter) GetName() models.ExternalSystem {
 	return models.SystemXero
 }
 
-func (e *XeroExporter) ExportLedger(orgID uuid.UUID, entries []models.LedgerEntry) ([]byte, string, error) {
+func (e *XeroExporter) ExportLedger(tenantID uuid.UUID, entries []models.LedgerEntry) ([]byte, string, error) {
 	// For now, Xero also gets CSV, but structured for Xero import
 	var buf bytes.Buffer
 	w := csv.NewWriter(&buf)
@@ -113,7 +113,7 @@ func (e *XeroExporter) ExportLedger(orgID uuid.UUID, entries []models.LedgerEntr
 	return buf.Bytes(), "ledger_xero.csv", nil
 }
 
-func (e *XeroExporter) ExportInvoices(orgID uuid.UUID, invoices []models.Invoice) ([]byte, string, error) {
+func (e *XeroExporter) ExportInvoices(tenantID uuid.UUID, invoices []models.Invoice) ([]byte, string, error) {
 	var buf bytes.Buffer
 	w := csv.NewWriter(&buf)
 
@@ -121,7 +121,7 @@ func (e *XeroExporter) ExportInvoices(orgID uuid.UUID, invoices []models.Invoice
 
 	for _, inv := range invoices {
 		_ = w.Write([]string{
-			"Organization " + inv.OrgID.String(),
+			"Organization " + inv.TenantID.String(),
 			"",
 			inv.ID.String(),
 			inv.InvoiceNumber,

@@ -18,7 +18,7 @@ const (
 
 type Payment struct {
 	ID            uuid.UUID     `json:"id"`
-	OrgID         uuid.UUID     `json:"tenant_id"`
+	TenantID         uuid.UUID     `json:"tenant_id"`
 	InvoiceID     *uuid.UUID    `json:"invoice_id,omitempty"`
 	Amount        float64       `json:"amount" validate:"required,gt=0"`
 	Status        PaymentStatus `json:"status"`
@@ -33,6 +33,6 @@ type Payment struct {
 
 type Repository interface {
 	Create(ctx context.Context, p *Payment) (*Payment, error)
-	GetByID(ctx context.Context, orgID, id uuid.UUID) (*Payment, error)
-	ListByInvoice(ctx context.Context, orgID, invoiceID uuid.UUID) ([]Payment, error)
+	GetByID(ctx context.Context, tenantID, id uuid.UUID) (*Payment, error)
+	ListByInvoice(ctx context.Context, tenantID, invoiceID uuid.UUID) ([]Payment, error)
 }

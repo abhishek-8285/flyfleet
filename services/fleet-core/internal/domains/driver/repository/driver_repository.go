@@ -57,7 +57,7 @@ func (r *DriverRepository) Create(ctx context.Context, driver *models.Driver) er
 
 	start := time.Now()
 	err = r.db.QueryRow(ctx, query,
-		id, driver.OrgID, driver.FirstName, driver.LastName, driver.Email, driver.Phone,
+		id, driver.TenantID, driver.FirstName, driver.LastName, driver.Email, driver.Phone,
 		driver.EmployeeCode, driver.AadhaarNumber, driver.PanNumber,
 		driver.LicenseNumber, driver.LicenseType, driver.LicenseIssueDate, driver.LicenseExpiry, driver.LicenseAuthority,
 		driver.DateOfBirth, addressJSON, emergencyContactJSON, driver.Status, driver.EmploymentType, driver.JoiningDate,
@@ -80,7 +80,7 @@ func (r *DriverRepository) GetByEmail(ctx context.Context, email string) (*model
 	var driver models.Driver
 	start := time.Now()
 	err := r.db.QueryRow(ctx, query, email).Scan(
-		&driver.ID, &driver.OrgID, &driver.FirstName, &driver.LastName,
+		&driver.ID, &driver.TenantID, &driver.FirstName, &driver.LastName,
 		&driver.FullName, &driver.Email, &driver.Status, &driver.CreatedAt,
 	)
 	metrics.RecordDBQuery(query, time.Since(start))
@@ -100,7 +100,7 @@ func (r *DriverRepository) GetByLicenseNumber(ctx context.Context, licenseNumber
 	var driver models.Driver
 	start := time.Now()
 	err := r.db.QueryRow(ctx, query, licenseNumber).Scan(
-		&driver.ID, &driver.OrgID, &driver.FirstName, &driver.LastName,
+		&driver.ID, &driver.TenantID, &driver.FirstName, &driver.LastName,
 		&driver.FullName, &driver.Email, &driver.LicenseNumber, &driver.Status, &driver.CreatedAt,
 	)
 	metrics.RecordDBQuery(query, time.Since(start))
@@ -130,7 +130,7 @@ func (r *DriverRepository) GetByID(ctx context.Context, id string) (*models.Driv
 
 	start := time.Now()
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&driver.ID, &driver.OrgID, &driver.FirstName, &driver.LastName, &driver.FullName,
+		&driver.ID, &driver.TenantID, &driver.FirstName, &driver.LastName, &driver.FullName,
 		&driver.Email, &driver.Phone, &driver.EmployeeCode, &driver.AadhaarNumber,
 		&driver.PanNumber, &driver.LicenseNumber, &driver.LicenseType,
 		&driver.LicenseIssueDate, &driver.LicenseExpiry, &driver.LicenseAuthority,
@@ -204,10 +204,10 @@ func (r *DriverRepository) GetAttendance(ctx context.Context, driverID string) (
 		var rec models.AttendanceRecord
 		var id uuid.UUID
 		var driverID uuid.UUID // dummy, not used
-		var orgID uuid.UUID   // org context, not stored in record
+		var tenantID uuid.UUID   // org context, not stored in record
 		var date time.Time
 		err := rows.Scan(
-			&id, &driverID, &orgID, &date, &rec.Status, &rec.CheckInTime, &rec.CheckOutTime, &rec.Remarks, &rec.CreatedAt,
+			&id, &driverID, &tenantID, &date, &rec.Status, &rec.CheckInTime, &rec.CheckOutTime, &rec.Remarks, &rec.CreatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan attendance record: %w", err)
@@ -224,7 +224,7 @@ func (r *DriverRepository) CreateAttendance(ctx context.Context, attendance *mod
 		INSERT INTO driver_attendance (driver_id, tenant_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
 	`
-	_, err := r.db.Exec(ctx, query, attendance.DriverID, attendance.OrgID, attendance.AttendanceDate, attendance.Status, attendance.CheckInTime, attendance.CheckOutTime, attendance.Remarks)
+	_, err := r.db.Exec(ctx, query, attendance.DriverID, attendance.TenantID, attendance.AttendanceDate, attendance.Status, attendance.CheckInTime, attendance.CheckOutTime, attendance.Remarks)
 	return err
 }
 
@@ -237,7 +237,7 @@ func (r *DriverRepository) GetAttendanceByID(ctx context.Context, id uuid.UUID) 
 	`
 	var attendance models.DriverAttendance
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&attendance.ID, &attendance.DriverID, &attendance.OrgID, &attendance.AttendanceDate,
+		&attendance.ID, &attendance.DriverID, &attendance.TenantID, &attendance.AttendanceDate,
 		&attendance.Status, &attendance.CheckInTime, &attendance.CheckOutTime, &attendance.Remarks, &attendance.CreatedAt,
 	)
 	if err != nil {
@@ -247,14 +247,14 @@ func (r *DriverRepository) GetAttendanceByID(ctx context.Context, id uuid.UUID) 
 }
 
 // GetAttendanceByDriver retrieves attendance records for a driver within a date range
-func (r *DriverRepository) GetAttendanceByDriver(ctx context.Context, driverID, orgID uuid.UUID, from, to time.Time) ([]*models.DriverAttendance, error) {
+func (r *DriverRepository) GetAttendanceByDriver(ctx context.Context, driverID, tenantID uuid.UUID, from, to time.Time) ([]*models.DriverAttendance, error) {
 	query := `
 		SELECT id, driver_id, tenant_id, attendance_date, status, check_in_time, check_out_time, remarks, created_at
 		FROM driver_attendance
 		WHERE driver_id = $1 AND tenant_id = $2 AND attendance_date BETWEEN $3 AND $4
 		ORDER BY attendance_date DESC
 	`
-	rows, err := r.db.Query(ctx, query, driverID, orgID, from, to)
+	rows, err := r.db.Query(ctx, query, driverID, tenantID, from, to)
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +264,7 @@ func (r *DriverRepository) GetAttendanceByDriver(ctx context.Context, driverID, 
 	for rows.Next() {
 		var attendance models.DriverAttendance
 		err := rows.Scan(
-			&attendance.ID, &attendance.DriverID, &attendance.OrgID, &attendance.AttendanceDate,
+			&attendance.ID, &attendance.DriverID, &attendance.TenantID, &attendance.AttendanceDate,
 			&attendance.Status, &attendance.CheckInTime, &attendance.CheckOutTime, &attendance.Remarks, &attendance.CreatedAt,
 		)
 		if err != nil {
@@ -276,13 +276,13 @@ func (r *DriverRepository) GetAttendanceByDriver(ctx context.Context, driverID, 
 }
 
 // UpdateCheckOut updates the check-out time for an attendance record
-func (r *DriverRepository) UpdateCheckOut(ctx context.Context, id, orgID uuid.UUID, checkOut time.Time, remarks string) error {
+func (r *DriverRepository) UpdateCheckOut(ctx context.Context, id, tenantID uuid.UUID, checkOut time.Time, remarks string) error {
 	query := `
 		UPDATE driver_attendance
 		SET check_out_time = $1, remarks = $2, updated_at = NOW()
 		WHERE id = $3 AND tenant_id = $4
 	`
-	_, err := r.db.Exec(ctx, query, checkOut, remarks, id, orgID)
+	_, err := r.db.Exec(ctx, query, checkOut, remarks, id, tenantID)
 	return err
 }
 
@@ -292,7 +292,7 @@ func (r *DriverRepository) CreateSchedule(ctx context.Context, schedule *models.
 		INSERT INTO driver_schedules (driver_id, tenant_id, day_of_week, start_time, end_time, is_working, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
 	`
-	_, err := r.db.Exec(ctx, query, schedule.DriverID, schedule.OrgID, schedule.DayOfWeek, schedule.StartTime, schedule.EndTime, schedule.IsWorking)
+	_, err := r.db.Exec(ctx, query, schedule.DriverID, schedule.TenantID, schedule.DayOfWeek, schedule.StartTime, schedule.EndTime, schedule.IsWorking)
 	return err
 }
 
@@ -305,7 +305,7 @@ func (r *DriverRepository) GetScheduleByID(ctx context.Context, id uuid.UUID) (*
 	`
 	var schedule models.DriverSchedule
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&schedule.ID, &schedule.DriverID, &schedule.OrgID, &schedule.DayOfWeek,
+		&schedule.ID, &schedule.DriverID, &schedule.TenantID, &schedule.DayOfWeek,
 		&schedule.StartTime, &schedule.EndTime, &schedule.IsWorking, &schedule.CreatedAt, &schedule.UpdatedAt,
 	)
 	if err != nil {
@@ -315,14 +315,14 @@ func (r *DriverRepository) GetScheduleByID(ctx context.Context, id uuid.UUID) (*
 }
 
 // GetSchedulesByDriver retrieves all work schedules for a driver
-func (r *DriverRepository) GetSchedulesByDriver(ctx context.Context, driverID, orgID uuid.UUID) ([]*models.DriverSchedule, error) {
+func (r *DriverRepository) GetSchedulesByDriver(ctx context.Context, driverID, tenantID uuid.UUID) ([]*models.DriverSchedule, error) {
 	query := `
 		SELECT id, driver_id, tenant_id, day_of_week, start_time, end_time, is_working, created_at, updated_at
 		FROM driver_schedules
 		WHERE driver_id = $1 AND tenant_id = $2
 		ORDER BY day_of_week
 	`
-	rows, err := r.db.Query(ctx, query, driverID, orgID)
+	rows, err := r.db.Query(ctx, query, driverID, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -332,7 +332,7 @@ func (r *DriverRepository) GetSchedulesByDriver(ctx context.Context, driverID, o
 	for rows.Next() {
 		var schedule models.DriverSchedule
 		err := rows.Scan(
-			&schedule.ID, &schedule.DriverID, &schedule.OrgID, &schedule.DayOfWeek,
+			&schedule.ID, &schedule.DriverID, &schedule.TenantID, &schedule.DayOfWeek,
 			&schedule.StartTime, &schedule.EndTime, &schedule.IsWorking, &schedule.CreatedAt, &schedule.UpdatedAt,
 		)
 		if err != nil {
@@ -355,9 +355,9 @@ func (r *DriverRepository) UpdateSchedule(ctx context.Context, schedule *models.
 }
 
 // DeleteSchedule deletes a work schedule
-func (r *DriverRepository) DeleteSchedule(ctx context.Context, id, orgID uuid.UUID) error {
+func (r *DriverRepository) DeleteSchedule(ctx context.Context, id, tenantID uuid.UUID) error {
 	query := `DELETE FROM driver_schedules WHERE id = $1 AND tenant_id = $2`
-	_, err := r.db.Exec(ctx, query, id, orgID)
+	_, err := r.db.Exec(ctx, query, id, tenantID)
 	return err
 }
 
@@ -381,9 +381,9 @@ func (r *DriverRepository) GetSchedules(ctx context.Context, driverID string) ([
 	var schedules []models.WorkSchedule
 	for rows.Next() {
 		var ds models.DriverSchedule
-		var orgID string
+		var tenantID string
 		err := rows.Scan(
-			&ds.ID, &ds.DriverID, &orgID, &ds.DayOfWeek, &ds.StartTime, &ds.EndTime,
+			&ds.ID, &ds.DriverID, &tenantID, &ds.DayOfWeek, &ds.StartTime, &ds.EndTime,
 			&ds.IsWorking, &ds.CreatedAt, &ds.UpdatedAt,
 		)
 		if err != nil {
@@ -421,9 +421,9 @@ func (r *DriverRepository) List(ctx context.Context, filter models.DriverListFil
 	var args []interface{}
 	argIndex := 1
 
-	if filter.OrgID != "" {
+	if filter.TenantID != "" {
 		conditions = append(conditions, fmt.Sprintf("tenant_id = $%d", argIndex))
-		args = append(args, filter.OrgID)
+		args = append(args, filter.TenantID)
 		argIndex++
 	}
 
@@ -507,7 +507,7 @@ func (r *DriverRepository) List(ctx context.Context, filter models.DriverListFil
 	for rows.Next() {
 		var driver models.Driver
 		err := rows.Scan(
-			&driver.ID, &driver.OrgID, &driver.FirstName, &driver.LastName, &driver.FullName,
+			&driver.ID, &driver.TenantID, &driver.FirstName, &driver.LastName, &driver.FullName,
 			&driver.Email, &driver.Phone, &driver.LicenseNumber, &driver.LicenseType,
 			&driver.Status, &driver.CurrentVehicleID, &driver.Rating, &driver.TotalTrips,
 			&driver.BehaviorScore, &driver.CreatedAt, &driver.UpdatedAt,
@@ -601,8 +601,8 @@ func (r *DriverRepository) Update(ctx context.Context, id string, updates map[st
 // replaceAttendance deletes and recreates driver attendance records from a slice
 func (r *DriverRepository) replaceAttendance(ctx context.Context, driverID string, records interface{}) error {
 	// Get driver's tenant_id first (needed for attendance records)
-	var orgID uuid.UUID
-	err := r.db.QueryRow(ctx, `SELECT tenant_id FROM drivers WHERE id = $1`, driverID).Scan(&orgID)
+	var tenantID uuid.UUID
+	err := r.db.QueryRow(ctx, `SELECT tenant_id FROM drivers WHERE id = $1`, driverID).Scan(&tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to get driver tenant_id: %w", err)
 	}
@@ -636,7 +636,7 @@ func (r *DriverRepository) replaceAttendance(ctx context.Context, driverID strin
 		args = append(args,
 			id,
 			uuid.MustParse(driverID),
-			orgID,
+			tenantID,
 			rec.Date,
 			rec.Status,
 			rec.CheckInTime,
@@ -661,8 +661,8 @@ func (r *DriverRepository) replaceAttendance(ctx context.Context, driverID strin
 // replaceSchedules deletes and recreates driver work schedules from a slice
 func (r *DriverRepository) replaceSchedules(ctx context.Context, driverID string, schedules interface{}) error {
 	// Get driver's tenant_id
-	var orgID uuid.UUID
-	err := r.db.QueryRow(ctx, `SELECT tenant_id FROM drivers WHERE id = $1`, driverID).Scan(&orgID)
+	var tenantID uuid.UUID
+	err := r.db.QueryRow(ctx, `SELECT tenant_id FROM drivers WHERE id = $1`, driverID).Scan(&tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to get driver tenant_id: %w", err)
 	}
@@ -696,7 +696,7 @@ func (r *DriverRepository) replaceSchedules(ctx context.Context, driverID string
 		args = append(args,
 			id,
 			uuid.MustParse(driverID),
-			orgID,
+			tenantID,
 			s.DayOfWeek,
 			s.StartTime,
 			s.EndTime,
@@ -799,14 +799,14 @@ func (r *DriverRepository) UpdateBehaviorScore(ctx context.Context, driverID str
 }
 
 // LogBehaviorScoreChange logs a behavior score change event
-func (r *DriverRepository) LogBehaviorScoreChange(ctx context.Context, driverID, orgID uuid.UUID, oldScore, newScore int, reason, eventType string, userID uuid.UUID, userEmail string) error {
+func (r *DriverRepository) LogBehaviorScoreChange(ctx context.Context, driverID, tenantID uuid.UUID, oldScore, newScore int, reason, eventType string, userID uuid.UUID, userEmail string) error {
 	query := `
 		INSERT INTO driver_behavior_logs (
 			driver_id, tenant_id, old_score, new_score, reason, event_type,
 			user_id, user_email, created_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
 	`
-	_, err := r.db.Exec(ctx, query, driverID, orgID, oldScore, newScore, reason, eventType, userID, userEmail)
+	_, err := r.db.Exec(ctx, query, driverID, tenantID, oldScore, newScore, reason, eventType, userID, userEmail)
 	return err
 }
 
@@ -909,7 +909,7 @@ func (r *DriverRepository) GetActiveDriversForVehicle(ctx context.Context, vehic
 	for rows.Next() {
 		var driver models.Driver
 		err := rows.Scan(
-			&driver.ID, &driver.OrgID, &driver.FirstName, &driver.LastName, &driver.FullName,
+			&driver.ID, &driver.TenantID, &driver.FirstName, &driver.LastName, &driver.FullName,
 			&driver.Email, &driver.Phone, &driver.LicenseNumber, &driver.LicenseType,
 			&driver.Status, &driver.Rating, &driver.BehaviorScore, &driver.CreatedAt, &driver.UpdatedAt,
 		)
@@ -960,7 +960,7 @@ func (r *DriverRepository) CreateBehaviorRecord(ctx context.Context, behavior *m
 
 	start := time.Now()
 	err = r.db.QueryRow(ctx, query,
-		id, behavior.DriverID, behavior.OrgID, behavior.PeriodStart, behavior.PeriodEnd,
+		id, behavior.DriverID, behavior.TenantID, behavior.PeriodStart, behavior.PeriodEnd,
 		behavior.Score, behavior.SafetyScore, behavior.EfficiencyScore, behavior.ComplianceScore,
 		behavior.HarshAccelerations, behavior.HarshBrakings, behavior.HarshCornerings,
 		behavior.SpeedingIncidents, behavior.PhoneUsage, behavior.SeatbeltViolations,
@@ -1008,7 +1008,7 @@ func (r *DriverRepository) GetBehaviorRecords(ctx context.Context, driverID stri
 		var riskFactorsJSON, improvementAreasJSON, metadataJSON []byte
 
 		err := rows.Scan(
-			&behavior.ID, &behavior.DriverID, &behavior.OrgID, &behavior.PeriodStart, &behavior.PeriodEnd,
+			&behavior.ID, &behavior.DriverID, &behavior.TenantID, &behavior.PeriodStart, &behavior.PeriodEnd,
 			&behavior.Score, &behavior.SafetyScore, &behavior.EfficiencyScore, &behavior.ComplianceScore,
 			&behavior.HarshAccelerations, &behavior.HarshBrakings, &behavior.HarshCornerings,
 			&behavior.SpeedingIncidents, &behavior.PhoneUsage, &behavior.SeatbeltViolations,
@@ -1067,7 +1067,7 @@ func (r *DriverRepository) CreateIncident(ctx context.Context, incident *models.
 
 	start := time.Now()
 	err = r.db.QueryRow(ctx, query,
-		id, incident.DriverID, incident.OrgID, incident.Type, incident.Severity,
+		id, incident.DriverID, incident.TenantID, incident.Type, incident.Severity,
 		incident.Timestamp, locationJSON, incident.Speed, detailsJSON,
 		incident.Resolved, incident.ResolutionNotes, now,
 	).Scan(&incident.ID, &incident.CreatedAt)
@@ -1126,7 +1126,7 @@ func (r *DriverRepository) GetIncidents(ctx context.Context, driverID string, fi
 		var locationJSON, detailsJSON []byte
 
 		err := rows.Scan(
-			&incident.ID, &incident.DriverID, &incident.OrgID, &incident.Type,
+			&incident.ID, &incident.DriverID, &incident.TenantID, &incident.Type,
 			&incident.Severity, &incident.Timestamp, &locationJSON, &incident.Speed,
 			&detailsJSON, &incident.Resolved, &incident.ResolutionNotes, &incident.CreatedAt,
 		)
@@ -1266,7 +1266,7 @@ func (r *DriverRepository) CreateAuditLog(ctx context.Context, audit *models.Dri
 
 	start := time.Now()
 	_, err = r.db.Exec(ctx, query,
-		id, audit.DriverID, audit.OrgID, audit.Action,
+		id, audit.DriverID, audit.TenantID, audit.Action,
 		oldValueJSON, newValueJSON, audit.UserID, audit.UserType, audit.UserEmail,
 		audit.Reason, metadataJSON, audit.IPAddress, audit.UserAgent, audit.CreatedAt,
 	)

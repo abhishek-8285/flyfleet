@@ -30,13 +30,13 @@ type WebSocketHandler struct {
 	liveCache   repository.LiveCacher
 
 	mu      sync.RWMutex
-	clients map[string][]*WSClient // orgID → clients
+	clients map[string][]*WSClient // tenantID → clients
 }
 
 // WSClient represents a single WebSocket connection.
 type WSClient struct {
 	conn       *websocket.Conn
-	orgID      string
+	tenantID      string
 	send       chan []byte
 	subscribed map[string]bool                // vehicle_id → bool (empty = all)
 	lastSent   map[string]*models.LiveLocation // differential push tracking
@@ -76,7 +76,7 @@ func (h *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := claims.OrgID.String()
+	tenantID := claims.TenantID.String()
 
 	// Upgrade to WebSocket
 	conn, err := h.upgrader.Upgrade(w, r, nil)
@@ -87,14 +87,14 @@ func (h *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	client := &WSClient{
 		conn:       conn,
-		orgID:      orgID,
+		tenantID:      tenantID,
 		send:       make(chan []byte, 256),
 		subscribed: make(map[string]bool),
 		lastSent:   make(map[string]*models.LiveLocation),
 		lastPong:   time.Now(),
 	}
 
-	h.registerClient(orgID, client)
+	h.registerClient(tenantID, client)
 
 	// Send connection ack with heartbeat/position config
 	ack, _ := json.Marshal(models.WSMessage{
@@ -117,22 +117,22 @@ func (h *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	go h.startPositionTicker(ctx, client)
 }
 
-func (h *WebSocketHandler) registerClient(orgID string, client *WSClient) {
+func (h *WebSocketHandler) registerClient(tenantID string, client *WSClient) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	h.clients[orgID] = append(h.clients[orgID], client)
+	h.clients[tenantID] = append(h.clients[tenantID], client)
 	h.logger.Info("ws client registered",
-		zap.String("org_id", orgID),
-		zap.Int("total_clients", len(h.clients[orgID])))
+		zap.String("tenant_id", tenantID),
+		zap.Int("total_clients", len(h.clients[tenantID])))
 }
 
-func (h *WebSocketHandler) unregisterClient(orgID string, client *WSClient) {
+func (h *WebSocketHandler) unregisterClient(tenantID string, client *WSClient) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	clients := h.clients[orgID]
+	clients := h.clients[tenantID]
 	for i, c := range clients {
 		if c == client {
-			h.clients[orgID] = append(clients[:i], clients[i+1:]...)
+			h.clients[tenantID] = append(clients[:i], clients[i+1:]...)
 			break
 		}
 	}
@@ -143,12 +143,12 @@ func (h *WebSocketHandler) subscribeToOrgUpdates(ctx context.Context, client *WS
 	defer cancel()
 
 	// Subscribe to telemetry channel
-	telPubsub := h.redis.Subscribe(ctx, database.RedisChannelForOrg(client.orgID))
+	telPubsub := h.redis.Subscribe(ctx, database.RedisChannelForOrg(client.tenantID))
 	defer telPubsub.Close()
 	telCh := telPubsub.Channel()
 
 	// Subscribe to geofence alerts channel
-	geoPubsub := h.redis.Subscribe(ctx, fmt.Sprintf("org:%s:geofence_alerts", client.orgID))
+	geoPubsub := h.redis.Subscribe(ctx, fmt.Sprintf("org:%s:geofence_alerts", client.tenantID))
 	defer geoPubsub.Close()
 	geoCh := geoPubsub.Channel()
 
@@ -162,7 +162,7 @@ func (h *WebSocketHandler) subscribeToOrgUpdates(ctx context.Context, client *WS
 			case client.send <- []byte(msg.Payload):
 			default:
 				h.logger.Warn("ws telemetry buffer full, dropping message",
-					zap.String("org_id", client.orgID))
+					zap.String("tenant_id", client.tenantID))
 			}
 		case msg, ok := <-geoCh:
 			if !ok {
@@ -172,7 +172,7 @@ func (h *WebSocketHandler) subscribeToOrgUpdates(ctx context.Context, client *WS
 			case client.send <- []byte(msg.Payload):
 			default:
 				h.logger.Warn("ws geofence buffer full, dropping message",
-					zap.String("org_id", client.orgID))
+					zap.String("tenant_id", client.tenantID))
 			}
 		case <-ctx.Done():
 			return
@@ -186,7 +186,7 @@ func (h *WebSocketHandler) startHeartbeat(client *WSClient) {
 	for range ticker.C {
 		if time.Since(client.lastPong) > 90*time.Second {
 			h.logger.Info("ws heartbeat timeout, closing connection",
-				zap.String("org_id", client.orgID))
+				zap.String("tenant_id", client.tenantID))
 			client.conn.WriteControl(websocket.CloseMessage,
 				websocket.FormatCloseMessage(websocket.CloseNormalClosure, "heartbeat timeout"),
 				time.Now().Add(5*time.Second))
@@ -211,7 +211,7 @@ func (h *WebSocketHandler) startPositionTicker(ctx context.Context, client *WSCl
 }
 
 func (h *WebSocketHandler) pushOrgPositions(ctx context.Context, client *WSClient) {
-	orgUUID, err := uuid.FromString(client.orgID)
+	orgUUID, err := uuid.FromString(client.tenantID)
 	if err != nil {
 		return
 	}
@@ -276,7 +276,7 @@ func hasSignificantChange(old, new models.LiveLocation) bool {
 
 func (h *WebSocketHandler) readPump(client *WSClient) {
 	defer func() {
-		h.unregisterClient(client.orgID, client)
+		h.unregisterClient(client.tenantID, client)
 		client.conn.Close()
 	}()
 
@@ -306,7 +306,7 @@ func (h *WebSocketHandler) readPump(client *WSClient) {
 				client.subscribed[vid] = true
 			}
 			h.logger.Debug("client subscribed to vehicles",
-				zap.String("org_id", client.orgID),
+				zap.String("tenant_id", client.tenantID),
 				zap.Int("count", len(subReq.VehicleIDs)))
 
 		case models.WSMsgPing:

@@ -77,7 +77,7 @@ class FleetService {
           size: 100,
           ...(query ? { q: query } : {}),
           ...(filters?.status ? { status: filters.status } : {}),
-          ...(filters?.org ? { tenant_id: filters.org } : {}),
+          ...((filters?.tenant_id || filters?.org) ? { tenant_id: filters.tenant_id || filters.org } : {}),
           ...(filters?.gps_enabled ? { gps_enabled: filters.gps_enabled } : {}),
         },
       }) as any;
@@ -130,13 +130,13 @@ class FleetService {
     );
   }
 
-  async getFilterMetadata(): Promise<{ orgs: string[]; statuses: string[] }> {
+  async getFilterMetadata(): Promise<{ tenants: string[]; statuses: string[] }> {
     // If worker is available, use it
     if (this.worker) {
       return new Promise((resolve) => {
         const timeout = setTimeout(() => {
           window.removeEventListener("VEHICLE_FILTER_METADATA", handler);
-          resolve({ orgs: [], statuses: [] });
+          resolve({ tenants: [], statuses: [] });
         }, 2000);
 
         function handler(e: any) {
@@ -161,17 +161,18 @@ class FleetService {
         ? raw
         : raw?.vehicles || raw?.data || [];
 
-      const orgSet = new Set<string>();
+      const tenantSet = new Set<string>();
       const statusSet = new Set<string>();
       vehicles.forEach((v: any) => {
-        if (v.org_id) orgSet.add(String(v.org_id));
-        if (v.org_name) orgSet.add(v.org_name);
+        const tid = v.tenant_id || v.tenantId || v.org_id || v.org;
+        if (tid) tenantSet.add(String(tid));
+        if (v.org_name) tenantSet.add(v.org_name); // Legacy name field
         if (v.status) statusSet.add(v.status);
       });
-      return { orgs: Array.from(orgSet), statuses: Array.from(statusSet) };
+      return { tenants: Array.from(tenantSet), statuses: Array.from(statusSet) };
     } catch (error) {
       console.error("[FleetService] getFilterMetadata REST fallback failed:", error);
-      return { orgs: [], statuses: [] };
+      return { tenants: [], statuses: [] };
     }
   }
 }

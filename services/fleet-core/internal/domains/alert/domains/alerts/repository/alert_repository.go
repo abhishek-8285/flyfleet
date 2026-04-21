@@ -47,7 +47,7 @@ func (r *AlertRepository) CreateRule(ctx context.Context, rule *models.AlertRule
 	driverIDsJSON, _ := json.Marshal(rule.DriverIDs)
 
 	err := r.db.QueryRow(ctx, query,
-		id, rule.OrgID, rule.Name, rule.Type, rule.Description,
+		id, rule.TenantID, rule.Name, rule.Type, rule.Description,
 		conditionsJSON, rule.Severity, actionsJSON, vehiclesJSON,
 		driverIDsJSON, rule.Enabled, now, now, rule.CreatedBy, rule.UpdatedBy,
 	).Scan(&rule.ID, &rule.CreatedAt, &rule.UpdatedAt)
@@ -66,7 +66,7 @@ func (r *AlertRepository) GetRuleByID(ctx context.Context, id string) (*models.A
 	var conditionsJSON, actionsJSON, vehiclesJSON, driverIDsJSON []byte
 
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&rule.ID, &rule.OrgID, &rule.Name, &rule.Type, &rule.Description,
+		&rule.ID, &rule.TenantID, &rule.Name, &rule.Type, &rule.Description,
 		&conditionsJSON, &rule.Severity, &actionsJSON, &vehiclesJSON,
 		&driverIDsJSON, &rule.Enabled, &rule.CreatedAt, &rule.UpdatedAt, &rule.CreatedBy, &rule.UpdatedBy,
 	)
@@ -85,7 +85,7 @@ func (r *AlertRepository) GetRuleByID(ctx context.Context, id string) (*models.A
 }
 
 // ListRules retrieves alert rules with filtering and pagination
-func (r *AlertRepository) ListRules(ctx context.Context, orgID uuid.UUID, filter models.AlertListFilter) ([]*models.AlertRule, int, error) {
+func (r *AlertRepository) ListRules(ctx context.Context, tenantID uuid.UUID, filter models.AlertListFilter) ([]*models.AlertRule, int, error) {
 	baseQuery := `
 		SELECT id, tenant_id, name, type, description, severity, enabled, created_at, updated_at
 		FROM alert_rules WHERE tenant_id = $1`
@@ -95,7 +95,7 @@ func (r *AlertRepository) ListRules(ctx context.Context, orgID uuid.UUID, filter
 	var conditions []string
 	var args []interface{}
 	argIndex := 2
-	args = append(args, orgID)
+	args = append(args, tenantID)
 
 	if len(filter.Type) > 0 {
 		typePlaceholders := make([]string, len(filter.Type))
@@ -174,7 +174,7 @@ func (r *AlertRepository) ListRules(ctx context.Context, orgID uuid.UUID, filter
 	for rows.Next() {
 		var rule models.AlertRule
 		err := rows.Scan(
-			&rule.ID, &rule.OrgID, &rule.Name, &rule.Type, &rule.Description,
+			&rule.ID, &rule.TenantID, &rule.Name, &rule.Type, &rule.Description,
 			&rule.Severity, &rule.Enabled, &rule.CreatedAt, &rule.UpdatedAt,
 		)
 		if err != nil {
@@ -263,7 +263,7 @@ func (r *AlertRepository) CreateAlert(ctx context.Context, alert *models.Alert) 
 	detailsJSON, _ := json.Marshal(alert.Details)
 
 	err := r.db.QueryRow(ctx, query,
-		id, alert.OrgID, alert.RuleID, alert.Type, alert.Severity,
+		id, alert.TenantID, alert.RuleID, alert.Type, alert.Severity,
 		alert.VehicleID, alert.DriverID, locationJSON, alert.Timestamp,
 		detailsJSON, alert.Status, alert.DedupKey,
 		alert.EscalationLevel, alert.SLADeadline, now, now, alert.CreatedBy, alert.UpdatedBy,
@@ -286,7 +286,7 @@ func (r *AlertRepository) GetAlertByID(ctx context.Context, id string) (*models.
 	var locationJSON, detailsJSON, escalatedToJSON []byte
 
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&alert.ID, &alert.OrgID, &alert.RuleID, &alert.Type, &alert.Severity,
+		&alert.ID, &alert.TenantID, &alert.RuleID, &alert.Type, &alert.Severity,
 		&alert.VehicleID, &alert.DriverID, &locationJSON, &alert.Timestamp,
 		&detailsJSON, &alert.Status, &alert.DedupKey,
 		&alert.EscalationLevel, &alert.LastEscalatedAt, &alert.SLADeadline,
@@ -319,7 +319,7 @@ func (r *AlertRepository) ListAlerts(ctx context.Context, filter models.AlertLis
 	var conditions []string
 	var args []interface{}
 	argIndex := 2
-	args = append(args, filter.OrgID)
+	args = append(args, filter.TenantID)
 
 	// Add date range filter
 	if !filter.FromDate.IsZero() {
@@ -427,7 +427,7 @@ func (r *AlertRepository) ListAlerts(ctx context.Context, filter models.AlertLis
 	for rows.Next() {
 		var alert models.Alert
 		err := rows.Scan(
-			&alert.ID, &alert.OrgID, &alert.RuleID, &alert.Type, &alert.Severity,
+			&alert.ID, &alert.TenantID, &alert.RuleID, &alert.Type, &alert.Severity,
 			&alert.VehicleID, &alert.DriverID, &alert.Timestamp, &alert.Status,
 			&alert.CreatedAt, &alert.UpdatedAt,
 		)
@@ -491,7 +491,7 @@ func (r *AlertRepository) GetActiveRulesForVehicle(ctx context.Context, vehicleI
 		var conditionsJSON, actionsJSON, vehiclesJSON, driverIDsJSON []byte
 
 		err := rows.Scan(
-			&rule.ID, &rule.OrgID, &rule.Name, &rule.Type, &rule.Description,
+			&rule.ID, &rule.TenantID, &rule.Name, &rule.Type, &rule.Description,
 			&conditionsJSON, &rule.Severity, &actionsJSON, &vehiclesJSON,
 			&driverIDsJSON, &rule.Enabled, &rule.CreatedAt, &rule.UpdatedAt, &rule.CreatedBy,
 		)
@@ -533,7 +533,7 @@ func (r *AlertRepository) GetActiveRulesForDriver(ctx context.Context, driverID 
 		var conditionsJSON, actionsJSON, vehiclesJSON, driverIDsJSON []byte
 
 		err := rows.Scan(
-			&rule.ID, &rule.OrgID, &rule.Name, &rule.Type, &rule.Description,
+			&rule.ID, &rule.TenantID, &rule.Name, &rule.Type, &rule.Description,
 			&conditionsJSON, &rule.Severity, &actionsJSON, &vehiclesJSON,
 			&driverIDsJSON, &rule.Enabled, &rule.CreatedAt, &rule.UpdatedAt, &rule.CreatedBy,
 		)
@@ -554,7 +554,7 @@ func (r *AlertRepository) GetActiveRulesForDriver(ctx context.Context, driverID 
 }
 
 // GetAlertSummary retrieves alert statistics for an organization
-func (r *AlertRepository) GetAlertSummary(ctx context.Context, orgID uuid.UUID, fromDate, toDate time.Time) (*models.AlertSummary, error) {
+func (r *AlertRepository) GetAlertSummary(ctx context.Context, tenantID uuid.UUID, fromDate, toDate time.Time) (*models.AlertSummary, error) {
 	query := `
 		SELECT 
 			COUNT(*) as total_alerts,
@@ -571,7 +571,7 @@ func (r *AlertRepository) GetAlertSummary(ctx context.Context, orgID uuid.UUID, 
 
 	var summary models.AlertSummary
 	var criticalCount, warningCount, infoCount int
-	err := r.db.QueryRow(ctx, query, orgID, fromDate, toDate).Scan(
+	err := r.db.QueryRow(ctx, query, tenantID, fromDate, toDate).Scan(
 		&summary.TotalAlerts, &summary.NewAlerts, &summary.Acknowledged,
 		&summary.Resolved, &criticalCount, &warningCount, &infoCount,
 	)
@@ -595,7 +595,7 @@ func (r *AlertRepository) GetAlertSummary(ctx context.Context, orgID uuid.UUID, 
 		WHERE tenant_id = $1 AND timestamp >= $2 AND timestamp <= $3
 		GROUP BY type`
 
-	typeRows, err := r.db.Query(ctx, typeQuery, orgID, fromDate, toDate)
+	typeRows, err := r.db.Query(ctx, typeQuery, tenantID, fromDate, toDate)
 	if err != nil {
 		return nil, err
 	}
@@ -615,7 +615,7 @@ func (r *AlertRepository) GetAlertSummary(ctx context.Context, orgID uuid.UUID, 
 		WHERE tenant_id = $1 AND timestamp >= $2 AND timestamp <= $3
 		GROUP BY status`
 
-	statusRows, err := r.db.Query(ctx, statusQuery, orgID, fromDate, toDate)
+	statusRows, err := r.db.Query(ctx, statusQuery, tenantID, fromDate, toDate)
 	if err != nil {
 		return nil, err
 	}
@@ -649,7 +649,7 @@ func (r *AlertRepository) GetStats(ctx context.Context) (*models.AlertStats, err
 
 // GetTemplate retrieves a notification template by alert type, channel, language, and org.
 // Returns sql.ErrNoRows if no matching template exists.
-func (r *AlertRepository) GetTemplate(ctx context.Context, alertType, channel, language string, orgID uuid.UUID) (*models.Template, error) {
+func (r *AlertRepository) GetTemplate(ctx context.Context, alertType, channel, language string, tenantID uuid.UUID) (*models.Template, error) {
 	query := `
 		SELECT id, tenant_id, alert_type, channel, language, subject, body, created_at, updated_at
 		FROM alert_templates
@@ -657,8 +657,8 @@ func (r *AlertRepository) GetTemplate(ctx context.Context, alertType, channel, l
 		LIMIT 1`
 
 	var tpl models.Template
-	err := r.db.QueryRow(ctx, query, alertType, channel, language, orgID).Scan(
-		&tpl.ID, &tpl.OrgID, &tpl.AlertType, &tpl.Channel, &tpl.Language,
+	err := r.db.QueryRow(ctx, query, alertType, channel, language, tenantID).Scan(
+		&tpl.ID, &tpl.TenantID, &tpl.AlertType, &tpl.Channel, &tpl.Language,
 		&tpl.Subject, &tpl.Body, &tpl.CreatedAt, &tpl.UpdatedAt,
 	)
 	if err != nil {

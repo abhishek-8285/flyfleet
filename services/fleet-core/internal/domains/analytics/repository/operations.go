@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (r *AnalyticsRepositoryImpl) GetVehicleDailyStats(ctx context.Context, vehicleID uuid.UUID, orgID uuid.UUID, startDate, endDate time.Time, cursor string, limit int) ([]*models.VehicleDailyStats, string, error) {
+func (r *AnalyticsRepositoryImpl) GetVehicleDailyStats(ctx context.Context, vehicleID uuid.UUID, tenantID uuid.UUID, startDate, endDate time.Time, cursor string, limit int) ([]*models.VehicleDailyStats, string, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 
@@ -29,7 +29,7 @@ func (r *AnalyticsRepositoryImpl) GetVehicleDailyStats(ctx context.Context, vehi
 		FROM vehicle_daily_stats
 		WHERE vehicle_id = $1 AND organization_id = $2 AND date >= $3 AND date <= $4
 	`
-	params := []interface{}{vehicleID, orgID, startDate, endDate}
+	params := []interface{}{vehicleID, tenantID, startDate, endDate}
 
 	if cursor != "" {
 		query += " AND date > $5"
@@ -73,7 +73,7 @@ func (r *AnalyticsRepositoryImpl) GetVehicleDailyStats(ctx context.Context, vehi
 }
 
 // GetDriverDailyStats retrieves pre-aggregated daily stats for a driver with cursor pagination
-func (r *AnalyticsRepositoryImpl) GetDriverDailyStats(ctx context.Context, driverID uuid.UUID, orgID uuid.UUID, startDate, endDate time.Time, cursor string, limit int) ([]*models.DriverDailyStats, string, error) {
+func (r *AnalyticsRepositoryImpl) GetDriverDailyStats(ctx context.Context, driverID uuid.UUID, tenantID uuid.UUID, startDate, endDate time.Time, cursor string, limit int) ([]*models.DriverDailyStats, string, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 
@@ -90,7 +90,7 @@ func (r *AnalyticsRepositoryImpl) GetDriverDailyStats(ctx context.Context, drive
 		FROM driver_daily_stats
 		WHERE driver_id = $1 AND organization_id = $2 AND date >= $3 AND date <= $4
 	`
-	params := []interface{}{driverID, orgID, startDate, endDate}
+	params := []interface{}{driverID, tenantID, startDate, endDate}
 
 	if cursor != "" {
 		query += " AND date > $5"
@@ -133,7 +133,7 @@ func (r *AnalyticsRepositoryImpl) GetDriverDailyStats(ctx context.Context, drive
 }
 
 // GetFleetHourlyStats retrieves pre-aggregated hourly stats for the whole fleet with cursor pagination
-func (r *AnalyticsRepositoryImpl) GetFleetHourlyStats(ctx context.Context, orgID uuid.UUID, startDate, endDate time.Time, cursor string, limit int) ([]*models.FleetHourlyStats, string, error) {
+func (r *AnalyticsRepositoryImpl) GetFleetHourlyStats(ctx context.Context, tenantID uuid.UUID, startDate, endDate time.Time, cursor string, limit int) ([]*models.FleetHourlyStats, string, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 
@@ -150,7 +150,7 @@ func (r *AnalyticsRepositoryImpl) GetFleetHourlyStats(ctx context.Context, orgID
 		FROM fleet_hourly_stats
 		WHERE organization_id = $1 AND timestamp >= $2 AND timestamp <= $3
 	`
-	params := []interface{}{orgID, startDate, endDate}
+	params := []interface{}{tenantID, startDate, endDate}
 
 	if cursor != "" {
 		cursorTime, err := time.Parse(time.RFC3339, cursor)
@@ -398,7 +398,7 @@ func (r *AnalyticsRepositoryImpl) CreateFeatureVector(ctx context.Context, vecto
 }
 
 // GetLatestFeatures retrieves the most recent features for an entity
-func (r *AnalyticsRepositoryImpl) GetLatestFeatures(ctx context.Context, orgID uuid.UUID, entityType string, entityID uuid.UUID) ([]*models.MLFeatureStore, error) {
+func (r *AnalyticsRepositoryImpl) GetLatestFeatures(ctx context.Context, tenantID uuid.UUID, entityType string, entityID uuid.UUID) ([]*models.MLFeatureStore, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 
@@ -408,7 +408,7 @@ func (r *AnalyticsRepositoryImpl) GetLatestFeatures(ctx context.Context, orgID u
 	          ORDER BY feature_name, feature_timestamp DESC
 	          LIMIT 100` // Fetch recent features
 
-	rows, err := r.db.Query(ctx, query, orgID, entityType, entityID)
+	rows, err := r.db.Query(ctx, query, tenantID, entityType, entityID)
 	if err != nil {
 		return nil, err
 	}
@@ -465,11 +465,11 @@ func (r *AnalyticsRepositoryImpl) PurgeAgedData(ctx context.Context, table strin
 }
 
 // SetTenantContext sets the organization ID in the transaction for RLS with fail-safe check (Phase 9)
-func (r *AnalyticsRepositoryImpl) SetTenantContext(ctx context.Context, tx pgx.Tx, orgID uuid.UUID) error {
-	if orgID == uuid.Nil {
+func (r *AnalyticsRepositoryImpl) SetTenantContext(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) error {
+	if tenantID == uuid.Nil {
 		return ErrInvalidTenant
 	}
-	_, err := tx.Exec(ctx, "SELECT set_config('app.tenant_id', $1, true)", orgID.String())
+	_, err := tx.Exec(ctx, "SELECT set_config('app.tenant_id', $1, true)", tenantID.String())
 	return err
 }
 
@@ -493,7 +493,7 @@ func (r *AnalyticsRepositoryImpl) SaveModelDeployment(ctx context.Context, deplo
 }
 
 // GetActiveModelDeployment retrieves the active deployment for a model
-func (r *AnalyticsRepositoryImpl) GetActiveModelDeployment(ctx context.Context, modelID string, orgID uuid.UUID) (*models.ModelDeployment, error) {
+func (r *AnalyticsRepositoryImpl) GetActiveModelDeployment(ctx context.Context, modelID string, tenantID uuid.UUID) (*models.ModelDeployment, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 
@@ -504,7 +504,7 @@ func (r *AnalyticsRepositoryImpl) GetActiveModelDeployment(ctx context.Context, 
 		LIMIT 1
 	`
 	var d models.ModelDeployment
-	err := r.db.QueryRow(ctx, query, modelID, orgID).Scan(
+	err := r.db.QueryRow(ctx, query, modelID, tenantID).Scan(
 		&d.ID, &d.ModelID, &d.OrganizationID, &d.DeploymentStrategy, &d.TrafficSplit, &d.IsActive, &d.DeployedAt, &d.CreatedAt,
 	)
 	if err != nil {
@@ -528,7 +528,7 @@ func (r *AnalyticsRepositoryImpl) SaveDriverRiskEvent(ctx context.Context, event
 }
 
 // GetDriverRiskEvents retrieves risk events for a specific driver and period
-func (r *AnalyticsRepositoryImpl) GetDriverRiskEvents(ctx context.Context, driverID uuid.UUID, orgID uuid.UUID, startDate, endDate time.Time) ([]*models.DriverRiskEvent, error) {
+func (r *AnalyticsRepositoryImpl) GetDriverRiskEvents(ctx context.Context, driverID uuid.UUID, tenantID uuid.UUID, startDate, endDate time.Time) ([]*models.DriverRiskEvent, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 
@@ -538,7 +538,7 @@ func (r *AnalyticsRepositoryImpl) GetDriverRiskEvents(ctx context.Context, drive
 		WHERE driver_id = $1 AND organization_id = $2 AND event_time BETWEEN $3 AND $4
 		ORDER BY event_time DESC
 	`
-	rows, err := r.db.Query(ctx, query, driverID, orgID, startDate, endDate)
+	rows, err := r.db.Query(ctx, query, driverID, tenantID, startDate, endDate)
 	if err != nil {
 		return nil, err
 	}
@@ -556,13 +556,13 @@ func (r *AnalyticsRepositoryImpl) GetDriverRiskEvents(ctx context.Context, drive
 }
 
 // GetAnalyticsQuota retrieves the current quota for an organization
-func (r *AnalyticsRepositoryImpl) GetAnalyticsQuota(ctx context.Context, orgID uuid.UUID) (*models.AnalyticsQuota, error) {
+func (r *AnalyticsRepositoryImpl) GetAnalyticsQuota(ctx context.Context, tenantID uuid.UUID) (*models.AnalyticsQuota, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 
 	query := `SELECT organization_id, daily_limit, used_credits, last_reset_at FROM analytics_quotas WHERE organization_id = $1`
 	var q models.AnalyticsQuota
-	err := r.db.QueryRow(ctx, query, orgID).Scan(&q.OrganizationID, &q.DailyLimit, &q.UsedCredits, &q.LastResetAt)
+	err := r.db.QueryRow(ctx, query, tenantID).Scan(&q.OrganizationID, &q.DailyLimit, &q.UsedCredits, &q.LastResetAt)
 	if err != nil {
 		return nil, err
 	}
@@ -570,12 +570,12 @@ func (r *AnalyticsRepositoryImpl) GetAnalyticsQuota(ctx context.Context, orgID u
 }
 
 // UpdateUsedCredits updates the used credits for an organization
-func (r *AnalyticsRepositoryImpl) UpdateUsedCredits(ctx context.Context, orgID uuid.UUID, credits int64) error {
+func (r *AnalyticsRepositoryImpl) UpdateUsedCredits(ctx context.Context, tenantID uuid.UUID, credits int64) error {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 
 	query := `UPDATE analytics_quotas SET used_credits = used_credits + $1, last_reset_at = NOW() WHERE organization_id = $2`
-	_, err := r.db.Exec(ctx, query, credits, orgID)
+	_, err := r.db.Exec(ctx, query, credits, tenantID)
 	return err
 }
 
@@ -605,7 +605,7 @@ func (r *AnalyticsRepositoryImpl) CreateVersionedFeatureVector(ctx context.Conte
 }
 
 // GetFeaturesByVersion retrieves features for a specific version (Phase 10/11 Lineage)
-func (r *AnalyticsRepositoryImpl) GetFeaturesByVersion(ctx context.Context, orgID uuid.UUID, entityType string, entityID uuid.UUID, version string) ([]*models.MLFeatureStore, error) {
+func (r *AnalyticsRepositoryImpl) GetFeaturesByVersion(ctx context.Context, tenantID uuid.UUID, entityType string, entityID uuid.UUID, version string) ([]*models.MLFeatureStore, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 
@@ -614,7 +614,7 @@ func (r *AnalyticsRepositoryImpl) GetFeaturesByVersion(ctx context.Context, orgI
 		FROM ml_feature_store
 		WHERE organization_id = $1 AND entity_type = $2 AND entity_id = $3 AND feature_version = $4
 	`
-	rows, err := r.db.Query(ctx, query, orgID, entityType, entityID, version)
+	rows, err := r.db.Query(ctx, query, tenantID, entityType, entityID, version)
 	if err != nil {
 		return nil, err
 	}
@@ -658,7 +658,7 @@ func (r *AnalyticsRepositoryImpl) CreateAccessLog(ctx context.Context, log *mode
 }
 
 // GetMaterializedReports retrieves pre-computed summaries (Phase 11)
-func (r *AnalyticsRepositoryImpl) GetMaterializedReports(ctx context.Context, orgID uuid.UUID, reportType string, period string) ([]*models.MaterializedFleetReport, error) {
+func (r *AnalyticsRepositoryImpl) GetMaterializedReports(ctx context.Context, tenantID uuid.UUID, reportType string, period string) ([]*models.MaterializedFleetReport, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 
@@ -667,7 +667,7 @@ func (r *AnalyticsRepositoryImpl) GetMaterializedReports(ctx context.Context, or
 		FROM materialized_fleet_reports
 		WHERE organization_id = $1 AND report_type = $2 AND period = $3
 	`
-	rows, err := r.db.Query(ctx, query, orgID, reportType, period)
+	rows, err := r.db.Query(ctx, query, tenantID, reportType, period)
 	if err != nil {
 		return nil, err
 	}

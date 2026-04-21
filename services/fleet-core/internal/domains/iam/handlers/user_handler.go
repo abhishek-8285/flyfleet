@@ -30,6 +30,7 @@ func NewUserHandler(userSvc userService, log *zap.Logger) *UserHandler {
 // GET /api/v1/admin/users
 func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	params := models.ListUsersParams{
+		TenantID: GetOrgUUID(r),
 		Page:     1,
 		PageSize: 20,
 	}
@@ -64,6 +65,33 @@ func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.writeJSON(w, http.StatusOK, resp)
+}
+
+// CreateUser handles direct user creation by an admin.
+// POST /api/v1/admin/users
+func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
+	var req models.CreateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeError(w, http.StatusBadRequest, "invalid_request", "Request body must be valid JSON", r)
+		return
+	}
+
+	if req.Email == "" || req.Password == "" {
+		h.writeError(w, http.StatusBadRequest, "missing_fields", "Email and password are required", r)
+		return
+	}
+
+	tenantID := GetOrgUUID(r)
+	actorID := GetUserIDUUID(r)
+
+	user, err := h.userSvc.CreateUser(r.Context(), tenantID, req, actorID)
+	if err != nil {
+		h.log.Error("failed to create user", zap.Error(err))
+		h.writeError(w, http.StatusInternalServerError, "internal_error", "Failed to create user", r)
+		return
+	}
+
+	h.writeJSON(w, http.StatusCreated, user)
 }
 
 // GetUser returns a single user by ID.
@@ -112,8 +140,9 @@ func (h *UserHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	actorID := GetUserIDUUID(r)
+	tenantID := GetOrgUUID(r)
 
-	if err := h.userSvc.UpdateUserStatus(r.Context(), userID, req.Status, actorID); err != nil {
+	if err := h.userSvc.UpdateUserStatus(r.Context(), userID, tenantID, req.Status, actorID); err != nil {
 		if errors.Is(err, service.ErrInvalidStatus) {
 			h.writeError(w, http.StatusBadRequest, "invalid_status", "Valid statuses: active, disabled, locked", r)
 			return
@@ -137,8 +166,9 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	actorID := GetUserIDUUID(r)
+	tenantID := GetOrgUUID(r)
 
-	if err := h.userSvc.DeleteUser(r.Context(), userID, actorID); err != nil {
+	if err := h.userSvc.DeleteUser(r.Context(), userID, tenantID, actorID); err != nil {
 		h.log.Error("failed to delete user", zap.Error(err), zap.String("user_id", idStr))
 		h.writeError(w, http.StatusInternalServerError, "internal_error", "Failed to delete user", r)
 		return
@@ -169,8 +199,9 @@ func (h *UserHandler) UpdatePreferences(w http.ResponseWriter, r *http.Request) 
 	}
 
 	actorID := GetUserIDUUID(r)
+	tenantID := GetOrgUUID(r)
 
-	if err := h.userSvc.UpdateUserPreferences(r.Context(), userID, req.SidebarCollapsed, req.Language, actorID); err != nil {
+	if err := h.userSvc.UpdateUserPreferences(r.Context(), userID, tenantID, req.SidebarCollapsed, req.Language, actorID); err != nil {
 		h.log.Error("failed to update user preferences", zap.Error(err), zap.String("user_id", idStr))
 		h.writeError(w, http.StatusInternalServerError, "internal_error", "Failed to update user preferences", r)
 		return

@@ -17,10 +17,10 @@ func (s *AnalyticsServiceImpl) HealthCheck(ctx context.Context) error {
 }
 
 // logQuery records Prometheus metrics and audit logs for an analytics query
-func (s *AnalyticsServiceImpl) logQuery(ctx context.Context, orgID uuid.UUID, queryType string, params map[string]interface{}, duration time.Duration, rowCount int, cacheHit bool, err error) {
+func (s *AnalyticsServiceImpl) logQuery(ctx context.Context, tenantID uuid.UUID, queryType string, params map[string]interface{}, duration time.Duration, rowCount int, cacheHit bool, err error) {
 	// 1. Prometheus Metrics
 	if s.metrics != nil {
-		orgStr := orgID.String()
+		orgStr := tenantID.String()
 		s.metrics.QueryTotal.WithLabelValues(queryType, orgStr).Inc()
 		s.metrics.QueryDurationSeconds.WithLabelValues(queryType, orgStr).Observe(duration.Seconds())
 		if cacheHit {
@@ -38,7 +38,7 @@ func (s *AnalyticsServiceImpl) logQuery(ctx context.Context, orgID uuid.UUID, qu
 
 	logEntry := &models.AnalyticsQueryLog{
 		ID:             uuid.New(),
-		OrganizationID: orgID,
+		OrganizationID: tenantID,
 		QueryType:      queryType,
 		Parameters:     params,
 		DurationMs:     duration.Milliseconds(),
@@ -62,7 +62,7 @@ func (s *AnalyticsServiceImpl) logQuery(ctx context.Context, orgID uuid.UUID, qu
 			s.logger.Warn("Slow query detected, capturing plan", zap.String("type", queryType), zap.Duration("duration", duration))
 			plan := &models.AnalyticsQueryPlan{
 				ID:                uuid.New().String(),
-				OrganizationID:    orgID,
+				OrganizationID:    tenantID,
 				QueryType:         queryType,
 				QueryParams:       params,
 				ExecutionDuration: duration.Milliseconds(),
@@ -75,7 +75,7 @@ func (s *AnalyticsServiceImpl) logQuery(ctx context.Context, orgID uuid.UUID, qu
 }
 
 // GetVehicleDailyStats retrieves daily stats for a vehicle with cursor pagination
-func (s *AnalyticsServiceImpl) InvalidateVehicleCache(ctx context.Context, vehicleID uuid.UUID, orgID uuid.UUID) error {
+func (s *AnalyticsServiceImpl) InvalidateVehicleCache(ctx context.Context, vehicleID uuid.UUID, tenantID uuid.UUID) error {
 	if s.cache == nil || s.queue == nil {
 		return nil
 	}
@@ -87,38 +87,38 @@ func (s *AnalyticsServiceImpl) InvalidateVehicleCache(ctx context.Context, vehic
 	}
 
 	// Pattern-based invalidation for all vehicle-specific analytics
-	pattern := fmt.Sprintf("analytics:%s:vehicle:%s:*", orgID.String(), vehicleID.String())
+	pattern := fmt.Sprintf("analytics:%s:vehicle:%s:*", tenantID.String(), vehicleID.String())
 
 	// Enqueue async invalidation task to avoid blocking ingestion
-	err := s.queue.EnqueueCacheInvalidate(orgID, pattern, "vehicle", vehicleID.String())
+	err := s.queue.EnqueueCacheInvalidate(tenantID, pattern, "vehicle", vehicleID.String())
 	if err != nil {
 		s.logger.Error("Failed to enqueue vehicle cache invalidation", zap.Error(err))
 		return err
 	}
 
-	s.logger.Info("Enqueued vehicle analytics cache invalidation", zap.String("tenant_id", orgID.String()), zap.String("vehicle_id", vehicleID.String()))
+	s.logger.Info("Enqueued vehicle analytics cache invalidation", zap.String("tenant_id", tenantID.String()), zap.String("vehicle_id", vehicleID.String()))
 	return nil
 }
 
 // GetLatestFeatures retrieves the most recent feature vector for an entity with Redis caching (Phase 9)
-func (s *AnalyticsServiceImpl) GetLatestFeatures(ctx context.Context, orgID uuid.UUID, entityType string, entityID uuid.UUID) ([]*models.MLFeatureStore, error) {
+func (s *AnalyticsServiceImpl) GetLatestFeatures(ctx context.Context, tenantID uuid.UUID, entityType string, entityID uuid.UUID) ([]*models.MLFeatureStore, error) {
 	if s.cache != nil {
-		cacheKey := fmt.Sprintf("feature:%s:%s:%s", orgID.String(), entityType, entityID.String())
+		cacheKey := fmt.Sprintf("feature:%s:%s:%s", tenantID.String(), entityType, entityID.String())
 		var cachedFeatures []*models.MLFeatureStore
 		if found, _ := s.cache.Get(ctx, cacheKey, &cachedFeatures); found {
-			s.metrics.CacheHitsTotal.WithLabelValues("feature_store", orgID.String()).Inc()
+			s.metrics.CacheHitsTotal.WithLabelValues("feature_store", tenantID.String()).Inc()
 			return cachedFeatures, nil
 		}
-		s.metrics.CacheMissesTotal.WithLabelValues("feature_store", orgID.String()).Inc()
+		s.metrics.CacheMissesTotal.WithLabelValues("feature_store", tenantID.String()).Inc()
 
-		features, err := s.repo.GetLatestFeatures(ctx, orgID, entityType, entityID)
+		features, err := s.repo.GetLatestFeatures(ctx, tenantID, entityType, entityID)
 		if err == nil && len(features) > 0 {
 			_ = s.cache.Set(ctx, cacheKey, features, 1*time.Hour)
 		}
 		return features, err
 	}
 
-	return s.repo.GetLatestFeatures(ctx, orgID, entityType, entityID)
+	return s.repo.GetLatestFeatures(ctx, tenantID, entityType, entityID)
 }
 
 // RunRetentionCycle executes the automated purging of aged data
@@ -151,7 +151,7 @@ func (s *AnalyticsServiceImpl) RunRetentionCycle(ctx context.Context) error {
 }
 
 // InvalidateDriverCache invalidates all analytics cache related to a driver
-func (s *AnalyticsServiceImpl) InvalidateDriverCache(ctx context.Context, driverID uuid.UUID, orgID uuid.UUID) error {
+func (s *AnalyticsServiceImpl) InvalidateDriverCache(ctx context.Context, driverID uuid.UUID, tenantID uuid.UUID) error {
 	if s.cache == nil || s.queue == nil {
 		return nil
 	}
@@ -163,33 +163,33 @@ func (s *AnalyticsServiceImpl) InvalidateDriverCache(ctx context.Context, driver
 	}
 
 	// Pattern-based invalidation for all driver-specific analytics
-	pattern := fmt.Sprintf("analytics:%s:driver:%s:*", orgID.String(), driverID.String())
+	pattern := fmt.Sprintf("analytics:%s:driver:%s:*", tenantID.String(), driverID.String())
 
 	// Enqueue async invalidation task
-	err := s.queue.EnqueueCacheInvalidate(orgID, pattern, "driver", driverID.String())
+	err := s.queue.EnqueueCacheInvalidate(tenantID, pattern, "driver", driverID.String())
 	if err != nil {
 		s.logger.Error("Failed to enqueue driver cache invalidation", zap.Error(err))
 		return err
 	}
 
-	s.logger.Info("Enqueued driver analytics cache invalidation", zap.String("tenant_id", orgID.String()), zap.String("driver_id", driverID.String()))
+	s.logger.Info("Enqueued driver analytics cache invalidation", zap.String("tenant_id", tenantID.String()), zap.String("driver_id", driverID.String()))
 	return nil
 }
 
 // InvalidateFleetCache invalidates all analytics cache related to the fleet by incrementing the version
-func (s *AnalyticsServiceImpl) InvalidateFleetCache(ctx context.Context, orgID uuid.UUID) error {
+func (s *AnalyticsServiceImpl) InvalidateFleetCache(ctx context.Context, tenantID uuid.UUID) error {
 	if s.cache == nil {
 		return nil
 	}
 
 	// For fleet, we just increment the version instead of deleting many keys
-	err := s.cache.IncrementFleetVersion(ctx, orgID.String())
+	err := s.cache.IncrementFleetVersion(ctx, tenantID.String())
 	if err != nil {
 		s.logger.Error("Failed to increment fleet cache version", zap.Error(err))
 		return err
 	}
 
-	s.logger.Info("Incremented fleet analytics cache version", zap.String("tenant_id", orgID.String()))
+	s.logger.Info("Incremented fleet analytics cache version", zap.String("tenant_id", tenantID.String()))
 	return nil
 }
 
@@ -202,11 +202,11 @@ func (s *AnalyticsServiceImpl) InvalidateByPattern(ctx context.Context, pattern 
 }
 
 // IncrementFleetVersion exposes direct version increment
-func (s *AnalyticsServiceImpl) IncrementFleetVersion(ctx context.Context, orgID uuid.UUID) error {
+func (s *AnalyticsServiceImpl) IncrementFleetVersion(ctx context.Context, tenantID uuid.UUID) error {
 	if s.cache == nil {
 		return nil
 	}
-	return s.cache.IncrementFleetVersion(ctx, orgID.String())
+	return s.cache.IncrementFleetVersion(ctx, tenantID.String())
 }
 
 func (s *AnalyticsServiceImpl) calculateSafetyScore(overspeed, harsh, fatigue, violations int) (float64, string) {
@@ -300,23 +300,23 @@ func (s *AnalyticsServiceImpl) CreateDriverRiskEvent(ctx context.Context, event 
 }
 
 // GetDriverRiskEvents retrieves risk events for a driver
-func (s *AnalyticsServiceImpl) GetDriverRiskEvents(ctx context.Context, driverID uuid.UUID, orgID uuid.UUID, startDate, endDate time.Time) ([]*models.DriverRiskEvent, error) {
-	if driverID == uuid.Nil || orgID == uuid.Nil {
+func (s *AnalyticsServiceImpl) GetDriverRiskEvents(ctx context.Context, driverID uuid.UUID, tenantID uuid.UUID, startDate, endDate time.Time) ([]*models.DriverRiskEvent, error) {
+	if driverID == uuid.Nil || tenantID == uuid.Nil {
 		return nil, errors.New("driver ID and organization ID are required")
 	}
-	return s.repo.GetDriverRiskEvents(ctx, driverID, orgID, startDate, endDate)
+	return s.repo.GetDriverRiskEvents(ctx, driverID, tenantID, startDate, endDate)
 }
 
 // GetAnalyticsQuota retrieves the current compute quota for an org
-func (s *AnalyticsServiceImpl) GetAnalyticsQuota(ctx context.Context, orgID uuid.UUID) (*models.AnalyticsQuota, error) {
-	return s.repo.GetAnalyticsQuota(ctx, orgID)
+func (s *AnalyticsServiceImpl) GetAnalyticsQuota(ctx context.Context, tenantID uuid.UUID) (*models.AnalyticsQuota, error) {
+	return s.repo.GetAnalyticsQuota(ctx, tenantID)
 }
 
 // CheckQuota verifies if an organization has enough ACU credits for an operation
-func (s *AnalyticsServiceImpl) CheckQuota(ctx context.Context, orgID uuid.UUID, credits int64) (bool, error) {
-	quota, err := s.repo.GetAnalyticsQuota(ctx, orgID)
+func (s *AnalyticsServiceImpl) CheckQuota(ctx context.Context, tenantID uuid.UUID, credits int64) (bool, error) {
+	quota, err := s.repo.GetAnalyticsQuota(ctx, tenantID)
 	if err != nil {
-		s.logger.Warn("could not retrieve quota", zap.Error(err), zap.String("tenant_id", orgID.String()))
+		s.logger.Warn("could not retrieve quota", zap.Error(err), zap.String("tenant_id", tenantID.String()))
 		return true, nil
 	}
 
@@ -327,15 +327,15 @@ func (s *AnalyticsServiceImpl) CheckQuota(ctx context.Context, orgID uuid.UUID, 
 }
 
 // RunReconciliation ensures consistency between telemetry and aggregates
-func (s *AnalyticsServiceImpl) RunReconciliation(ctx context.Context, orgID uuid.UUID, startDate, endDate time.Time) error {
-	s.logger.Info("starting analytics reconciliation", zap.String("tenant_id", orgID.String()), zap.Time("start", startDate), zap.Time("end", endDate))
+func (s *AnalyticsServiceImpl) RunReconciliation(ctx context.Context, tenantID uuid.UUID, startDate, endDate time.Time) error {
+	s.logger.Info("starting analytics reconciliation", zap.String("tenant_id", tenantID.String()), zap.Time("start", startDate), zap.Time("end", endDate))
 	// Placeholder: In a real-world scenario, this would query raw telemetry vs daily stats and trigger repairs
 	return nil
 }
 
 // RunHistoricalBackfill recomputes historical stats
-func (s *AnalyticsServiceImpl) RunHistoricalBackfill(ctx context.Context, orgID uuid.UUID, startDate, endDate time.Time) error {
-	s.logger.Info("starting historical analytics backfill", zap.String("tenant_id", orgID.String()), zap.Time("start", startDate), zap.Time("end", endDate))
+func (s *AnalyticsServiceImpl) RunHistoricalBackfill(ctx context.Context, tenantID uuid.UUID, startDate, endDate time.Time) error {
+	s.logger.Info("starting historical analytics backfill", zap.String("tenant_id", tenantID.String()), zap.Time("start", startDate), zap.Time("end", endDate))
 	// Logic to trigger background jobs via Asynq
 	return nil
 }
@@ -361,28 +361,28 @@ func (s *AnalyticsServiceImpl) CreateVersionedFeatureVector(ctx context.Context,
 }
 
 // GetFeaturesByVersion retrieves a specific feature version for reproducibility (Phase 10)
-func (s *AnalyticsServiceImpl) GetFeaturesByVersion(ctx context.Context, orgID uuid.UUID, entityType string, entityID uuid.UUID, version string) ([]*models.MLFeatureStore, error) {
+func (s *AnalyticsServiceImpl) GetFeaturesByVersion(ctx context.Context, tenantID uuid.UUID, entityType string, entityID uuid.UUID, version string) ([]*models.MLFeatureStore, error) {
 	if s.cache != nil {
-		cacheKey := fmt.Sprintf("feature:%s:%s:%s:%s", orgID.String(), entityType, entityID.String(), version)
+		cacheKey := fmt.Sprintf("feature:%s:%s:%s:%s", tenantID.String(), entityType, entityID.String(), version)
 		var cachedFeatures []*models.MLFeatureStore
 		if found, _ := s.cache.Get(ctx, cacheKey, &cachedFeatures); found {
 			return cachedFeatures, nil
 		}
 
-		features, err := s.repo.GetFeaturesByVersion(ctx, orgID, entityType, entityID, version)
+		features, err := s.repo.GetFeaturesByVersion(ctx, tenantID, entityType, entityID, version)
 		if err == nil && len(features) > 0 {
 			_ = s.cache.Set(ctx, cacheKey, features, 24*time.Hour) // Versions are immutable, cache longer
 		}
 		return features, err
 	}
 
-	return s.repo.GetFeaturesByVersion(ctx, orgID, entityType, entityID, version)
+	return s.repo.GetFeaturesByVersion(ctx, tenantID, entityType, entityID, version)
 }
 
 // GetDynamicRateLimit returns an adaptive QPS limit based on organization and cluster load (Phase 10)
-func (s *AnalyticsServiceImpl) GetDynamicRateLimit(ctx context.Context, orgID uuid.UUID) (int, error) {
+func (s *AnalyticsServiceImpl) GetDynamicRateLimit(ctx context.Context, tenantID uuid.UUID) (int, error) {
 	// 1. Check for organization-specific override in Quota table
-	quota, err := s.repo.GetAnalyticsQuota(ctx, orgID)
+	quota, err := s.repo.GetAnalyticsQuota(ctx, tenantID)
 	if err == nil && quota.DailyLimit > 0 {
 		// Example: 0.1% of daily limit as burst QPS, minimum 5
 		baseLimit := int(quota.DailyLimit / 1000)
@@ -415,7 +415,7 @@ func (s *AnalyticsServiceImpl) GetDynamicRateLimit(ctx context.Context, orgID uu
 }
 
 // CheckModelHealth performs an automated rollback check (Phase 11)
-func (s *AnalyticsServiceImpl) CheckModelHealth(ctx context.Context, modelID string, orgID uuid.UUID) error {
+func (s *AnalyticsServiceImpl) CheckModelHealth(ctx context.Context, modelID string, tenantID uuid.UUID) error {
 	// In a real implementation, this would query Prometheus or the local metrics store
 	// For Phase 11, we simulate the logic based on recent 'orchestration_error' counts
 
@@ -423,7 +423,7 @@ func (s *AnalyticsServiceImpl) CheckModelHealth(ctx context.Context, modelID str
 	// - Error Rate > 5% in 5m
 	// - Accuracy < 90% (from model registry)
 
-	model, err := s.repo.GetPredictiveModel(ctx, modelID, orgID)
+	model, err := s.repo.GetPredictiveModel(ctx, modelID, tenantID)
 	if err != nil {
 		return err
 	}
@@ -431,7 +431,7 @@ func (s *AnalyticsServiceImpl) CheckModelHealth(ctx context.Context, modelID str
 	if model.Accuracy < 0.90 {
 		// Auto-disable if accuracy drops below threshold
 		s.logger.Warn("Automated Rollback: Model accuracy below 90%", zap.String("model_id", modelID), zap.Float64("accuracy", model.Accuracy))
-		_ = s.repo.UpdatePredictiveModel(ctx, modelID, orgID, map[string]interface{}{"status": "inactive"})
+		_ = s.repo.UpdatePredictiveModel(ctx, modelID, tenantID, map[string]interface{}{"status": "inactive"})
 		return fmt.Errorf("model accuracy (%f) below safety threshold", model.Accuracy)
 	}
 
@@ -451,8 +451,8 @@ func (s *AnalyticsServiceImpl) LogAccess(ctx context.Context, log *models.Analyt
 }
 
 // GetExecutiveDashboard retrieves pre-computed reports (Phase 11)
-func (s *AnalyticsServiceImpl) GetExecutiveDashboard(ctx context.Context, orgID uuid.UUID, period string) ([]*models.MaterializedFleetReport, error) {
-	return s.repo.GetMaterializedReports(ctx, orgID, "EXECUTIVE_SUMMARY", period)
+func (s *AnalyticsServiceImpl) GetExecutiveDashboard(ctx context.Context, tenantID uuid.UUID, period string) ([]*models.MaterializedFleetReport, error) {
+	return s.repo.GetMaterializedReports(ctx, tenantID, "EXECUTIVE_SUMMARY", period)
 }
 
 // collectCapacityMetrics periodically updates storage metrics (Phase 11)

@@ -18,16 +18,16 @@ var (
 )
 
 type IAMService interface {
-	Register(ctx context.Context, email, password, fullName string, orgID uuid.UUID) (*models.User, error)
+	Register(ctx context.Context, email, password, fullName string, tenantID uuid.UUID) (*models.User, error)
 	Login(ctx context.Context, email, password string) (string, error)
 	ValidateToken(tokenString string) (*IAMClaims, error)
 	CheckPermission(ctx context.Context, userID uuid.UUID, resource, action string) (bool, error)
-	IsSessionActive(ctx context.Context, userID, orgID uuid.UUID, jti string) (bool, error)
+	IsSessionActive(ctx context.Context, userID, tenantID uuid.UUID, jti string) (bool, error)
 }
 
 type IAMClaims struct {
 	UserID uuid.UUID `json:"user_id"`
-	OrgID  uuid.UUID `json:"org_id"`
+	TenantID  uuid.UUID `json:"tenant_id"`
 	JTI    string    `json:"jti"`
 	jwt.RegisteredClaims
 }
@@ -46,24 +46,24 @@ func NewIAMService(repo repository.IAMRepository, orgSvc OrganizationService, jw
 	}
 }
 
-func (s *iamService) Register(ctx context.Context, email, password, fullName string, orgID uuid.UUID) (*models.User, error) {
+func (s *iamService) Register(ctx context.Context, email, password, fullName string, tenantID uuid.UUID) (*models.User, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
 
-	// If orgID is empty, create a new organization for the user
-	if orgID == uuid.Nil {
+	// If tenantID is empty, create a new organization for the user
+	if tenantID == uuid.Nil {
 		org, err := s.orgSvc.Onboard(ctx, fullName+"'s Fleet", "")
 		if err != nil {
 			return nil, err
 		}
-		orgID = org.ID
+		tenantID = org.ID
 	}
 
 	user := &models.User{
 		ID:             uuid.New(),
-		OrganizationID: orgID,
+		OrganizationID: tenantID,
 		Email:          email,
 		FullName:       fullName,
 		PasswordHash:   string(hashedPassword),
@@ -90,7 +90,7 @@ func (s *iamService) Login(ctx context.Context, email, password string) (string,
 
 	claims := &IAMClaims{
 		UserID: user.ID,
-		OrgID:  user.OrganizationID,
+		TenantID:  user.OrganizationID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -169,7 +169,7 @@ func (s *iamService) CheckPermission(ctx context.Context, userID uuid.UUID, reso
 
 // IsSessionActive checks if a session (by JTI) is still active.
 // Used by AuthMiddleware to reject revoked tokens.
-func (s *iamService) IsSessionActive(ctx context.Context, userID, orgID uuid.UUID, jti string) (bool, error) {
+func (s *iamService) IsSessionActive(ctx context.Context, userID, tenantID uuid.UUID, jti string) (bool, error) {
 	// In the full IAM implementation, this checks Redis for "session:{jti}"
 	// For now, fail-open (return true) to avoid breaking existing functionality
 	// when Redis isn't wired up. The auth-service implementation has the full check.

@@ -214,11 +214,11 @@ func (tp *TelemetryProcessor) flushGPS(batch []*models.GPSTelemetry) {
 	ctx := context.Background()
 	byOrg := make(map[uuid.UUID][]*models.GPSTelemetry)
 	for _, item := range batch {
-		byOrg[item.OrgID] = append(byOrg[item.OrgID], item)
+		byOrg[item.TenantID] = append(byOrg[item.TenantID], item)
 	}
 
-	for orgID, items := range byOrg {
-		err := tp.db.WithTenant(ctx, orgID.String(), func(ctx context.Context, tx database.Transaction) error {
+	for tenantID, items := range byOrg {
+		err := tp.db.WithTenant(ctx, tenantID.String(), func(ctx context.Context, tx database.Transaction) error {
 			err := tp.storeGPSDataBatchTx(ctx, tx, items)
 			if err != nil {
 				tp.logger.Error("Failed to store GPS data in batch", zap.Error(err))
@@ -231,12 +231,12 @@ func (tp *TelemetryProcessor) flushGPS(batch []*models.GPSTelemetry) {
 				// Update redis cache
 				tp.updateVehicleCache(item.VehicleID.String(), "gps", item)
 
-				go tp.processAnalytics(orgID.String(), item.VehicleID.String(), time.Now().Add(-24*time.Hour), time.Now())
+				go tp.processAnalytics(tenantID.String(), item.VehicleID.String(), time.Now().Add(-24*time.Hour), time.Now())
 			}
 			return nil
 		})
 		if err != nil {
-			tp.logger.Error("Batch GPS flush failed for org", zap.String("tenant_id", orgID.String()), zap.Error(err))
+			tp.logger.Error("Batch GPS flush failed for org", zap.String("tenant_id", tenantID.String()), zap.Error(err))
 		}
 	}
 }
@@ -245,17 +245,17 @@ func (tp *TelemetryProcessor) flushOBD(batch []*models.OBDTelemetry) {
 	ctx := context.Background()
 	byOrg := make(map[uuid.UUID][]*models.OBDTelemetry)
 	for _, item := range batch {
-		byOrg[item.OrgID] = append(byOrg[item.OrgID], item)
+		byOrg[item.TenantID] = append(byOrg[item.TenantID], item)
 	}
 
-	for orgID, items := range byOrg {
-		_ = tp.db.WithTenant(ctx, orgID.String(), func(ctx context.Context, tx database.Transaction) error {
+	for tenantID, items := range byOrg {
+		_ = tp.db.WithTenant(ctx, tenantID.String(), func(ctx context.Context, tx database.Transaction) error {
 			_ = tp.storeOBDDataBatchTx(ctx, tx, items)
 			for _, item := range items {
 				// Update redis cache
 				tp.updateVehicleCache(item.VehicleID.String(), "obd", item)
 
-				go tp.processAnalytics(orgID.String(), item.VehicleID.String(), time.Now().Add(-24*time.Hour), time.Now())
+				go tp.processAnalytics(tenantID.String(), item.VehicleID.String(), time.Now().Add(-24*time.Hour), time.Now())
 			}
 			return nil
 		})
@@ -266,17 +266,17 @@ func (tp *TelemetryProcessor) flushFuel(batch []*models.FuelTelemetry) {
 	ctx := context.Background()
 	byOrg := make(map[uuid.UUID][]*models.FuelTelemetry)
 	for _, item := range batch {
-		byOrg[item.OrgID] = append(byOrg[item.OrgID], item)
+		byOrg[item.TenantID] = append(byOrg[item.TenantID], item)
 	}
 
-	for orgID, items := range byOrg {
-		_ = tp.db.WithTenant(ctx, orgID.String(), func(ctx context.Context, tx database.Transaction) error {
+	for tenantID, items := range byOrg {
+		_ = tp.db.WithTenant(ctx, tenantID.String(), func(ctx context.Context, tx database.Transaction) error {
 			_ = tp.storeFuelDataBatchTx(ctx, tx, items)
 			for _, item := range items {
 				// Update redis cache
 				tp.updateVehicleCache(item.VehicleID.String(), "fuel", item)
 
-				go tp.processAnalytics(orgID.String(), item.VehicleID.String(), time.Now().Add(-24*time.Hour), time.Now())
+				go tp.processAnalytics(tenantID.String(), item.VehicleID.String(), time.Now().Add(-24*time.Hour), time.Now())
 			}
 			return nil
 		})
@@ -290,7 +290,7 @@ func (tp *TelemetryProcessor) storeGPSDataBatchTx(ctx context.Context, tx databa
 	rows := make([][]any, len(items))
 	for i, gps := range items {
 		rows[i] = []any{
-			gps.Time, gps.VehicleID, gps.OrgID, gps.Latitude, gps.Longitude,
+			gps.Time, gps.VehicleID, gps.TenantID, gps.Latitude, gps.Longitude,
 			gps.Altitude, gps.Speed, gps.Heading, gps.Accuracy, gps.Ignition,
 			gps.Odometer, gps.Battery, gps.Satellites, gps.RawData,
 		}
@@ -314,7 +314,7 @@ func (tp *TelemetryProcessor) storeOBDDataBatchTx(ctx context.Context, tx databa
 	rows := make([][]any, len(items))
 	for i, obd := range items {
 		rows[i] = []any{
-			obd.Time, obd.VehicleID, obd.OrgID, obd.RPM, obd.CoolantTemp,
+			obd.Time, obd.VehicleID, obd.TenantID, obd.RPM, obd.CoolantTemp,
 			obd.EngineLoad, obd.ThrottlePos, obd.FuelLevel, obd.DTCs, obd.VIN, obd.RawData,
 		}
 	}
@@ -353,7 +353,7 @@ func (tp *TelemetryProcessor) storeFuelDataBatchTx(ctx context.Context, tx datab
 		}
 
 		rows[i] = []any{
-			fuel.Time, fuel.VehicleID, fuel.OrgID, fuel.LevelPercent,
+			fuel.Time, fuel.VehicleID, fuel.TenantID, fuel.LevelPercent,
 			fuel.LevelLiters, fuel.RefuelEvent, fuel.TheftEvent, loc, fuel.RawData,
 		}
 	}
@@ -379,19 +379,19 @@ func (tp *TelemetryProcessor) updateVehicleLocationTx(ctx context.Context, tx da
 }
 
 func (tp *TelemetryProcessor) storeGPSData(ctx context.Context, gps *models.GPSTelemetry) error {
-	return tp.db.WithTenant(ctx, gps.OrgID.String(), func(ctx context.Context, tx database.Transaction) error {
+	return tp.db.WithTenant(ctx, gps.TenantID.String(), func(ctx context.Context, tx database.Transaction) error {
 		return tp.storeGPSDataBatchTx(ctx, tx, []*models.GPSTelemetry{gps})
 	})
 }
 
 func (tp *TelemetryProcessor) storeOBDData(ctx context.Context, obd *models.OBDTelemetry) error {
-	return tp.db.WithTenant(ctx, obd.OrgID.String(), func(ctx context.Context, tx database.Transaction) error {
+	return tp.db.WithTenant(ctx, obd.TenantID.String(), func(ctx context.Context, tx database.Transaction) error {
 		return tp.storeOBDDataBatchTx(ctx, tx, []*models.OBDTelemetry{obd})
 	})
 }
 
 func (tp *TelemetryProcessor) storeFuelData(ctx context.Context, fuel *models.FuelTelemetry) error {
-	return tp.db.WithTenant(ctx, fuel.OrgID.String(), func(ctx context.Context, tx database.Transaction) error {
+	return tp.db.WithTenant(ctx, fuel.TenantID.String(), func(ctx context.Context, tx database.Transaction) error {
 		return tp.storeFuelDataBatchTx(ctx, tx, []*models.FuelTelemetry{fuel})
 	})
 }
@@ -412,32 +412,32 @@ func (tp *TelemetryProcessor) storeDeviceHeartbeat(ctx context.Context, heartbea
 			signal_strength = EXCLUDED.signal_strength,
 			error_codes = EXCLUDED.error_codes`
 
-	return tp.db.WithTenant(ctx, heartbeat.OrgID.String(), func(ctx context.Context, tx database.Transaction) error {
-		return tx.Execute(ctx, query, heartbeat.DeviceID, heartbeat.VehicleID, heartbeat.OrgID, heartbeat.Status, heartbeat.LastSeen, heartbeat.Battery, heartbeat.SignalStrength, heartbeat.ErrorCodes)
+	return tp.db.WithTenant(ctx, heartbeat.TenantID.String(), func(ctx context.Context, tx database.Transaction) error {
+		return tx.Execute(ctx, query, heartbeat.DeviceID, heartbeat.VehicleID, heartbeat.TenantID, heartbeat.Status, heartbeat.LastSeen, heartbeat.Battery, heartbeat.SignalStrength, heartbeat.ErrorCodes)
 	})
 }
 
-func (tp *TelemetryProcessor) updateVehicleLocation(ctx context.Context, orgID, vehicleID string, lat, lng float64) error {
-	return tp.db.WithTenant(ctx, orgID, func(ctx context.Context, tx database.Transaction) error {
+func (tp *TelemetryProcessor) updateVehicleLocation(ctx context.Context, tenantID, vehicleID string, lat, lng float64) error {
+	return tp.db.WithTenant(ctx, tenantID, func(ctx context.Context, tx database.Transaction) error {
 		return tp.updateVehicleLocationTx(ctx, tx, vehicleID, lat, lng)
 	})
 }
 
-func (tp *TelemetryProcessor) processAnalytics(orgID, vehicleIDStr string, startTime, endTime time.Time) {
+func (tp *TelemetryProcessor) processAnalytics(tenantID, vehicleIDStr string, startTime, endTime time.Time) {
 	vehicleID, err := uuid.Parse(vehicleIDStr)
 	if err != nil {
-		tp.logger.Error("Failed to parse vehicle ID for analytics", zap.String("tenant_id", orgID), zap.String("vehicle_id", vehicleIDStr), zap.Error(err))
+		tp.logger.Error("Failed to parse vehicle ID for analytics", zap.String("tenant_id", tenantID), zap.String("vehicle_id", vehicleIDStr), zap.Error(err))
 		return
 	}
 
-	err = tp.analytics.ProcessAdvancedAnalytics(context.Background(), orgID, vehicleID, startTime, endTime)
+	err = tp.analytics.ProcessAdvancedAnalytics(context.Background(), tenantID, vehicleID, startTime, endTime)
 	if err != nil {
-		tp.logger.Error("Failed to process advanced analytics", zap.String("tenant_id", orgID), zap.String("vehicle_id", vehicleIDStr), zap.Error(err))
+		tp.logger.Error("Failed to process advanced analytics", zap.String("tenant_id", tenantID), zap.String("vehicle_id", vehicleIDStr), zap.Error(err))
 		return
 	}
 
 	tp.logger.Debug("Advanced analytics processed",
-		zap.String("tenant_id", orgID),
+		zap.String("tenant_id", tenantID),
 		zap.String("vehicle_id", vehicleIDStr),
 		zap.Time("start_time", startTime),
 		zap.Time("end_time", endTime))

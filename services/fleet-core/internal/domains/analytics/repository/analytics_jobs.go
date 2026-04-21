@@ -59,7 +59,7 @@ func (r *AnalyticsRepositoryImpl) CreateAnalyticsJob(ctx context.Context, job *m
 }
 
 // GetAnalyticsJob retrieves an analytics job by ID
-func (r *AnalyticsRepositoryImpl) GetAnalyticsJob(ctx context.Context, id string, orgID uuid.UUID) (*models.AnalyticsJob, error) {
+func (r *AnalyticsRepositoryImpl) GetAnalyticsJob(ctx context.Context, id string, tenantID uuid.UUID) (*models.AnalyticsJob, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := `
@@ -74,7 +74,7 @@ func (r *AnalyticsRepositoryImpl) GetAnalyticsJob(ctx context.Context, id string
 	var startTime, endTime *time.Time
 	var errorDetails *string
 
-	err := r.db.QueryRow(ctx, query, id, orgID).Scan(
+	err := r.db.QueryRow(ctx, query, id, tenantID).Scan(
 		&job.ID, &job.Name, &job.Type, &job.Description, &job.Status, &job.JobType, &parametersJSON,
 		&job.InputSource, &job.OutputDestination, &startTime, &endTime, &job.Progress, &errorDetails,
 		&job.ResultKey, &job.OrganizationID, &job.CreatedBy, &job.CreatedAt, &job.UpdatedAt, &job.IdempotencyKey,
@@ -99,7 +99,7 @@ func (r *AnalyticsRepositoryImpl) GetAnalyticsJob(ctx context.Context, id string
 }
 
 // UpdateAnalyticsJob updates an existing analytics job
-func (r *AnalyticsRepositoryImpl) UpdateAnalyticsJob(ctx context.Context, id string, orgID uuid.UUID, updates map[string]interface{}) error {
+func (r *AnalyticsRepositoryImpl) UpdateAnalyticsJob(ctx context.Context, id string, tenantID uuid.UUID, updates map[string]interface{}) error {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	setParts := []string{}
@@ -120,7 +120,7 @@ func (r *AnalyticsRepositoryImpl) UpdateAnalyticsJob(ctx context.Context, id str
 		return errors.New("no updates provided")
 	}
 
-	args = append(args, id, orgID)
+	args = append(args, id, tenantID)
 	query := fmt.Sprintf("UPDATE analytics_jobs SET %s WHERE id = $%d AND organization_id = $%d",
 		strings.Join(setParts, ", "), argIndex, argIndex+1)
 
@@ -129,11 +129,11 @@ func (r *AnalyticsRepositoryImpl) UpdateAnalyticsJob(ctx context.Context, id str
 }
 
 // DeleteAnalyticsJob deletes an analytics job
-func (r *AnalyticsRepositoryImpl) DeleteAnalyticsJob(ctx context.Context, id string, orgID uuid.UUID) error {
+func (r *AnalyticsRepositoryImpl) DeleteAnalyticsJob(ctx context.Context, id string, tenantID uuid.UUID) error {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := "DELETE FROM analytics_jobs WHERE id = $1 AND organization_id = $2"
-	_, err := r.db.Exec(ctx, query, id, orgID)
+	_, err := r.db.Exec(ctx, query, id, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to delete analytics job %s: %w", id, err)
 	}
@@ -141,7 +141,7 @@ func (r *AnalyticsRepositoryImpl) DeleteAnalyticsJob(ctx context.Context, id str
 }
 
 // ListAnalyticsJobs retrieves analytics jobs with filtering
-func (r *AnalyticsRepositoryImpl) ListAnalyticsJobs(ctx context.Context, jobType, status *string, orgID uuid.UUID, cursor string, limit, offset int) ([]*models.AnalyticsJob, int, error) {
+func (r *AnalyticsRepositoryImpl) ListAnalyticsJobs(ctx context.Context, jobType, status *string, tenantID uuid.UUID, cursor string, limit, offset int) ([]*models.AnalyticsJob, int, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 
@@ -164,7 +164,7 @@ func (r *AnalyticsRepositoryImpl) ListAnalyticsJobs(ctx context.Context, jobType
 	`
 	countQuery := `SELECT COUNT(*) FROM analytics_jobs WHERE organization_id = $1`
 
-	args := []interface{}{orgID}
+	args := []interface{}{tenantID}
 	argIndex := 2
 	var conditions []string
 

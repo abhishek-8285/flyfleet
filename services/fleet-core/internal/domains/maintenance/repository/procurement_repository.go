@@ -28,7 +28,7 @@ func (r *MaintenanceRepositoryImpl) CreatePO(ctx context.Context, po *models.Pur
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
 	_, err = tx.Exec(ctx, poQuery,
-		po.ID, po.OrgID, po.VendorID, po.OrderNumber, po.Status, po.TotalCost, po.CreatedAt, po.UpdatedAt,
+		po.ID, po.TenantID, po.VendorID, po.OrderNumber, po.Status, po.TotalCost, po.CreatedAt, po.UpdatedAt,
 	)
 	if err != nil {
 		return err
@@ -58,7 +58,7 @@ func (r *MaintenanceRepositoryImpl) CreatePO(ctx context.Context, po *models.Pur
 func (r *MaintenanceRepositoryImpl) GetPOByID(ctx context.Context, id uuid.UUID) (*models.PurchaseOrder, error) {
 	query := `SELECT id, tenant_id, vendor_id, order_number, status, total_cost, created_at FROM purchase_orders WHERE id = $1`
 	var po models.PurchaseOrder
-	err := r.db.QueryRow(ctx, query, id).Scan(&po.ID, &po.OrgID, &po.VendorID, &po.OrderNumber, &po.Status, &po.TotalCost, &po.CreatedAt)
+	err := r.db.QueryRow(ctx, query, id).Scan(&po.ID, &po.TenantID, &po.VendorID, &po.OrderNumber, &po.Status, &po.TotalCost, &po.CreatedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil

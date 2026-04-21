@@ -41,11 +41,11 @@ type TripRepository interface {
 	GetTelemetry(ctx context.Context, tripID string) ([]models.TelemetryPoint, error)
 
 	// Analytics
-	GetTripSummary(ctx context.Context, orgID string, startDate, endDate time.Time) (*models.TripSummary, error)
+	GetTripSummary(ctx context.Context, tenantID string, startDate, endDate time.Time) (*models.TripSummary, error)
 	GetStats(ctx context.Context) (*models.TripStats, error)
-	GetTripCustomers(ctx context.Context, orgID string) ([]string, error)
-	GetDriverStats(ctx context.Context, orgID string) ([]models.DriverPerformance, error)
-	GetTripStats(ctx context.Context, orgID string) ([]models.DailyTripTrend, error)
+	GetTripCustomers(ctx context.Context, tenantID string) ([]string, error)
+	GetDriverStats(ctx context.Context, tenantID string) ([]models.DriverPerformance, error)
+	GetTripStats(ctx context.Context, tenantID string) ([]models.DailyTripTrend, error)
 
 	// Trip Offers
 	CreateOffer(ctx context.Context, offer *models.TripOffer) error
@@ -108,7 +108,7 @@ func (r *PostgresTripRepository) Create(ctx context.Context, trip *models.Trip) 
 
 	start := time.Now()
 	err := r.db.QueryRow(ctx, query,
-		id, trip.OrgID, trip.VehicleID, trip.DriverID, trip.Status, trip.TripType, trip.Title, trip.Description,
+		id, trip.TenantID, trip.VehicleID, trip.DriverID, trip.Status, trip.TripType, trip.Title, trip.Description,
 		pLat, pLng, dLat, dLng,
 		plannedRouteJSON, waypointsJSON, trip.PlannedDistance, trip.EstimatedDurationMin,
 		cargoDetailsJSON, trip.ScheduledStart, trip.StartOdometer, trip.FuelLevelSnapshot,
@@ -158,7 +158,7 @@ func (r *PostgresTripRepository) GetByID(ctx context.Context, id string) (*model
 
 	start := time.Now()
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&trip.ID, &trip.OrgID, &trip.VehicleID, &trip.DriverID, &trip.Status, &trip.TripType, &trip.Title, &trip.Description,
+		&trip.ID, &trip.TenantID, &trip.VehicleID, &trip.DriverID, &trip.Status, &trip.TripType, &trip.Title, &trip.Description,
 		&pLat, &pLng, &dLat, &dLng,
 		&plannedRouteJSON, &actualRouteJSON, &waypointsJSON,
 		&trip.PlannedDistance, &totalDistance, &trip.EstimatedDurationMin, &actualDurationMin,
@@ -216,7 +216,7 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 	countQuery := `SELECT COUNT(*) FROM trips WHERE tenant_id = $1 AND is_deleted = FALSE`
 
 	var conditions []string
-	args := []interface{}{filter.OrgID}
+	args := []interface{}{filter.TenantID}
 	argIndex := 2
 
 	if filter.Status != "" {
@@ -306,7 +306,7 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 		var custName sql.NullString
 
 		err := rows.Scan(
-			&trip.ID, &trip.OrgID, &trip.VehicleID, &trip.DriverID, &trip.Status, &trip.TripType,
+			&trip.ID, &trip.TenantID, &trip.VehicleID, &trip.DriverID, &trip.Status, &trip.TripType,
 			&trip.Title, &trip.Description,
 			&plannedDist, &totalDist, &estDur, &actDur,
 			&schedStart, &startedAt, &endedAt,
@@ -352,7 +352,7 @@ func (r *PostgresTripRepository) Update(ctx context.Context, id string, updates 
 
 	// Mapping Go field names to DB column names if they differ
 	fieldMap := map[string]string{
-		"OrgID":                "tenant_id",
+		"TenantID":                "tenant_id",
 		"PlannedDistance":      "planned_distance",
 		"TotalDistance":        "total_distance",
 		"StartTime":            "start_time",
@@ -552,7 +552,7 @@ func (r *PostgresTripRepository) GetActiveTripsForDriver(ctx context.Context, dr
 	var trips []*models.Trip
 	for rows.Next() {
 		var trip models.Trip
-		if err := rows.Scan(&trip.ID, &trip.OrgID, &trip.VehicleID, &trip.DriverID, &trip.Status, &trip.Title, &trip.CreatedAt, &trip.UpdatedAt); err != nil {
+		if err := rows.Scan(&trip.ID, &trip.TenantID, &trip.VehicleID, &trip.DriverID, &trip.Status, &trip.Title, &trip.CreatedAt, &trip.UpdatedAt); err != nil {
 			return nil, err
 		}
 		trips = append(trips, &trip)
@@ -669,7 +669,7 @@ func (r *PostgresTripRepository) GetActiveTripsForVehicle(ctx context.Context, v
 	for rows.Next() {
 		var trip models.Trip
 		err := rows.Scan(
-			&trip.ID, &trip.OrgID, &trip.VehicleID, &trip.DriverID, &trip.Status,
+			&trip.ID, &trip.TenantID, &trip.VehicleID, &trip.DriverID, &trip.Status,
 			&trip.Title, &trip.Description, &trip.PlannedDistance, &trip.TotalDistance,
 			&trip.EstimatedDurationMin, &trip.ActualDurationMin, &trip.ScheduledStart,
 			&trip.StartTime, &trip.EndTime, &trip.CustomerName, &trip.CreatedAt, &trip.UpdatedAt,
@@ -684,7 +684,7 @@ func (r *PostgresTripRepository) GetActiveTripsForVehicle(ctx context.Context, v
 }
 
 // GetTripSummary retrieves trip analytics for an organization
-func (r *PostgresTripRepository) GetTripSummary(ctx context.Context, orgID string, startDate, endDate time.Time) (*models.TripSummary, error) {
+func (r *PostgresTripRepository) GetTripSummary(ctx context.Context, tenantID string, startDate, endDate time.Time) (*models.TripSummary, error) {
 	query := `
 		SELECT 
 			COUNT(*) as total_trips,
@@ -706,7 +706,7 @@ func (r *PostgresTripRepository) GetTripSummary(ctx context.Context, orgID strin
 	var totalDurationMinutes float64
 
 	start := time.Now()
-	err := r.db.QueryRow(ctx, query, orgID, startDate, endDate).Scan(
+	err := r.db.QueryRow(ctx, query, tenantID, startDate, endDate).Scan(
 		&summary.TotalTrips, &summary.CompletedTrips, &summary.CancelledTrips,
 		&summary.TotalDistance, &totalDurationMinutes, &summary.AverageFuelEfficiency,
 		&summary.FuelUsed, &summary.TotalIdleTimeMinutes,
@@ -740,11 +740,11 @@ func (r *PostgresTripRepository) GetStats(ctx context.Context) (*models.TripStat
 }
 
 // GetTripCustomers returns distinct customer names for the filter dropdown
-func (r *PostgresTripRepository) GetTripCustomers(ctx context.Context, orgID string) ([]string, error) {
+func (r *PostgresTripRepository) GetTripCustomers(ctx context.Context, tenantID string) ([]string, error) {
 	query := `SELECT DISTINCT customer_name FROM trips WHERE tenant_id = $1 AND customer_name != '' AND is_deleted = FALSE ORDER BY customer_name ASC`
 
 	start := time.Now()
-	rows, err := r.db.Query(ctx, query, orgID)
+	rows, err := r.db.Query(ctx, query, tenantID)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
@@ -763,7 +763,7 @@ func (r *PostgresTripRepository) GetTripCustomers(ctx context.Context, orgID str
 }
 
 // GetDriverStats aggregates metrics for all drivers in a tenant
-func (r *PostgresTripRepository) GetDriverStats(ctx context.Context, orgID string) ([]models.DriverPerformance, error) {
+func (r *PostgresTripRepository) GetDriverStats(ctx context.Context, tenantID string) ([]models.DriverPerformance, error) {
 	query := `
 		SELECT
 			driver_id,
@@ -776,7 +776,7 @@ func (r *PostgresTripRepository) GetDriverStats(ctx context.Context, orgID strin
 		GROUP BY driver_id`
 
 	start := time.Now()
-	rows, err := r.db.Query(ctx, query, orgID)
+	rows, err := r.db.Query(ctx, query, tenantID)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
@@ -799,7 +799,7 @@ func (r *PostgresTripRepository) GetDriverStats(ctx context.Context, orgID strin
 }
 
 // GetTripStats aggregates trip counts and distance per day for a tenant
-func (r *PostgresTripRepository) GetTripStats(ctx context.Context, orgID string) ([]models.DailyTripTrend, error) {
+func (r *PostgresTripRepository) GetTripStats(ctx context.Context, tenantID string) ([]models.DailyTripTrend, error) {
 	query := `
 		SELECT 
 			TO_CHAR(created_at, 'YYYY-MM-DD') as date,
@@ -814,7 +814,7 @@ func (r *PostgresTripRepository) GetTripStats(ctx context.Context, orgID string)
 		ORDER BY date ASC`
 
 	start := time.Now()
-	rows, err := r.db.Query(ctx, query, orgID)
+	rows, err := r.db.Query(ctx, query, tenantID)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
@@ -960,24 +960,24 @@ func (r *txRepository) CheckOverlappingTrips(ctx context.Context, vehicleID, dri
 	return r.base.CheckOverlappingTrips(ctx, vehicleID, driverID, start, end)
 }
 
-func (r *txRepository) GetTripSummary(ctx context.Context, orgID string, startDate, endDate time.Time) (*models.TripSummary, error) {
-	return r.base.GetTripSummary(ctx, orgID, startDate, endDate)
+func (r *txRepository) GetTripSummary(ctx context.Context, tenantID string, startDate, endDate time.Time) (*models.TripSummary, error) {
+	return r.base.GetTripSummary(ctx, tenantID, startDate, endDate)
 }
 
 func (r *txRepository) GetStats(ctx context.Context) (*models.TripStats, error) {
 	return r.base.GetStats(ctx)
 }
 
-func (r *txRepository) GetTripCustomers(ctx context.Context, orgID string) ([]string, error) {
-	return r.base.GetTripCustomers(ctx, orgID)
+func (r *txRepository) GetTripCustomers(ctx context.Context, tenantID string) ([]string, error) {
+	return r.base.GetTripCustomers(ctx, tenantID)
 }
 
-func (r *txRepository) GetDriverStats(ctx context.Context, orgID string) ([]models.DriverPerformance, error) {
-	return r.base.GetDriverStats(ctx, orgID)
+func (r *txRepository) GetDriverStats(ctx context.Context, tenantID string) ([]models.DriverPerformance, error) {
+	return r.base.GetDriverStats(ctx, tenantID)
 }
 
-func (r *txRepository) GetTripStats(ctx context.Context, orgID string) ([]models.DailyTripTrend, error) {
-	return r.base.GetTripStats(ctx, orgID)
+func (r *txRepository) GetTripStats(ctx context.Context, tenantID string) ([]models.DailyTripTrend, error) {
+	return r.base.GetTripStats(ctx, tenantID)
 }
 
 func (r *txRepository) CreateOffer(ctx context.Context, offer *models.TripOffer) error {

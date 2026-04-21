@@ -11,7 +11,7 @@ import (
 )
 
 func TestPDFGenerator_GenerateFromTemplate(t *testing.T) {
-	generator := pdf.NewPDFGenerator(30 * time.Second)
+	generator := pdf.NewPDFGenerator(30*time.Second, "")
 	ctx := context.Background()
 
 	htmlTemplate := `

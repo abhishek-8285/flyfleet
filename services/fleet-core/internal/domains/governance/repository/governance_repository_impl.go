@@ -36,7 +36,7 @@ func (r *pgGovernanceRepository) CreateRequest(ctx context.Context, req *models.
 	return err
 }
 
-func (r *pgGovernanceRepository) GetRequestByID(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*models.GovernanceRequest, error) {
+func (r *pgGovernanceRepository) GetRequestByID(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) (*models.GovernanceRequest, error) {
 	query := `
 		SELECT 
 			id, tenant_id, requester_id, request_type, data_scope,
@@ -46,7 +46,7 @@ func (r *pgGovernanceRepository) GetRequestByID(ctx context.Context, id uuid.UUI
 		WHERE id = $1 AND tenant_id = $2
 	`
 	var req models.GovernanceRequest
-	err := r.db.QueryRow(ctx, query, id, orgID).Scan(
+	err := r.db.QueryRow(ctx, query, id, tenantID).Scan(
 		&req.ID, &req.OrganizationID, &req.RequesterID, &req.RequestType, &req.DataScope,
 		&req.Purpose, &req.Format, &req.DeliveryMethod, &req.Status, &req.ExpiryDate, &req.Comments,
 		&req.CreatedAt, &req.CreatedBy, &req.UpdatedAt, &req.UpdatedBy,
@@ -159,17 +159,17 @@ func (r *pgGovernanceRepository) ListRequests(ctx context.Context, filter models
 	}, nil
 }
 
-func (r *pgGovernanceRepository) UpdateRequestStatus(ctx context.Context, id uuid.UUID, orgID uuid.UUID, status models.GovernanceRequestStatus, comments *string, expiryDate *time.Time) error {
+func (r *pgGovernanceRepository) UpdateRequestStatus(ctx context.Context, id uuid.UUID, tenantID uuid.UUID, status models.GovernanceRequestStatus, comments *string, expiryDate *time.Time) error {
 	query := `
 		UPDATE governance_requests
 		SET status = $1, comments = COALESCE($2, comments), expiry_date = COALESCE($3, expiry_date), updated_at = NOW()
 		WHERE id = $4 AND tenant_id = $5
 	`
-	_, err := r.db.Exec(ctx, query, status, comments, expiryDate, id, orgID)
+	_, err := r.db.Exec(ctx, query, status, comments, expiryDate, id, tenantID)
 	return err
 }
 
-func (r *pgGovernanceRepository) UpdateVerificationStatus(ctx context.Context, id, orgID uuid.UUID, status string, verifiedBy uuid.UUID) error {
+func (r *pgGovernanceRepository) UpdateVerificationStatus(ctx context.Context, id, tenantID uuid.UUID, status string, verifiedBy uuid.UUID) error {
 	query := `
 		UPDATE governance_requests
 		SET verification_status = $1,
@@ -178,17 +178,17 @@ func (r *pgGovernanceRepository) UpdateVerificationStatus(ctx context.Context, i
 		    updated_at = NOW()
 		WHERE id = $3 AND tenant_id = $4
 	`
-	_, err := r.db.Exec(ctx, query, status, verifiedBy, id, orgID)
+	_, err := r.db.Exec(ctx, query, status, verifiedBy, id, tenantID)
 	return err
 }
 
-func (r *pgGovernanceRepository) GetSettings(ctx context.Context, orgID uuid.UUID) (*models.GovernanceSettings, error) {
+func (r *pgGovernanceRepository) GetSettings(ctx context.Context, tenantID uuid.UUID) (*models.GovernanceSettings, error) {
 	query := `
 		SELECT tenant_id, retention_policies, masking_rules, auto_expiry_enabled, download_ttl_hours, created_at, updated_at
 		FROM governance_settings WHERE tenant_id = $1
 	`
 	var s models.GovernanceSettings
-	err := r.db.QueryRow(ctx, query, orgID).Scan(
+	err := r.db.QueryRow(ctx, query, tenantID).Scan(
 		&s.OrganizationID, &s.RetentionPolicies, &s.MaskingRules, &s.AutoExpiryEnabled, &s.DownloadTTLHours, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
@@ -233,7 +233,7 @@ func (r *pgGovernanceRepository) CreateAuditLog(ctx context.Context, log *models
 	return err
 }
 
-func (r *pgGovernanceRepository) ListAuditLogs(ctx context.Context, orgID uuid.UUID, page, pageSize int) ([]models.GovernanceAuditLog, int, error) {
+func (r *pgGovernanceRepository) ListAuditLogs(ctx context.Context, tenantID uuid.UUID, page, pageSize int) ([]models.GovernanceAuditLog, int, error) {
 	if page <= 0 {
 		page = 1
 	}
@@ -247,7 +247,7 @@ func (r *pgGovernanceRepository) ListAuditLogs(ctx context.Context, orgID uuid.U
 		WHERE tenant_id = $1
 	`
 	var total int
-	if err := r.db.QueryRow(ctx, countQuery, orgID).Scan(&total); err != nil {
+	if err := r.db.QueryRow(ctx, countQuery, tenantID).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
@@ -259,7 +259,7 @@ func (r *pgGovernanceRepository) ListAuditLogs(ctx context.Context, orgID uuid.U
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3
 	`
-	rows, err := r.db.Query(ctx, query, orgID, pageSize, offset)
+	rows, err := r.db.Query(ctx, query, tenantID, pageSize, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -407,7 +407,7 @@ func (r *pgGovernanceRepository) ListAllSettings(ctx context.Context) ([]models.
 	return settings, nil
 }
 
-func (r *pgGovernanceRepository) EnforceRetentionPolicy(ctx context.Context, orgID uuid.UUID, tableName string, retentionDays int) (int64, error) {
+func (r *pgGovernanceRepository) EnforceRetentionPolicy(ctx context.Context, tenantID uuid.UUID, tableName string, retentionDays int) (int64, error) {
 	// Only allow known tables to prevent SQL injection and specify entity mapping
 	entityMap := map[string]string{
 		"telemetry": "device_id",
@@ -431,7 +431,7 @@ func (r *pgGovernanceRepository) EnforceRetentionPolicy(ctx context.Context, org
 		)
 	`, tableName, entityCol)
 
-	tag, err := r.db.Exec(ctx, query, orgID, retentionDays)
+	tag, err := r.db.Exec(ctx, query, tenantID, retentionDays)
 	if err != nil {
 		return 0, err
 	}

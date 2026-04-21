@@ -59,13 +59,13 @@ func TestNewIngestionService(t *testing.T) {
 func TestIngestService_Ingest_ValidData(t *testing.T) {
 	svc, telemRepo, liveCache, mr := setupIngestTest(t)
 
-	orgID := uuid.Must(uuid.NewV4())
+	tenantID := uuid.Must(uuid.NewV4())
 	vehicleID := uuid.Must(uuid.NewV4())
 	now := time.Now().UTC()
 
 	event := &models.TelemetryEvent{
 		VehicleID:  vehicleID,
-		TenantID:   orgID,
+		TenantID:   tenantID,
 		Lat:        28.6139,
 		Lng:        77.2090,
 		Speed:      45.2,
@@ -80,7 +80,7 @@ func TestIngestService_Ingest_ValidData(t *testing.T) {
 	// Subscribe to the pub/sub channel before ingest using a separate redis client
 	rdbSub := redis.NewClient(&redis.Options{Addr: mr.Addr()})
 	defer rdbSub.Close()
-	channel := "org:" + orgID.String() + ":telemetry"
+	channel := "org:" + tenantID.String() + ":telemetry"
 	sub := rdbSub.Subscribe(context.Background(), channel)
 	defer sub.Close()
 	// Wait for subscription confirmation
@@ -417,11 +417,11 @@ func TestTelemetryQueryService_VehicleBelongsToOrg(t *testing.T) {
 	tenantChk := repository.NewMemTenantChecker()
 	svc := NewTelemetryQueryService(telemRepo, liveCache, tenantChk, zap.NewNop())
 
-	orgID := uuid.Must(uuid.NewV4())
+	tenantID := uuid.Must(uuid.NewV4())
 	vehicleID := uuid.Must(uuid.NewV4())
 
 	// Not added — should return false
-	belongs, err := svc.VehicleBelongsToOrg(context.Background(), orgID, vehicleID)
+	belongs, err := svc.VehicleBelongsToOrg(context.Background(), tenantID, vehicleID)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -430,8 +430,8 @@ func TestTelemetryQueryService_VehicleBelongsToOrg(t *testing.T) {
 	}
 
 	// Add membership — should return true
-	tenantChk.AddMembership(orgID, vehicleID)
-	belongs, err = svc.VehicleBelongsToOrg(context.Background(), orgID, vehicleID)
+	tenantChk.AddMembership(tenantID, vehicleID)
+	belongs, err = svc.VehicleBelongsToOrg(context.Background(), tenantID, vehicleID)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -456,7 +456,7 @@ func TestNewBatchLocationService(t *testing.T) {
 }
 
 func TestBatchLocationService_GetAllOrgLocations_CacheHit(t *testing.T) {
-	orgID := uuid.Must(uuid.NewV4())
+	tenantID := uuid.Must(uuid.NewV4())
 	v1 := uuid.Must(uuid.NewV4())
 
 	vr := repository.NewMemVehicleRepo()
@@ -471,7 +471,7 @@ func TestBatchLocationService_GetAllOrgLocations_CacheHit(t *testing.T) {
 	tr := repository.NewMemTelemRepo()
 	svc := NewBatchLocationService(vr, lc, tr, zap.NewNop(), 500)
 
-	locs, err := svc.GetAllOrgLocations(context.Background(), orgID)
+	locs, err := svc.GetAllOrgLocations(context.Background(), tenantID)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -484,7 +484,7 @@ func TestBatchLocationService_GetAllOrgLocations_CacheHit(t *testing.T) {
 }
 
 func TestBatchLocationService_GetAllOrgLocations_DBFallback(t *testing.T) {
-	orgID := uuid.Must(uuid.NewV4())
+	tenantID := uuid.Must(uuid.NewV4())
 	v1 := uuid.Must(uuid.NewV4())
 
 	vr := repository.NewMemVehicleRepo()
@@ -505,7 +505,7 @@ func TestBatchLocationService_GetAllOrgLocations_DBFallback(t *testing.T) {
 
 	svc := NewBatchLocationService(vr, lc, tr, zap.NewNop(), 500)
 
-	locs, err := svc.GetAllOrgLocations(context.Background(), orgID)
+	locs, err := svc.GetAllOrgLocations(context.Background(), tenantID)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -518,7 +518,7 @@ func TestBatchLocationService_GetAllOrgLocations_DBFallback(t *testing.T) {
 }
 
 func TestBatchLocationService_GetAllOrgLocations_NoLocation(t *testing.T) {
-	orgID := uuid.Must(uuid.NewV4())
+	tenantID := uuid.Must(uuid.NewV4())
 	v1 := uuid.Must(uuid.NewV4())
 
 	vr := repository.NewMemVehicleRepo()
@@ -529,7 +529,7 @@ func TestBatchLocationService_GetAllOrgLocations_NoLocation(t *testing.T) {
 
 	svc := NewBatchLocationService(vr, lc, tr, zap.NewNop(), 500)
 
-	locs, err := svc.GetAllOrgLocations(context.Background(), orgID)
+	locs, err := svc.GetAllOrgLocations(context.Background(), tenantID)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -542,7 +542,7 @@ func TestBatchLocationService_GetAllOrgLocations_NoLocation(t *testing.T) {
 }
 
 func TestBatchLocationService_GetAllOrgLocations_WithDriver(t *testing.T) {
-	orgID := uuid.Must(uuid.NewV4())
+	tenantID := uuid.Must(uuid.NewV4())
 	v1 := uuid.Must(uuid.NewV4())
 	driverID := uuid.Must(uuid.NewV4())
 
@@ -562,7 +562,7 @@ func TestBatchLocationService_GetAllOrgLocations_WithDriver(t *testing.T) {
 	tr := repository.NewMemTelemRepo()
 	svc := NewBatchLocationService(vr, lc, tr, zap.NewNop(), 500)
 
-	locs, err := svc.GetAllOrgLocations(context.Background(), orgID)
+	locs, err := svc.GetAllOrgLocations(context.Background(), tenantID)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -575,7 +575,7 @@ func TestBatchLocationService_GetAllOrgLocations_WithDriver(t *testing.T) {
 }
 
 func TestBatchLocationService_GetAllOrgLocations_PerformanceGuardrail(t *testing.T) {
-	orgID := uuid.Must(uuid.NewV4())
+	tenantID := uuid.Must(uuid.NewV4())
 
 	vr := repository.NewMemVehicleRepo()
 	// Add 10 vehicles
@@ -593,7 +593,7 @@ func TestBatchLocationService_GetAllOrgLocations_PerformanceGuardrail(t *testing
 	// Set maxVehicles to 3
 	svc := NewBatchLocationService(vr, lc, tr, zap.NewNop(), 3)
 
-	locs, err := svc.GetAllOrgLocations(context.Background(), orgID)
+	locs, err := svc.GetAllOrgLocations(context.Background(), tenantID)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -603,7 +603,7 @@ func TestBatchLocationService_GetAllOrgLocations_PerformanceGuardrail(t *testing
 }
 
 func TestBatchLocationService_GetFilteredOrgLocations_AllFilters(t *testing.T) {
-	orgID := uuid.Must(uuid.NewV4())
+	tenantID := uuid.Must(uuid.NewV4())
 	v1 := uuid.Must(uuid.NewV4())
 	v2 := uuid.Must(uuid.NewV4())
 	driverID := uuid.Must(uuid.NewV4())
@@ -627,7 +627,7 @@ func TestBatchLocationService_GetFilteredOrgLocations_AllFilters(t *testing.T) {
 	svc := NewBatchLocationService(vr, lc, tr, zap.NewNop(), 500)
 
 	// Filter by status
-	locs, err := svc.GetFilteredOrgLocations(context.Background(), orgID, "moving", uuid.Nil, "")
+	locs, err := svc.GetFilteredOrgLocations(context.Background(), tenantID, "moving", uuid.Nil, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -636,7 +636,7 @@ func TestBatchLocationService_GetFilteredOrgLocations_AllFilters(t *testing.T) {
 	}
 
 	// Filter by driver
-	locs, err = svc.GetFilteredOrgLocations(context.Background(), orgID, "", driverID, "")
+	locs, err = svc.GetFilteredOrgLocations(context.Background(), tenantID, "", driverID, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -645,7 +645,7 @@ func TestBatchLocationService_GetFilteredOrgLocations_AllFilters(t *testing.T) {
 	}
 
 	// Filter by search
-	locs, err = svc.GetFilteredOrgLocations(context.Background(), orgID, "", uuid.Nil, "DL01")
+	locs, err = svc.GetFilteredOrgLocations(context.Background(), tenantID, "", uuid.Nil, "DL01")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -654,7 +654,7 @@ func TestBatchLocationService_GetFilteredOrgLocations_AllFilters(t *testing.T) {
 	}
 
 	// Filter by driver name search
-	locs, err = svc.GetFilteredOrgLocations(context.Background(), orgID, "", uuid.Nil, "Rajesh")
+	locs, err = svc.GetFilteredOrgLocations(context.Background(), tenantID, "", uuid.Nil, "Rajesh")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -663,7 +663,7 @@ func TestBatchLocationService_GetFilteredOrgLocations_AllFilters(t *testing.T) {
 	}
 
 	// No filter — all
-	locs, err = svc.GetFilteredOrgLocations(context.Background(), orgID, "", uuid.Nil, "")
+	locs, err = svc.GetFilteredOrgLocations(context.Background(), tenantID, "", uuid.Nil, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

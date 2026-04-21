@@ -26,14 +26,14 @@ func NewSessionHandler(sessionSvc sessionService, log *zap.Logger) *SessionHandl
 // GET /api/v1/auth/sessions
 func (h *SessionHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserIDUUID(r)
-	orgID := GetOrgUUID(r)
+	tenantID := GetOrgUUID(r)
 
 	if userID.String() == "00000000-0000-0000-0000-000000000000" {
 		h.writeError(w, http.StatusUnauthorized, "unauthenticated", "Authentication required", r)
 		return
 	}
 
-	sessions, err := h.sessionSvc.ListSessions(r.Context(), userID, orgID)
+	sessions, err := h.sessionSvc.ListSessions(r.Context(), userID, tenantID)
 	if err != nil {
 		h.log.Error("failed to list sessions", zap.Error(err), zap.String("user_id", userID.String()))
 		h.writeError(w, http.StatusInternalServerError, "internal_error", "Failed to list sessions", r)
@@ -57,9 +57,9 @@ func (h *SessionHandler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := GetUserIDUUID(r)
-	orgID := GetOrgUUID(r)
+	tenantID := GetOrgUUID(r)
 
-	if err := h.sessionSvc.RevokeSession(r.Context(), userID, orgID, sessionID); err != nil {
+	if err := h.sessionSvc.RevokeSession(r.Context(), userID, tenantID, sessionID); err != nil {
 		h.log.Error("failed to revoke session", zap.Error(err), zap.String("session_id", sessionID))
 		h.writeError(w, http.StatusInternalServerError, "internal_error", "Failed to revoke session", r)
 		return

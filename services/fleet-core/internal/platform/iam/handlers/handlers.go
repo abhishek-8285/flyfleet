@@ -22,7 +22,7 @@ func (h *IAMHandlers) Register(w http.ResponseWriter, r *http.Request) {
 		Name     string    `json:"name"`
 		Email    string    `json:"email"`
 		Password string    `json:"password"`
-		OrgID    uuid.UUID `json:"organization_id"`
+		TenantID    uuid.UUID `json:"organization_id"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -30,7 +30,7 @@ func (h *IAMHandlers) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.svc.Register(r.Context(), req.Email, req.Password, req.Name, req.OrgID)
+	user, err := h.svc.Register(r.Context(), req.Email, req.Password, req.Name, req.TenantID)
 	if err != nil {
 		http.Error(w, "registration failed", http.StatusInternalServerError)
 		return

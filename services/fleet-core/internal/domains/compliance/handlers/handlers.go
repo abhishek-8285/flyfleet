@@ -46,15 +46,9 @@ func (h *Handlers) RecordDutyStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// SECURITY FIX: Prevent IDOR - validate driver_id matches authenticated user
-	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
-	if !ok || authUserID == "" {
+	authUserUUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		h.errorJSON(w, http.StatusUnauthorized, "authentication required")
-		return
-	}
-
-	authUserUUID, err := uuid.Parse(authUserID)
-	if err != nil {
-		h.errorJSON(w, http.StatusBadRequest, "invalid user ID")
 		return
 	}
 
@@ -67,7 +61,7 @@ func (h *Handlers) RecordDutyStatus(w http.ResponseWriter, r *http.Request) {
 	// Check if user is allowed to record duty status for this driver
 	if !h.canRecordDutyStatus(r, authUserUUID, reqDriverID) {
 		h.logger.Warn("IDOR attempt: driver mismatch in duty status",
-			zap.String("auth_user", authUserID),
+			zap.String("auth_user", authUserUUID.String()),
 			zap.String("requested_driver", req.DriverId))
 		h.errorJSON(w, http.StatusForbidden, "cannot record duty status for another driver")
 		return
@@ -114,15 +108,9 @@ func (h *Handlers) GetCurrentDutyStatus(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// SECURITY: Validate user can view this driver's duty status
-	authUserID, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
-	if !ok || authUserID == "" {
+	authUserUUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		h.errorJSON(w, http.StatusUnauthorized, "authentication required")
-		return
-	}
-
-	authUserUUID, err := uuid.Parse(authUserID)
-	if err != nil {
-		h.errorJSON(w, http.StatusBadRequest, "invalid user ID")
 		return
 	}
 
@@ -134,9 +122,6 @@ func (h *Handlers) GetCurrentDutyStatus(w http.ResponseWriter, r *http.Request) 
 
 	// Check if user is allowed to view duty status for this driver
 	if !h.canRecordDutyStatus(r, authUserUUID, reqDriverUUID) {
-		h.logger.Warn("IDOR attempt: driver mismatch in duty status view",
-			zap.String("auth_user", authUserID),
-			zap.String("requested_driver", driverID))
 		h.errorJSON(w, http.StatusForbidden, "cannot view duty status for another driver")
 		return
 	}

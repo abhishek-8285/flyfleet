@@ -257,7 +257,7 @@ func (re *RuleEngine) checkOverspeedRule(rule *models.AlertRule, event GPSEvent)
 		// Create alert for overspeeding
 		alert := &models.Alert{
 			ID:        uuid.New().String(),
-			OrgID:     rule.OrgID,
+			TenantID:     rule.TenantID,
 			RuleID:    rule.ID,
 			Type:      models.AlertTypeOverspeed,
 			Severity:  rule.Severity,
@@ -314,7 +314,7 @@ func (re *RuleEngine) checkHarshAccelerationRule(rule *models.AlertRule, event O
 	if event.ThrottlePos > 80 && event.Speed > 20 {
 		alert := &models.Alert{
 			ID:        uuid.New().String(),
-			OrgID:     rule.OrgID,
+			TenantID:     rule.TenantID,
 			RuleID:    rule.ID,
 			Type:      models.AlertTypeHarshAcceleration,
 			Severity:  rule.Severity,

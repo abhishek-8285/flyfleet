@@ -23,7 +23,7 @@ type AlertingService struct {
 
 type AlertEvent struct {
 	EventType  string                 `json:"event_type"`
-	OrgID      uuid.UUID              `json:"tenant_id"`
+	TenantID      uuid.UUID              `json:"tenant_id"`
 	OccurredAt time.Time              `json:"occurred_at"`
 	Payload    map[string]interface{} `json:"payload"`
 }
@@ -34,14 +34,14 @@ func NewAlertingService(nc *nats.Conn, logger *zap.Logger) *AlertingService {
 	return s
 }
 
-func (s *AlertingService) Publish(ctx context.Context, eventType string, orgID uuid.UUID, payload map[string]interface{}) error {
+func (s *AlertingService) Publish(ctx context.Context, eventType string, tenantID uuid.UUID, payload map[string]interface{}) error {
 	if s == nil || s.nc == nil {
 		return nil
 	}
 
 	data, err := json.Marshal(AlertEvent{
 		EventType:  eventType,
-		OrgID:      orgID,
+		TenantID:      tenantID,
 		OccurredAt: time.Now().UTC(),
 		Payload:    payload,
 	})

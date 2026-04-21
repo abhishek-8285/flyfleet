@@ -84,9 +84,9 @@ func (h *GeofenceHandler) CreateGeofence(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	userID := h.getUserID(r)
-	if !h.requireAuthContext(w, orgID, userID) {
+	if !h.requireAuthContext(w, tenantID, userID) {
 		return
 	}
 
@@ -112,7 +112,7 @@ func (h *GeofenceHandler) CreateGeofence(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	geofence, err := h.service.Create(r.Context(), orgID, userID, req)
+	geofence, err := h.service.Create(r.Context(), tenantID, userID, req)
 	if err != nil {
 		h.logger.Error("Failed to create geofence", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -132,13 +132,13 @@ func (h *GeofenceHandler) GetGeofence(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	userID := h.getUserID(r)
-	if !h.requireAuthContext(w, orgID, userID) {
+	if !h.requireAuthContext(w, tenantID, userID) {
 		return
 	}
 
-	geofence, err := h.service.GetByID(r.Context(), id, orgID)
+	geofence, err := h.service.GetByID(r.Context(), id, tenantID)
 	if err != nil {
 		h.logger.Error("Failed to get geofence", zap.String("id", idStr), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusNotFound, "Geofence not found", nil)
@@ -176,9 +176,9 @@ func (h *GeofenceHandler) ListGeofences(w http.ResponseWriter, r *http.Request) 
 
 	req.Sort = query.Get("sort")
 
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	userID := h.getUserID(r)
-	if !h.requireAuthContext(w, orgID, userID) {
+	if !h.requireAuthContext(w, tenantID, userID) {
 		return
 	}
 	if err := h.validate.Struct(req); err != nil {
@@ -186,7 +186,7 @@ func (h *GeofenceHandler) ListGeofences(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	response, err := h.service.List(r.Context(), orgID, &req)
+	response, err := h.service.List(r.Context(), tenantID, &req)
 	if err != nil {
 		h.logger.Error("Failed to list geofences", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -229,9 +229,9 @@ func (h *GeofenceHandler) UpdateGeofence(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	userID := h.getUserID(r)
-	if !h.requireAuthContext(w, orgID, userID) {
+	if !h.requireAuthContext(w, tenantID, userID) {
 		return
 	}
 
@@ -258,7 +258,7 @@ func (h *GeofenceHandler) UpdateGeofence(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	updatedGeofence, err := h.service.Update(r.Context(), id, orgID, req)
+	updatedGeofence, err := h.service.Update(r.Context(), id, tenantID, req)
 	if err != nil {
 		h.logger.Error("Failed to update geofence", zap.String("id", idStr), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -278,13 +278,13 @@ func (h *GeofenceHandler) DeleteGeofence(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	userID := h.getUserID(r)
-	if !h.requireAuthContext(w, orgID, userID) {
+	if !h.requireAuthContext(w, tenantID, userID) {
 		return
 	}
 
-	if err := h.service.Delete(r.Context(), id, orgID); err != nil {
+	if err := h.service.Delete(r.Context(), id, tenantID); err != nil {
 		h.logger.Error("Failed to delete geofence", zap.String("id", idStr), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -297,9 +297,9 @@ func (h *GeofenceHandler) DeleteGeofence(w http.ResponseWriter, r *http.Request)
 func (h *GeofenceHandler) GetGeofenceEvents(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	var filter models.GeofenceEventFilter
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	userID := h.getUserID(r)
-	if !h.requireAuthContext(w, orgID, userID) {
+	if !h.requireAuthContext(w, tenantID, userID) {
 		return
 	}
 
@@ -336,7 +336,7 @@ func (h *GeofenceHandler) GetGeofenceEvents(w http.ResponseWriter, r *http.Reque
 		limit = 20
 	}
 	filter.Limit = limit
-	filter.OrgID = orgID
+	filter.TenantID = tenantID
 	if err := h.validate.Struct(filter); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
 		return
@@ -378,8 +378,8 @@ func (h *GeofenceHandler) writeErrorResponse(w http.ResponseWriter, statusCode i
 	h.writeJSONResponse(w, statusCode, resp)
 }
 
-func (h *GeofenceHandler) getOrgID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
+func (h *GeofenceHandler) getTenantID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.TenantIDKey); val != nil {
 		switch v := val.(type) {
 		case uuid.UUID:
 			return v
@@ -412,8 +412,8 @@ func (h *GeofenceHandler) getUserID(r *http.Request) uuid.UUID {
 	return uuid.Nil
 }
 
-func (h *GeofenceHandler) requireAuthContext(w http.ResponseWriter, orgID uuid.UUID, userID uuid.UUID) bool {
-	if orgID == uuid.Nil {
+func (h *GeofenceHandler) requireAuthContext(w http.ResponseWriter, tenantID uuid.UUID, userID uuid.UUID) bool {
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "missing organization id", nil)
 		return false
 	}

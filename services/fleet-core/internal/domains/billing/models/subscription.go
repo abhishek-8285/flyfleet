@@ -70,7 +70,7 @@ const (
 // Subscription represents an organization's active plan
 type Subscription struct {
 	ID                 uuid.UUID              `json:"id" db:"id"`
-	OrgID              uuid.UUID              `json:"tenant_id" db:"tenant_id"`
+	TenantID              uuid.UUID              `json:"tenant_id" db:"tenant_id"`
 	PlanID             uuid.UUID              `json:"plan_id" db:"plan_id"`
 	Status             SubscriptionStatus     `json:"status" db:"status"`
 	CurrentPeriodStart time.Time              `json:"current_period_start" db:"current_period_start"`

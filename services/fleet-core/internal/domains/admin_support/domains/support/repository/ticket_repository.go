@@ -21,11 +21,11 @@ type TicketRepository interface {
 	DeleteTicket(ctx context.Context, id uuid.UUID) error
 	UpdateTicketStatus(ctx context.Context, id uuid.UUID, status string) error
 	AssignTicket(ctx context.Context, id uuid.UUID, assignedTo uuid.UUID) error
-	GetRecentActivity(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.SupportTicket, error)
-	GetDashboardSummary(ctx context.Context, orgID uuid.UUID) (*models.DashboardSummary, error)
+	GetRecentActivity(ctx context.Context, tenantID uuid.UUID, limit int) ([]*models.SupportTicket, error)
+	GetDashboardSummary(ctx context.Context, tenantID uuid.UUID) (*models.DashboardSummary, error)
 	AddComment(ctx context.Context, comment *models.IncidentComment) error
 	GetTicketComments(ctx context.Context, ticketID uuid.UUID) ([]*models.IncidentComment, error)
-	GetOrgMetrics(ctx context.Context, orgID uuid.UUID) (*models.OrgSupportMetrics, error)
+	GetOrgMetrics(ctx context.Context, tenantID uuid.UUID) (*models.OrgSupportMetrics, error)
 	UpdateOrgMetrics(ctx context.Context, metrics *models.OrgSupportMetrics) error
 	GetNextTicketNumber(ctx context.Context) (int, error)
 }
@@ -47,7 +47,7 @@ func (r *ticketRepository) CreateTicket(ctx context.Context, ticket *models.Supp
 	if ticket.Title == "" {
 		return fmt.Errorf("ticket title is required")
 	}
-	if ticket.OrgID == uuid.Nil {
+	if ticket.TenantID == uuid.Nil {
 		return fmt.Errorf("organization ID is required")
 	}
 	if ticket.ReporterID == uuid.Nil {
@@ -66,7 +66,7 @@ func (r *ticketRepository) CreateTicket(ctx context.Context, ticket *models.Supp
 	ticket.UpdatedAt = now
 
 	err := r.db.QueryRow(ctx, query,
-		ticket.ID, ticket.TicketID, ticket.OrgID, ticket.Title, ticket.Description,
+		ticket.ID, ticket.TicketID, ticket.TenantID, ticket.Title, ticket.Description,
 		ticket.Status, ticket.Priority, ticket.Category, ticket.AssignedTo,
 		ticket.ReporterID, ticket.CreatedAt, ticket.CreatedBy, ticket.UpdatedAt, ticket.UpdatedBy, ticket.Tags, ticket.Metadata,
 	).Scan(&ticket.ID, &ticket.CreatedAt, &ticket.UpdatedAt)
@@ -97,7 +97,7 @@ func (r *ticketRepository) GetTicketByID(ctx context.Context, id uuid.UUID) (*mo
 
 	var ticket models.SupportTicket
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&ticket.ID, &ticket.TicketID, &ticket.OrgID, &ticket.Title, &ticket.Description,
+		&ticket.ID, &ticket.TicketID, &ticket.TenantID, &ticket.Title, &ticket.Description,
 		&ticket.Status, &ticket.Priority, &ticket.Category, &ticket.AssignedTo,
 		&ticket.ReporterID, &ticket.CreatedAt, &ticket.CreatedBy, &ticket.UpdatedAt, &ticket.UpdatedBy, &ticket.ResolvedAt,
 		&ticket.SLADeadline, &ticket.Tags, &ticket.Metadata,
@@ -123,7 +123,7 @@ func (r *ticketRepository) GetTicketByTicketID(ctx context.Context, ticketID str
 
 	var ticket models.SupportTicket
 	err := r.db.QueryRow(ctx, query, ticketID).Scan(
-		&ticket.ID, &ticket.TicketID, &ticket.OrgID, &ticket.Title, &ticket.Description,
+		&ticket.ID, &ticket.TicketID, &ticket.TenantID, &ticket.Title, &ticket.Description,
 		&ticket.Status, &ticket.Priority, &ticket.Category, &ticket.AssignedTo,
 		&ticket.ReporterID, &ticket.CreatedAt, &ticket.CreatedBy, &ticket.UpdatedAt, &ticket.UpdatedBy, &ticket.ResolvedAt,
 		&ticket.SLADeadline, &ticket.Tags, &ticket.Metadata,
@@ -218,7 +218,7 @@ func (r *ticketRepository) ListTickets(ctx context.Context, filter models.Ticket
 	for rows.Next() {
 		var ticket models.SupportTicket
 		err := rows.Scan(
-			&ticket.ID, &ticket.TicketID, &ticket.OrgID, &ticket.Title, &ticket.Description,
+			&ticket.ID, &ticket.TicketID, &ticket.TenantID, &ticket.Title, &ticket.Description,
 			&ticket.Status, &ticket.Priority, &ticket.Category, &ticket.AssignedTo,
 			&ticket.ReporterID, &ticket.CreatedAt, &ticket.CreatedBy, &ticket.UpdatedAt, &ticket.UpdatedBy, &ticket.ResolvedAt,
 			&ticket.SLADeadline, &ticket.Tags, &ticket.Metadata,
@@ -315,7 +315,7 @@ func (r *ticketRepository) AssignTicket(ctx context.Context, id uuid.UUID, assig
 	return nil
 }
 
-func (r *ticketRepository) GetRecentActivity(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.SupportTicket, error) {
+func (r *ticketRepository) GetRecentActivity(ctx context.Context, tenantID uuid.UUID, limit int) ([]*models.SupportTicket, error) {
 	query := `
 		SELECT id, ticket_id, tenant_id, title, description, status, priority, category,
 		       assigned_to, reporter_id, created_at, updated_at, resolved_at, 
@@ -325,7 +325,7 @@ func (r *ticketRepository) GetRecentActivity(ctx context.Context, orgID uuid.UUI
 		ORDER BY updated_at DESC 
 		LIMIT $2`
 
-	rows, err := r.db.Query(ctx, query, orgID, limit)
+	rows, err := r.db.Query(ctx, query, tenantID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +335,7 @@ func (r *ticketRepository) GetRecentActivity(ctx context.Context, orgID uuid.UUI
 	for rows.Next() {
 		var ticket models.SupportTicket
 		err := rows.Scan(
-			&ticket.ID, &ticket.TicketID, &ticket.OrgID, &ticket.Title, &ticket.Description,
+			&ticket.ID, &ticket.TicketID, &ticket.TenantID, &ticket.Title, &ticket.Description,
 			&ticket.Status, &ticket.Priority, &ticket.Category, &ticket.AssignedTo,
 			&ticket.ReporterID, &ticket.CreatedAt, &ticket.UpdatedAt, &ticket.ResolvedAt,
 			&ticket.SLADeadline, &ticket.Tags, &ticket.Metadata,
@@ -353,7 +353,7 @@ func (r *ticketRepository) GetRecentActivity(ctx context.Context, orgID uuid.UUI
 	return tickets, nil
 }
 
-func (r *ticketRepository) GetDashboardSummary(ctx context.Context, orgID uuid.UUID) (*models.DashboardSummary, error) {
+func (r *ticketRepository) GetDashboardSummary(ctx context.Context, tenantID uuid.UUID) (*models.DashboardSummary, error) {
 	query := `
 		SELECT 
 			COUNT(*) FILTER (WHERE status != 'RESOLVED') as open_tickets,
@@ -365,7 +365,7 @@ func (r *ticketRepository) GetDashboardSummary(ctx context.Context, orgID uuid.U
 		WHERE tenant_id = $1`
 
 	var summary models.DashboardSummary
-	err := r.db.QueryRow(ctx, query, orgID).Scan(
+	err := r.db.QueryRow(ctx, query, tenantID).Scan(
 		&summary.OpenTickets, &summary.ResolvedToday, &summary.SLABreaches,
 		&summary.ActiveErrors, &summary.AvgResolutionHrs,
 	)
@@ -446,7 +446,7 @@ func (r *ticketRepository) GetTicketComments(ctx context.Context, ticketID uuid.
 	return comments, nil
 }
 
-func (r *ticketRepository) GetOrgMetrics(ctx context.Context, orgID uuid.UUID) (*models.OrgSupportMetrics, error) {
+func (r *ticketRepository) GetOrgMetrics(ctx context.Context, tenantID uuid.UUID) (*models.OrgSupportMetrics, error) {
 	query := `
 		SELECT tenant_id, open_tickets, resolved_tickets, avg_resolution_time,
 		       sla_breaches, critical_issues, last_calculated, updated_at
@@ -454,8 +454,8 @@ func (r *ticketRepository) GetOrgMetrics(ctx context.Context, orgID uuid.UUID) (
 		WHERE tenant_id = $1`
 
 	var metrics models.OrgSupportMetrics
-	err := r.db.QueryRow(ctx, query, orgID).Scan(
-		&metrics.OrgID, &metrics.OpenTickets, &metrics.ResolvedTickets,
+	err := r.db.QueryRow(ctx, query, tenantID).Scan(
+		&metrics.TenantID, &metrics.OpenTickets, &metrics.ResolvedTickets,
 		&metrics.AvgResolutionTime, &metrics.SLABreaches, &metrics.CriticalIssues,
 		&metrics.LastCalculated, &metrics.UpdatedAt,
 	)
@@ -486,7 +486,7 @@ func (r *ticketRepository) UpdateOrgMetrics(ctx context.Context, metrics *models
 	metrics.UpdatedAt = now
 
 	_, err := r.db.Exec(ctx, query,
-		metrics.OrgID, metrics.OpenTickets, metrics.ResolvedTickets,
+		metrics.TenantID, metrics.OpenTickets, metrics.ResolvedTickets,
 		metrics.AvgResolutionTime, metrics.SLABreaches, metrics.CriticalIssues,
 		metrics.LastCalculated, metrics.UpdatedAt,
 	)

@@ -19,13 +19,13 @@ func (h *BillingHandler) ListPlans(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *BillingHandler) GetSubscription(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
 		return
 	}
 
-	sub, err := h.subService.GetSubscription(r.Context(), orgID)
+	sub, err := h.subService.GetSubscription(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("Failed to get subscription", zap.Error(err))
 		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
@@ -41,8 +41,8 @@ func (h *BillingHandler) GetSubscription(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *BillingHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
 		return
 	}
@@ -55,7 +55,7 @@ func (h *BillingHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sub, err := h.subService.Subscribe(r.Context(), orgID, req.PlanID)
+	sub, err := h.subService.Subscribe(r.Context(), tenantID, req.PlanID)
 	if err != nil {
 		h.logger.Error("Failed to subscribe", zap.Error(err))
 		h.errorJSON(w, r, err.Error(), http.StatusInternalServerError)
@@ -66,8 +66,8 @@ func (h *BillingHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *BillingHandler) ChangePlan(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
 		return
 	}
@@ -80,7 +80,7 @@ func (h *BillingHandler) ChangePlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sub, err := h.subService.ChangePlan(r.Context(), orgID, req.NewPlanID)
+	sub, err := h.subService.ChangePlan(r.Context(), tenantID, req.NewPlanID)
 	if err != nil {
 		h.logger.Error("Failed to change plan", zap.Error(err))
 		h.errorJSON(w, r, err.Error(), http.StatusInternalServerError)
@@ -91,8 +91,8 @@ func (h *BillingHandler) ChangePlan(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *BillingHandler) CancelSubscription(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
 		return
 	}
@@ -103,7 +103,7 @@ func (h *BillingHandler) CancelSubscription(w http.ResponseWriter, r *http.Reque
 	// Decode is optional as we have defaults
 	_ = json.NewDecoder(r.Body).Decode(&req)
 
-	err := h.subService.CancelSubscription(r.Context(), orgID, req.Immediate)
+	err := h.subService.CancelSubscription(r.Context(), tenantID, req.Immediate)
 	if err != nil {
 		h.logger.Error("Failed to cancel subscription", zap.Error(err))
 		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)

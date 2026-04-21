@@ -20,46 +20,52 @@ type mockInvoicingService struct {
 	mock.Mock
 }
 
-func (m *mockInvoicingService) CreateInvoice(ctx context.Context, orgID uuid.UUID, inv *invoicing.Invoice) (*invoicing.Invoice, error) {
-	args := m.Called(ctx, orgID, inv)
+func (m *mockInvoicingService) CreateInvoice(ctx context.Context, tenantID uuid.UUID, inv *invoicing.Invoice) (*invoicing.Invoice, error) {
+	args := m.Called(ctx, tenantID, inv)
 	return args.Get(0).(*invoicing.Invoice), args.Error(1)
 }
 
-func (m *mockInvoicingService) GetInvoice(ctx context.Context, orgID, id uuid.UUID) (*invoicing.Invoice, error) {
-	args := m.Called(ctx, orgID, id)
+func (m *mockInvoicingService) GetInvoice(ctx context.Context, tenantID, id uuid.UUID) (*invoicing.Invoice, error) {
+	args := m.Called(ctx, tenantID, id)
 	return args.Get(0).(*invoicing.Invoice), args.Error(1)
 }
 
-func (m *mockInvoicingService) ListInvoices(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]invoicing.Invoice, int64, error) {
-	args := m.Called(ctx, orgID, limit, offset)
+func (m *mockInvoicingService) ListInvoices(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]invoicing.Invoice, int64, error) {
+	args := m.Called(ctx, tenantID, limit, offset)
 	return args.Get(0).([]invoicing.Invoice), args.Get(1).(int64), args.Error(2)
 }
 
-func (m *mockInvoicingService) VoidInvoice(ctx context.Context, orgID, id uuid.UUID) error {
-	args := m.Called(ctx, orgID, id)
+func (m *mockInvoicingService) VoidInvoice(ctx context.Context, tenantID, id uuid.UUID) error {
+	args := m.Called(ctx, tenantID, id)
 	return args.Error(0)
+}
+
+func (m *mockInvoicingService) GeneratePDF(ctx context.Context, tenantID, id uuid.UUID) ([]byte, string, error) {
+	args := m.Called(ctx, tenantID, id)
+	return args.Get(0).([]byte), args.String(1), args.Error(2)
 }
 
 func TestCreateHandler(t *testing.T) {
 	svc := new(mockInvoicingService)
 	h := NewHandler(svc)
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
 	reqBody := invoicing.CreateInvoiceRequest{
 		CustomerName:   "Test Client",
 		BillingAddress: "123 Road",
-		DueDate:        time.Now().AddDate(0, 0, 7),
+		InvoiceDate:    invoicing.JSONDate(time.Now()),
+		DueDate:        invoicing.JSONDate(time.Now().AddDate(0, 0, 7)),
 		Currency:       "INR",
 		Items: []invoicing.CreateInvoiceItem{
 			{Description: "Service 1", Quantity: 1, UnitPrice: 1000},
 		},
 	}
 
-	svc.On("CreateInvoice", mock.Anything, orgID, mock.Anything).Return(&invoicing.Invoice{ID: uuid.New()}, nil)
+	svc.On("CreateInvoice", mock.Anything, tenantID, mock.Anything).Return(&invoicing.Invoice{ID: uuid.New()}, nil)
 
 	body, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBuffer(body))
-	ctx := context.WithValue(req.Context(), middleware.OrgIDKey, orgID)
+	ctx := context.WithValue(req.Context(), middleware.TenantIDKey, tenantID)
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 
@@ -74,7 +80,7 @@ func TestCreateHandler_InvalidJSON(t *testing.T) {
 	h := NewHandler(svc)
 
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString("{invalid}"))
-	ctx := context.WithValue(req.Context(), middleware.OrgIDKey, uuid.New())
+	ctx := context.WithValue(req.Context(), middleware.TenantIDKey, uuid.New())
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 

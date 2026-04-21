@@ -6,6 +6,7 @@ import (
 
 	"github.com/flyfleet/fleet-core/internal/domains/dispatch/engine"
 	"github.com/flyfleet/fleet-core/internal/domains/dispatch/service"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -25,12 +26,11 @@ func NewDispatchHandler(svc service.DispatchService, eng engine.SuggestionEngine
 }
 
 func (h *DispatchHandler) Assign(w http.ResponseWriter, r *http.Request) {
-	orgIDStr, ok := r.Context().Value("tenant_id").(string)
-	if !ok || orgIDStr == "" {
+	tenantID, ok := ctxkeys.GetTenantID(r.Context())
+	if !ok {
 		http.Error(w, `{"error":"missing tenant_id"}`, http.StatusUnauthorized)
 		return
 	}
-	orgID, _ := uuid.Parse(orgIDStr)
 
 	var req service.AssignRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -38,7 +38,7 @@ func (h *DispatchHandler) Assign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.dispatchSvc.Assign(r.Context(), orgID, req)
+	result, err := h.dispatchSvc.Assign(r.Context(), tenantID, req)
 	if err != nil {
 		http.Error(w, `{"error":"failed to assign"}`, http.StatusInternalServerError)
 		return
@@ -79,12 +79,11 @@ func (h *DispatchHandler) GetDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DispatchHandler) Redispatch(w http.ResponseWriter, r *http.Request) {
-	orgIDStr, ok := r.Context().Value("tenant_id").(string)
-	if !ok || orgIDStr == "" {
+	tenantID, ok := ctxkeys.GetTenantID(r.Context())
+	if !ok {
 		http.Error(w, `{"error":"missing tenant_id"}`, http.StatusUnauthorized)
 		return
 	}
-	orgID, _ := uuid.Parse(orgIDStr)
 
 	var req service.RedispatchRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -92,7 +91,7 @@ func (h *DispatchHandler) Redispatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.dispatchSvc.Redispatch(r.Context(), orgID, req)
+	result, err := h.dispatchSvc.Redispatch(r.Context(), tenantID, req)
 	if err != nil {
 		http.Error(w, `{"error":"failed to redispatch"}`, http.StatusInternalServerError)
 		return

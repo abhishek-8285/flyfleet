@@ -78,7 +78,7 @@ func (r *AuthRepository) GetOrganizationsByEmail(ctx context.Context, email stri
 	}
 	defer tx.Rollback(ctx)
 
-	_, _ = tx.Exec(ctx, "SELECT set_config('app.current_org_id', '00000000-0000-0000-0000-000000000001', false)")
+	_, _ = tx.Exec(ctx, "SELECT set_config('app.current_tenant_id', '00000000-0000-0000-0000-000000000001', false)")
 
 	start := time.Now()
 	rows, err := tx.Query(ctx, query, email)

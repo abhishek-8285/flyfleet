@@ -7,7 +7,7 @@ import (
 // FuelTransaction represents a fuel purchase event
 type FuelTransaction struct {
 	ID                    string    `json:"id" db:"id"`
-	OrgID                 string    `json:"tenant_id" db:"tenant_id"`
+	TenantID                 string    `json:"tenant_id" db:"tenant_id"`
 	VehicleID             string    `json:"vehicle_id" db:"vehicle_id"`
 	DriverID              *string   `json:"driver_id,omitempty" db:"driver_id"` // Nullable
 	CardID                *string   `json:"card_id,omitempty" db:"card_id"`
@@ -26,7 +26,7 @@ type FuelTransaction struct {
 // ExpensePolicy defines spending limits and approval rules
 type ExpensePolicy struct {
 	ID               string    `json:"id" db:"id"`
-	OrgID            string    `json:"tenant_id" db:"tenant_id"`
+	TenantID            string    `json:"tenant_id" db:"tenant_id"`
 	Category         string    `json:"category" db:"category"` // MEALS, LODGING, FUEL, MAINTENANCE
 	LimitAmount      *float64  `json:"limit_amount,omitempty" db:"limit_amount"`
 	Currency         string    `json:"currency" db:"currency"`
@@ -40,7 +40,7 @@ type ExpensePolicy struct {
 // ExpenseReport aggregates expenses for a period
 type ExpenseReport struct {
 	ID              string                 `json:"id" db:"id"`
-	OrgID           string                 `json:"tenant_id" db:"tenant_id"`
+	TenantID           string                 `json:"tenant_id" db:"tenant_id"`
 	SubmitterID     string                 `json:"submitter_id" db:"submitter_id"`
 	PeriodStart     *time.Time             `json:"period_start" db:"period_start"`
 	PeriodEnd       *time.Time             `json:"period_end" db:"period_end"`
@@ -106,7 +106,7 @@ type ApprovalAction struct {
 // ApprovalConfig defines the workflow for approvals
 type ApprovalConfig struct {
 	ID         string    `json:"id" db:"id"`
-	OrgID      string    `json:"tenant_id" db:"tenant_id"`
+	TenantID      string    `json:"tenant_id" db:"tenant_id"`
 	EntityType string    `json:"entity_type" db:"entity_type"`
 	MinAmount  float64   `json:"min_amount" db:"min_amount"`
 	Levels     []string  `json:"levels" db:"levels"` // List of role names or user IDs
@@ -116,7 +116,7 @@ type ApprovalConfig struct {
 // Budget tracks spending against a limit
 type Budget struct {
 	ID                string    `json:"id" db:"id"`
-	OrgID             string    `json:"tenant_id" db:"tenant_id"`
+	TenantID             string    `json:"tenant_id" db:"tenant_id"`
 	Category          string    `json:"category" db:"category"`
 	Year              int       `json:"year" db:"year"`
 	Month             int       `json:"month" db:"month"`

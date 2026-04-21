@@ -15,13 +15,13 @@ import (
 
 func TestTelemetry_Ingestion(t *testing.T) {
 	ctx := context.Background()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	deviceID := uuid.New()
 
 	// Initial device setup
 	device := &models.Device{
 		ID:         deviceID,
-		OrgID:      orgID,
+		TenantID:      tenantID,
 		DeviceIMEI: ptr("telemetry-test-imei"),
 		Status:     ptr("ACTIVE"),
 	}
@@ -37,7 +37,7 @@ func TestTelemetry_Ingestion(t *testing.T) {
 			Timestamp:      ptr(now),
 		}
 
-		err := telemetryService.IngestTelemetry(ctx, deviceID, orgID, telemetry)
+		err := telemetryService.IngestTelemetry(ctx, deviceID, tenantID, telemetry)
 		assert.NoError(t, err)
 
 		// Verify telemetry record
@@ -47,7 +47,7 @@ func TestTelemetry_Ingestion(t *testing.T) {
 		assert.Equal(t, 12.9716, *tels[0].GPSLat)
 
 		// Verify device last_seen_at
-		updatedDevice, err := repo.GetDevice(ctx, deviceID, orgID)
+		updatedDevice, err := repo.GetDevice(ctx, deviceID, tenantID)
 		assert.NoError(t, err)
 		assert.NotNil(t, updatedDevice.LastSeenAt)
 		assert.WithinDuration(t, now, updatedDevice.LastSeenAt.UTC(), time.Second)

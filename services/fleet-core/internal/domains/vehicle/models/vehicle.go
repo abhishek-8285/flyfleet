@@ -64,7 +64,6 @@ type Vehicle struct {
 }
 
 // Backward-compat aliases used by existing code / tests.
-func (v *Vehicle) OrgID() uuid.UUID     { return v.TenantID }
 func (v *Vehicle) LicensePlate() string { return v.RegistrationNumber }
 
 // VehicleLocation is the real-time location snapshot for a vehicle.

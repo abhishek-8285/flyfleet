@@ -24,7 +24,7 @@ export const invoicingV2Service = {
   createInvoice: async (data: CreateInvoiceRequest): Promise<Invoice> => {
     try {
       const response = await apiClient.post('/admin/invoicing', data);
-      return response.data?.invoice;
+      return response.data;
     } catch (error) {
       console.error('[invoicingV2Service] createInvoice failed:', error);
       throw error;
@@ -43,10 +43,16 @@ export const invoicingV2Service = {
 
   getInvoice: async (id: string): Promise<Invoice> => {
     const response = await apiClient.get(`/admin/invoicing/${id}`);
-    return response.data?.invoice;
+    return response.data;
   },
 
   voidInvoice: async (id: string): Promise<void> => {
     await apiClient.post(`/admin/invoicing/${id}/void`);
+  },
+  
+  downloadPDF: async (id: string): Promise<Blob> => {
+    return apiClient.get(`/admin/invoicing/${id}/pdf`, {
+      responseType: 'blob',
+    });
   }
 };

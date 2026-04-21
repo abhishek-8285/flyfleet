@@ -14,7 +14,7 @@ type MaintenanceRepository interface {
 	CreateSchedule(ctx context.Context, schedule *models.MaintenanceSchedule) error
 	GetScheduleByID(ctx context.Context, id string) (*models.MaintenanceSchedule, error)
 	GetSchedulesByVehicle(ctx context.Context, vehicleID uuid.UUID, limit int) ([]*models.MaintenanceSchedule, error)
-	GetSchedulesByOrg(ctx context.Context, orgID uuid.UUID, filters *ScheduleFilters) ([]*models.MaintenanceSchedule, error)
+	GetSchedulesByOrg(ctx context.Context, tenantID uuid.UUID, filters *ScheduleFilters) ([]*models.MaintenanceSchedule, error)
 	UpdateSchedule(ctx context.Context, id string, updates map[string]interface{}) error
 	DeleteSchedule(ctx context.Context, id string) error
 
@@ -26,10 +26,10 @@ type MaintenanceRepository interface {
 
 	// Query operations
 	GetMaintenanceHistory(ctx context.Context, vehicleID uuid.UUID, limit int) ([]*models.MaintenanceLog, error)
-	GetOverdueSchedules(ctx context.Context, orgID uuid.UUID) ([]*models.MaintenanceSchedule, error)
-	GetUpcomingSchedules(ctx context.Context, orgID uuid.UUID, days int) ([]*models.MaintenanceSchedule, error)
+	GetOverdueSchedules(ctx context.Context, tenantID uuid.UUID) ([]*models.MaintenanceSchedule, error)
+	GetUpcomingSchedules(ctx context.Context, tenantID uuid.UUID, days int) ([]*models.MaintenanceSchedule, error)
 	GetDueByOdometer(ctx context.Context, vehicleID uuid.UUID, currentOdometer int) ([]*models.MaintenanceSchedule, error)
-	GetMaintenanceSummary(ctx context.Context, orgID uuid.UUID, fromDate, toDate time.Time) (*models.MaintenanceSummary, error)
+	GetMaintenanceSummary(ctx context.Context, tenantID uuid.UUID, fromDate, toDate time.Time) (*models.MaintenanceSummary, error)
 }
 
 // ScheduleFilters represents filters for querying schedules

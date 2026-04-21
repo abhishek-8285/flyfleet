@@ -19,7 +19,7 @@ type Flag struct {
 var (
 	FlagGRPCTelemetry  = Flag{Name: "grpc_telemetry", DefaultValue: true, Description: "Use gRPC for telemetry ingestion"}
 	FlagBatchIngestion = Flag{Name: "batch_ingestion", DefaultValue: true, Description: "Enable batch telemetry ingestion"}
-	FlagStrictTenant   = Flag{Name: "strict_tenant", DefaultValue: false, Description: "Enforce strict org_id on all routes"}
+	FlagStrictTenant   = Flag{Name: "strict_tenant", DefaultValue: false, Description: "Enforce strict tenant_id on all routes"}
 	FlagAuditLogging   = Flag{Name: "audit_logging", DefaultValue: true, Description: "Enable hash-chained audit logging"}
 	FlagPIIMasking     = Flag{Name: "pii_masking", DefaultValue: true, Description: "Mask PII in logs"}
 	FlagCanaryDeploy   = Flag{Name: "canary_deploy", DefaultValue: false, Description: "Route 10% traffic to canary"}

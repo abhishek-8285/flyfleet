@@ -7,26 +7,26 @@ import (
 	"github.com/fleet-platform/shared/pkg/middleware"
 )
 
-// GetOrgID extracts the organization ID from the context.
-func GetOrgID(ctx context.Context) (uuid.UUID, bool) {
-	orgIDStr, ok := ctx.Value(middleware.OrgIDKey).(string)
+// GetTenantID extracts the organization ID from the context.
+func GetTenantID(ctx context.Context) (uuid.UUID, bool) {
+	tenantIDStr, ok := ctx.Value(middleware.TenantIDKey).(string)
 	if !ok {
 		return uuid.Nil, false
 	}
 
-	orgID, err := uuid.Parse(orgIDStr)
+	tenantID, err := uuid.Parse(tenantIDStr)
 	if err != nil {
 		return uuid.Nil, false
 	}
 
-	return orgID, true
+	return tenantID, true
 }
 
-// MustGetOrgID extracts the organization ID from the context or panics.
-func MustGetOrgID(ctx context.Context) uuid.UUID {
-	orgID, ok := GetOrgID(ctx)
+// MustGetTenantID extracts the organization ID from the context or panics.
+func MustGetTenantID(ctx context.Context) uuid.UUID {
+	tenantID, ok := GetTenantID(ctx)
 	if !ok {
-		panic("org_id missing from context")
+		panic("tenant_id missing from context")
 	}
-	return orgID
+	return tenantID
 }

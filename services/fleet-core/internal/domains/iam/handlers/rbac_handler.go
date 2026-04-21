@@ -28,9 +28,9 @@ func NewRBACHandler(rbacSvc rbacService, log *zap.Logger) *RBACHandler {
 // ListRoles returns all roles for the current organization.
 // GET /api/v1/admin/rbac/roles
 func (h *RBACHandler) ListRoles(w http.ResponseWriter, r *http.Request) {
-	orgID := GetOrgUUID(r)
+	tenantID := GetOrgUUID(r)
 
-	roles, err := h.rbacSvc.ListRoles(r.Context(), orgID)
+	roles, err := h.rbacSvc.ListRoles(r.Context(), tenantID)
 	if err != nil {
 		h.log.Error("failed to list roles", zap.Error(err))
 		h.writeError(w, http.StatusInternalServerError, "internal_error", "Failed to list roles", r)
@@ -58,14 +58,14 @@ func (h *RBACHandler) CreateRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := GetOrgUUID(r)
+	tenantID := GetOrgUUID(r)
 	createdBy := GetUserIDUUID(r)
 
 	// Parse permissions from query string or body
 	// For simplicity, read from query param
 	permStrs := r.URL.Query()["permissions"]
 
-	role, err := h.rbacSvc.CreateRole(r.Context(), orgID, req.Name, req.Description, permStrs, createdBy)
+	role, err := h.rbacSvc.CreateRole(r.Context(), tenantID, req.Name, req.Description, permStrs, createdBy)
 	if err != nil {
 		h.log.Error("failed to create role", zap.Error(err))
 		h.writeError(w, http.StatusInternalServerError, "internal_error", "Failed to create role", r)
@@ -91,8 +91,8 @@ func (h *RBACHandler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := GetOrgUUID(r)
-	if err := h.rbacSvc.UpdateRole(r.Context(), roleID, orgID, req.Name, req.Description); err != nil {
+	tenantID := GetOrgUUID(r)
+	if err := h.rbacSvc.UpdateRole(r.Context(), roleID, tenantID, req.Name, req.Description); err != nil {
 		switch {
 		case errors.Is(err, service.ErrRoleNotFound):
 			h.writeError(w, http.StatusNotFound, "role_not_found", "Role not found", r)
@@ -130,9 +130,9 @@ func (h *RBACHandler) CloneRole(w http.ResponseWriter, r *http.Request) {
 	}
 
 	createdBy := GetUserIDUUID(r)
-	orgID := GetOrgUUID(r)
+	tenantID := GetOrgUUID(r)
 
-	role, err := h.rbacSvc.CloneRole(r.Context(), sourceID, orgID, req.Name, req.Description, createdBy)
+	role, err := h.rbacSvc.CloneRole(r.Context(), sourceID, tenantID, req.Name, req.Description, createdBy)
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrRoleNotFound):
@@ -157,8 +157,8 @@ func (h *RBACHandler) DeleteRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := GetOrgUUID(r)
-	if err := h.rbacSvc.DeleteRole(r.Context(), roleID, orgID); err != nil {
+	tenantID := GetOrgUUID(r)
+	if err := h.rbacSvc.DeleteRole(r.Context(), roleID, tenantID); err != nil {
 		switch {
 		case errors.Is(err, service.ErrRoleNotFound):
 			h.writeError(w, http.StatusNotFound, "role_not_found", "Role not found", r)
@@ -177,9 +177,9 @@ func (h *RBACHandler) DeleteRole(w http.ResponseWriter, r *http.Request) {
 // GetPermissionMatrix returns the full permission matrix for all roles.
 // GET /api/v1/admin/rbac/matrix
 func (h *RBACHandler) GetPermissionMatrix(w http.ResponseWriter, r *http.Request) {
-	orgID := GetOrgUUID(r)
+	tenantID := GetOrgUUID(r)
 
-	matrix, err := h.rbacSvc.GetPermissionMatrix(r.Context(), orgID)
+	matrix, err := h.rbacSvc.GetPermissionMatrix(r.Context(), tenantID)
 	if err != nil {
 		h.log.Error("failed to get permission matrix", zap.Error(err))
 		h.writeError(w, http.StatusInternalServerError, "internal_error", "Failed to get permission matrix", r)
@@ -209,8 +209,8 @@ func (h *RBACHandler) UpdateRolePermissions(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	orgID := GetOrgUUID(r)
-	if err := h.rbacSvc.UpdateRolePermissions(r.Context(), roleID, orgID, req.Permissions); err != nil {
+	tenantID := GetOrgUUID(r)
+	if err := h.rbacSvc.UpdateRolePermissions(r.Context(), roleID, tenantID, req.Permissions); err != nil {
 		switch {
 		case errors.Is(err, service.ErrRoleNotFound):
 			h.writeError(w, http.StatusNotFound, "role_not_found", "Role not found", r)
@@ -243,7 +243,7 @@ func (h *RBACHandler) AssignRole(w http.ResponseWriter, r *http.Request) {
 
 	assignedBy := GetUserIDUUID(r)
 
-	if err := h.rbacSvc.AssignRole(r.Context(), req.UserID, req.RoleID, req.OrgID, assignedBy); err != nil {
+	if err := h.rbacSvc.AssignRole(r.Context(), req.UserID, req.RoleID, req.TenantID, assignedBy); err != nil {
 		switch {
 		case errors.Is(err, service.ErrRoleNotFound):
 			h.writeError(w, http.StatusNotFound, "role_not_found", "Role not found", r)
@@ -263,7 +263,7 @@ func (h *RBACHandler) BulkAssignRole(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		UserIDs []uuid.UUID `json:"user_ids"`
 		RoleIDs []uuid.UUID `json:"role_ids"`
-		OrgID   uuid.UUID   `json:"tenant_id"`
+		TenantID   uuid.UUID   `json:"tenant_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.writeError(w, http.StatusBadRequest, "invalid_request", "Request body must be valid JSON", r)
@@ -277,7 +277,7 @@ func (h *RBACHandler) BulkAssignRole(w http.ResponseWriter, r *http.Request) {
 
 	assignedBy := GetUserIDUUID(r)
 
-	result := h.rbacSvc.BulkAssignRoles(r.Context(), req.UserIDs, req.RoleIDs, req.OrgID, assignedBy)
+	result := h.rbacSvc.BulkAssignRoles(r.Context(), req.UserIDs, req.RoleIDs, req.TenantID, assignedBy)
 
 	h.writeJSON(w, http.StatusOK, result)
 }
@@ -297,7 +297,7 @@ func (h *RBACHandler) UnassignRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.rbacSvc.UnassignRole(r.Context(), req.UserID, req.RoleID, req.OrgID); err != nil {
+	if err := h.rbacSvc.UnassignRole(r.Context(), req.UserID, req.RoleID, req.TenantID); err != nil {
 		h.log.Error("failed to unassign role", zap.Error(err))
 		h.writeError(w, http.StatusInternalServerError, "internal_error", "Failed to unassign role", r)
 		return
@@ -316,9 +316,9 @@ func (h *RBACHandler) GetUserRoles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := GetOrgUUID(r)
+	tenantID := GetOrgUUID(r)
 
-	roles, err := h.rbacSvc.GetUserRoles(r.Context(), userID, orgID)
+	roles, err := h.rbacSvc.GetUserRoles(r.Context(), userID, tenantID)
 	if err != nil {
 		h.log.Error("failed to get user roles", zap.Error(err), zap.String("user_id", idStr))
 		h.writeError(w, http.StatusInternalServerError, "internal_error", "Failed to get user roles", r)
@@ -342,9 +342,9 @@ func (h *RBACHandler) GetUserPermissions(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	orgID := GetOrgUUID(r)
+	tenantID := GetOrgUUID(r)
 
-	perms, err := h.rbacSvc.GetUserPermissions(r.Context(), userID, orgID)
+	perms, err := h.rbacSvc.GetUserPermissions(r.Context(), userID, tenantID)
 	if err != nil {
 		h.log.Error("failed to get user permissions", zap.Error(err), zap.String("user_id", idStr))
 		h.writeError(w, http.StatusInternalServerError, "internal_error", "Failed to get user permissions", r)

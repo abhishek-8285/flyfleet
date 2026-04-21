@@ -37,7 +37,7 @@ type VideoRepository interface {
 	GetRetentionPolicy(ctx context.Context, id string) (*models.VideoRetentionPolicy, error)
 	UpdateRetentionPolicy(ctx context.Context, id string, updates map[string]interface{}) error
 	DeleteRetentionPolicy(ctx context.Context, id string) error
-	ListRetentionPolicies(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.VideoRetentionPolicy, int, error)
+	ListRetentionPolicies(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.VideoRetentionPolicy, int, error)
 
 	// Video Thumbnail operations
 	CreateVideoThumbnail(ctx context.Context, thumbnail *models.VideoThumbnail) error

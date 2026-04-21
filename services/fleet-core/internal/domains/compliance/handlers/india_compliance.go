@@ -126,12 +126,11 @@ func (h IndiaComplianceHandler) RecordDutyStatus(w http.ResponseWriter, r *http.
 	}
 
 	// Authorization check
-	authUserIDStr, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
-	if !ok || authUserIDStr == "" {
+	authUserUUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	authUserUUID, _ := uuid.Parse(authUserIDStr)
 	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
 
 	dIDPtr := &dID
@@ -166,12 +165,11 @@ func (h IndiaComplianceHandler) GetCurrentDuty(w http.ResponseWriter, r *http.Re
 	}
 
 	// Authorization check
-	authUserIDStr, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
-	if !ok || authUserIDStr == "" {
+	authUserUUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	authUserUUID, _ := uuid.Parse(authUserIDStr)
 	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
 
 	if !h.checkDriverAccess(r, &dID, authUserUUID, role) {
@@ -209,12 +207,11 @@ func (h IndiaComplianceHandler) RecordBreak(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Authorization check
-	authUserIDStr, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
-	if !ok || authUserIDStr == "" {
+	authUserUUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	authUserUUID, _ := uuid.Parse(authUserIDStr)
 	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
 
 	if !h.checkDriverAccess(r, &dID, authUserUUID, role) {
@@ -254,12 +251,11 @@ func (h IndiaComplianceHandler) TriggerPanicAlert(w http.ResponseWriter, r *http
 	}
 
 	// Authorization: Panic alerts are sensitive. Only admins or the driver themselves can trigger
-	authUserIDStr, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
-	if !ok || authUserIDStr == "" {
+	authUserUUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	authUserUUID, _ := uuid.Parse(authUserIDStr)
 	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
 
 	var dID *uuid.UUID
@@ -279,7 +275,7 @@ func (h IndiaComplianceHandler) TriggerPanicAlert(w http.ResponseWriter, r *http
 		// No driver specified, requires admin access (vehicle-level alert)
 		if role != "admin" && role != "super_admin" {
 			h.logger.Warn("Access denied: non-admin attempted vehicle-level panic alert",
-				zap.String("auth_user_id", authUserIDStr),
+				zap.String("auth_user_id", authUserUUID.String()),
 				zap.String("role", role))
 			http.Error(w, "Forbidden: Vehicle-level panic alerts require admin privileges", http.StatusForbidden)
 			return
@@ -353,12 +349,11 @@ func (h IndiaComplianceHandler) CreateTripSheet(w http.ResponseWriter, r *http.R
 	}
 
 	// Authorization check
-	authUserIDStr, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
-	if !ok || authUserIDStr == "" {
+	authUserUUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	authUserUUID, _ := uuid.Parse(authUserIDStr)
 	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
 
 	if !h.checkDriverAccess(r, &dID, authUserUUID, role) {
@@ -386,12 +381,11 @@ func (h IndiaComplianceHandler) GetDriverTrips(w http.ResponseWriter, r *http.Re
 	}
 
 	// Authorization check
-	authUserIDStr, ok := r.Context().Value(ctxkeys.UserIDKey).(string)
-	if !ok || authUserIDStr == "" {
+	authUserUUID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	authUserUUID, _ := uuid.Parse(authUserIDStr)
 	role, _ := r.Context().Value(ctxkeys.RoleKey).(string)
 
 	if !h.checkDriverAccess(r, &dID, authUserUUID, role) {
@@ -420,14 +414,11 @@ func (h IndiaComplianceHandler) GetDashboard(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	orgID := uuid.Nil
-	if val, ok := r.Context().Value(ctxkeys.OrgIDKey).(uuid.UUID); ok {
-		orgID = val
-	}
+	tenantID, _ := ctxkeys.GetTenantID(r.Context())
 
-	metrics, err := h.dashService.GetDashboardMetrics(r.Context(), orgID)
+	metrics, err := h.dashService.GetDashboardMetrics(r.Context(), tenantID)
 	if err != nil {
-		h.logger.Error("GetDashboard failed", zap.Error(err), zap.String("tenant_id", orgID.String()))
+		h.logger.Error("GetDashboard failed", zap.Error(err), zap.String("tenant_id", tenantID.String()))
 		http.Error(w, "Failed to load dashboard metrics", http.StatusInternalServerError)
 		return
 	}

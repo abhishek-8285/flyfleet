@@ -2,6 +2,8 @@ package pdf
 
 import (
 	"context"
+	"time"
+
 	"github.com/flyfleet/fleet-core/internal/domains/billing/models"
 )
 
@@ -18,7 +20,7 @@ func NewEngineFactory(engineType string, chromeTimeout int) InvoiceEngine {
 	}
 	// Default to Premium (Chromium)
 	return &ChromiumEngineWrapper{
-		generator: NewPDFGenerator(60),
+		generator: NewPDFGenerator(time.Duration(chromeTimeout)*time.Second, ""),
 	}
 }
 

@@ -6,19 +6,46 @@ import (
 	"github.com/google/uuid"
 )
 
+// Status Constants
+const (
+	StatusActive    = "ACTIVE"
+	StatusSuspended = "SUSPENDED"
+	StatusPending   = "PENDING"
+	StatusBlocked   = "BLOCKED"
+)
+
 // Customer Accounts
 type Customer struct {
 	ID             uuid.UUID `json:"id" db:"id"`
-	OrganizationID uuid.UUID `json:"organization_id" db:"organization_id"`
-	CompanyName    string    `json:"company_name" db:"company_name"`
+	TenantID       uuid.UUID `json:"tenant_id" db:"tenant_id"`
+	Name           string    `json:"name" db:"name"`
 	GSTNumber      *string   `json:"gst_number" db:"gst_number"`
-	BillingAddress []byte    `json:"billing_address" db:"billing_address"`
+	BillingAddress string    `json:"billing_address" db:"billing_address"`
 	ContactEmail   *string   `json:"contact_email" db:"contact_email"`
 	ContactPhone   *string   `json:"contact_phone" db:"contact_phone"`
-	Status         string    `json:"status" db:"status"` // ACTIVE, SUSPENDED, BLOCKED
+	Status         string    `json:"status" db:"status"` // StatusActive, StatusSuspended, StatusPending, StatusBlocked
 	CreatedAt      time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at" db:"updated_at"`
 }
+
+// NormalizeStatus ensures legacy or inconsistent status values are mapped to canonical constants.
+func (c *Customer) NormalizeStatus() {
+	switch c.Status {
+	case "ACTIVE", "active":
+		c.Status = StatusActive
+	case "SUSPENDED", "suspended", "inactive", "INACTIVE":
+		c.Status = StatusSuspended
+	case "PENDING", "pending":
+		c.Status = StatusPending
+	case "BLOCKED", "blocked":
+		c.Status = StatusBlocked
+	default:
+		if c.Status == "" {
+			c.Status = StatusActive
+		}
+	}
+}
+
 
 type CustomerContact struct {
 	ID         uuid.UUID `json:"id" db:"id"`

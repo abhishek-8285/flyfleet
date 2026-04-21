@@ -10,7 +10,7 @@ import (
 type DriverAuditLog struct {
 	ID        uuid.UUID              `json:"id" db:"id"`
 	DriverID  uuid.UUID              `json:"driver_id" db:"driver_id"`
-	OrgID     uuid.UUID              `json:"tenant_id" db:"tenant_id"`
+	TenantID     uuid.UUID              `json:"tenant_id" db:"tenant_id"`
 	Action    string                 `json:"action" db:"action"` // created, updated, deleted, status_changed, vehicle_assigned, document_uploaded, etc.
 	OldValue  map[string]interface{} `json:"old_value,omitempty" db:"old_value"`
 	NewValue  map[string]interface{} `json:"new_value,omitempty" db:"new_value"`
@@ -46,7 +46,7 @@ const (
 // AuditLogFilter defines filters for audit log queries
 type AuditLogFilter struct {
 	DriverID *uuid.UUID `json:"driver_id,omitempty"`
-	OrgID    uuid.UUID  `json:"tenant_id"`
+	TenantID    uuid.UUID  `json:"tenant_id"`
 	Action   string     `json:"action,omitempty"`
 	UserID   *uuid.UUID `json:"user_id,omitempty"`
 	UserType string     `json:"user_type,omitempty"`

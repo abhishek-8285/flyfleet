@@ -55,7 +55,7 @@ func (h *EmergencyHandlers) RegisterRoutes(r chi.Router) {
 	// Administrative commands
 	r.Group(func(r chi.Router) {
 		// Require admin or super_admin role for fleet-wide administrative actions
-		r.Use(middleware.RequireRole(h.logger, "admin", "super_admin"))
+		r.Use(middleware.RequireRole(h.logger, "admin", "super_admin", "org_admin", "fleet_manager"))
 		r.Post("/fleet-halt", h.FleetHalt)
 		r.Post("/fleet-resume", h.FleetResume)
 		r.Post("/contacts", h.CreateContact)
@@ -97,8 +97,8 @@ func (h *EmergencyHandlers) Health(w http.ResponseWriter, r *http.Request) {
 
 func (h *EmergencyHandlers) Export(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	orgID := middleware.GetOrgID(ctx)
-	if orgID == uuid.Nil {
+	tenantID := middleware.GetTenantID(ctx)
+	if tenantID == uuid.Nil {
 		http.Error(w, "Unauthorized: missing organization context", http.StatusUnauthorized)
 		return
 	}
@@ -120,7 +120,7 @@ func (h *EmergencyHandlers) Export(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	incidents, err := h.service.ExportIncidents(ctx, orgID, start, end)
+	incidents, err := h.service.ExportIncidents(ctx, tenantID, start, end)
 	if err != nil {
 		h.logger.Error("Failed to export incidents", zap.Error(err))
 		http.Error(w, "Failed to export incidents", http.StatusInternalServerError)
@@ -187,13 +187,13 @@ func (h *EmergencyHandlers) TriggerAIS140SOS(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Convert to CreateSOSRequest
-	orgID := middleware.GetOrgID(r.Context())
-	if orgID == uuid.Nil {
+	tenantID := middleware.GetTenantID(r.Context())
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
 		return
 	}
-	h.logger.Info("Triggering AIS140 SOS", zap.String("tenant_id", orgID.String()))
+	h.logger.Info("Triggering AIS140 SOS", zap.String("tenant_id", tenantID.String()))
 
 	createReq := models.CreateSOSRequest{
 		DeviceID:     req.DeviceID,
@@ -202,7 +202,7 @@ func (h *EmergencyHandlers) TriggerAIS140SOS(w http.ResponseWriter, r *http.Requ
 		PanicSource:  models.SourceAIS140,
 		Latitude:     req.Lat,
 		Longitude:    req.Lng,
-		OrgID:        orgID,
+		TenantID:        tenantID,
 	}
 
 	incident, err := h.service.TriggerSOS(r.Context(), createReq)
@@ -234,8 +234,8 @@ func (h *EmergencyHandlers) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	orgID := middleware.GetOrgID(r.Context())
-	if orgID == uuid.Nil {
+	tenantID := middleware.GetTenantID(r.Context())
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
 		return
@@ -255,13 +255,13 @@ func (h *EmergencyHandlers) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *EmergencyHandlers) ListActiveIncidents(w http.ResponseWriter, r *http.Request) {
-	orgID := middleware.GetOrgID(r.Context())
-	if orgID == uuid.Nil {
+	tenantID := middleware.GetTenantID(r.Context())
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
 		return
 	}
-	incidents, err := h.service.ListActiveIncidents(r.Context(), orgID)
+	incidents, err := h.service.ListActiveIncidents(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("Failed to list incidents", zap.Error(err))
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -287,11 +287,11 @@ func (h *EmergencyHandlers) AcknowledgeIncident(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	orgID := middleware.GetOrgID(r.Context())
+	tenantID := middleware.GetTenantID(r.Context())
 	userID := middleware.GetUserID(r.Context())
-	h.logger.Info("Context info for acknowledge", zap.String("tenant_id", orgID.String()), zap.String("user_id", userID.String()))
+	h.logger.Info("Context info for acknowledge", zap.String("tenant_id", tenantID.String()), zap.String("user_id", userID.String()))
 
-	if err := h.service.AcknowledgeIncident(r.Context(), id, orgID, userID, req.Notes); err != nil {
+	if err := h.service.AcknowledgeIncident(r.Context(), id, tenantID, userID, req.Notes); err != nil {
 		h.logger.Error("Failed to acknowledge incident in service", zap.String("id", id.String()), zap.Error(err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -317,12 +317,12 @@ func (h *EmergencyHandlers) ResolveIncident(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	orgID := middleware.GetOrgID(r.Context())
+	tenantID := middleware.GetTenantID(r.Context())
 	userID := middleware.GetUserID(r.Context())
 	status := models.SOSStatus(req.Status)
-	h.logger.Info("Context info for resolve", zap.String("tenant_id", orgID.String()), zap.String("user_id", userID.String()), zap.String("status", string(status)))
+	h.logger.Info("Context info for resolve", zap.String("tenant_id", tenantID.String()), zap.String("user_id", userID.String()), zap.String("status", string(status)))
 
-	if err := h.service.ResolveIncident(r.Context(), id, orgID, userID, req.Notes, status); err != nil {
+	if err := h.service.ResolveIncident(r.Context(), id, tenantID, userID, req.Notes, status); err != nil {
 		h.logger.Error("Failed to resolve incident in service", zap.String("id", id.String()), zap.Error(err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -339,13 +339,13 @@ func (h *EmergencyHandlers) GetIncident(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	orgID := middleware.GetOrgID(r.Context())
-	if orgID == uuid.Nil {
+	tenantID := middleware.GetTenantID(r.Context())
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
 		return
 	}
-	incident, err := h.service.GetIncident(r.Context(), id, orgID)
+	incident, err := h.service.GetIncident(r.Context(), id, tenantID)
 	if err != nil {
 		h.logger.Error("Failed to get incident", zap.Error(err))
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -372,8 +372,8 @@ func (h *EmergencyHandlers) MarkAsFalseAlarm(w http.ResponseWriter, r *http.Requ
 	}
 	json.NewDecoder(r.Body).Decode(&req)
 
-	orgID := middleware.GetOrgID(r.Context())
-	if orgID == uuid.Nil {
+	tenantID := middleware.GetTenantID(r.Context())
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
 		return
@@ -384,7 +384,7 @@ func (h *EmergencyHandlers) MarkAsFalseAlarm(w http.ResponseWriter, r *http.Requ
 		http.Error(w, "Unauthorized: user context required", http.StatusUnauthorized)
 		return
 	}
-	if err := h.service.ResolveIncident(r.Context(), id, orgID, userID, req.Notes, models.StatusFalseAlarm); err != nil {
+	if err := h.service.ResolveIncident(r.Context(), id, tenantID, userID, req.Notes, models.StatusFalseAlarm); err != nil {
 		h.logger.Error("Failed to mark as false alarm", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -402,10 +402,10 @@ func (h *EmergencyHandlers) FleetHalt(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := getActorOrgID(r)
+	tenantID := getActorTenantID(r)
 	userName := "Admin" // Simplified
 
-	if err := h.service.FleetHalt(r.Context(), orgID, req.Reason, userName); err != nil {
+	if err := h.service.FleetHalt(r.Context(), tenantID, req.Reason, userName); err != nil {
 		h.logger.Error("Failed to issue fleet halt", zap.Error(err))
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
@@ -415,10 +415,10 @@ func (h *EmergencyHandlers) FleetHalt(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *EmergencyHandlers) FleetResume(w http.ResponseWriter, r *http.Request) {
-	orgID := getActorOrgID(r)
+	tenantID := getActorTenantID(r)
 	userName := "Admin"
 
-	if err := h.service.FleetResume(r.Context(), orgID, userName); err != nil {
+	if err := h.service.FleetResume(r.Context(), tenantID, userName); err != nil {
 		h.logger.Error("Failed to issue fleet resume", zap.Error(err))
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
@@ -428,8 +428,8 @@ func (h *EmergencyHandlers) FleetResume(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *EmergencyHandlers) GetSafetyDashboard(w http.ResponseWriter, r *http.Request) {
-	orgID := getActorOrgID(r)
-	data, err := h.analyticsService.GetSafetyDashboard(r.Context(), orgID)
+	tenantID := getActorTenantID(r)
+	data, err := h.analyticsService.GetSafetyDashboard(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("Failed to get safety dashboard", zap.Error(err))
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -439,9 +439,9 @@ func (h *EmergencyHandlers) GetSafetyDashboard(w http.ResponseWriter, r *http.Re
 }
 
 func (h *EmergencyHandlers) GetIncidentAnalytics(w http.ResponseWriter, r *http.Request) {
-	orgID := middleware.GetOrgID(r.Context())
+	tenantID := middleware.GetTenantID(r.Context())
 
-	analytics, err := h.analyticsService.GetIncidentAnalytics(r.Context(), orgID)
+	analytics, err := h.analyticsService.GetIncidentAnalytics(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("Failed to get incident analytics", zap.Error(err))
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -452,7 +452,7 @@ func (h *EmergencyHandlers) GetIncidentAnalytics(w http.ResponseWriter, r *http.
 }
 
 func (h *EmergencyHandlers) SearchIncidents(w http.ResponseWriter, r *http.Request) {
-	orgID := getActorOrgID(r)
+	tenantID := getActorTenantID(r)
 
 	// Parse query parameters
 	statusStr := r.URL.Query().Get("status")
@@ -493,7 +493,7 @@ func (h *EmergencyHandlers) SearchIncidents(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Search incidents
-	incidents, err := h.service.SearchIncidents(r.Context(), orgID, params)
+	incidents, err := h.service.SearchIncidents(r.Context(), tenantID, params)
 	if err != nil {
 		h.logger.Error("Failed to search incidents", zap.Error(err))
 		http.Error(w, "Failed to search incidents", http.StatusInternalServerError)
@@ -508,7 +508,7 @@ func (h *EmergencyHandlers) SearchIncidents(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *EmergencyHandlers) ExportIncidents(w http.ResponseWriter, r *http.Request) {
-	orgID := getActorOrgID(r)
+	tenantID := getActorTenantID(r)
 
 	// Parse date range
 	startDateStr := r.URL.Query().Get("start_date")
@@ -531,7 +531,7 @@ func (h *EmergencyHandlers) ExportIncidents(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Fetch incidents
-	incidents, err := h.service.ExportIncidents(r.Context(), orgID, startDate, endDate)
+	incidents, err := h.service.ExportIncidents(r.Context(), tenantID, startDate, endDate)
 	if err != nil {
 		h.logger.Error("Failed to export incidents", zap.Error(err))
 		http.Error(w, "Failed to export incidents", http.StatusInternalServerError)
@@ -549,7 +549,7 @@ func (h *EmergencyHandlers) ExportIncidents(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *EmergencyHandlers) CreateContact(w http.ResponseWriter, r *http.Request) {
-	orgID := getActorOrgID(r)
+	tenantID := getActorTenantID(r)
 
 	var contact models.EmergencyContact
 	if err := json.NewDecoder(r.Body).Decode(&contact); err != nil {
@@ -559,7 +559,7 @@ func (h *EmergencyHandlers) CreateContact(w http.ResponseWriter, r *http.Request
 	}
 
 	// Set tenant_id from context
-	contact.OrgID = orgID
+	contact.TenantID = tenantID
 
 	if err := h.service.CreateContact(r.Context(), &contact); err != nil {
 		h.logger.Error("Failed to create contact", zap.Error(err))
@@ -574,8 +574,8 @@ func (h *EmergencyHandlers) CreateContact(w http.ResponseWriter, r *http.Request
 }
 
 func (h *EmergencyHandlers) ListContacts(w http.ResponseWriter, r *http.Request) {
-	orgID := getActorOrgID(r)
-	contacts, err := h.service.GetEmergencyContacts(r.Context(), orgID)
+	tenantID := getActorTenantID(r)
+	contacts, err := h.service.GetEmergencyContacts(r.Context(), tenantID)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
@@ -583,8 +583,8 @@ func (h *EmergencyHandlers) ListContacts(w http.ResponseWriter, r *http.Request)
 	writeJSONResponse(w, http.StatusOK, map[string]interface{}{"data": contacts})
 }
 
-func getActorOrgID(r *http.Request) uuid.UUID {
-	return middleware.GetOrgID(r.Context())
+func getActorTenantID(r *http.Request) uuid.UUID {
+	return middleware.GetTenantID(r.Context())
 }
 
 func writeJSONResponse(w http.ResponseWriter, status int, data interface{}) {
@@ -616,8 +616,8 @@ func (h *EmergencyHandlers) UploadMedia(w http.ResponseWriter, r *http.Request) 
 		req.UploadedBy = &userID
 	}
 
-	orgID := middleware.GetOrgID(r.Context())
-	if err := h.service.AddMedia(r.Context(), req, orgID); err != nil {
+	tenantID := middleware.GetTenantID(r.Context())
+	if err := h.service.AddMedia(r.Context(), req, tenantID); err != nil {
 		h.logger.Error("Failed to add media to incident", zap.Error(err))
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
@@ -634,7 +634,7 @@ func (h *EmergencyHandlers) TriggerSimulatedSOS(w http.ResponseWriter, r *http.R
 	}
 
 	req.SimulationMode = true
-	req.OrgID = middleware.GetOrgID(r.Context())
+	req.TenantID = middleware.GetTenantID(r.Context())
 	incident, err := h.service.TriggerSimulatedSOS(r.Context(), req)
 	if err != nil {
 		h.logger.Error("Failed to trigger simulated SOS", zap.Error(err))
@@ -662,8 +662,8 @@ func (h *EmergencyHandlers) SubmitDriverFeedback(w http.ResponseWriter, r *http.
 		return
 	}
 
-	orgID := middleware.GetOrgID(r.Context())
-	if err := h.service.UpdateDriverFeedback(r.Context(), incidentID, orgID, req.Feedback, req.Notes); err != nil {
+	tenantID := middleware.GetTenantID(r.Context())
+	if err := h.service.UpdateDriverFeedback(r.Context(), incidentID, tenantID, req.Feedback, req.Notes); err != nil {
 		h.logger.Error("Failed to update driver feedback", zap.Error(err))
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
@@ -689,8 +689,8 @@ func (h *EmergencyHandlers) TriggerDrill(w http.ResponseWriter, r *http.Request)
 	}
 
 	// SECURITY: Require tenant_id from authenticated context ONLY (prevent spoofing)
-	orgID := middleware.GetOrgID(r.Context())
-	if orgID == uuid.Nil {
+	tenantID := middleware.GetTenantID(r.Context())
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
 		return
@@ -698,7 +698,7 @@ func (h *EmergencyHandlers) TriggerDrill(w http.ResponseWriter, r *http.Request)
 
 	// SECURITY FIX: Do NOT accept tenant_id from request body - force use of authenticated org
 	sosReq := models.CreateSOSRequest{
-		OrgID:          orgID,
+		TenantID:          tenantID,
 		VehicleID:      req.VehicleID,
 		Latitude:       req.Latitude,
 		Longitude:      req.Longitude,
@@ -714,12 +714,12 @@ func (h *EmergencyHandlers) TriggerDrill(w http.ResponseWriter, r *http.Request)
 	}
 
 	h.logger.Info("Drill simulation completed", zap.String("incident_id", incident.ID.String()),
-		zap.String("tenant_id", orgID.String()))
+		zap.String("tenant_id", tenantID.String()))
 	writeJSONResponse(w, http.StatusCreated, map[string]interface{}{
 		"status":       "drill_triggered",
 		"incident_id":  incident.ID,
 		"simulation":   true,
-		"organization": orgID.String(),
+		"organization": tenantID.String(),
 	})
 }
 
@@ -731,14 +731,14 @@ func (h *EmergencyHandlers) GetIncidentTimeline(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	orgID := middleware.GetOrgID(r.Context())
-	if orgID == uuid.Nil {
+	tenantID := middleware.GetTenantID(r.Context())
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		h.respondWithError(w, http.StatusUnauthorized, "Organization ID required")
 		return
 	}
 
-	timeline, err := h.service.GetIncidentTimeline(r.Context(), incidentID, orgID)
+	timeline, err := h.service.GetIncidentTimeline(r.Context(), incidentID, tenantID)
 	if err != nil {
 		if err == service.ErrIncidentNotFound {
 			h.respondWithError(w, http.StatusNotFound, "Incident not found")

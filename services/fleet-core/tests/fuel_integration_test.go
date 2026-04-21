@@ -47,12 +47,12 @@ func TestFuelModuleIntegrationFlow(t *testing.T) {
 		zap.NewNop(),
 	)
 
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	userID := uuid.New()
 	vehicleID := uuid.New()
 	driverID := uuid.New()
 
-	log, err := svc.CreateLog(ctx, orgID, userID, models.CreateFuelLogRequest{
+	log, err := svc.CreateLog(ctx, tenantID, userID, models.CreateFuelLogRequest{
 		VehicleID:       vehicleID,
 		DriverID:        driverID,
 		StationName:     "Shell",
@@ -66,12 +66,12 @@ func TestFuelModuleIntegrationFlow(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, models.FuelLogStatusPending, log.Status)
 
-	require.NoError(t, svc.ChangeStatus(ctx, log.ID, orgID, models.ChangeFuelLogStatusRequest{Status: models.FuelLogStatusRejected}))
+	require.NoError(t, svc.ChangeStatus(ctx, log.ID, tenantID, models.ChangeFuelLogStatusRequest{Status: models.FuelLogStatusRejected}))
 
-	_, err = svc.UpdateLog(ctx, log.ID, orgID, models.UpdateFuelLogRequest{Notes: strPtr("nope")})
+	_, err = svc.UpdateLog(ctx, log.ID, tenantID, models.UpdateFuelLogRequest{Notes: strPtr("nope")})
 	require.ErrorIs(t, err, fuelService.ErrLogImmutable)
 
-	_, err = svc.CreateLog(ctx, orgID, userID, models.CreateFuelLogRequest{
+	_, err = svc.CreateLog(ctx, tenantID, userID, models.CreateFuelLogRequest{
 		VehicleID:       uuid.New(),
 		DriverID:        driverID,
 		StationName:     "Shell",
@@ -84,7 +84,7 @@ func TestFuelModuleIntegrationFlow(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	anomalyLog, err := svc.CreateLog(ctx, orgID, userID, models.CreateFuelLogRequest{
+	anomalyLog, err := svc.CreateLog(ctx, tenantID, userID, models.CreateFuelLogRequest{
 		VehicleID:       uuid.New(),
 		DriverID:        driverID,
 		StationName:     "Shell",
@@ -98,7 +98,7 @@ func TestFuelModuleIntegrationFlow(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, anomalyLog.AnomalyFlag)
 
-	stats, err := svc.GetStats(ctx, orgID, models.FuelLogFilter{})
+	stats, err := svc.GetStats(ctx, tenantID, models.FuelLogFilter{})
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, stats.TotalCost, 0.0)
 }

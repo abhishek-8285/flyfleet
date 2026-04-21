@@ -9,7 +9,7 @@ import (
 // Geofence represents a geographic boundary for monitoring
 type Geofence struct {
 	ID            uuid.UUID              `json:"id" db:"id"`
-	OrgID         uuid.UUID              `json:"tenant_id" db:"tenant_id"`
+	TenantID         uuid.UUID              `json:"tenant_id" db:"tenant_id"`
 	Name          string                 `json:"name" db:"name"`
 	Type          string                 `json:"type" db:"type"`                               // circle, polygon, route_corridor
 	Center        *Location              `json:"center,omitempty" db:"center"`                 // For circle geofences
@@ -110,7 +110,7 @@ type GeofenceEvent struct {
 
 // GeofenceEventFilter represents the filter for geofence events
 type GeofenceEventFilter struct {
-	OrgID      uuid.UUID `json:"-" form:"-"`
+	TenantID      uuid.UUID `json:"-" form:"-"`
 	GeofenceID uuid.UUID `form:"geofence_id"`
 	VehicleID  uuid.UUID `form:"vehicle_id"`
 	EventType  string    `form:"event_type" validate:"omitempty,oneof=enter exit dwell speed"`

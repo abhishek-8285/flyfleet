@@ -37,7 +37,7 @@ func (r *WorkOrderRepository) Create(ctx context.Context, wo *models.WorkOrder) 
 	`
 	start := time.Now()
 	err := r.db.QueryRow(ctx, query,
-		wo.OrgID, wo.VehicleID, wo.Title, wo.Description,
+		wo.TenantID, wo.VehicleID, wo.Title, wo.Description,
 		wo.MaintenanceType, wo.Priority, wo.Status, wo.AssignedTo,
 		wo.ScheduledDate, wo.EstimatedCost, wo.CreatedBy,
 		wo.VendorID, wo.ApprovalStatus, wo.CostBreakdown, wo.InspectionID,
@@ -59,7 +59,7 @@ func (r *WorkOrderRepository) GetByID(ctx context.Context, id uuid.UUID) (*model
 	wo := &models.WorkOrder{}
 	start := time.Now()
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&wo.ID, &wo.OrgID, &wo.VehicleID, &wo.Title, &wo.Description,
+		&wo.ID, &wo.TenantID, &wo.VehicleID, &wo.Title, &wo.Description,
 		&wo.MaintenanceType, &wo.Priority, &wo.Status, &wo.AssignedTo,
 		&wo.ScheduledDate, &wo.CompletedDate, &wo.EstimatedCost, &wo.ActualCost,
 		&wo.CreatedBy, &wo.CreatedAt, &wo.UpdatedAt,
@@ -112,7 +112,7 @@ func (r *WorkOrderRepository) List(ctx context.Context, filter models.WorkOrderF
 	argIdx := 1
 
 	conditions = append(conditions, fmt.Sprintf("tenant_id = $%d", argIdx))
-	args = append(args, filter.OrgID)
+	args = append(args, filter.TenantID)
 	argIdx++
 
 	if filter.VehicleID != nil {
@@ -199,7 +199,7 @@ func (r *WorkOrderRepository) List(ctx context.Context, filter models.WorkOrderF
 	for rows.Next() {
 		var wo models.WorkOrder
 		if err := rows.Scan(
-			&wo.ID, &wo.OrgID, &wo.VehicleID, &wo.Title, &wo.Description,
+			&wo.ID, &wo.TenantID, &wo.VehicleID, &wo.Title, &wo.Description,
 			&wo.MaintenanceType, &wo.Priority, &wo.Status, &wo.AssignedTo,
 			&wo.ScheduledDate, &wo.CompletedDate, &wo.EstimatedCost, &wo.ActualCost,
 			&wo.CreatedBy, &wo.CreatedAt, &wo.UpdatedAt,
@@ -241,7 +241,7 @@ func (r *WorkOrderRepository) Close(ctx context.Context, id uuid.UUID, actualCos
 }
 
 // GetStats retrieves work order statistics for an organization
-func (r *WorkOrderRepository) GetStats(ctx context.Context, orgID uuid.UUID) (*models.WorkOrderStats, error) {
+func (r *WorkOrderRepository) GetStats(ctx context.Context, tenantID uuid.UUID) (*models.WorkOrderStats, error) {
 	stats := &models.WorkOrderStats{
 		ByStatus:   make(map[string]int),
 		ByPriority: make(map[string]int),
@@ -250,7 +250,7 @@ func (r *WorkOrderRepository) GetStats(ctx context.Context, orgID uuid.UUID) (*m
 	// Active work orders (not completed)
 	err := r.db.QueryRow(ctx,
 		"SELECT COUNT(*) FROM work_orders WHERE tenant_id = $1 AND status != 'COMPLETED'",
-		orgID,
+		tenantID,
 	).Scan(&stats.ActiveWorkOrders)
 	if err != nil {
 		return nil, err
@@ -259,7 +259,7 @@ func (r *WorkOrderRepository) GetStats(ctx context.Context, orgID uuid.UUID) (*m
 	// Status breakdown
 	rows, err := r.db.Query(ctx,
 		"SELECT status, COUNT(*) FROM work_orders WHERE tenant_id = $1 GROUP BY status",
-		orgID,
+		tenantID,
 	)
 	if err != nil {
 		return nil, err
@@ -277,7 +277,7 @@ func (r *WorkOrderRepository) GetStats(ctx context.Context, orgID uuid.UUID) (*m
 	// Priority breakdown
 	rows, err = r.db.Query(ctx,
 		"SELECT priority, COUNT(*) FROM work_orders WHERE tenant_id = $1 AND status != 'COMPLETED' GROUP BY priority",
-		orgID,
+		tenantID,
 	)
 	if err != nil {
 		return nil, err

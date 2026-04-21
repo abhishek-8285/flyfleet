@@ -24,7 +24,7 @@ import (
 // @Router /drivers/{id}/duty-status [post]
 func (h *DriverHandler) UpdateDutyStatus(w http.ResponseWriter, r *http.Request) {
 	driverID := chi.URLParam(r, "id")
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
 	var req models.DutyStatusLog
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -33,7 +33,7 @@ func (h *DriverHandler) UpdateDutyStatus(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := h.service.UpdateDutyStatus(r.Context(), driverID, orgID, &req); err != nil {
+	if err := h.service.UpdateDutyStatus(r.Context(), driverID, tenantID, &req); err != nil {
 		h.logger.Error("failed to update duty status", zap.Error(err))
 
 		// Map domain errors to status codes
@@ -84,10 +84,10 @@ func (h *DriverHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		req.Type = "TEXT"
 	}
 
-	// Extract orgID from context
-	orgID := h.getOrgID(r)
+	// Extract tenantID from context
+	tenantID := h.getTenantID(r)
 
-	msg, err := h.service.SendMessage(r.Context(), driverID, orgID.String(), req.Content, req.Type, req.AttachmentURL)
+	msg, err := h.service.SendMessage(r.Context(), driverID, tenantID.String(), req.Content, req.Type, req.AttachmentURL)
 	if err != nil {
 		h.logger.Error("failed to send message", zap.Error(err))
 		http.Error(w, "Failed to send message", http.StatusInternalServerError)
@@ -122,10 +122,10 @@ func (h *DriverHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
 		pageSize = 20
 	}
 
-	// Extract orgID from context
-	orgID := h.getOrgID(r)
+	// Extract tenantID from context
+	tenantID := h.getTenantID(r)
 
-	messages, err := h.service.GetMessages(r.Context(), driverID, orgID.String(), page, pageSize)
+	messages, err := h.service.GetMessages(r.Context(), driverID, tenantID.String(), page, pageSize)
 	if err != nil {
 		h.logger.Error("failed to get messages", zap.Error(err))
 		http.Error(w, "Failed to get messages", http.StatusInternalServerError)
@@ -155,10 +155,10 @@ func (h *DriverHandler) SubmitExpense(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract orgID from context
-	orgID := h.getOrgID(r)
+	// Extract tenantID from context
+	tenantID := h.getTenantID(r)
 
-	expense, err := h.service.SubmitExpense(r.Context(), driverID, orgID.String(), &req)
+	expense, err := h.service.SubmitExpense(r.Context(), driverID, tenantID.String(), &req)
 	if err != nil {
 		h.logger.Error("failed to submit expense", zap.Error(err))
 		http.Error(w, "Failed to submit expense", http.StatusInternalServerError)
@@ -181,10 +181,10 @@ func (h *DriverHandler) SubmitExpense(w http.ResponseWriter, r *http.Request) {
 func (h *DriverHandler) GetExpenses(w http.ResponseWriter, r *http.Request) {
 	driverID := chi.URLParam(r, "id")
 
-	// Extract orgID from context
-	orgID := h.getOrgID(r)
+	// Extract tenantID from context
+	tenantID := h.getTenantID(r)
 
-	expenses, err := h.service.GetExpenses(r.Context(), driverID, orgID.String())
+	expenses, err := h.service.GetExpenses(r.Context(), driverID, tenantID.String())
 	if err != nil {
 		h.logger.Error("failed to get expenses", zap.Error(err))
 		http.Error(w, "Failed to get expenses", http.StatusInternalServerError)
@@ -216,11 +216,11 @@ func (h *DriverHandler) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract orgID from context or header
-	orgID := h.getOrgID(r)
-	h.logger.Info("TriggerSOS: extracted orgID", zap.String("tenant_id", orgID.String()))
+	// Extract tenantID from context or header
+	tenantID := h.getTenantID(r)
+	h.logger.Info("TriggerSOS: extracted tenantID", zap.String("tenant_id", tenantID.String()))
 
-	if err := h.service.TriggerSOS(r.Context(), driverID, orgID.String(), &loc); err != nil {
+	if err := h.service.TriggerSOS(r.Context(), driverID, tenantID.String(), &loc); err != nil {
 		h.logger.Error("failed to trigger SOS in service", zap.Error(err))
 		http.Error(w, "Failed to trigger SOS: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -242,10 +242,10 @@ func (h *DriverHandler) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 func (h *DriverHandler) GetPerformance(w http.ResponseWriter, r *http.Request) {
 	driverID := chi.URLParam(r, "id")
 
-	// Extract orgID from context
-	orgID := h.getOrgID(r)
+	// Extract tenantID from context
+	tenantID := h.getTenantID(r)
 
-	summary, err := h.service.GetDriverPerformanceSummary(r.Context(), driverID, orgID.String())
+	summary, err := h.service.GetDriverPerformanceSummary(r.Context(), driverID, tenantID.String())
 	if err != nil {
 		h.logger.Error("failed to get driver performance summary", zap.Error(err))
 		statusCode := http.StatusInternalServerError

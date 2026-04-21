@@ -55,15 +55,15 @@ type IndiaIntegrationRepository interface {
 	GetGSTComplianceByGSTIN(ctx context.Context, gstin string) (*models.GSTCompliance, error)
 	UpdateGSTCompliance(ctx context.Context, id string, updates map[string]interface{}) error
 	DeleteGSTCompliance(ctx context.Context, id string) error
-	ListGSTCompliances(ctx context.Context, orgID uuid.UUID, status *string, limit, offset int) ([]*models.GSTCompliance, int, error)
+	ListGSTCompliances(ctx context.Context, tenantID uuid.UUID, status *string, limit, offset int) ([]*models.GSTCompliance, int, error)
 
 	// Integration Config operations
 	CreateIntegrationConfig(ctx context.Context, config *models.IntegrationConfig) error
 	GetIntegrationConfig(ctx context.Context, id string) (*models.IntegrationConfig, error)
-	GetIntegrationConfigByServiceType(ctx context.Context, orgID uuid.UUID, serviceType string) (*models.IntegrationConfig, error)
+	GetIntegrationConfigByServiceType(ctx context.Context, tenantID uuid.UUID, serviceType string) (*models.IntegrationConfig, error)
 	UpdateIntegrationConfig(ctx context.Context, id string, updates map[string]interface{}) error
 	DeleteIntegrationConfig(ctx context.Context, id string) error
-	ListIntegrationConfigs(ctx context.Context, orgID uuid.UUID, serviceType *string, active *bool, limit, offset int) ([]*models.IntegrationConfig, int, error)
+	ListIntegrationConfigs(ctx context.Context, tenantID uuid.UUID, serviceType *string, active *bool, limit, offset int) ([]*models.IntegrationConfig, int, error)
 
 	// Bulk operations
 	BulkCreateVehicleVerification(ctx context.Context, verifications []*models.VehicleVerification) error

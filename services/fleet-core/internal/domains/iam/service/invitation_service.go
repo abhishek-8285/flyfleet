@@ -56,9 +56,9 @@ func NewInvitationService(
 }
 
 // CreateInvite creates a new invitation and sends the email.
-func (s *InvitationService) CreateInvite(ctx context.Context, orgID, invitedBy uuid.UUID, email string, roleIDs []uuid.UUID, message string) (*models.Invitation, error) {
+func (s *InvitationService) CreateInvite(ctx context.Context, tenantID, invitedBy uuid.UUID, email string, roleIDs []uuid.UUID, message string) (*models.Invitation, error) {
 	// Check for existing pending invite for this email/org
-	exists, err := s.invitationRepo.ExistsForEmail(ctx, orgID, email)
+	exists, err := s.invitationRepo.ExistsForEmail(ctx, tenantID, email)
 	if err != nil {
 		return nil, err
 	}
@@ -67,13 +67,13 @@ func (s *InvitationService) CreateInvite(ctx context.Context, orgID, invitedBy u
 	}
 
 	// Get org info for email
-	org, err := s.orgRepo.GetOrgByID(ctx, orgID)
+	org, err := s.orgRepo.GetOrgByID(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
 
 	inv := &models.Invitation{
-		OrgID:     orgID,
+		TenantID:     tenantID,
 		Email:     email,
 		InvitedBy: invitedBy,
 		RoleIDs:   roleIDs,
@@ -108,7 +108,7 @@ func (s *InvitationService) CreateInvite(ctx context.Context, orgID, invitedBy u
 	s.log.Info("invite_created",
 		zap.String("invite_id", inv.ID.String()),
 		zap.String("email", email),
-		zap.String("tenant_id", orgID.String()),
+		zap.String("tenant_id", tenantID.String()),
 	)
 
 	return inv, nil
@@ -163,7 +163,7 @@ func (s *InvitationService) AcceptInvite(ctx context.Context, token, name, passw
 
 	// Assign roles
 	for _, roleID := range inv.RoleIDs {
-		if err := s.roleRepo.AssignRole(ctx, user.ID, roleID, inv.OrgID, uuid.Nil); err != nil {
+		if err := s.roleRepo.AssignRole(ctx, user.ID, roleID, inv.TenantID, uuid.Nil); err != nil {
 			s.log.Error("failed to assign role during invite acceptance",
 				zap.String("role_id", roleID.String()),
 				zap.Error(err),
@@ -192,7 +192,7 @@ func (s *InvitationService) ResendInvite(ctx context.Context, inviteID, actorID 
 
 	// We need to look up by ID — GetByToken uses token so we use a workaround.
 	// In production, add a GetByID method to the repo. For now, use ListPending.
-	invites, err := s.invitationRepo.ListPending(ctx, inv.OrgID)
+	invites, err := s.invitationRepo.ListPending(ctx, inv.TenantID)
 	if err != nil {
 		return err
 	}
@@ -214,7 +214,7 @@ func (s *InvitationService) ResendInvite(ctx context.Context, inviteID, actorID 
 	}
 
 	// Re-send email
-	org, err := s.orgRepo.GetOrgByID(ctx, found.OrgID)
+	org, err := s.orgRepo.GetOrgByID(ctx, found.TenantID)
 	orgName := ""
 	if err == nil && org != nil {
 		orgName = org.Name

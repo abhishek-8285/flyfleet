@@ -24,7 +24,7 @@ func (m *mockRepo) CreateLog(ctx context.Context, log *models.NotificationLog) e
 	return nil
 }
 
-func (m *mockRepo) GetTemplate(ctx context.Context, name string, channel models.Channel, language string, orgID uuid.UUID) (*models.Template, error) {
+func (m *mockRepo) GetTemplate(ctx context.Context, name string, channel models.Channel, language string, tenantID uuid.UUID) (*models.Template, error) {
 	return &models.Template{
 		Name:    name,
 		Channel: channel,
@@ -33,7 +33,7 @@ func (m *mockRepo) GetTemplate(ctx context.Context, name string, channel models.
 	}, nil
 }
 
-func (m *mockRepo) GetUserPreferences(ctx context.Context, userID, orgID uuid.UUID) ([]models.UserPreference, error) {
+func (m *mockRepo) GetUserPreferences(ctx context.Context, userID, tenantID uuid.UUID) ([]models.UserPreference, error) {
 	return nil, nil // All enabled by default
 }
 

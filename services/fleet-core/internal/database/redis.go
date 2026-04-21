@@ -30,8 +30,8 @@ func NewRedis(ctx context.Context, url string) (*redis.Client, error) {
 
 // RedisChannelForOrg returns the Redis pub/sub channel name for
 // telemetry updates belonging to the given organization.
-func RedisChannelForOrg(orgID string) string {
-	return fmt.Sprintf("org:%s:telemetry", orgID)
+func RedisChannelForOrg(tenantID string) string {
+	return fmt.Sprintf("org:%s:telemetry", tenantID)
 }
 
 // LiveLocationKey returns the Redis key for a vehicle's cached position.

@@ -25,7 +25,7 @@ const (
 type Report struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	OrgId         string                 `protobuf:"bytes,2,opt,name=org_id,json=orgId,proto3" json:"org_id,omitempty"`
+	TenantId      string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
 	Format        string                 `protobuf:"bytes,4,opt,name=format,proto3" json:"format,omitempty"`
 	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
@@ -73,9 +73,9 @@ func (x *Report) GetId() string {
 	return ""
 }
 
-func (x *Report) GetOrgId() string {
+func (x *Report) GetTenantId() string {
 	if x != nil {
-		return x.OrgId
+		return x.TenantId
 	}
 	return ""
 }
@@ -316,7 +316,7 @@ func (x *GetReportResponse) GetReport() *Report {
 
 type ListReportsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	OrgId         string                 `protobuf:"bytes,1,opt,name=org_id,json=orgId,proto3" json:"org_id,omitempty"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
 	Offset        int32                  `protobuf:"varint,3,opt,name=offset,proto3" json:"offset,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -353,9 +353,9 @@ func (*ListReportsRequest) Descriptor() ([]byte, []int) {
 	return file_proto_reports_v1_reports_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *ListReportsRequest) GetOrgId() string {
+func (x *ListReportsRequest) GetTenantId() string {
 	if x != nil {
-		return x.OrgId
+		return x.TenantId
 	}
 	return ""
 }

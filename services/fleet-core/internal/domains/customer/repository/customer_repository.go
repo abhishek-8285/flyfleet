@@ -23,7 +23,9 @@ type CustomerV2Repository interface {
 	GetDashboardMetrics(ctx context.Context, customerID uuid.UUID) (map[string]interface{}, error)
 	GetAnalytics(ctx context.Context, customerID uuid.UUID) (map[string]interface{}, error)
 	SearchShipments(ctx context.Context, customerID uuid.UUID, filters map[string]interface{}) ([]models.Shipment, error)
-	ListCustomers(ctx context.Context, orgID uuid.UUID) ([]models.Customer, error)
+	ListCustomers(ctx context.Context, tenantID uuid.UUID, filters map[string]interface{}, limit, offset int) ([]models.Customer, error)
+	CountCustomers(ctx context.Context, tenantID uuid.UUID, filters map[string]interface{}) (int, error)
+	UpdateCustomer(ctx context.Context, c *models.Customer) error
 }
 
 type customerV2Repository struct {
@@ -38,8 +40,8 @@ func NewCustomerV2Repository(db *pgxpool.Pool) CustomerV2Repository {
 
 func (r *customerV2Repository) CreateCustomer(ctx context.Context, c *models.Customer) error {
 	query := `
-		INSERT INTO customer_v2_customers (
-			id, organization_id, company_name, gst_number, billing_address, 
+		INSERT INTO customers (
+			id, tenant_id, name, gst_number, billing_address, 
 			contact_email, contact_phone, status, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING id, created_at, updated_at`
@@ -48,20 +50,31 @@ func (r *customerV2Repository) CreateCustomer(ctx context.Context, c *models.Cus
 	now := time.Now()
 
 	var billingAddrJSON []byte
-	var err error
-	if len(c.BillingAddress) > 0 {
-		billingAddrJSON = c.BillingAddress
+	if c.BillingAddress != "" {
+		// If it doesn't look like JSON, wrap it in quotes to make it a valid JSON string
+		addr := c.BillingAddress
+		if !((len(addr) > 0 && addr[0] == '{') || (len(addr) > 0 && addr[0] == '[')) {
+			// It's a plain string, JSON-quote it
+			b, err := json.Marshal(addr)
+			if err == nil {
+				billingAddrJSON = b
+			} else {
+				billingAddrJSON = []byte(addr)
+			}
+		} else {
+			billingAddrJSON = []byte(addr)
+		}
 	} else {
 		billingAddrJSON = []byte("{}")
 	}
 
-	err = r.db.QueryRow(ctx, query,
-		id, c.OrganizationID, c.CompanyName, c.GSTNumber, billingAddrJSON,
+	err := r.db.QueryRow(ctx, query,
+		id, c.TenantID, c.Name, c.GSTNumber, billingAddrJSON,
 		c.ContactEmail, c.ContactPhone, c.Status, now, now,
 	).Scan(&c.ID, &c.CreatedAt, &c.UpdatedAt)
 
 	if err != nil {
-		return fmt.Errorf("failed to create customer_v2 customer: %w", err)
+		return fmt.Errorf("failed to create customer: %w", err)
 	}
 
 	return nil
@@ -69,13 +82,14 @@ func (r *customerV2Repository) CreateCustomer(ctx context.Context, c *models.Cus
 
 func (r customerV2Repository) GetCustomerByID(ctx context.Context, id uuid.UUID) (*models.Customer, error) {
 	query := `
-		SELECT id, organization_id, company_name, gst_number, billing_address,
+		SELECT id, tenant_id, name, gst_number, billing_address,
 			   contact_email, contact_phone, status, created_at, updated_at
-		FROM customer_v2_customers WHERE id = $1`
+		FROM customers WHERE id = $1`
 
 	var c models.Customer
+	var billingAddrJSON []byte
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&c.ID, &c.OrganizationID, &c.CompanyName, &c.GSTNumber, &c.BillingAddress,
+		&c.ID, &c.TenantID, &c.Name, &c.GSTNumber, &billingAddrJSON,
 		&c.ContactEmail, &c.ContactPhone, &c.Status, &c.CreatedAt, &c.UpdatedAt,
 	)
 	if err != nil {
@@ -85,18 +99,49 @@ func (r customerV2Repository) GetCustomerByID(ctx context.Context, id uuid.UUID)
 		return nil, fmt.Errorf("failed to get customer by ID: %w", err)
 	}
 
+	// Handle JSON decoding for address
+	if len(billingAddrJSON) > 0 {
+		if billingAddrJSON[0] == '"' {
+			var s string
+			if err := json.Unmarshal(billingAddrJSON, &s); err == nil {
+				c.BillingAddress = s
+			} else {
+				c.BillingAddress = string(billingAddrJSON)
+			}
+		} else {
+			c.BillingAddress = string(billingAddrJSON)
+		}
+	}
+
 	return &c, nil
 }
 
-func (r *customerV2Repository) ListCustomers(ctx context.Context, orgID uuid.UUID) ([]models.Customer, error) {
+func (r *customerV2Repository) ListCustomers(ctx context.Context, tenantID uuid.UUID, filters map[string]interface{}, limit, offset int) ([]models.Customer, error) {
 	query := `
-		SELECT id, organization_id, company_name, gst_number, billing_address,
+		SELECT id, tenant_id, name, gst_number, billing_address,
 			   contact_email, contact_phone, status, created_at, updated_at
-		FROM customer_v2_customers 
-		WHERE organization_id = $1 AND status = 'ACTIVE'
-		ORDER BY company_name ASC`
+		FROM customers 
+		WHERE tenant_id = $1`
 
-	rows, err := r.db.Query(ctx, query, orgID)
+	args := []interface{}{tenantID}
+	argIdx := 2
+
+	if name, ok := filters["name"].(string); ok && name != "" {
+		query += fmt.Sprintf(" AND name ILIKE $%d", argIdx)
+		args = append(args, "%"+name+"%")
+		argIdx++
+	}
+
+	if status, ok := filters["status"].(string); ok && status != "" {
+		query += fmt.Sprintf(" AND status = $%d", argIdx)
+		args = append(args, status)
+		argIdx++
+	}
+
+	query += fmt.Sprintf(" ORDER BY name ASC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
+	args = append(args, limit, offset)
+
+	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list customers: %w", err)
 	}
@@ -105,17 +150,100 @@ func (r *customerV2Repository) ListCustomers(ctx context.Context, orgID uuid.UUI
 	var customers []models.Customer
 	for rows.Next() {
 		var c models.Customer
+		var billingAddrJSON []byte
 		err := rows.Scan(
-			&c.ID, &c.OrganizationID, &c.CompanyName, &c.GSTNumber, &c.BillingAddress,
+			&c.ID, &c.TenantID, &c.Name, &c.GSTNumber, &billingAddrJSON,
 			&c.ContactEmail, &c.ContactPhone, &c.Status, &c.CreatedAt, &c.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan customer: %w", err)
 		}
+
+		// Handle JSON decoding for address
+		if len(billingAddrJSON) > 0 {
+			if billingAddrJSON[0] == '"' {
+				var s string
+				if err := json.Unmarshal(billingAddrJSON, &s); err == nil {
+					c.BillingAddress = s
+				} else {
+					c.BillingAddress = string(billingAddrJSON)
+				}
+			} else {
+				c.BillingAddress = string(billingAddrJSON)
+			}
+		}
+
+		c.NormalizeStatus()
 		customers = append(customers, c)
 	}
 
 	return customers, nil
+}
+
+func (r *customerV2Repository) CountCustomers(ctx context.Context, tenantID uuid.UUID, filters map[string]interface{}) (int, error) {
+	query := `SELECT COUNT(*) FROM customers WHERE tenant_id = $1`
+	args := []interface{}{tenantID}
+	argIdx := 2
+
+	if name, ok := filters["name"].(string); ok && name != "" {
+		query += fmt.Sprintf(" AND name ILIKE $%d", argIdx)
+		args = append(args, "%"+name+"%")
+		argIdx++
+	}
+
+	if status, ok := filters["status"].(string); ok && status != "" {
+		query += fmt.Sprintf(" AND status = $%d", argIdx)
+		args = append(args, status)
+		argIdx++
+	}
+
+	var count int
+	err := r.db.QueryRow(ctx, query, args...).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count customers: %w", err)
+	}
+	return count, nil
+}
+
+func (r *customerV2Repository) UpdateCustomer(ctx context.Context, c *models.Customer) error {
+	query := `
+		UPDATE customers SET 
+			name = $1, gst_number = $2, billing_address = $3, 
+			contact_email = $4, contact_phone = $5, status = $6, updated_at = $7
+		WHERE id = $8 AND tenant_id = $9`
+
+	now := time.Now()
+	var billingAddrJSON []byte
+	if c.BillingAddress != "" {
+		addr := c.BillingAddress
+		if !((len(addr) > 0 && addr[0] == '{') || (len(addr) > 0 && addr[0] == '[')) {
+			b, err := json.Marshal(addr)
+			if err == nil {
+				billingAddrJSON = b
+			} else {
+				billingAddrJSON = []byte(addr)
+			}
+		} else {
+			billingAddrJSON = []byte(addr)
+		}
+	} else {
+		billingAddrJSON = []byte("{}")
+	}
+
+	cmd, err := r.db.Exec(ctx, query,
+		c.Name, c.GSTNumber, billingAddrJSON,
+		c.ContactEmail, c.ContactPhone, c.Status, now,
+		c.ID, c.TenantID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update customer: %w", err)
+	}
+
+	if cmd.RowsAffected() == 0 {
+		return fmt.Errorf("customer not found or access denied")
+	}
+
+	return nil
 }
 
 // -- Booking Request Methods --
@@ -274,31 +402,67 @@ func (r customerV2Repository) GetShipmentTracking(ctx context.Context, id uuid.U
 // -- Dashboard & Analytics Methods --
 
 func (r customerV2Repository) GetDashboardMetrics(ctx context.Context, customerID uuid.UUID) (map[string]interface{}, error) {
-	// Active shipments count
-	var activeShipments int
-	err := r.db.QueryRow(ctx, "SELECT count(*) FROM customer_v2_shipments WHERE customer_id = $1 AND status NOT IN ('DELIVERED', 'CANCELLED')", customerID).Scan(&activeShipments)
+	// 1. Shipment Counts
+	var activeShipments, deliveredShipments, totalShipments int
+	
+	// Check ACTIVE shipments (not delivered/cancelled)
+	err := r.db.QueryRow(ctx, `
+		SELECT 
+			COUNT(*) FILTER (WHERE status NOT IN ('DELIVERED', 'CANCELLED')),
+			COUNT(*) FILTER (WHERE status = 'DELIVERED'),
+			COUNT(*)
+		FROM customer_v2_shipments 
+		WHERE customer_id = $1
+	`, customerID).Scan(&activeShipments, &deliveredShipments, &totalShipments)
+	
 	if err != nil {
-		return nil, err
+		// Log and default to 0 if table missing/error
+		fmt.Printf("Warning: failed to query shipments metrics: %v\n", err)
+		activeShipments = 0
+		deliveredShipments = 0
+		totalShipments = 0
 	}
 
-	// Delivered shipments count
-	var deliveredShipments int
-	err = r.db.QueryRow(ctx, "SELECT count(*) FROM customer_v2_shipments WHERE customer_id = $1 AND status = 'DELIVERED'", customerID).Scan(&deliveredShipments)
-	if err != nil {
-		return nil, err
-	}
-
-	// Pending bookings count
+	// 2. Pending bookings count
 	var pendingBookings int
 	err = r.db.QueryRow(ctx, "SELECT count(*) FROM customer_v2_booking_requests WHERE customer_id = $1 AND status = 'REQUESTED'", customerID).Scan(&pendingBookings)
 	if err != nil {
-		return nil, err
+		fmt.Printf("Warning: failed to query bookings metrics: %v\n", err)
+		pendingBookings = 0
+	}
+
+	// 3. Revenue
+	var totalRevenue float64
+	err = r.db.QueryRow(ctx, `
+		SELECT COALESCE(SUM(q.total_amount), 0)
+		FROM customer_v2_pricing_quotes q
+		JOIN customer_v2_booking_requests b ON q.booking_id = b.id
+		WHERE b.customer_id = $1
+	`, customerID).Scan(&totalRevenue)
+	if err != nil {
+		fmt.Printf("Warning: failed to query revenue metrics: %v\n", err)
+		totalRevenue = 0
+	}
+
+	// 4. Unpaid Invoices (using credit usage as proxy)
+	var unpaidInvoices float64
+	err = r.db.QueryRow(ctx, `
+		SELECT COALESCE(credit_limit - available_credit, 0)
+		FROM customer_v2_customer_credit_limits
+		WHERE customer_id = $1
+	`, customerID).Scan(&unpaidInvoices)
+	if err != nil {
+		fmt.Printf("Warning: failed to query invoice metrics: %v\n", err)
+		unpaidInvoices = 0
 	}
 
 	return map[string]interface{}{
 		"active_shipments":    activeShipments,
 		"delivered_shipments": deliveredShipments,
+		"total_shipments":     totalShipments,
 		"pending_bookings":    pendingBookings,
+		"total_revenue":       totalRevenue,
+		"unpaid_invoices":     unpaidInvoices, 
 	}, nil
 }
 

@@ -18,7 +18,7 @@ type mockDispatchDB struct {
 
 type mockDispatchAction struct {
 	ID         uuid.UUID
-	OrgID      uuid.UUID
+	TenantID      uuid.UUID
 	ActionType string
 	ShipmentID uuid.UUID
 	TripID     string
@@ -41,7 +41,7 @@ func (m *mockDispatchDB) ExecuteAssignment(ctx context.Context, tx *AssignmentTx
 	// 2. Insert dispatch action
 	action := mockDispatchAction{
 		ID:         uuid.New(),
-		OrgID:      tx.OrgID,
+		TenantID:      tx.TenantID,
 		ActionType: "manual_assign",
 		ShipmentID: tx.ShipmentID,
 		TripID:     tx.TripID,
@@ -65,7 +65,7 @@ func TestDispatchRepository_ExecuteAssignment_UpdatesShipment(t *testing.T) {
 	}
 
 	shipmentID := uuid.New()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	tripID := uuid.New().String()
 	vehicleID := uuid.New()
 	driverID := uuid.New()
@@ -75,7 +75,7 @@ func TestDispatchRepository_ExecuteAssignment_UpdatesShipment(t *testing.T) {
 		TripID:     tripID,
 		VehicleID:  vehicleID,
 		DriverID:   driverID,
-		OrgID:      orgID,
+		TenantID:      tenantID,
 	})
 
 	require.NoError(t, err)
@@ -94,7 +94,7 @@ func TestDispatchRepository_ExecuteAssignment_InsertsAuditRecord(t *testing.T) {
 	}
 
 	shipmentID := uuid.New()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	tripID := uuid.New().String()
 	vehicleID := uuid.New()
 	driverID := uuid.New()
@@ -104,7 +104,7 @@ func TestDispatchRepository_ExecuteAssignment_InsertsAuditRecord(t *testing.T) {
 		TripID:     tripID,
 		VehicleID:  vehicleID,
 		DriverID:   driverID,
-		OrgID:      orgID,
+		TenantID:      tenantID,
 	})
 
 	require.NoError(t, err)
@@ -112,7 +112,7 @@ func TestDispatchRepository_ExecuteAssignment_InsertsAuditRecord(t *testing.T) {
 	// Verify audit record
 	require.Len(t, db.actions, 1, "One dispatch action must be recorded")
 	action := db.actions[0]
-	assert.Equal(t, orgID, action.OrgID)
+	assert.Equal(t, tenantID, action.TenantID)
 	assert.Equal(t, "manual_assign", action.ActionType)
 	assert.Equal(t, shipmentID, action.ShipmentID)
 	assert.Equal(t, tripID, action.TripID)
@@ -126,7 +126,7 @@ func TestDispatchRepository_AuditRecordIsImmutable(t *testing.T) {
 	}
 
 	shipmentID := uuid.New()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	tripID := uuid.New().String()
 
 	_, _ = db.ExecuteAssignment(context.Background(), &AssignmentTx{
@@ -134,7 +134,7 @@ func TestDispatchRepository_AuditRecordIsImmutable(t *testing.T) {
 		TripID:     tripID,
 		VehicleID:  uuid.New(),
 		DriverID:   uuid.New(),
-		OrgID:      orgID,
+		TenantID:      tenantID,
 	})
 
 	// Audit record must not be modifiable after insert
@@ -158,7 +158,7 @@ func TestDispatchRepository_MultipleAssignmentsCreateSeparateRecords(t *testing.
 		TripID:     uuid.New().String(),
 		VehicleID:  uuid.New(),
 		DriverID:   uuid.New(),
-		OrgID:      uuid.New(),
+		TenantID:      uuid.New(),
 	})
 
 	// Second assignment
@@ -167,7 +167,7 @@ func TestDispatchRepository_MultipleAssignmentsCreateSeparateRecords(t *testing.
 		TripID:     uuid.New().String(),
 		VehicleID:  uuid.New(),
 		DriverID:   uuid.New(),
-		OrgID:      uuid.New(),
+		TenantID:      uuid.New(),
 	})
 
 	assert.Len(t, db.actions, 2, "Two separate audit records must exist")
@@ -211,7 +211,7 @@ type AssignmentTx struct {
 	TripID     string
 	VehicleID  uuid.UUID
 	DriverID   uuid.UUID
-	OrgID      uuid.UUID
+	TenantID      uuid.UUID
 }
 
 type AssignmentResult struct {

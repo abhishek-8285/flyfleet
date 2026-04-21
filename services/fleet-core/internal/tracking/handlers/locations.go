@@ -29,10 +29,10 @@ func (h *LocationsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// FIX: GetOrgID takes context.Context, returns google/uuid — convert to gofrs
-	middlewareOrgID := middleware.GetOrgID(r.Context())
-	orgID, _ := uuid.FromString(middlewareOrgID.String())
-	if orgID == uuid.Nil {
+	// FIX: GetTenantID takes context.Context, returns google/uuid — convert to gofrs
+	middlewareTenantID := middleware.GetTenantID(r.Context())
+	tenantID, _ := uuid.FromString(middlewareTenantID.String())
+	if tenantID == uuid.Nil {
 		http.Error(w, `{"error":"missing organization context"}`, http.StatusUnauthorized)
 		return
 	}
@@ -51,9 +51,9 @@ func (h *LocationsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var locations []models.VehicleLocationResponse
 	var err error
 	if statusFilter != "" || driverID != uuid.Nil || search != "" {
-		locations, err = h.batchService.GetFilteredOrgLocations(r.Context(), orgID, statusFilter, driverID, search)
+		locations, err = h.batchService.GetFilteredOrgLocations(r.Context(), tenantID, statusFilter, driverID, search)
 	} else {
-		locations, err = h.batchService.GetAllOrgLocations(r.Context(), orgID)
+		locations, err = h.batchService.GetAllOrgLocations(r.Context(), tenantID)
 	}
 	if err != nil {
 		h.logger.Error("failed to get org locations", zap.Error(err))

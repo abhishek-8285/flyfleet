@@ -39,15 +39,15 @@ func (h *InviteHandler) CreateInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := GetOrgUUID(r)
+	tenantID := GetOrgUUID(r)
 	invitedBy := GetUserIDUUID(r)
 
-	if orgID.String() == "00000000-0000-0000-0000-000000000000" {
+	if tenantID.String() == "00000000-0000-0000-0000-000000000000" {
 		h.writeError(w, http.StatusBadRequest, "missing_org", "Organization context is required", r)
 		return
 	}
 
-	invite, err := h.inviteSvc.CreateInvite(r.Context(), orgID, invitedBy, req.Email, req.RoleIDs, req.Message)
+	invite, err := h.inviteSvc.CreateInvite(r.Context(), tenantID, invitedBy, req.Email, req.RoleIDs, req.Message)
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrDuplicateInvite):
@@ -153,7 +153,7 @@ func (h *InviteHandler) ValidateInviteToken(w http.ResponseWriter, r *http.Reque
 	// Return public-safe invite info (no token)
 	h.writeJSON(w, http.StatusOK, map[string]interface{}{
 		"email":      invite.Email,
-		"tenant_id":     invite.OrgID,
+		"tenant_id":     invite.TenantID,
 		"message":    invite.Message,
 		"expires_at": invite.ExpiresAt.Format("2006-01-02T15:04:05Z"),
 	})

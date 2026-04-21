@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/flyfleet/fleet-core/internal/domains/vehicle/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 )
 
 type BulkHandlers struct {
@@ -50,13 +50,13 @@ func (h *BulkHandlers) CreateBulkJob(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	// Organization ID from context
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found", nil)
 		return
 	}
 
-	job, err := h.service.CreateJob(r.Context(), orgID, header.Filename, file)
+	job, err := h.service.CreateJob(r.Context(), tenantID, header.Filename, file)
 	if err != nil {
 		h.logger.Error("Failed to create bulk job", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to create job", err)
@@ -68,7 +68,7 @@ func (h *BulkHandlers) CreateBulkJob(w http.ResponseWriter, r *http.Request) {
 
 // ListBulkJobs godoc
 func (h *BulkHandlers) ListBulkJobs(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
 	query := r.URL.Query()
 	status := query.Get("status")
@@ -82,7 +82,7 @@ func (h *BulkHandlers) ListBulkJobs(w http.ResponseWriter, r *http.Request) {
 		limit = 20
 	}
 
-	jobs, total, err := h.service.ListJobs(r.Context(), orgID, status, page, limit)
+	jobs, total, err := h.service.ListJobs(r.Context(), tenantID, status, page, limit)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list jobs", err)
 		return
@@ -112,13 +112,13 @@ func (h *BulkHandlers) GetBulkJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found", nil)
 		return
 	}
 
-	job, err := h.service.GetJob(r.Context(), jobID, orgID)
+	job, err := h.service.GetJob(r.Context(), jobID, tenantID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, "Job not found", err)
 		return
@@ -138,13 +138,13 @@ func (h *BulkHandlers) GetJobRecords(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found", nil)
 		return
 	}
 
-	records, err := h.service.GetJobRecords(r.Context(), jobID, orgID, status)
+	records, err := h.service.GetJobRecords(r.Context(), jobID, tenantID, status)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to fetch records", err)
 		return
@@ -167,13 +167,13 @@ func (h *BulkHandlers) RetryBulkJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found", nil)
 		return
 	}
 
-	job, err := h.service.RetryJob(r.Context(), jobID, orgID)
+	job, err := h.service.RetryJob(r.Context(), jobID, tenantID)
 	if err != nil {
 		h.logger.Error("Failed to retry bulk job", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error(), nil)
@@ -214,13 +214,9 @@ func (h *BulkHandlers) writeErrorResponse(w http.ResponseWriter, statusCode int,
 	json.NewEncoder(w).Encode(response)
 }
 
-func (h *BulkHandlers) getOrgID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
-		if orgIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(orgIDStr); err == nil {
-				return id
-			}
-		}
+func (h *BulkHandlers) getTenantID(r *http.Request) uuid.UUID {
+	if id, ok := ctxkeys.GetTenantID(r.Context()); ok {
+		return id
 	}
 	return uuid.Nil
 }

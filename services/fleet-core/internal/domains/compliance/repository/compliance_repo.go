@@ -43,7 +43,7 @@ type ComplianceRepository interface {
 	RecordFASTagReconciliation(ctx context.Context, recon *models.FASTagReconciliation) error
 
 	// Dashboard & Monitoring
-	GetDashboardMetrics(ctx context.Context, orgID uuid.UUID) (*models.ComplianceDashboardMetrics, error)
+	GetDashboardMetrics(ctx context.Context, tenantID uuid.UUID) (*models.ComplianceDashboardMetrics, error)
 	UpdateDashboardMetrics(ctx context.Context, metrics *models.ComplianceDashboardMetrics) error
 	GetOfflineDevices(ctx context.Context, threshold time.Time) ([]models.AIS140Device, error)
 	RegisterDevice(ctx context.Context, device *models.AIS140Device) error
@@ -143,7 +143,7 @@ func (r *pgComplianceRepository) RecordFASTagReconciliation(ctx context.Context,
 	return nil
 }
 
-func (r *pgComplianceRepository) GetDashboardMetrics(ctx context.Context, orgID uuid.UUID) (*models.ComplianceDashboardMetrics, error) {
+func (r *pgComplianceRepository) GetDashboardMetrics(ctx context.Context, tenantID uuid.UUID) (*models.ComplianceDashboardMetrics, error) {
 	return nil, nil
 }
 

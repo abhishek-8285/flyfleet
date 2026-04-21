@@ -21,7 +21,7 @@ func NewSettingsRepository(db *pgxpool.Pool) *SettingsRepository {
 }
 
 // Get retrieves settings for an organization
-func (r *SettingsRepository) Get(ctx context.Context, orgID uuid.UUID) (*models.MaintenanceSettings, error) {
+func (r *SettingsRepository) Get(ctx context.Context, tenantID uuid.UUID) (*models.MaintenanceSettings, error) {
 	query := `
 		SELECT tenant_id, sla_p1_hours, sla_p2_hours, sla_p3_hours,
 			   low_stock_threshold, approval_threshold,
@@ -30,8 +30,8 @@ func (r *SettingsRepository) Get(ctx context.Context, orgID uuid.UUID) (*models.
 		FROM maintenance_settings WHERE tenant_id = $1
 	`
 	settings := &models.MaintenanceSettings{}
-	err := r.db.QueryRow(ctx, query, orgID).Scan(
-		&settings.OrgID, &settings.SLAP1Hours, &settings.SLAP2Hours, &settings.SLAP3Hours,
+	err := r.db.QueryRow(ctx, query, tenantID).Scan(
+		&settings.TenantID, &settings.SLAP1Hours, &settings.SLAP2Hours, &settings.SLAP3Hours,
 		&settings.LowStockThreshold, &settings.ApprovalThreshold,
 		&settings.AutoAssignEnabled, &settings.NotificationEnabled,
 		&settings.CreatedAt, &settings.UpdatedAt,
@@ -61,21 +61,21 @@ func (r *SettingsRepository) Upsert(ctx context.Context, settings *models.Mainte
 		RETURNING created_at, updated_at
 	`
 	return r.db.QueryRow(ctx, query,
-		settings.OrgID, settings.SLAP1Hours, settings.SLAP2Hours, settings.SLAP3Hours,
+		settings.TenantID, settings.SLAP1Hours, settings.SLAP2Hours, settings.SLAP3Hours,
 		settings.LowStockThreshold, settings.ApprovalThreshold,
 		settings.AutoAssignEnabled, settings.NotificationEnabled,
 	).Scan(&settings.CreatedAt, &settings.UpdatedAt)
 }
 
 // GetOrDefault retrieves settings or returns defaults if not found
-func (r *SettingsRepository) GetOrDefault(ctx context.Context, orgID uuid.UUID) (*models.MaintenanceSettings, error) {
-	settings, err := r.Get(ctx, orgID)
+func (r *SettingsRepository) GetOrDefault(ctx context.Context, tenantID uuid.UUID) (*models.MaintenanceSettings, error) {
+	settings, err := r.Get(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
 	if settings == nil {
 		return &models.MaintenanceSettings{
-			OrgID:               orgID,
+			TenantID:               tenantID,
 			SLAP1Hours:          4,
 			SLAP2Hours:          24,
 			SLAP3Hours:          72,

@@ -91,12 +91,12 @@ func FixedRateLimit(limiter RateLimiter, limit int, window time.Duration, keyFun
 	}
 }
 
-// OrgRateLimit enforces a per-organization rate limit
-func OrgRateLimit(limiter RateLimiter, limit int, window time.Duration) func(http.Handler) http.Handler {
+// TenantRateLimit enforces a per-tenant rate limit
+func TenantRateLimit(limiter RateLimiter, limit int, window time.Duration) func(http.Handler) http.Handler {
 	return FixedRateLimit(limiter, limit, window, func(r *http.Request) string {
-		// Try to get OrgID from context (populated by TenantMiddleware)
-		if orgID, ok := r.Context().Value(OrgIDKey).(string); ok {
-			return "org:" + orgID
+		// Try to get TenantID from context (populated by TenantMiddleware)
+		if tenantID, ok := r.Context().Value(TenantIDKey).(string); ok {
+			return "tenant:" + tenantID
 		}
 		// Fallback to IP address
 		return "ip:" + r.RemoteAddr

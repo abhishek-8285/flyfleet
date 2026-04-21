@@ -109,13 +109,13 @@ func TestLocationsHandler_MissingOrg(t *testing.T) {
 }
 
 func TestLocationsHandler_EmptyOrg(t *testing.T) {
-	orgID := uuid.Must(uuid.NewV4())
+	tenantID := uuid.Must(uuid.NewV4())
 	vr := repository.NewMemVehicleRepo()
 	lc := repository.NewMemLiveCache()
 	tr := repository.NewMemTelemRepo()
 	h := makeLocationsHandler(t, vr, lc, tr)
 
-	ctx := ctxkeys.WithOrgID(context.Background(), orgID.String())
+	ctx := ctxkeys.WithTenantID(context.Background(), tenantID.String())
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/vehicles/locations", nil).WithContext(ctx)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
@@ -133,7 +133,7 @@ func TestLocationsHandler_EmptyOrg(t *testing.T) {
 }
 
 func TestLocationsHandler_WithVehicles(t *testing.T) {
-	orgID := uuid.Must(uuid.NewV4())
+	tenantID := uuid.Must(uuid.NewV4())
 	v1 := uuid.Must(uuid.NewV4())
 	v2 := uuid.Must(uuid.NewV4())
 
@@ -154,7 +154,7 @@ func TestLocationsHandler_WithVehicles(t *testing.T) {
 	tr := repository.NewMemTelemRepo()
 	h := makeLocationsHandler(t, vr, lc, tr)
 
-	ctx := ctxkeys.WithOrgID(context.Background(), orgID.String())
+	ctx := ctxkeys.WithTenantID(context.Background(), tenantID.String())
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/vehicles/locations", nil).WithContext(ctx)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
@@ -186,7 +186,7 @@ func TestLocationsHandler_WithVehicles(t *testing.T) {
 }
 
 func TestLocationsHandler_StatusFilter(t *testing.T) {
-	orgID := uuid.Must(uuid.NewV4())
+	tenantID := uuid.Must(uuid.NewV4())
 	v1 := uuid.Must(uuid.NewV4())
 	v2 := uuid.Must(uuid.NewV4())
 
@@ -207,7 +207,7 @@ func TestLocationsHandler_StatusFilter(t *testing.T) {
 	tr := repository.NewMemTelemRepo()
 	h := makeLocationsHandler(t, vr, lc, tr)
 
-	ctx := ctxkeys.WithOrgID(context.Background(), orgID.String())
+	ctx := ctxkeys.WithTenantID(context.Background(), tenantID.String())
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/vehicles/locations?status=moving", nil).WithContext(ctx)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
@@ -225,7 +225,7 @@ func TestLocationsHandler_StatusFilter(t *testing.T) {
 }
 
 func TestLocationsHandler_SearchFilter(t *testing.T) {
-	orgID := uuid.Must(uuid.NewV4())
+	tenantID := uuid.Must(uuid.NewV4())
 	v1 := uuid.Must(uuid.NewV4())
 	v2 := uuid.Must(uuid.NewV4())
 
@@ -246,7 +246,7 @@ func TestLocationsHandler_SearchFilter(t *testing.T) {
 	tr := repository.NewMemTelemRepo()
 	h := makeLocationsHandler(t, vr, lc, tr)
 
-	ctx := ctxkeys.WithOrgID(context.Background(), orgID.String())
+	ctx := ctxkeys.WithTenantID(context.Background(), tenantID.String())
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/vehicles/locations?search=DL01", nil).WithContext(ctx)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
@@ -336,11 +336,11 @@ func TestHistoryHandler_TenantIsolationViolation(t *testing.T) {
 	h := makeHistoryHandler(t, tr, lc, tc)
 
 	vehicleID := uuid.Must(uuid.NewV4())
-	orgID := uuid.Must(uuid.NewV4())
+	tenantID := uuid.Must(uuid.NewV4())
 	// Don't add membership — should fail
 	start := time.Now().Add(-time.Hour).Format(time.RFC3339)
 	end := time.Now().Format(time.RFC3339)
-	ctx := ctxkeys.WithOrgID(context.Background(), orgID.String())
+	ctx := ctxkeys.WithTenantID(context.Background(), tenantID.String())
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/vehicles/"+vehicleID.String()+"/telemetry/history?start="+start+"&end="+end, nil).WithContext(ctx)
 	req = withChiParam(req, "id", vehicleID.String())
 	w := httptest.NewRecorder()
@@ -358,8 +358,8 @@ func TestHistoryHandler_Success(t *testing.T) {
 	h := makeHistoryHandler(t, tr, lc, tc)
 
 	vehicleID := uuid.Must(uuid.NewV4())
-	orgID := uuid.Must(uuid.NewV4())
-	tc.AddMembership(orgID, vehicleID)
+	tenantID := uuid.Must(uuid.NewV4())
+	tc.AddMembership(tenantID, vehicleID)
 
 	now := time.Now().UTC()
 	tr.Write(context.Background(), &models.TelemetryEvent{
@@ -373,7 +373,7 @@ func TestHistoryHandler_Success(t *testing.T) {
 
 	start := now.Add(-time.Hour).Format(time.RFC3339)
 	end := now.Add(time.Hour).Format(time.RFC3339)
-	ctx := ctxkeys.WithOrgID(context.Background(), orgID.String())
+	ctx := ctxkeys.WithTenantID(context.Background(), tenantID.String())
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/vehicles/"+vehicleID.String()+"/telemetry/history?start="+start+"&end="+end, nil).WithContext(ctx)
 	req = withChiParam(req, "id", vehicleID.String())
 	w := httptest.NewRecorder()
@@ -460,7 +460,7 @@ func TestIngestHandler_AcceptsValidPayload(t *testing.T) {
 		"sequence_no": 100,
 		"recorded_at": "2026-04-08T10:30:00Z"
 	}`
-	ctx := ctxkeys.WithOrgID(context.Background(), "550e8400-e29b-41d4-a716-446655440000")
+	ctx := ctxkeys.WithTenantID(context.Background(), "550e8400-e29b-41d4-a716-446655440000")
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/telemetry", bytes.NewReader([]byte(payload))).WithContext(ctx)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
@@ -485,12 +485,12 @@ func TestIngestHandler_AcceptsValidPayload(t *testing.T) {
 
 func TestGeofenceHandler_GetSuccess(t *testing.T) {
 	gID := uuid.Must(uuid.NewV4())
-	orgID := uuid.Must(uuid.NewV4())
+	tenantID := uuid.Must(uuid.NewV4())
 	repo := repository.NewMemGeofenceRepo()
-	repo.AddGeofence(models.Geofence{ID: gID, OrgID: orgID, Name: "Warehouse A", Type: "circle"})
+	repo.AddGeofence(models.Geofence{ID: gID, TenantID: tenantID, Name: "Warehouse A", Type: "circle"})
 	h := NewGeofenceHandler(repo, zap.NewNop())
 
-	ctx := ctxkeys.WithOrgID(context.Background(), orgID.String())
+	ctx := ctxkeys.WithTenantID(context.Background(), tenantID.String())
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/geofences", nil).WithContext(ctx)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
@@ -508,11 +508,11 @@ func TestGeofenceHandler_GetSuccess(t *testing.T) {
 }
 
 func TestGeofenceHandler_GetEmpty(t *testing.T) {
-	orgID := uuid.Must(uuid.NewV4())
+	tenantID := uuid.Must(uuid.NewV4())
 	repo := repository.NewMemGeofenceRepo()
 	h := NewGeofenceHandler(repo, zap.NewNop())
 
-	ctx := ctxkeys.WithOrgID(context.Background(), orgID.String())
+	ctx := ctxkeys.WithTenantID(context.Background(), tenantID.String())
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/geofences", nil).WithContext(ctx)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
@@ -526,9 +526,9 @@ func TestGeofenceHandler_PostMissingName(t *testing.T) {
 	repo := repository.NewMemGeofenceRepo()
 	h := NewGeofenceHandler(repo, zap.NewNop())
 
-	orgID := uuid.Must(uuid.NewV4())
+	tenantID := uuid.Must(uuid.NewV4())
 	payload := `{"type":"circle"}`
-	ctx := ctxkeys.WithOrgID(context.Background(), orgID.String())
+	ctx := ctxkeys.WithTenantID(context.Background(), tenantID.String())
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/geofences", bytes.NewReader([]byte(payload))).WithContext(ctx)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
@@ -542,9 +542,9 @@ func TestGeofenceHandler_PostCreatesGeofence(t *testing.T) {
 	repo := repository.NewMemGeofenceRepo()
 	h := NewGeofenceHandler(repo, zap.NewNop())
 
-	orgID := uuid.Must(uuid.NewV4())
+	tenantID := uuid.Must(uuid.NewV4())
 	payload := `{"name":"Test Zone","type":"circle","center_lat":28.6139,"center_lng":77.2090,"radius_m":1000}`
-	ctx := ctxkeys.WithOrgID(context.Background(), orgID.String())
+	ctx := ctxkeys.WithTenantID(context.Background(), tenantID.String())
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/geofences", bytes.NewReader([]byte(payload))).WithContext(ctx)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)

@@ -36,13 +36,33 @@ const InvoiceForm: React.FC = () => {
     due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
       .toISOString()
       .split("T")[0],
+    template_type: "TAX_INVOICE",
     currency: "INR",
     category: "Transportation",
+    // Transporter Profile (Master)
+    bank_name: "",
+    account_no: "",
+    ifsc_code: "",
+    branch_name: "",
+    beneficiary_name: "",
+    gstin_seller: "",
+    pan_seller: "",
+    // Logistics
+    vehicle_no: "",
+    driver_name: "",
+    driver_mobile: "",
+    pickup_location: "",
+    drop_location: "",
+    eway_bill_no: "",
+    billed_distance: 0,
+    place_of_supply: "KA", // Default to Karnataka
     items: [
       {
         id: "",
         invoice_id: "",
         description: "",
+        hsn_sac: "",
+        unit: "Trip",
         quantity: 1,
         unit_price: 0,
         tax_percent: 18,
@@ -62,8 +82,7 @@ const InvoiceForm: React.FC = () => {
         if (!isEdit && data.billing_metadata) {
           setFormData((prev) => ({
             ...prev,
-            currency:
-              data.billing_metadata.currency_symbol === "₹" ? "INR" : "USD",
+            currency: "INR",
             items: [
               {
                 id: "",
@@ -103,6 +122,8 @@ const InvoiceForm: React.FC = () => {
           id: "",
           invoice_id: "",
           description: "",
+          hsn_sac: "",
+          unit: "Trip",
           quantity: 1,
           unit_price: 0,
           tax_percent: billingMeta?.default_tax_percent || 18,
@@ -153,11 +174,17 @@ const InvoiceForm: React.FC = () => {
   };
 
   const handleCustomerSelect = (customer: Customer) => {
+    let phone = customer.phone || "";
+    // Auto-prefix if it's a 10 digit number and doesn't have a prefix
+    if (phone.length === 10 && !phone.startsWith("+")) {
+      phone = `+91 ${phone.substring(0, 5)} ${phone.substring(5)}`;
+    }
+
     setFormData((prev) => ({
       ...prev,
       customer_name: customer.name,
       customer_email: customer.email || "",
-      customer_phone: customer.phone || "",
+      customer_phone: phone,
       billing_address: customer.address || "",
     }));
   };
@@ -178,11 +205,40 @@ const InvoiceForm: React.FC = () => {
         invoice_date: formData.invoice_date,
         due_date: formData.due_date,
         currency: formData.currency || "INR",
+        template_type: formData.template_type,
+        // Logistics
+        trip_id: formData.trip_id,
+        vehicle_no: formData.vehicle_no,
+        driver_name: formData.driver_name,
+        driver_mobile: formData.driver_mobile,
+        pickup_location: formData.pickup_location,
+        drop_location: formData.drop_location,
+        pickup_time: formData.pickup_time,
+        drop_time: formData.drop_time,
+        billed_distance: formData.billed_distance,
+        // Compliance
+        place_of_supply: formData.place_of_supply,
+        reverse_charge: formData.reverse_charge,
+        gstin_seller: formData.gstin_seller,
+        pan_seller: formData.pan_seller,
+        eway_bill_no: formData.eway_bill_no,
+        irn: formData.irn,
+        // Bank
+        bank_name: formData.bank_name,
+        account_no: formData.account_no,
+        ifsc_code: formData.ifsc_code,
+        branch_name: formData.branch_name,
+        beneficiary_name: formData.beneficiary_name,
+
         items: (formData.items || []).map((item) => ({
           description: item.description,
           quantity: item.quantity,
           unit_price: item.unit_price,
           tax_percent: item.tax_percent,
+          hsn_sac: item.hsn_sac,
+          unit: item.unit,
+          list_price: item.unit_price, // Assuming unit price as list price for now
+          discount_amount: 0,
         })),
         notes: formData.notes || "",
       };
@@ -215,7 +271,22 @@ const InvoiceForm: React.FC = () => {
         <h1 className="text-2xl font-bold text-white">
           {isEdit ? "Edit Invoice" : "Create New Invoice"}
         </h1>
-        <div className="w-20"></div> {/* Spacer */}
+        <div className="flex bg-gray-900 border border-white/10 p-1 rounded-xl">
+          <button
+            type="button"
+            onClick={() => setFormData(prev => ({ ...prev, template_type: "TAX_INVOICE" }))}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${formData.template_type === "TAX_INVOICE" ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-gray-500 hover:text-gray-300"}`}
+          >
+            TAX INVOICE
+          </button>
+          <button
+            type="button"
+            onClick={() => setFormData(prev => ({ ...prev, template_type: "TRIP_NOTE" }))}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${formData.template_type === "TRIP_NOTE" ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-gray-500 hover:text-gray-300"}`}
+          >
+            TRIP NOTE
+          </button>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -242,8 +313,13 @@ const InvoiceForm: React.FC = () => {
                   required
                   type="text"
                   value={formData.customer_phone}
-                  onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
-                  placeholder="e.g. +91 98765 43210"
+                  onChange={(e) => setFormData(prev => ({ ...prev, customer_phone: e.target.value }))}
+                  onBlur={(e) => {
+                    let val = e.target.value.replace(/\s/g, "");
+                    if (/^\d{10}$/.test(val)) {
+                      setFormData(prev => ({ ...prev, customer_phone: `+91 ${val.substring(0, 5)} ${val.substring(5)}` }));
+                    }
+                  }}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary transition-colors"
                 />
               </div>
@@ -255,7 +331,6 @@ const InvoiceForm: React.FC = () => {
                   type="email"
                   value={formData.customer_email}
                   onChange={(e) => setFormData({ ...formData, customer_email: e.target.value })}
-                  placeholder="customer@example.com"
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary transition-colors"
                 />
               </div>
@@ -267,8 +342,7 @@ const InvoiceForm: React.FC = () => {
               </label>
               <textarea
                 value={formData.billing_address}
-                onChange={(e) => setFormData({ ...formData, billing_address: e.target.value })}
-                placeholder="Full address for invoice"
+                onChange={(e) => setFormData(prev => ({ ...prev, billing_address: e.target.value }))}
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-primary transition-colors h-20 resize-none"
               />
             </div>
@@ -304,22 +378,152 @@ const InvoiceForm: React.FC = () => {
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary transition-colors"
               />
             </div>
+            <div className="col-span-2 space-y-2 pt-4 border-t border-white/5">
+                <label className="text-xs font-medium text-gray-500 uppercase">Currency</label>
+                <div className="text-lg font-bold text-white flex items-center gap-2">
+                   <IndianRupee className="w-5 h-5 text-primary" /> INR (Standardized)
+                </div>
+            </div>
           </div>
-          <div className="md:col-span-2 space-y-2 pt-4 border-t border-white/5">
-            <label className="text-sm font-medium text-gray-400 flex items-center gap-2">
-              <Package className="w-4 h-4" />{" "}
-              {uiStrings?.label_category || "Category"}
-            </label>
-            <select
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary transition-colors cursor-pointer"
-            >
-              <option value="Transportation" className="bg-gray-900">Transportation</option>
-              <option value="Maintenance" className="bg-gray-900">Maintenance</option>
-              <option value="Subscription" className="bg-gray-900">Software Subscription</option>
-              <option value="Miscellaneous" className="bg-gray-900 font-bold">Miscellaneous</option>
-            </select>
+        </div>
+
+        {/* Transporter & Bank Details */}
+        <div className="bg-gray-900/50 backdrop-blur-xl border border-white/10 p-6 rounded-2xl space-y-6">
+          <h3 className="text-md font-semibold text-white flex items-center gap-2 border-b border-white/5 pb-3">
+             <IndianRupee className="w-4 h-4 text-primary" /> Transporter Credentials & Bank
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-gray-500 uppercase">GSTIN (Seller)</label>
+              <input
+                type="text"
+                value={formData.gstin_seller}
+                onChange={(e) => setFormData(prev => ({ ...prev, gstin_seller: e.target.value.toUpperCase() }))}
+                placeholder="29AAAAA0000A1Z5"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary transition-colors"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-gray-500 uppercase">PAN Number</label>
+              <input
+                type="text"
+                value={formData.pan_seller}
+                onChange={(e) => setFormData(prev => ({ ...prev, pan_seller: e.target.value.toUpperCase() }))}
+                placeholder="ABCDE1234F"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary transition-colors"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-gray-500 uppercase">Place of Supply</label>
+              <select
+                 value={formData.place_of_supply}
+                 onChange={(e) => setFormData(prev => ({ ...prev, place_of_supply: e.target.value }))}
+                 className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary transition-colors"
+              >
+                <option value="KA">Karnataka (29)</option>
+                <option value="MH">Maharashtra (27)</option>
+                <option value="DL">Delhi (07)</option>
+                <option value="TN">Tamil Nadu (33)</option>
+                <option value="TS">Telangana (36)</option>
+              </select>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
+             <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-500 uppercase">Bank Name</label>
+                <input
+                  type="text"
+                  value={formData.bank_name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, bank_name: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm"
+                />
+             </div>
+             <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-500 uppercase">A/C Number</label>
+                <input
+                  type="text"
+                  value={formData.account_no}
+                  onChange={(e) => setFormData(prev => ({ ...prev, account_no: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm"
+                />
+             </div>
+             <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-500 uppercase">IFSC Code</label>
+                <input
+                  type="text"
+                  value={formData.ifsc_code}
+                  onChange={(e) => setFormData(prev => ({ ...prev, ifsc_code: e.target.value.toUpperCase() }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm"
+                />
+             </div>
+             <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-500 uppercase">Beneficiary</label>
+                <input
+                  type="text"
+                  value={formData.beneficiary_name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, beneficiary_name: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm"
+                />
+             </div>
+          </div>
+        </div>
+
+        {/* Logistics & Trip Details */}
+        <div className="bg-gray-900/50 backdrop-blur-xl border border-white/10 p-6 rounded-2xl space-y-6">
+          <h3 className="text-md font-semibold text-white flex items-center gap-2 border-b border-white/5 pb-3">
+             <MapPin className="w-4 h-4 text-primary" /> Logistics & Consignment
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+             <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-500 uppercase">Vehicle Register No.</label>
+                <input
+                  type="text"
+                  value={formData.vehicle_no}
+                  onChange={(e) => setFormData(prev => ({ ...prev, vehicle_no: e.target.value.toUpperCase() }))}
+                  placeholder="KA-01-AB-1234"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary transition-colors"
+                />
+             </div>
+             <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-500 uppercase">E-Way Bill No.</label>
+                <input
+                  type="text"
+                  value={formData.eway_bill_no}
+                  onChange={(e) => setFormData(prev => ({ ...prev, eway_bill_no: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary transition-colors"
+                />
+             </div>
+             <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-500 uppercase">Billed Distance (KM)</label>
+                <input
+                  type="number"
+                  value={formData.billed_distance}
+                  onChange={(e) => setFormData(prev => ({ ...prev, billed_distance: parseFloat(e.target.value) }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary transition-colors"
+                />
+             </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+             <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-500 uppercase">Pickup Location</label>
+                <input
+                  type="text"
+                  value={formData.pickup_location}
+                  onChange={(e) => setFormData(prev => ({ ...prev, pickup_location: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm"
+                />
+             </div>
+             <div className="space-y-2">
+                <label className="text-xs font-medium text-gray-500 uppercase">Drop Location</label>
+                <input
+                  type="text"
+                  value={formData.drop_location}
+                  onChange={(e) => setFormData(prev => ({ ...prev, drop_location: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm"
+                />
+             </div>
           </div>
         </div>
 
@@ -358,12 +562,23 @@ const InvoiceForm: React.FC = () => {
                       handleItemChange(index, "description", e.target.value)
                     }
                     className="w-full bg-black/20 border border-white/5 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-primary/50"
-                    placeholder={
-                      uiStrings?.ph_item_desc || "Describe service or product"
-                    }
+                    placeholder="e.g. Full Load Transport"
                   />
                 </div>
-                <div className="col-span-4 md:col-span-2 space-y-2">
+                <div className="col-span-12 md:col-span-2 space-y-2">
+                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    HSN/SAC
+                  </label>
+                  <input
+                    type="text"
+                    value={item.hsn_sac}
+                    onChange={(e) =>
+                      handleItemChange(index, "hsn_sac", e.target.value)
+                    }
+                    className="w-full bg-black/20 border border-white/5 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+                <div className="col-span-4 md:col-span-1 space-y-2">
                   <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Qty
                   </label>
@@ -376,15 +591,32 @@ const InvoiceForm: React.FC = () => {
                       handleItemChange(
                         index,
                         "quantity",
-                        parseInt(e.target.value) || 0,
+                        parseFloat(e.target.value) || 0,
                       )
                     }
                     className="w-full bg-black/20 border border-white/5 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-primary/50"
                   />
                 </div>
+                <div className="col-span-4 md:col-span-1 space-y-2">
+                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Unit
+                  </label>
+                   <select
+                    value={item.unit}
+                    onChange={(e) =>
+                      handleItemChange(index, "unit", e.target.value)
+                    }
+                    className="w-full bg-black/20 border border-white/5 rounded-lg px-2 py-1.5 text-white text-sm focus:outline-none focus:border-primary/50"
+                  >
+                    <option value="Trip">Trip</option>
+                    <option value="Box">Box</option>
+                    <option value="Ton">Ton</option>
+                    <option value="KM">KM</option>
+                  </select>
+                </div>
                 <div className="col-span-4 md:col-span-2 space-y-2">
                   <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Price
+                    Rate
                   </label>
                   <div className="relative">
                     <IndianRupee className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-500" />
@@ -460,7 +692,7 @@ const InvoiceForm: React.FC = () => {
             </div>
             <div className="pt-3 border-t border-white/10 flex justify-between text-white font-bold text-lg">
               <span>Total</span>
-              <span>₹{calculateTotal().toLocaleString()}</span>
+              <span>₹{calculateTotal().toLocaleString('en-IN')}</span>
             </div>
           </div>
         </div>

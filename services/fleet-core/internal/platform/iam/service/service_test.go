@@ -53,8 +53,8 @@ func (m *MockRepository) GetUserByID(ctx context.Context, userID uuid.UUID) (*mo
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
-func (m *MockRepository) GetRolesByOrganization(ctx context.Context, orgID uuid.UUID) ([]*models.Role, error) {
-	args := m.Called(ctx, orgID)
+func (m *MockRepository) GetRolesByOrganization(ctx context.Context, tenantID uuid.UUID) ([]*models.Role, error) {
+	args := m.Called(ctx, tenantID)
 	return args.Get(0).([]*models.Role), args.Error(1)
 }
 
@@ -75,13 +75,13 @@ func TestIAMService_JWT(t *testing.T) {
 	svc := NewIAMService(repo, orgSvc, secret)
 
 	userID := uuid.New()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
 	// Test Login
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
 	user := &models.User{
 		ID:             userID,
-		OrganizationID: orgID,
+		OrganizationID: tenantID,
 		Email:          "test@example.com",
 		PasswordHash:   string(hashedPassword),
 		Status:         "active",
@@ -98,7 +98,7 @@ func TestIAMService_JWT(t *testing.T) {
 	claims, err := svc.ValidateToken(token)
 	assert.NoError(t, err)
 	assert.Equal(t, userID, claims.UserID)
-	assert.Equal(t, orgID, claims.OrgID)
+	assert.Equal(t, tenantID, claims.TenantID)
 }
 
 func TestIAMService_CheckPermission(t *testing.T) {
@@ -148,17 +148,17 @@ func TestIAMService_ValidateToken_AlgorithmCheck(t *testing.T) {
 
 func TestIAMService_ValidateToken_ExpirationCheck(t *testing.T) {
 	validUserID := uuid.New()
-	validOrgID := uuid.New()
+	validTenantID := uuid.New()
 	activeUser := &models.User{
 		ID:             validUserID,
-		OrganizationID: validOrgID,
+		OrganizationID: validTenantID,
 		Status:         "active",
 	}
 
 	// Create an expired token
 	expiredClaims := &IAMClaims{
 		UserID: validUserID,
-		OrgID:  validOrgID,
+		TenantID:  validTenantID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now().Add(-2 * time.Hour)),
@@ -184,12 +184,12 @@ func TestIAMService_ValidateToken_ExpirationCheck(t *testing.T) {
 
 func TestIAMService_ValidateToken_UserStatusCheck(t *testing.T) {
 	validUserID := uuid.New()
-	validOrgID := uuid.New()
+	validTenantID := uuid.New()
 
 	// Create a valid, non-expired token
 	validClaims := &IAMClaims{
 		UserID: validUserID,
-		OrgID:  validOrgID,
+		TenantID:  validTenantID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -205,7 +205,7 @@ func TestIAMService_ValidateToken_UserStatusCheck(t *testing.T) {
 
 		inactiveUser := &models.User{
 			ID:             validUserID,
-			OrganizationID: validOrgID,
+			OrganizationID: validTenantID,
 			Status:         "inactive",
 		}
 		repo.On("GetUserByID", mock.Anything, validUserID).Return(inactiveUser, nil)
@@ -234,7 +234,7 @@ func TestIAMService_ValidateToken_UserStatusCheck(t *testing.T) {
 
 		activeUser := &models.User{
 			ID:             validUserID,
-			OrganizationID: validOrgID,
+			OrganizationID: validTenantID,
 			Status:         "active",
 		}
 		repo.On("GetUserByID", mock.Anything, validUserID).Return(activeUser, nil)
@@ -242,6 +242,6 @@ func TestIAMService_ValidateToken_UserStatusCheck(t *testing.T) {
 		claims, err := iamSvc.ValidateToken(validTokenStr)
 		assert.NoError(t, err)
 		assert.Equal(t, validUserID, claims.UserID)
-		assert.Equal(t, validOrgID, claims.OrgID)
+		assert.Equal(t, validTenantID, claims.TenantID)
 	})
 }

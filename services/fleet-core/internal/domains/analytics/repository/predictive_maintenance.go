@@ -65,7 +65,7 @@ func (r *AnalyticsRepositoryImpl) CreatePredictiveMaintenanceAnalytics(ctx conte
 }
 
 // GetPredictiveMaintenanceAnalytics retrieves predictive maintenance analytics by ID
-func (r *AnalyticsRepositoryImpl) GetPredictiveMaintenanceAnalytics(ctx context.Context, id string, orgID uuid.UUID) (*models.PredictiveMaintenanceAnalytics, error) {
+func (r *AnalyticsRepositoryImpl) GetPredictiveMaintenanceAnalytics(ctx context.Context, id string, tenantID uuid.UUID) (*models.PredictiveMaintenanceAnalytics, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := `
@@ -79,7 +79,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveMaintenanceAnalytics(ctx context.
 	var analytics models.PredictiveMaintenanceAnalytics
 	var componentRisksJSON, failurePredictionJSON, maintenanceScheduleJSON, partsNeededJSON, recommendationsJSON []byte
 
-	err := r.db.QueryRow(ctx, query, id, orgID).Scan(
+	err := r.db.QueryRow(ctx, query, id, tenantID).Scan(
 		&analytics.ID, &analytics.VehicleID, &analytics.OrganizationID, &analytics.AnalysisDate,
 		&analytics.NextServiceDue, &analytics.ServicePriority, &componentRisksJSON,
 		&failurePredictionJSON, &maintenanceScheduleJSON, &partsNeededJSON, &analytics.CostEstimation,
@@ -126,13 +126,13 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveMaintenanceAnalytics(ctx context.
 }
 
 // GetPredictiveMaintenanceAnalyticsByVehicle retrieves predictive maintenance analytics by vehicle ID
-func (r *AnalyticsRepositoryImpl) GetPredictiveMaintenanceAnalyticsByVehicle(ctx context.Context, vehicleID uuid.UUID, orgID uuid.UUID, limit, offset int) ([]*models.PredictiveMaintenanceAnalytics, int, error) {
+func (r *AnalyticsRepositoryImpl) GetPredictiveMaintenanceAnalyticsByVehicle(ctx context.Context, vehicleID uuid.UUID, tenantID uuid.UUID, limit, offset int) ([]*models.PredictiveMaintenanceAnalytics, int, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	// Count query
 	countQuery := "SELECT COUNT(*) FROM predictive_maintenance_analytics WHERE vehicle_id = $1 AND organization_id = $2"
 	var totalCount int
-	err := r.db.QueryRow(ctx, countQuery, vehicleID, orgID).Scan(&totalCount)
+	err := r.db.QueryRow(ctx, countQuery, vehicleID, tenantID).Scan(&totalCount)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count predictive maintenance analytics: %w", err)
 	}
@@ -149,7 +149,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveMaintenanceAnalyticsByVehicle(ctx
 		LIMIT $3 OFFSET $4
 	`
 
-	rows, err := r.executeWithObservability(ctx, query, vehicleID, orgID, limit, offset)
+	rows, err := r.executeWithObservability(ctx, query, vehicleID, tenantID, limit, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to query predictive maintenance analytics: %w", err)
 	}
@@ -207,7 +207,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveMaintenanceAnalyticsByVehicle(ctx
 }
 
 // UpdatePredictiveMaintenanceAnalytics updates existing predictive maintenance analytics
-func (r *AnalyticsRepositoryImpl) UpdatePredictiveMaintenanceAnalytics(ctx context.Context, id string, orgID uuid.UUID, updates map[string]interface{}) error {
+func (r *AnalyticsRepositoryImpl) UpdatePredictiveMaintenanceAnalytics(ctx context.Context, id string, tenantID uuid.UUID, updates map[string]interface{}) error {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	setParts := []string{}
@@ -228,7 +228,7 @@ func (r *AnalyticsRepositoryImpl) UpdatePredictiveMaintenanceAnalytics(ctx conte
 		return errors.New("no updates provided")
 	}
 
-	args = append(args, id, orgID)
+	args = append(args, id, tenantID)
 	query := fmt.Sprintf("UPDATE predictive_maintenance_analytics SET %s WHERE id = $%d AND organization_id = $%d",
 		strings.Join(setParts, ", "), argIndex, argIndex+1)
 
@@ -240,11 +240,11 @@ func (r *AnalyticsRepositoryImpl) UpdatePredictiveMaintenanceAnalytics(ctx conte
 }
 
 // DeletePredictiveMaintenanceAnalytics deletes predictive maintenance analytics
-func (r *AnalyticsRepositoryImpl) DeletePredictiveMaintenanceAnalytics(ctx context.Context, id string, orgID uuid.UUID) error {
+func (r *AnalyticsRepositoryImpl) DeletePredictiveMaintenanceAnalytics(ctx context.Context, id string, tenantID uuid.UUID) error {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := "DELETE FROM predictive_maintenance_analytics WHERE id = $1 AND organization_id = $2"
-	_, err := r.db.Exec(ctx, query, id, orgID)
+	_, err := r.db.Exec(ctx, query, id, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to delete predictive maintenance analytics %s: %w", id, err)
 	}
@@ -252,7 +252,7 @@ func (r *AnalyticsRepositoryImpl) DeletePredictiveMaintenanceAnalytics(ctx conte
 }
 
 // ListPredictiveMaintenanceAnalytics retrieves predictive maintenance analytics with filtering
-func (r *AnalyticsRepositoryImpl) ListPredictiveMaintenanceAnalytics(ctx context.Context, orgID uuid.UUID, vehicleID *uuid.UUID, cursor string, limit, offset int) ([]*models.PredictiveMaintenanceAnalytics, int, error) {
+func (r *AnalyticsRepositoryImpl) ListPredictiveMaintenanceAnalytics(ctx context.Context, tenantID uuid.UUID, vehicleID *uuid.UUID, cursor string, limit, offset int) ([]*models.PredictiveMaintenanceAnalytics, int, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 
@@ -278,7 +278,7 @@ func (r *AnalyticsRepositoryImpl) ListPredictiveMaintenanceAnalytics(ctx context
 	`
 	countQuery := `SELECT COUNT(*) FROM predictive_maintenance_analytics WHERE organization_id = $1`
 
-	args := []interface{}{orgID}
+	args := []interface{}{tenantID}
 	argIndex := 2
 	var conditions []string
 

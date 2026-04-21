@@ -28,10 +28,10 @@ func NewNotificationService(nc *nats.Conn, repo *repository.NotificationReposito
 }
 
 // PublishEvent sends a billing notification to NATS
-func (s *NotificationService) PublishEvent(ctx context.Context, eventType string, orgID uuid.UUID, data map[string]interface{}) error {
+func (s *NotificationService) PublishEvent(ctx context.Context, eventType string, tenantID uuid.UUID, data map[string]interface{}) error {
 	event := models.NotificationEvent{
 		Type:      eventType,
-		OrgID:     orgID,
+		TenantID:     tenantID,
 		Timestamp: time.Now(),
 		Data:      data,
 	}
@@ -62,7 +62,7 @@ func NewDunningService(repo *repository.NotificationRepository, notifService *No
 }
 
 // HandlePaymentFailure records the attempt and triggers retry logic (Dunning)
-func (s *DunningService) HandlePaymentFailure(ctx context.Context, orgID uuid.UUID, invoiceID uuid.UUID, reason string, amount float64, currency string) error {
+func (s *DunningService) HandlePaymentFailure(ctx context.Context, tenantID uuid.UUID, invoiceID uuid.UUID, reason string, amount float64, currency string) error {
 	// 1. Get current attempt count
 	currentCount, err := s.repo.GetLatestAttemptNumber(ctx, invoiceID)
 	if err != nil {
@@ -71,7 +71,7 @@ func (s *DunningService) HandlePaymentFailure(ctx context.Context, orgID uuid.UU
 
 	// 2. Record new failed attempt
 	attempt := &models.PaymentAttempt{
-		OrgID:         orgID,
+		TenantID:         tenantID,
 		InvoiceID:     invoiceID,
 		AttemptNumber: currentCount + 1,
 		Status:        models.AttemptStatusFailed,
@@ -85,7 +85,7 @@ func (s *DunningService) HandlePaymentFailure(ctx context.Context, orgID uuid.UU
 	}
 
 	// 3. Fire NATS notification for failure
-	_ = s.notifService.PublishEvent(ctx, "payment_failed", orgID, map[string]interface{}{
+	_ = s.notifService.PublishEvent(ctx, "payment_failed", tenantID, map[string]interface{}{
 		"invoice_id":     invoiceID,
 		"attempt_number": attempt.AttemptNumber,
 		"reason":         reason,
@@ -101,11 +101,11 @@ func (s *DunningService) HandlePaymentFailure(ctx context.Context, orgID uuid.UU
 }
 
 // HandlePaymentSuccess records the successful attempt
-func (s *DunningService) HandlePaymentSuccess(ctx context.Context, orgID uuid.UUID, invoiceID uuid.UUID, amount float64, currency string) error {
+func (s *DunningService) HandlePaymentSuccess(ctx context.Context, tenantID uuid.UUID, invoiceID uuid.UUID, amount float64, currency string) error {
 	currentCount, _ := s.repo.GetLatestAttemptNumber(ctx, invoiceID)
 
 	attempt := &models.PaymentAttempt{
-		OrgID:         orgID,
+		TenantID:         tenantID,
 		InvoiceID:     invoiceID,
 		AttemptNumber: currentCount + 1,
 		Status:        models.AttemptStatusSuccess,
@@ -118,7 +118,7 @@ func (s *DunningService) HandlePaymentSuccess(ctx context.Context, orgID uuid.UU
 	}
 
 	// Fire NATS notification for success
-	return s.notifService.PublishEvent(ctx, "payment_success", orgID, map[string]interface{}{
+	return s.notifService.PublishEvent(ctx, "payment_success", tenantID, map[string]interface{}{
 		"invoice_id": invoiceID,
 		"amount":     amount,
 	})

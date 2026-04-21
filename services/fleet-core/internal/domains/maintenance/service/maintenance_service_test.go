@@ -65,13 +65,13 @@ func TestCreateScheduleRequestValidation(t *testing.T) {
 func TestMaintenanceScheduleModel(t *testing.T) {
 	schedule := &models.MaintenanceSchedule{
 		ID:     uuid.New().String(),
-		OrgID:  uuid.New(),
+		TenantID:  uuid.New(),
 		Name:   "Test Schedule",
 		Status: models.StatusScheduled,
 	}
 
 	assert.NotEmpty(t, schedule.ID)
-	assert.NotEqual(t, uuid.Nil, schedule.OrgID)
+	assert.NotEqual(t, uuid.Nil, schedule.TenantID)
 	assert.Equal(t, models.StatusScheduled, schedule.Status)
 	assert.Equal(t, "Test Schedule", schedule.Name)
 

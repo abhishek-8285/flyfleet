@@ -65,10 +65,10 @@ type AuthRepositoryInterface interface {
 
 	// RBAC Operations
 	CreateRole(ctx context.Context, role *models.Role) error
-	AssignRoleToUser(ctx context.Context, userID uuid.UUID, roleID uuid.UUID, orgID uuid.UUID) error
-	GetUserRoles(ctx context.Context, userID uuid.UUID, orgID uuid.UUID) ([]models.Role, error)
-	GetUserPermissions(ctx context.Context, userID uuid.UUID, orgID uuid.UUID) ([]string, error)
-	CheckPermission(ctx context.Context, userID uuid.UUID, orgID uuid.UUID, permission string) (bool, error)
+	AssignRoleToUser(ctx context.Context, userID uuid.UUID, roleID uuid.UUID, tenantID uuid.UUID) error
+	GetUserRoles(ctx context.Context, userID uuid.UUID, tenantID uuid.UUID) ([]models.Role, error)
+	GetUserPermissions(ctx context.Context, userID uuid.UUID, tenantID uuid.UUID) ([]string, error)
+	CheckPermission(ctx context.Context, userID uuid.UUID, tenantID uuid.UUID, permission string) (bool, error)
 	GetRolePermissions(ctx context.Context, role string) ([]string, error) // Legacy support
 
 	// MFA Recovery Codes
@@ -95,13 +95,13 @@ type AuthRepositoryInterface interface {
 	// API Keys & M2M
 	SaveAPIKey(ctx context.Context, key *models.APIKey) error
 	GetAPIKeyByPrefix(ctx context.Context, prefix string) (*models.APIKey, error)
-	ListAPIKeys(ctx context.Context, orgID uuid.UUID) ([]models.APIKey, error)
+	ListAPIKeys(ctx context.Context, tenantID uuid.UUID) ([]models.APIKey, error)
 	RevokeAPIKey(ctx context.Context, id uuid.UUID) error
 	UpdateAPIKeyLastUsed(ctx context.Context, id uuid.UUID) error
 
 	GetServiceAccount(ctx context.Context, id uuid.UUID) (*models.ServiceAccount, error)
 	CreateServiceAccount(ctx context.Context, sa *models.ServiceAccount) error
-	ListServiceAccounts(ctx context.Context, orgID uuid.UUID) ([]models.ServiceAccount, error)
+	ListServiceAccounts(ctx context.Context, tenantID uuid.UUID) ([]models.ServiceAccount, error)
 	DeleteServiceAccount(ctx context.Context, id uuid.UUID) error
 
 	// Organization operations
@@ -122,7 +122,7 @@ type AuthRepositoryInterface interface {
 
 	// Compliance & Admin
 	RevokeAllTokensGlobal(ctx context.Context) error
-	RevokeAllOrgTokens(ctx context.Context, orgID uuid.UUID) error
+	RevokeAllOrgTokens(ctx context.Context, tenantID uuid.UUID) error
 	AnonymizeUser(ctx context.Context, userID uuid.UUID) error
 }
 
@@ -181,7 +181,7 @@ func NewAuthService(logger logger.Logger, repo AuthRepositoryInterface, identity
 	}
 }
 
-func (s *AuthService) Login(ctx context.Context, email, password, orgIDStr, ipAddress, userAgent string) (*models.AuthResponse, error) {
+func (s *AuthService) Login(ctx context.Context, email, password, tenantIDStr, ipAddress, userAgent string) (*models.AuthResponse, error) {
 	s.logger.Info("Login attempt started", zap.String("email", email))
 	user, err := s.repo.GetUserByEmail(ctx, email)
 	if err != nil {
@@ -191,8 +191,8 @@ func (s *AuthService) Login(ctx context.Context, email, password, orgIDStr, ipAd
 	s.logger.Info("User found", zap.String("email", email), zap.String("userID", user.ID.String()))
 
 	// Override org if provided
-	if orgIDStr != "" {
-		orgID, err := uuid.Parse(orgIDStr)
+	if tenantIDStr != "" {
+		tenantID, err := uuid.Parse(tenantIDStr)
 		if err != nil {
 			return nil, errors.New("invalid tenant_id format")
 		}
@@ -204,7 +204,7 @@ func (s *AuthService) Login(ctx context.Context, email, password, orgIDStr, ipAd
 
 		found := false
 		for _, o := range orgs {
-			if o.ID == orgID {
+			if o.ID == tenantID {
 				found = true
 				break
 			}
@@ -212,7 +212,7 @@ func (s *AuthService) Login(ctx context.Context, email, password, orgIDStr, ipAd
 		if !found {
 			return nil, errors.New("invalid organization")
 		}
-		user.OrgID = orgID
+		user.TenantID = tenantID
 	}
 	if err != nil {
 		return nil, err
@@ -339,7 +339,7 @@ func (s *AuthService) DevLogin(ctx context.Context, email string, ipAddress, use
 
 func (s *AuthService) issueTokens(ctx context.Context, user *models.User, ipAddress, userAgent string) (*models.AuthResponse, error) {
 	// Fetch permissions via IdentityService/Repository (New RBAC)
-	permissions, _ := s.repo.GetUserPermissions(ctx, user.ID, user.OrgID)
+	permissions, _ := s.repo.GetUserPermissions(ctx, user.ID, user.TenantID)
 	if len(permissions) == 0 {
 		// Fallback to legacy role-based permissions if no multi-roles assigned
 		permissions, _ = s.repo.GetRolePermissions(ctx, user.Role)
@@ -362,7 +362,7 @@ func (s *AuthService) issueTokens(ctx context.Context, user *models.User, ipAddr
 		EventType: "SESSION_ISSUED",
 		IPAddress: ipAddress,
 		UserAgent: userAgent,
-		Metadata:  fmt.Sprintf("tenant_id: %s, role: %s", user.OrgID.String(), user.Role),
+		Metadata:  fmt.Sprintf("tenant_id: %s, role: %s", user.TenantID.String(), user.Role),
 	})
 
 	return &models.AuthResponse{
@@ -382,14 +382,14 @@ func (s *AuthService) generateTempToken(user *models.User) (string, error) {
 	// Actually, let's keep it simple.
 	claims := models.TokenClaims{
 		UserID: user.ID.String(),
-		OrgID:  user.OrgID.String(),
+		TenantID:  user.TenantID.String(),
 		Role:   user.Role,
 		Type:   "mfa_pending",
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": claims.UserID,
-		"tenant_id":  claims.OrgID,
+		"tenant_id":  claims.TenantID,
 		"role":    claims.Role,
 		"type":    claims.Type,
 		"exp":     time.Now().Add(5 * time.Minute).Unix(),
@@ -399,7 +399,7 @@ func (s *AuthService) generateTempToken(user *models.User) (string, error) {
 	return token.SignedString([]byte(s.jwtSecret))
 }
 
-func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr, orgIDStr, ipAddress, userAgent string) (*models.AuthResponse, error) {
+func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr, tenantIDStr, ipAddress, userAgent string) (*models.AuthResponse, error) {
 	// ATOMIC: Try to revoke the refresh token in a single DB operation.
 	// This prevents the race condition where concurrent refresh requests all see revoked=false.
 	revokedToken, err := s.repo.TryRevokeRefreshToken(ctx, refreshTokenStr)
@@ -454,8 +454,8 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr, orgIDSt
 		}
 
 		// Apply org context switch if requested
-		if orgIDStr != "" {
-			orgID, err := uuid.Parse(orgIDStr)
+		if tenantIDStr != "" {
+			tenantID, err := uuid.Parse(tenantIDStr)
 			if err != nil {
 				return nil, errors.New("invalid organization id format")
 			}
@@ -465,7 +465,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr, orgIDSt
 			}
 			found := false
 			for _, o := range orgs {
-				if o.ID == orgID {
+				if o.ID == tenantID {
 					found = true
 					break
 				}
@@ -473,15 +473,15 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr, orgIDSt
 			if !found {
 				return nil, errors.New("unauthorized: user does not belong to the requested organization")
 			}
-			if orgID != user.OrgID {
+			if tenantID != user.TenantID {
 				_ = s.repo.LogSecurityEvent(ctx, &models.SecurityEvent{
 					UserID:    user.ID,
 					EventType: "ORG_CONTEXT_SWITCH",
 					IPAddress: ipAddress,
 					UserAgent: userAgent,
-					Metadata:  fmt.Sprintf("old_org: %s, new_org: %s", user.OrgID.String(), orgID.String()),
+					Metadata:  fmt.Sprintf("old_org: %s, new_org: %s", user.TenantID.String(), tenantID.String()),
 				})
-				user.OrgID = orgID
+				user.TenantID = tenantID
 			}
 		}
 
@@ -496,8 +496,8 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr, orgIDSt
 	}
 
 	// Organization context switching logic
-	if orgIDStr != "" {
-		orgID, err := uuid.Parse(orgIDStr)
+	if tenantIDStr != "" {
+		tenantID, err := uuid.Parse(tenantIDStr)
 		if err != nil {
 			return nil, errors.New("invalid organization id format")
 		}
@@ -510,7 +510,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr, orgIDSt
 
 		found := false
 		for _, o := range orgs {
-			if o.ID == orgID {
+			if o.ID == tenantID {
 				found = true
 				break
 			}
@@ -521,21 +521,21 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshTokenStr, orgIDSt
 		}
 
 		// Audit context switch
-		if orgID != user.OrgID {
+		if tenantID != user.TenantID {
 			_ = s.repo.LogSecurityEvent(ctx, &models.SecurityEvent{
 				UserID:    user.ID,
 				EventType: "ORG_CONTEXT_SWITCH",
 				IPAddress: ipAddress,
 				UserAgent: userAgent,
-				Metadata:  fmt.Sprintf("old_org: %s, new_org: %s", user.OrgID.String(), orgID.String()),
+				Metadata:  fmt.Sprintf("old_org: %s, new_org: %s", user.TenantID.String(), tenantID.String()),
 			})
 		}
 
 		// Update user's active organization context for the new session
-		user.OrgID = orgID
+		user.TenantID = tenantID
 	}
 
-	// Issue new tokens (scoped to user.OrgID)
+	// Issue new tokens (scoped to user.TenantID)
 	return s.issueTokens(ctx, user, ipAddress, userAgent)
 }
 
@@ -711,7 +711,7 @@ func (s *AuthService) generateAccessToken(user *models.User, permissions []strin
 	jti := uuid.New().String()
 
 	// Fetch organization to get tenant_type
-	org, _ := s.repo.GetOrganizationByID(context.Background(), user.OrgID)
+	org, _ := s.repo.GetOrganizationByID(context.Background(), user.TenantID)
 	tenantType := ""
 	if org != nil {
 		tenantType = org.Type
@@ -721,7 +721,7 @@ func (s *AuthService) generateAccessToken(user *models.User, permissions []strin
 		"sub":    user.ID.String(),
 		"iss":    "FlyFleet",
 		"aud":    "fleet-dashboard",
-		"tenant_id": user.OrgID.String(),
+		"tenant_id": user.TenantID.String(),
 		"rol":    user.Role,
 		"ten":    tenantType, // tenant_type claim
 		"type":   "access",
@@ -802,7 +802,7 @@ func (s *AuthService) RevokeUserSession(ctx context.Context, sessionID uuid.UUID
 func (s *AuthService) RevokeDeviceAccess(ctx context.Context, deviceID string, reason string) error {
 	// For session revocation, deviceID here is essentially the jti or session ID
 	var jtiStr string
-	var orgIDStr string
+	var tenantIDStr string
 	var userIDStr string
 
 	if id, err := uuid.Parse(deviceID); err == nil {
@@ -822,7 +822,7 @@ func (s *AuthService) RevokeDeviceAccess(ctx context.Context, deviceID string, r
 		event := map[string]string{
 			"jti":       jtiStr,
 			"user_id":   userIDStr, // would be fetched if needed
-			"tenant_id":    orgIDStr,  // would be fetched if needed
+			"tenant_id":    tenantIDStr,  // would be fetched if needed
 			"device_id": deviceID,
 			"reason":    reason,
 			"action":    "revoked",
@@ -939,7 +939,7 @@ func (s *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*m
 	now := time.Now()
 	creatorID := s.getUserID(ctx)
 
-	var orgID uuid.UUID
+	var tenantID uuid.UUID
 	var role string
 
 	// Handle Organization & Role logic based on Invite vs Creation
@@ -954,7 +954,7 @@ func (s *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*m
 			return nil, fmt.Errorf("invite code is expired or has already been used")
 		}
 
-		orgID = invite.OrgID
+		tenantID = invite.TenantID
 		role = invite.Role
 
 		// Mark invite as used
@@ -964,9 +964,9 @@ func (s *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*m
 		// Not joining via invite.
 		if req.OrgName != "" {
 			// Creating a new organization
-			orgID = uuid.New()
+			tenantID = uuid.New()
 			org := &models.Organization{
-				ID:        orgID,
+				ID:        tenantID,
 				Name:      req.OrgName,
 				CreatedAt: now,
 				UpdatedAt: now,
@@ -983,9 +983,9 @@ func (s *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*m
 			// Wait, the plan says: "if creating org -> org_admin. If public signup (no invite, no org creation) -> driver."
 			// Since tenant_id is NOT NULL, let's create a "Personal Organization" for them, or require org creation.
 			// Let's create a personal org for drivers to satisfy the constraint.
-			orgID = uuid.New()
+			tenantID = uuid.New()
 			org := &models.Organization{
-				ID:        orgID,
+				ID:        tenantID,
 				Name:      fmt.Sprintf("%s's Workspace", req.Name),
 				CreatedAt: now,
 				UpdatedAt: now,
@@ -999,7 +999,7 @@ func (s *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*m
 
 	user := &models.User{
 		ID:                  uuid.New(),
-		OrgID:               orgID,
+		TenantID:               tenantID,
 		Email:               strings.ToLower(req.Email),
 		Role:                role,
 		PasswordHash:        string(hashedPassword),
@@ -1130,8 +1130,8 @@ func (s *AuthService) RevokeAllTokensGlobal(ctx context.Context) error {
 	return s.repo.RevokeAllTokensGlobal(ctx)
 }
 
-func (s *AuthService) RevokeAllOrgTokens(ctx context.Context, orgID uuid.UUID) error {
-	return s.repo.RevokeAllOrgTokens(ctx, orgID)
+func (s *AuthService) RevokeAllOrgTokens(ctx context.Context, tenantID uuid.UUID) error {
+	return s.repo.RevokeAllOrgTokens(ctx, tenantID)
 }
 
 func (s *AuthService) AnonymizeUser(ctx context.Context, userID uuid.UUID) error {
@@ -1139,10 +1139,10 @@ func (s *AuthService) AnonymizeUser(ctx context.Context, userID uuid.UUID) error
 }
 
 // GenerateToken is a public helper for generating tokens in tests
-func (s *AuthService) GenerateToken(userID, orgID uuid.UUID, role string) (string, error) {
+func (s *AuthService) GenerateToken(userID, tenantID uuid.UUID, role string) (string, error) {
 	user := &models.User{
 		ID:    userID,
-		OrgID: orgID,
+		TenantID: tenantID,
 		Role:  role,
 	}
 	permissions, _ := s.repo.GetRolePermissions(context.Background(), role)

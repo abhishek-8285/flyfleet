@@ -16,8 +16,8 @@ type mockAggregator struct {
 	mock.Mock
 }
 
-func (m *mockAggregator) AggregateData(ctx context.Context, userID, orgID uuid.UUID) (*models.DSARData, error) {
-	args := m.Called(ctx, userID, orgID)
+func (m *mockAggregator) AggregateData(ctx context.Context, userID, tenantID uuid.UUID) (*models.DSARData, error) {
+	args := m.Called(ctx, userID, tenantID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -60,21 +60,21 @@ func TestExportService_ProcessExportRequest_Compliance(t *testing.T) {
 	svc := NewExportService(mockRepo, mockAgg, mockMsk, mockGen, nil, logger)
 
 	requestID := uuid.New()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	userID := uuid.New()
 
 	req := &models.GovernanceRequest{
 		ID:             requestID,
-		OrganizationID: orgID,
+		OrganizationID: tenantID,
 		RequesterID:    userID,
 		Status:         models.RequestStatusApproved,
 		Format:         "JSON",
 	}
 
 	mockRepo.On("GetRequestByIDInternal", mock.Anything, requestID).Return(req, nil)
-	mockRepo.On("UpdateRequestStatus", mock.Anything, requestID, orgID, models.RequestStatusProcessing, mock.Anything, mock.Anything).Return(nil)
-	mockRepo.On("UpdateRequestStatus", mock.Anything, requestID, orgID, models.RequestStatusCompleted, mock.Anything, mock.Anything).Return(nil)
-	mockRepo.On("GetSettings", mock.Anything, orgID).Return(&models.GovernanceSettings{MaskingRules: json.RawMessage("{}")}, nil)
+	mockRepo.On("UpdateRequestStatus", mock.Anything, requestID, tenantID, models.RequestStatusProcessing, mock.Anything, mock.Anything).Return(nil)
+	mockRepo.On("UpdateRequestStatus", mock.Anything, requestID, tenantID, models.RequestStatusCompleted, mock.Anything, mock.Anything).Return(nil)
+	mockRepo.On("GetSettings", mock.Anything, tenantID).Return(&models.GovernanceSettings{MaskingRules: json.RawMessage("{}")}, nil)
 	mockRepo.On("CreateExport", mock.Anything, mock.Anything).Return(nil)
 
 	// Phase 5 & 6 expectations
@@ -87,7 +87,7 @@ func TestExportService_ProcessExportRequest_Compliance(t *testing.T) {
 	})).Return(nil)
 
 	dsarData := &models.DSARData{UserProfile: map[string]string{"name": "test"}}
-	mockAgg.On("AggregateData", mock.Anything, userID, orgID).Return(dsarData, nil)
+	mockAgg.On("AggregateData", mock.Anything, userID, tenantID).Return(dsarData, nil)
 	mockMsk.On("MaskData", dsarData, mock.Anything).Return(dsarData)
 	mockGen.On("GenerateJSON", dsarData, mock.Anything).Return(int64(1024), "sha256:test", nil)
 

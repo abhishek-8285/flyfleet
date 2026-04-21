@@ -15,7 +15,7 @@ service AlertService {
 
 message Alert {
   string id = 1;
-  string org_id = 2;
+  string tenant_id = 2;
   string vehicle_id = 3;
   string type = 4;
   string severity = 5;
@@ -26,7 +26,7 @@ message Alert {
 }
 
 message ListAlertsRequest {
-  string org_id = 1;
+  string tenant_id = 1;
   string vehicle_id = 2;
   string type = 3;
   string severity = 4;
@@ -58,7 +58,7 @@ message UpdateAlertStatusResponse {
 }
 
 message GetAlertStatsRequest {
-  string org_id = 1;
+  string tenant_id = 1;
 }
 
 message GetAlertStatsResponse {

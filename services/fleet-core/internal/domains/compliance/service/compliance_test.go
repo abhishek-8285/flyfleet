@@ -101,7 +101,7 @@ func (m *MockRepository) RecordFASTagReconciliation(ctx context.Context, recon *
 	return nil
 }
 
-func (m *MockRepository) GetDashboardMetrics(ctx context.Context, orgID uuid.UUID) (*models.ComplianceDashboardMetrics, error) {
+func (m *MockRepository) GetDashboardMetrics(ctx context.Context, tenantID uuid.UUID) (*models.ComplianceDashboardMetrics, error) {
 	return nil, nil
 }
 

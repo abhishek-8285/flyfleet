@@ -26,9 +26,9 @@ func NewSubscriptionService(repo *repository.SubscriptionRepository, auditRepo *
 }
 
 // Subscribe starts a new subscription for an organization
-func (s *SubscriptionService) Subscribe(ctx context.Context, orgID uuid.UUID, planID uuid.UUID) (*models.Subscription, error) {
+func (s *SubscriptionService) Subscribe(ctx context.Context, tenantID uuid.UUID, planID uuid.UUID) (*models.Subscription, error) {
 	// Check if already subscribed
-	existing, err := s.repo.GetSubscription(ctx, orgID)
+	existing, err := s.repo.GetSubscription(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func (s *SubscriptionService) Subscribe(ctx context.Context, orgID uuid.UUID, pl
 
 	sub := &models.Subscription{
 		ID:                 uuid.New(),
-		OrgID:              orgID,
+		TenantID:              tenantID,
 		PlanID:             planID,
 		Status:             models.SubscriptionTrial,
 		CurrentPeriodStart: now,
@@ -58,13 +58,13 @@ func (s *SubscriptionService) Subscribe(ctx context.Context, orgID uuid.UUID, pl
 		return nil, err
 	}
 
-	s.logger.Info("organization subscribed", zap.String("tenant_id", orgID.String()), zap.String("plan_id", planID.String()))
+	s.logger.Info("organization subscribed", zap.String("tenant_id", tenantID.String()), zap.String("plan_id", planID.String()))
 	return sub, nil
 }
 
 // ChangePlan handles upgrading or downgrading a subscription with proration
-func (s *SubscriptionService) ChangePlan(ctx context.Context, orgID uuid.UUID, newPlanID uuid.UUID) (*models.Subscription, error) {
-	sub, err := s.repo.GetSubscription(ctx, orgID)
+func (s *SubscriptionService) ChangePlan(ctx context.Context, tenantID uuid.UUID, newPlanID uuid.UUID) (*models.Subscription, error) {
+	sub, err := s.repo.GetSubscription(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (s *SubscriptionService) ChangePlan(ctx context.Context, orgID uuid.UUID, n
 
 		prorationCredit = monthlyTotal * fraction
 		s.logger.Info("Proration credit calculated",
-			zap.String("tenant_id", orgID.String()),
+			zap.String("tenant_id", tenantID.String()),
 			zap.String("old_plan_id", sub.PlanID.String()),
 			zap.Float64("credit_amount", prorationCredit),
 			zap.Float64("fraction", fraction))
@@ -127,7 +127,7 @@ func (s *SubscriptionService) ChangePlan(ctx context.Context, orgID uuid.UUID, n
 	}
 
 	s.logger.Info("subscription plan changed with proration",
-		zap.String("tenant_id", orgID.String()),
+		zap.String("tenant_id", tenantID.String()),
 		zap.String("old_plan_id", sub.PlanID.String()),
 		zap.String("new_plan_id", newPlanID.String()),
 		zap.Float64("proration_credit", prorationCredit))
@@ -136,8 +136,8 @@ func (s *SubscriptionService) ChangePlan(ctx context.Context, orgID uuid.UUID, n
 }
 
 // CancelSubscription marks a subscription for cancellation at the end of the period
-func (s *SubscriptionService) CancelSubscription(ctx context.Context, orgID uuid.UUID, immediate bool) error {
-	sub, err := s.repo.GetSubscription(ctx, orgID)
+func (s *SubscriptionService) CancelSubscription(ctx context.Context, tenantID uuid.UUID, immediate bool) error {
+	sub, err := s.repo.GetSubscription(ctx, tenantID)
 	if err != nil {
 		return err
 	}
@@ -156,8 +156,8 @@ func (s *SubscriptionService) CancelSubscription(ctx context.Context, orgID uuid
 }
 
 // GetSubscription retrieves the current subscription for an organization
-func (s *SubscriptionService) GetSubscription(ctx context.Context, orgID uuid.UUID) (*models.Subscription, error) {
-	return s.repo.GetSubscription(ctx, orgID)
+func (s *SubscriptionService) GetSubscription(ctx context.Context, tenantID uuid.UUID) (*models.Subscription, error) {
+	return s.repo.GetSubscription(ctx, tenantID)
 }
 
 func (s *SubscriptionService) UpdateSubscription(ctx context.Context, sub *models.Subscription) error {
@@ -168,7 +168,7 @@ func (s *SubscriptionService) UpdateSubscription(ctx context.Context, sub *model
 	}
 
 	// Audit logging for update
-	_ = s.auditRepo.CreateAuditLogEntry(ctx, sub.OrgID, models.AuditActionUpdated, nil, sub, uuid.Nil, "subscription", sub.ID.String(), "", "")
+	_ = s.auditRepo.CreateAuditLogEntry(ctx, sub.TenantID, models.AuditActionUpdated, nil, sub, uuid.Nil, "subscription", sub.ID.String(), "", "")
 
 	return nil
 }

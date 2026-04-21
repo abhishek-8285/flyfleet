@@ -12,13 +12,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAuthService_RefreshToken_WithOrgID(t *testing.T) {
+func TestAuthService_RefreshToken_WithTenantID(t *testing.T) {
 	service, mockRepo := setupTestService(t)
 	ctx := context.Background()
 
 	userID := uuid.New()
-	orgID1 := uuid.New()
-	orgID2 := uuid.New()
+	tenantID1 := uuid.New()
+	tenantID2 := uuid.New()
 	refreshTokenStr := "valid-refresh-token"
 
 	mockRepo.GetRefreshTokenFn = func(ctx context.Context, token string) (*models.RefreshToken, error) {
@@ -38,19 +38,19 @@ func TestAuthService_RefreshToken_WithOrgID(t *testing.T) {
 		return &models.User{
 			ID:    id,
 			Email: "test@example.com",
-			OrgID: orgID1,
+			TenantID: tenantID1,
 			Role:  "user",
 		}, nil
 	}
 
 	mockRepo.GetOrganizationsByEmailFn = func(ctx context.Context, email string) ([]models.Organization, error) {
 		return []models.Organization{
-			{ID: orgID1, Name: "Org 1"},
-			{ID: orgID2, Name: "Org 2"},
+			{ID: tenantID1, Name: "Org 1"},
+			{ID: tenantID2, Name: "Org 2"},
 		}, nil
 	}
 
-	mockRepo.GetUserPermissionsFn = func(ctx context.Context, userID, orgID uuid.UUID) ([]string, error) {
+	mockRepo.GetUserPermissionsFn = func(ctx context.Context, userID, tenantID uuid.UUID) ([]string, error) {
 		return []string{"read:trips"}, nil
 	}
 
@@ -61,47 +61,47 @@ func TestAuthService_RefreshToken_WithOrgID(t *testing.T) {
 		return nil
 	}
 
-	resp, err := service.RefreshToken(ctx, refreshTokenStr, orgID2.String(), "127.0.0.1", "test")
+	resp, err := service.RefreshToken(ctx, refreshTokenStr, tenantID2.String(), "127.0.0.1", "test")
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
-	assert.Equal(t, orgID2, resp.User.OrgID) // Should be updated to Org 2
+	assert.Equal(t, tenantID2, resp.User.TenantID) // Should be updated to Org 2
 
 	// Verify ORG_CONTEXT_SWITCH event
 	foundSwitch := false
 	for _, e := range events {
 		if e.EventType == "ORG_CONTEXT_SWITCH" {
 			foundSwitch = true
-			assert.Contains(t, e.Metadata, orgID1.String())
-			assert.Contains(t, e.Metadata, orgID2.String())
+			assert.Contains(t, e.Metadata, tenantID1.String())
+			assert.Contains(t, e.Metadata, tenantID2.String())
 		}
 	}
 	assert.True(t, foundSwitch, "ORG_CONTEXT_SWITCH event not found")
 
 	// Case 2: Refresh with unauthorized Org ID
-	unauthorizedOrgID := uuid.New().String()
-	_, err = service.RefreshToken(ctx, refreshTokenStr, unauthorizedOrgID, "127.0.0.1", "test")
+	unauthorizedTenantID := uuid.New().String()
+	_, err = service.RefreshToken(ctx, refreshTokenStr, unauthorizedTenantID, "127.0.0.1", "test")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unauthorized")
 
 	// Case 3: Refresh without Org ID (should keep current/default)
 	resp, err = service.RefreshToken(ctx, refreshTokenStr, "", "127.0.0.1", "test")
 	assert.NoError(t, err)
-	assert.Equal(t, orgID1, resp.User.OrgID)
+	assert.Equal(t, tenantID1, resp.User.TenantID)
 }
 
 func TestAuthService_RevokeAllOrgTokens(t *testing.T) {
 	service, mockRepo := setupTestService(t)
 	ctx := context.Background()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
 	called := false
 	mockRepo.RevokeAllOrgTokensFn = func(ctx context.Context, id uuid.UUID) error {
 		called = true
-		assert.Equal(t, orgID, id)
+		assert.Equal(t, tenantID, id)
 		return nil
 	}
 
-	err := service.repo.RevokeAllOrgTokens(ctx, orgID)
+	err := service.repo.RevokeAllOrgTokens(ctx, tenantID)
 	assert.NoError(t, err)
 	assert.True(t, called)
 }

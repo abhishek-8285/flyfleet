@@ -25,7 +25,7 @@ func (r *NotificationRepository) RecordPaymentAttempt(ctx context.Context, attem
 	_, err := r.db.Exec(ctx, `
 		INSERT INTO billing_payment_attempts (id, tenant_id, invoice_id, attempt_number, status, failure_reason, processor_response, amount, currency)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-	`, attempt.ID, attempt.OrgID, attempt.InvoiceID, attempt.AttemptNumber, attempt.Status, attempt.FailureReason, attempt.ProcessorResponse, attempt.Amount, attempt.Currency)
+	`, attempt.ID, attempt.TenantID, attempt.InvoiceID, attempt.AttemptNumber, attempt.Status, attempt.FailureReason, attempt.ProcessorResponse, attempt.Amount, attempt.Currency)
 
 	return err
 }

@@ -107,7 +107,7 @@ func (h *TelemetryHandler) IngestGPS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var jti string
-	var orgIDStr string
+	var tenantIDStr string
 	authHeader := r.Header.Get("Authorization")
 	if strings.HasPrefix(authHeader, "Bearer ") {
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
@@ -131,7 +131,7 @@ func (h *TelemetryHandler) IngestGPS(w http.ResponseWriter, r *http.Request) {
 					jti = jtiClaim
 				}
 				if orgClaim, ok := claims["tenant_id"].(string); ok {
-					orgIDStr = orgClaim
+					tenantIDStr = orgClaim
 				}
 			}
 		} else {
@@ -174,7 +174,7 @@ func (h *TelemetryHandler) IngestGPS(w http.ResponseWriter, r *http.Request) {
 			jtiRevoked, err := h.redis.Exists(ctx, "blacklist:jti:"+jti).Result()
 			if err == nil && jtiRevoked > 0 {
 				if h.metrics != nil {
-					h.metrics.TelemetryZombiePingsTotal.WithLabelValues(orgIDStr).Inc()
+					h.metrics.TelemetryZombiePingsTotal.WithLabelValues(tenantIDStr).Inc()
 				}
 				h.logger.Warn("Blocked Zombie Ping", zap.String("jti", jti), zap.String("device_id", payload.DeviceID))
 				h.errorJSON(w, "Session Revoked - JTI Blacklisted", http.StatusUnauthorized)
@@ -195,7 +195,7 @@ func (h *TelemetryHandler) IngestGPS(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var vehicleID, orgID uuid.UUID
+	var vehicleID, tenantID uuid.UUID
 
 	// Fast Path: Redis Cache
 	if h.redis != nil {
@@ -205,7 +205,7 @@ func (h *TelemetryHandler) IngestGPS(w http.ResponseWriter, r *http.Request) {
 			parts := strings.Split(cachedVal, "|")
 			if len(parts) == 2 {
 				vehicleID, _ = uuid.Parse(parts[0])
-				orgID, _ = uuid.Parse(parts[1])
+				tenantID, _ = uuid.Parse(parts[1])
 			}
 		}
 	}
@@ -215,7 +215,7 @@ func (h *TelemetryHandler) IngestGPS(w http.ResponseWriter, r *http.Request) {
 			`SELECT vehicle_id, tenant_id FROM devices WHERE device_id = $1 AND status = 'active'`,
 			payload.DeviceID,
 		)
-		err := row.Scan(&vehicleID, &orgID)
+		err := row.Scan(&vehicleID, &tenantID)
 
 		if err != nil {
 			if strings.Contains(err.Error(), "no rows") {
@@ -230,7 +230,7 @@ func (h *TelemetryHandler) IngestGPS(w http.ResponseWriter, r *http.Request) {
 
 		if h.redis != nil {
 			cacheKey := "device:resolve:" + payload.DeviceID
-			h.redis.Set(r.Context(), cacheKey, vehicleID.String()+"|"+orgID.String(), 15*time.Minute)
+			h.redis.Set(r.Context(), cacheKey, vehicleID.String()+"|"+tenantID.String(), 15*time.Minute)
 		}
 	}
 
@@ -250,18 +250,18 @@ func (h *TelemetryHandler) IngestGPS(w http.ResponseWriter, r *http.Request) {
 	eventData := struct {
 		Type      string              `json:"type"`
 		Timestamp string              `json:"timestamp"`
-		OrgID     string              `json:"tenant_id"`
+		TenantID     string              `json:"tenant_id"`
 		VehicleID string              `json:"vehicle_id"`
 		Data      models.GPSTelemetry `json:"data"`
 	}{
 		Type:      "gps",
 		Timestamp: timestamp.Format(time.RFC3339),
-		OrgID:     orgID.String(),
+		TenantID:     tenantID.String(),
 		VehicleID: vehicleID.String(),
 		Data: models.GPSTelemetry{
 			Time:                timestamp,
 			VehicleID:           vehicleID,
-			OrgID:               orgID,
+			TenantID:               tenantID,
 			Latitude:            payload.Latitude,
 			Longitude:           payload.Longitude,
 			Altitude:            payload.Altitude,
@@ -313,7 +313,7 @@ func (h *TelemetryHandler) IngestOBD(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var jti string
-	var orgIDStr string
+	var tenantIDStr string
 	authHeader := r.Header.Get("Authorization")
 	if strings.HasPrefix(authHeader, "Bearer ") {
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
@@ -337,7 +337,7 @@ func (h *TelemetryHandler) IngestOBD(w http.ResponseWriter, r *http.Request) {
 					jti = jtiClaim
 				}
 				if orgClaim, ok := claims["tenant_id"].(string); ok {
-					orgIDStr = orgClaim
+					tenantIDStr = orgClaim
 				}
 			}
 		} else {
@@ -366,7 +366,7 @@ func (h *TelemetryHandler) IngestOBD(w http.ResponseWriter, r *http.Request) {
 			jtiRevoked, err := h.redis.Exists(ctx, "blacklist:jti:"+jti).Result()
 			if err == nil && jtiRevoked > 0 {
 				if h.metrics != nil {
-					h.metrics.TelemetryZombiePingsTotal.WithLabelValues(orgIDStr).Inc()
+					h.metrics.TelemetryZombiePingsTotal.WithLabelValues(tenantIDStr).Inc()
 				}
 				h.logger.Warn("Blocked Zombie Ping", zap.String("jti", jti), zap.String("device_id", payload.DeviceID))
 				h.errorJSON(w, "Session Revoked - JTI Blacklisted", http.StatusUnauthorized)
@@ -375,12 +375,12 @@ func (h *TelemetryHandler) IngestOBD(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var vehicleID, orgID uuid.UUID
+	var vehicleID, tenantID uuid.UUID
 	row := h.db.QueryRow(r.Context(),
 		`SELECT vehicle_id, tenant_id FROM devices WHERE device_id = $1 AND status = 'active'`,
 		payload.DeviceID,
 	)
-	err := row.Scan(&vehicleID, &orgID)
+	err := row.Scan(&vehicleID, &tenantID)
 	if err != nil {
 		h.errorJSON(w, "Device not registered", http.StatusNotFound)
 		return
@@ -392,18 +392,18 @@ func (h *TelemetryHandler) IngestOBD(w http.ResponseWriter, r *http.Request) {
 	eventData := struct {
 		Type      string              `json:"type"`
 		Timestamp string              `json:"timestamp"`
-		OrgID     string              `json:"tenant_id"`
+		TenantID     string              `json:"tenant_id"`
 		VehicleID string              `json:"vehicle_id"`
 		Data      models.OBDTelemetry `json:"data"`
 	}{
 		Type:      "obd",
 		Timestamp: timestamp.Format(time.RFC3339),
-		OrgID:     orgID.String(),
+		TenantID:     tenantID.String(),
 		VehicleID: vehicleID.String(),
 		Data: models.OBDTelemetry{
 			Time:      timestamp,
 			VehicleID: vehicleID,
-			OrgID:     orgID,
+			TenantID:     tenantID,
 			RPM:       payload.EngineRPM,
 			FuelLevel: nil, // Map correctly from payload if needed
 		},
@@ -439,7 +439,7 @@ func (h *TelemetryHandler) IngestBinary(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var jti string
-	var orgIDStr string
+	var tenantIDStr string
 	authHeader := r.Header.Get("Authorization")
 	if strings.HasPrefix(authHeader, "Bearer ") {
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
@@ -463,7 +463,7 @@ func (h *TelemetryHandler) IngestBinary(w http.ResponseWriter, r *http.Request) 
 					jti = jtiClaim
 				}
 				if orgClaim, ok := claims["tenant_id"].(string); ok {
-					orgIDStr = orgClaim
+					tenantIDStr = orgClaim
 				}
 			}
 		} else {
@@ -492,7 +492,7 @@ func (h *TelemetryHandler) IngestBinary(w http.ResponseWriter, r *http.Request) 
 			jtiRevoked, err := h.redis.Exists(ctx, "blacklist:jti:"+jti).Result()
 			if err == nil && jtiRevoked > 0 {
 				if h.metrics != nil {
-					h.metrics.TelemetryZombiePingsTotal.WithLabelValues(orgIDStr).Inc()
+					h.metrics.TelemetryZombiePingsTotal.WithLabelValues(tenantIDStr).Inc()
 				}
 				h.logger.Warn("Blocked Zombie Ping", zap.String("jti", jti), zap.String("device_id", deviceID))
 				h.errorJSON(w, "Session Revoked - JTI Blacklisted", http.StatusUnauthorized)
@@ -502,12 +502,12 @@ func (h *TelemetryHandler) IngestBinary(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// 3. Resolve Device and Vechicle (Cached path would be better but keeping simple for MVP)
-	var vehicleID, orgID uuid.UUID
+	var vehicleID, tenantID uuid.UUID
 	row := h.db.QueryRow(r.Context(),
 		`SELECT vehicle_id, tenant_id FROM devices WHERE device_id = $1 AND status = 'active'`,
 		deviceID,
 	)
-	err = row.Scan(&vehicleID, &orgID)
+	err = row.Scan(&vehicleID, &tenantID)
 	if err != nil {
 		h.errorJSON(w, "Device not registered", http.StatusNotFound)
 		return
@@ -517,13 +517,13 @@ func (h *TelemetryHandler) IngestBinary(w http.ResponseWriter, r *http.Request) 
 	eventData := struct {
 		Type      string              `json:"type"`
 		Timestamp string              `json:"timestamp"`
-		OrgID     string              `json:"tenant_id"`
+		TenantID     string              `json:"tenant_id"`
 		VehicleID string              `json:"vehicle_id"`
 		Data      models.GPSTelemetry `json:"data"`
 	}{
 		Type:      "gps_binary",
 		Timestamp: telemetry.Time.Format(time.RFC3339),
-		OrgID:     orgID.String(),
+		TenantID:     tenantID.String(),
 		VehicleID: vehicleID.String(),
 		Data:      *telemetry,
 	}

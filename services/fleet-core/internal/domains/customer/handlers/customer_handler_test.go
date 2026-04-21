@@ -28,9 +28,27 @@ func (m *mockCustomerService) GetCustomerByID(ctx context.Context, id uuid.UUID)
 	return args.Get(0).(*models.Customer), args.Error(1)
 }
 
-func (m *mockCustomerService) ListCustomers(ctx context.Context, orgID uuid.UUID) ([]models.Customer, error) {
-	args := m.Called(ctx, orgID)
+func (m *mockCustomerService) ListCustomers(ctx context.Context, tenantID uuid.UUID, filters map[string]interface{}, limit, offset int) ([]models.Customer, error) {
+	args := m.Called(ctx, tenantID, filters, limit, offset)
 	return args.Get(0).([]models.Customer), args.Error(1)
+}
+
+func (m *mockCustomerService) CountCustomers(ctx context.Context, tenantID uuid.UUID, filters map[string]interface{}) (int, error) {
+	args := m.Called(ctx, tenantID, filters)
+	return args.Int(0), args.Error(1)
+}
+
+func (m *mockCustomerService) GetCustomerSummary(ctx context.Context, customerID uuid.UUID) (map[string]interface{}, error) {
+	args := m.Called(ctx, customerID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(map[string]interface{}), args.Error(1)
+}
+
+func (m *mockCustomerService) UpdateCustomer(ctx context.Context, c *models.Customer) error {
+	args := m.Called(ctx, c)
+	return args.Error(0)
 }
 
 func TestListCustomersHandler(t *testing.T) {
@@ -39,25 +57,33 @@ func TestListCustomersHandler(t *testing.T) {
 		customerService: svc,
 	}
 
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	customers := []models.Customer{
-		{ID: uuid.New(), CompanyName: "Acme Corp", OrganizationID: orgID},
+		{ID: uuid.New(), Name: "Acme Corp", TenantID: tenantID},
 	}
 
-	svc.On("ListCustomers", mock.Anything, orgID).Return(customers, nil)
+	filters := map[string]interface{}{}
+	svc.On("ListCustomers", mock.Anything, tenantID, filters, 20, 0).Return(customers, nil)
+	svc.On("CountCustomers", mock.Anything, tenantID, filters).Return(1, nil)
 
-	req := httptest.NewRequest(http.MethodGet, "/customers", nil)
-	ctx := context.WithValue(req.Context(), middleware.OrgIDKey, orgID)
+	req := httptest.NewRequest(http.MethodGet, "/customers?page=1&size=20", nil)
+	ctx := context.WithValue(req.Context(), middleware.TenantIDKey, tenantID)
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 
 	h.ListCustomers(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-	var resp []models.Customer
-	json.Unmarshal(rr.Body.Bytes(), &resp)
-	assert.Len(t, resp, 1)
-	assert.Equal(t, "Acme Corp", resp[0].CompanyName)
+	
+	var outer struct {
+		Data []models.Customer `json:"data"`
+		Meta map[string]int    `json:"meta"`
+	}
+	json.Unmarshal(rr.Body.Bytes(), &outer)
+	
+	assert.Len(t, outer.Data, 1)
+	assert.Equal(t, "Acme Corp", outer.Data[0].Name)
+	assert.Equal(t, 1, outer.Meta["total"])
 	svc.AssertExpectations(t)
 }
 
@@ -81,11 +107,12 @@ func TestListCustomersHandler_Error(t *testing.T) {
 		customerService: svc,
 	}
 
-	orgID := uuid.New()
-	svc.On("ListCustomers", mock.Anything, orgID).Return([]models.Customer{}, assert.AnError)
+	tenantID := uuid.New()
+	filters := map[string]interface{}{}
+	svc.On("ListCustomers", mock.Anything, tenantID, filters, 20, 0).Return([]models.Customer{}, assert.AnError)
 
-	req := httptest.NewRequest(http.MethodGet, "/customers", nil)
-	ctx := context.WithValue(req.Context(), middleware.OrgIDKey, orgID)
+	req := httptest.NewRequest(http.MethodGet, "/customers?page=1&size=20", nil)
+	ctx := context.WithValue(req.Context(), middleware.TenantIDKey, tenantID)
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 

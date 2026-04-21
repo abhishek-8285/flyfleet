@@ -16,7 +16,7 @@ service AnalyticsService {
 
 message AnalyticsJob {
   string id = 1;
-  string org_id = 2;
+  string tenant_id = 2;
   string type = 3;
   string status = 4;
   google.protobuf.Timestamp created_at = 5;
@@ -41,7 +41,7 @@ message GetAnalyticsJobResponse {
 }
 
 message ListAnalyticsJobsRequest {
-  string org_id = 1;
+  string tenant_id = 1;
   int32 limit = 2;
   int32 offset = 3;
 }
@@ -52,7 +52,7 @@ message ListAnalyticsJobsResponse {
 }
 
 message GetFleetAnalyticsRequest {
-  string org_id = 1;
+  string tenant_id = 1;
   google.protobuf.Timestamp from_date = 2;
   google.protobuf.Timestamp to_date = 3;
 }
@@ -66,7 +66,7 @@ message GetFleetAnalyticsResponse {
 
 message GetDriverBehaviorAnalyticsRequest {
   string driver_id = 1;
-  string org_id = 2;
+  string tenant_id = 2;
 }
 
 message GetDriverBehaviorAnalyticsResponse {

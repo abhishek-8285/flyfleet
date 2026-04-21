@@ -37,7 +37,7 @@ func (r *GeofenceRepository) Create(ctx context.Context, geofence *models.Geofen
 
 	err := r.db.QueryRow(ctx, query,
 		geofence.ID,
-		geofence.OrgID,
+		geofence.TenantID,
 		geofence.Name,
 		geofence.Type,
 		geofence.Center,
@@ -61,7 +61,7 @@ func (r *GeofenceRepository) Create(ctx context.Context, geofence *models.Geofen
 }
 
 // GetByID retrieves a geofence by ID
-func (r *GeofenceRepository) GetByID(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*models.Geofence, error) {
+func (r *GeofenceRepository) GetByID(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) (*models.Geofence, error) {
 	query := `
 		SELECT
 			id, tenant_id, name, type,
@@ -73,12 +73,12 @@ func (r *GeofenceRepository) GetByID(ctx context.Context, id uuid.UUID, orgID uu
 		FROM geofences
 		WHERE id = $1 AND tenant_id = $2 AND enabled = true`
 
-	row := r.db.QueryRow(ctx, query, id, orgID)
+	row := r.db.QueryRow(ctx, query, id, tenantID)
 
 	var geofence models.Geofence
 	err := row.Scan(
 		&geofence.ID,
-		&geofence.OrgID,
+		&geofence.TenantID,
 		&geofence.Name,
 		&geofence.Type,
 		&geofence.Center,
@@ -107,7 +107,7 @@ func (r *GeofenceRepository) GetByID(ctx context.Context, id uuid.UUID, orgID uu
 }
 
 // List retrieves geofences with pagination and filtering
-func (r *GeofenceRepository) List(ctx context.Context, orgID uuid.UUID, req *models.ListGeofencesRequest) ([]models.Geofence, int64, error) {
+func (r *GeofenceRepository) List(ctx context.Context, tenantID uuid.UUID, req *models.ListGeofencesRequest) ([]models.Geofence, int64, error) {
 	baseQuery := `SELECT id, tenant_id, name, type, 
 	                 center, radius_meters, coordinates,
 	                 route_polyline, buffer_meters,
@@ -118,7 +118,7 @@ func (r *GeofenceRepository) List(ctx context.Context, orgID uuid.UUID, req *mod
 	          FROM geofences 
 	          WHERE tenant_id = $1 AND enabled = true`
 
-	args := []interface{}{orgID}
+	args := []interface{}{tenantID}
 	argCount := 2
 
 	// Add search filter
@@ -181,7 +181,7 @@ func (r *GeofenceRepository) List(ctx context.Context, orgID uuid.UUID, req *mod
 
 		err := rows.Scan(
 			&geofence.ID,
-			&geofence.OrgID,
+			&geofence.TenantID,
 			&geofence.Name,
 			&geofence.Type,
 			&geofence.Center,
@@ -216,7 +216,7 @@ func (r *GeofenceRepository) List(ctx context.Context, orgID uuid.UUID, req *mod
 }
 
 // Update updates an existing geofence
-func (r *GeofenceRepository) Update(ctx context.Context, id uuid.UUID, orgID uuid.UUID, req *models.UpdateGeofenceRequest) error {
+func (r *GeofenceRepository) Update(ctx context.Context, id uuid.UUID, tenantID uuid.UUID, req *models.UpdateGeofenceRequest) error {
 	// Build dynamic update query
 	query := "UPDATE geofences SET updated_at = NOW()"
 	args := []interface{}{}
@@ -249,7 +249,7 @@ func (r *GeofenceRepository) Update(ctx context.Context, id uuid.UUID, orgID uui
 	}
 
 	query += fmt.Sprintf(" WHERE id = $%d AND tenant_id = $%d", argCount+1, argCount+2)
-	args = append(args, id, orgID)
+	args = append(args, id, tenantID)
 
 	_, err := r.db.Exec(ctx, query, args...)
 	if err != nil {
@@ -259,9 +259,9 @@ func (r *GeofenceRepository) Update(ctx context.Context, id uuid.UUID, orgID uui
 }
 
 // Delete marks a geofence as inactive
-func (r *GeofenceRepository) Delete(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error {
+func (r *GeofenceRepository) Delete(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) error {
 	query := `UPDATE geofences SET enabled = false, updated_at = NOW() WHERE id = $1 AND tenant_id = $2`
-	_, err := r.db.Exec(ctx, query, id, orgID)
+	_, err := r.db.Exec(ctx, query, id, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to delete geofence: %w", err)
 	}
@@ -279,7 +279,7 @@ func (r *GeofenceRepository) GetEvents(ctx context.Context, filter *models.Geofe
 	              LEFT JOIN vehicles v ON ge.vehicle_id = v.id
 	              WHERE g.tenant_id = $1`
 
-	args := []interface{}{filter.OrgID}
+	args := []interface{}{filter.TenantID}
 	argCount := 2
 
 	// Add filters

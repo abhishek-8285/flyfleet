@@ -6,7 +6,7 @@ import (
 
 func Tenant(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, ok := GetOrgID(r.Context())
+		_, ok := GetTenantID(r.Context())
 		if !ok {
 			http.Error(w, "tenant_id missing or invalid", http.StatusForbidden)
 			return

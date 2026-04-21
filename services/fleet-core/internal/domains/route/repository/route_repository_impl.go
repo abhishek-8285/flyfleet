@@ -153,10 +153,10 @@ func (r *RouteOptimizationRepositoryImpl) DeleteOptimizationRequest(ctx context.
 }
 
 // ListOptimizationRequests lists optimization requests for an organization
-func (r *RouteOptimizationRepositoryImpl) ListOptimizationRequests(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.RouteOptimizationRequest, int, error) {
+func (r *RouteOptimizationRepositoryImpl) ListOptimizationRequests(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.RouteOptimizationRequest, int, error) {
 	countQuery := "SELECT COUNT(*) FROM route_optimization_requests WHERE organization_id = $1"
 	var total int
-	if err := r.db.QueryRow(ctx, countQuery, orgID).Scan(&total); err != nil {
+	if err := r.db.QueryRow(ctx, countQuery, tenantID).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("failed to count optimization requests: %w", err)
 	}
 
@@ -170,7 +170,7 @@ func (r *RouteOptimizationRepositoryImpl) ListOptimizationRequests(ctx context.C
 		LIMIT $2 OFFSET $3
 	`
 
-	rows, err := r.db.Query(ctx, query, orgID, limit, offset)
+	rows, err := r.db.Query(ctx, query, tenantID, limit, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list optimization requests: %w", err)
 	}

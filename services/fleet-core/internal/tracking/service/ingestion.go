@@ -94,7 +94,7 @@ func (s *IngestionService) Ingest(ctx context.Context, event *models.TelemetryEv
 
 func (s *IngestionService) publishPositionUpdate(
 	ctx context.Context,
-	orgID uuid.UUID,
+	tenantID uuid.UUID,
 	event *models.TelemetryEvent,
 	status string,
 ) error {
@@ -111,6 +111,6 @@ func (s *IngestionService) publishPositionUpdate(
 		return fmt.Errorf("marshal position update: %w", err)
 	}
 
-	channel := database.RedisChannelForOrg(orgID.String())
+	channel := database.RedisChannelForOrg(tenantID.String())
 	return s.redis.Publish(ctx, channel, msg).Err()
 }

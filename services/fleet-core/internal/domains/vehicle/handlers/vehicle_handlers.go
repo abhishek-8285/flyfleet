@@ -11,9 +11,7 @@ import (
 
 	"github.com/flyfleet/fleet-core/internal/domains/vehicle/models"
 	"github.com/flyfleet/fleet-core/internal/domains/vehicle/service"
-	"github.com/flyfleet/fleet-core/internal/middleware"
 	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
-	sharedmw "github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -116,8 +114,8 @@ func (h *VehicleHandlers) CreateVehicle(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Get Organization ID from context (set by auth middleware)
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r.Context())
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found in context", nil)
 		return
 	}
@@ -150,7 +148,7 @@ func (h *VehicleHandlers) CreateVehicle(w http.ResponseWriter, r *http.Request) 
 		LicensePlate:       dto.LicensePlate,
 	}
 
-	vehicle, err := h.service.CreateVehicle(r.Context(), req, orgID)
+	vehicle, err := h.service.CreateVehicle(r.Context(), req, tenantID)
 	if err != nil {
 		if errors.Is(err, service.ErrVehicleAlreadyExists) {
 			h.writeErrorResponse(w, http.StatusConflict, "Vehicle with this registration number already exists", nil)
@@ -185,8 +183,8 @@ func (h *VehicleHandlers) GetVehicle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// SECURITY FIX: Verify vehicle belongs to authenticated organization (CWE-639)
-	orgID := h.getOrgID(r)
-	if vehicle.TenantID != orgID {
+	tenantID := h.getTenantID(r.Context())
+	if vehicle.TenantID != tenantID {
 		h.writeErrorResponse(w, http.StatusNotFound, "Vehicle not found or access denied", nil)
 		return
 	}
@@ -196,18 +194,18 @@ func (h *VehicleHandlers) GetVehicle(w http.ResponseWriter, r *http.Request) {
 // ListVehicles godoc
 func (h *VehicleHandlers) ListVehicles(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	orgIDStr := query.Get("tenant_id")
-	var orgID uuid.UUID
-	if orgIDStr != "" {
+	tenantIDStr := query.Get("tenant_id")
+	var tenantID uuid.UUID
+	if tenantIDStr != "" {
 		var err error
-		orgID, err = uuid.Parse(orgIDStr)
+		tenantID, err = uuid.Parse(tenantIDStr)
 		if err != nil {
 			h.writeErrorResponse(w, http.StatusBadRequest, "Invalid tenant_id format", err)
 			return
 		}
 	} else {
 		// Fallback to context if not in query
-		orgID = h.getOrgID(r)
+		tenantID = h.getTenantID(r.Context())
 	}
 
 	page, _ := strconv.Atoi(query.Get("page"))
@@ -220,7 +218,7 @@ func (h *VehicleHandlers) ListVehicles(w http.ResponseWriter, r *http.Request) {
 		limit = 20
 	}
 
-	vehicles, total, err := h.service.ListVehicles(r.Context(), orgID, page, limit)
+	vehicles, total, err := h.service.ListVehicles(r.Context(), tenantID, page, limit)
 	if err != nil {
 		h.logger.Error("failed to list vehicles", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list vehicles", err)
@@ -300,13 +298,13 @@ func (h *VehicleHandlers) DeleteVehicle(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r.Context())
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return
 	}
 
-	err = h.service.DeleteVehicle(r.Context(), vehicleID, orgID)
+	err = h.service.DeleteVehicle(r.Context(), vehicleID, tenantID)
 	if err != nil {
 		if err.Error() == "vehicle not found" {
 			h.writeErrorResponse(w, http.StatusNotFound, "Vehicle not found", nil)
@@ -328,8 +326,8 @@ func (h *VehicleHandlers) AssignDriver(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r.Context())
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return
 	}
@@ -340,7 +338,7 @@ func (h *VehicleHandlers) AssignDriver(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vehicle, err := h.service.AssignDriver(r.Context(), vehicleID, orgID, dto.DriverID)
+	vehicle, err := h.service.AssignDriver(r.Context(), vehicleID, tenantID, dto.DriverID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to assign driver", err)
 		return
@@ -387,9 +385,9 @@ func (h *VehicleHandlers) SearchVehicles(w http.ResponseWriter, r *http.Request)
 			params.TenantID = &id
 		}
 	} else {
-		orgID := h.getOrgID(r)
-		if orgID != uuid.Nil {
-			params.TenantID = &orgID
+		tenantID := h.getTenantID(r.Context())
+		if tenantID != uuid.Nil {
+			params.TenantID = &tenantID
 		}
 	}
 
@@ -430,8 +428,8 @@ func (h *VehicleHandlers) SearchVehicles(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	// Fallback: regular list
-	orgID := h.getOrgID(r)
-	vehicles, total, err := h.service.ListVehicles(r.Context(), orgID, page, limit)
+	tenantID := h.getTenantID(r.Context())
+	vehicles, total, err := h.service.ListVehicles(r.Context(), tenantID, page, limit)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to search vehicles", err)
 		return
@@ -463,50 +461,9 @@ func (h *VehicleHandlers) writeErrorResponse(w http.ResponseWriter, statusCode i
 	h.writeJSONResponse(w, statusCode, map[string]string{"error": message})
 }
 
-func (h *VehicleHandlers) getOrgID(r *http.Request) uuid.UUID {
-	// 1. Try CtxOrgID (set by fleet-core JWKS middleware) as UUID or string
-	if val := r.Context().Value(middleware.CtxOrgID); val != nil {
-		switch v := val.(type) {
-		case uuid.UUID:
-			return v
-		case string:
-			if id, err := uuid.Parse(v); err == nil {
-				return id
-			}
-		}
-	}
-	// 2. Try ctxkeys.OrgIDKey (standard local key)
-	if val := r.Context().Value(ctxkeys.OrgIDKey); val != nil {
-		switch v := val.(type) {
-		case string:
-			if id, err := uuid.Parse(v); err == nil {
-				return id
-			}
-		case uuid.UUID:
-			return v
-		}
-	}
-	// 3. Try sharedmw.OrgIDKey (from shared pkg, used in legacy tests)
-	if val := r.Context().Value(sharedmw.OrgIDKey); val != nil {
-		switch v := val.(type) {
-		case string:
-			if id, err := uuid.Parse(v); err == nil {
-				return id
-			}
-		case uuid.UUID:
-			return v
-		}
-	}
-	// 4. Final fallback: raw string "tenant_id"
-	if val := r.Context().Value("tenant_id"); val != nil {
-		switch v := val.(type) {
-		case string:
-			if id, err := uuid.Parse(v); err == nil {
-				return id
-			}
-		case uuid.UUID:
-			return v
-		}
+func (h *VehicleHandlers) getTenantID(ctx context.Context) uuid.UUID {
+	if id, ok := ctxkeys.GetTenantID(ctx); ok {
+		return id
 	}
 	return uuid.Nil
 }

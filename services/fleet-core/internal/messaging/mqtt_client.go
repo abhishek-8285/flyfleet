@@ -230,31 +230,31 @@ func (c *MQTTClient) GetConfig() MQTTConfig {
 }
 
 // PublishVehicleTelemetry publishes vehicle telemetry data
-func (c *MQTTClient) PublishVehicleTelemetry(orgID, vehicleID string, telemetry interface{}) error {
-	topic := fmt.Sprintf("fleet/%s/vehicles/%s/telemetry", orgID, vehicleID)
+func (c *MQTTClient) PublishVehicleTelemetry(tenantID, vehicleID string, telemetry interface{}) error {
+	topic := fmt.Sprintf("fleet/%s/vehicles/%s/telemetry", tenantID, vehicleID)
 	return c.PublishJSON(topic, telemetry)
 }
 
 // PublishVehicleStatus publishes vehicle status update
-func (c *MQTTClient) PublishVehicleStatus(orgID, vehicleID string, status interface{}) error {
-	topic := fmt.Sprintf("fleet/%s/vehicles/%s/status", orgID, vehicleID)
+func (c *MQTTClient) PublishVehicleStatus(tenantID, vehicleID string, status interface{}) error {
+	topic := fmt.Sprintf("fleet/%s/vehicles/%s/status", tenantID, vehicleID)
 	return c.PublishJSON(topic, status)
 }
 
 // PublishVehicleAlert publishes a vehicle alert
-func (c *MQTTClient) PublishVehicleAlert(orgID, vehicleID string, alert interface{}) error {
-	topic := fmt.Sprintf("fleet/%s/vehicles/%s/alerts", orgID, vehicleID)
+func (c *MQTTClient) PublishVehicleAlert(tenantID, vehicleID string, alert interface{}) error {
+	topic := fmt.Sprintf("fleet/%s/vehicles/%s/alerts", tenantID, vehicleID)
 	return c.PublishWithQoS(topic, nil, 2, false) // QoS 2 for alerts
 }
 
 // SendCommand publishes a command to a vehicle
-func (c *MQTTClient) SendCommand(orgID, vehicleID string, command interface{}) error {
-	topic := fmt.Sprintf("fleet/%s/commands/%s", orgID, vehicleID)
+func (c *MQTTClient) SendCommand(tenantID, vehicleID string, command interface{}) error {
+	topic := fmt.Sprintf("fleet/%s/commands/%s", tenantID, vehicleID)
 	return c.PublishWithQoS(topic, nil, 2, false) // QoS 2 for commands
 }
 
 // SubscribeToCommands subscribes to command responses for a vehicle
-func (c *MQTTClient) SubscribeToCommands(orgID, vehicleID string, handler func([]byte)) error {
-	topic := fmt.Sprintf("fleet/%s/responses/%s", orgID, vehicleID)
+func (c *MQTTClient) SubscribeToCommands(tenantID, vehicleID string, handler func([]byte)) error {
+	topic := fmt.Sprintf("fleet/%s/responses/%s", tenantID, vehicleID)
 	return c.Subscribe(topic, handler)
 }

@@ -66,14 +66,14 @@ func (h *IngestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		deviceID, _ = uuid.FromString(req.DeviceID)
 	}
 
-	// FIX: GetOrgID takes context.Context, and returns google/uuid.UUID — convert via string
-	middlewareOrgID := middleware.GetOrgID(r.Context())
-	orgID, _ := uuid.FromString(middlewareOrgID.String())
+	// FIX: GetTenantID takes context.Context, and returns google/uuid.UUID — convert via string
+	middlewareTenantID := middleware.GetTenantID(r.Context())
+	tenantID, _ := uuid.FromString(middlewareTenantID.String())
 
 	event := &models.TelemetryEvent{
 		VehicleID:  vehicleID,
 		DeviceID:   deviceID,
-		TenantID:   orgID,
+		TenantID:   tenantID,
 		Lat:        req.Latitude,
 		Lng:        req.Longitude,
 		Speed:      req.Speed,

@@ -21,16 +21,16 @@ func NewGeofenceRepository(pool *pgxpool.Pool) *GeofenceRepository {
 	return &GeofenceRepository{pool: pool}
 }
 
-// GetOrgGeofences returns all active geofences for an organization.
-func (r *GeofenceRepository) GetOrgGeofences(ctx context.Context, orgID uuid.UUID) ([]models.Geofence, error) {
-	q := `SELECT id, org_id, name, COALESCE(description,''), type,
+// GetOrgGeofences returns all active geofences for a tenant.
+func (r *GeofenceRepository) GetOrgGeofences(ctx context.Context, tenantID uuid.UUID) ([]models.Geofence, error) {
+	q := `SELECT id, tenant_id, name, COALESCE(description,''), type,
 	         center_lat, center_lng, radius_m,
 	         COALESCE(polygon_wkt, ''), enabled, created_at, updated_at
 	      FROM geofences
-	      WHERE org_id = $1 AND enabled = true
+	      WHERE tenant_id = $1 AND enabled = true
 	      ORDER BY name`
 
-	rows, err := r.pool.Query(ctx, q, orgID)
+	rows, err := r.pool.Query(ctx, q, tenantID)
 	if err != nil {
 		return nil, fmt.Errorf("query geofences: %w", err)
 	}
@@ -43,7 +43,7 @@ func (r *GeofenceRepository) GetOrgGeofences(ctx context.Context, orgID uuid.UUI
 		var centerLat, centerLng, radiusM interface{}
 		var enabled bool
 		if err := rows.Scan(
-			&g.ID, &g.OrgID, &g.Name, &g.Description, &g.Type,
+			&g.ID, &g.TenantID, &g.Name, &g.Description, &g.Type,
 			&centerLat, &centerLng, &radiusM,
 			&g.PolygonWKT, &enabled, &g.CreatedAt, &updatedAt,
 		); err != nil {
@@ -71,20 +71,20 @@ func (r *GeofenceRepository) GetOrgGeofences(ctx context.Context, orgID uuid.UUI
 // CreateGeofence inserts a new geofence.
 func (r *GeofenceRepository) CreateGeofence(ctx context.Context, g *models.Geofence) error {
 	if g.Type == models.GeofenceCircle {
-		q := `INSERT INTO geofences (id, org_id, name, description, type, center_lat, center_lng, radius_m, enabled, created_at, updated_at)
+		q := `INSERT INTO geofences (id, tenant_id, name, description, type, center_lat, center_lng, radius_m, enabled, created_at, updated_at)
 		      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true,NOW(),NOW())`
 		_, err := r.pool.Exec(ctx, q,
-			g.ID, g.OrgID, g.Name, g.Description, g.Type,
+			g.ID, g.TenantID, g.Name, g.Description, g.Type,
 			*g.CenterLat, *g.CenterLng, *g.RadiusM,
 		)
 		return err
 	}
 
 	// Polygon — store WKT as text
-	q := `INSERT INTO geofences (id, org_id, name, description, type, polygon_wkt, enabled, created_at, updated_at)
+	q := `INSERT INTO geofences (id, tenant_id, name, description, type, polygon_wkt, enabled, created_at, updated_at)
 	      VALUES ($1,$2,$3,$4,$5,$6,true,NOW(),NOW())`
 	_, err := r.pool.Exec(ctx, q,
-		g.ID, g.OrgID, g.Name, g.Description, g.Type, g.PolygonWKT,
+		g.ID, g.TenantID, g.Name, g.Description, g.Type, g.PolygonWKT,
 	)
 	return err
 }
@@ -104,11 +104,11 @@ func haversineDistanceM(lat1, lng1, lat2, lng2 float64) float64 {
 // CheckPointInGeofences returns the list of geofences that contain
 // the given point. For circles, uses Haversine distance.
 // For polygons, returns all (point-in-polygon requires PostGIS or client-side check).
-func (r *GeofenceRepository) CheckPointInGeofences(ctx context.Context, orgID uuid.UUID, lat, lng float64) ([]models.Geofence, error) {
-	// Fetch all active geofences for the org and filter client-side
-	all, err := r.GetOrgGeofences(ctx, orgID)
+func (r *GeofenceRepository) CheckPointInGeofences(ctx context.Context, tenantID uuid.UUID, lat, lng float64) ([]models.Geofence, error) {
+	// Fetch all active geofences for the tenant and filter client-side
+	all, err := r.GetOrgGeofences(ctx, tenantID)
 	if err != nil {
-		return nil, fmt.Errorf("get org geofences: %w", err)
+		return nil, fmt.Errorf("get tenant geofences: %w", err)
 	}
 
 	var results []models.Geofence

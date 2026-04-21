@@ -42,16 +42,16 @@ func (h *HistoryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// FIX: GetOrgID takes context.Context, returns google/uuid — convert to gofrs
-	middlewareOrgID := middleware.GetOrgID(r.Context())
-	orgID, _ := uuid.FromString(middlewareOrgID.String())
-	if orgID == uuid.Nil {
+	// FIX: GetTenantID takes context.Context, returns google/uuid — convert to gofrs
+	middlewareTenantID := middleware.GetTenantID(r.Context())
+	tenantID, _ := uuid.FromString(middlewareTenantID.String())
+	if tenantID == uuid.Nil {
 		http.Error(w, `{"error":"missing organization context"}`, http.StatusUnauthorized)
 		return
 	}
 
 	// NEW: Tenant isolation check — vehicle must belong to requesting org
-	belongs, err := h.queryService.VehicleBelongsToOrg(r.Context(), orgID, vehicleID)
+	belongs, err := h.queryService.VehicleBelongsToOrg(r.Context(), tenantID, vehicleID)
 	if err != nil || !belongs {
 		http.Error(w, `{"error":"vehicle not found or not accessible"}`, http.StatusNotFound)
 		return

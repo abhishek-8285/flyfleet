@@ -16,7 +16,7 @@ service TripService {
 
 message Trip {
   string id = 1;
-  string org_id = 2;
+  string tenant_id = 2;
   string vehicle_id = 3;
   string driver_id = 4;
   string status = 5;
@@ -53,7 +53,7 @@ message GetTripResponse {
 }
 
 message ListTripsRequest {
-  string org_id = 1;
+  string tenant_id = 1;
   string vehicle_id = 2;
   string driver_id = 3;
   string status = 4;
@@ -76,7 +76,7 @@ message UpdateTripStatusResponse {
 }
 
 message GetTripStatsRequest {
-  string org_id = 1;
+  string tenant_id = 1;
 }
 
 message GetTripStatsResponse {

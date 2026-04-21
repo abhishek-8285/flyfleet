@@ -35,7 +35,7 @@ func TestAuthHandler_Login_RequestParsing(t *testing.T) {
 		body        string
 		expectEmail string
 		expectPass  string
-		expectOrgID string
+		expectTenantID string
 		wantErr     bool
 	}{
 		{
@@ -43,15 +43,15 @@ func TestAuthHandler_Login_RequestParsing(t *testing.T) {
 			body:        `{"email":"user@example.com","password":"secret123","tenant_id":"org-001"}`,
 			expectEmail: "user@example.com",
 			expectPass:  "secret123",
-			expectOrgID: "org-001",
+			expectTenantID: "org-001",
 			wantErr:     false,
 		},
 		{
-			name:        "missing_org_id",
+			name:        "missing_tenant_id",
 			body:        `{"email":"user@example.com","password":"secret123"}`,
 			expectEmail: "user@example.com",
 			expectPass:  "secret123",
-			expectOrgID: "",
+			expectTenantID: "",
 			wantErr:     false,
 		},
 		{
@@ -72,7 +72,7 @@ func TestAuthHandler_Login_RequestParsing(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectEmail, parsed.Email)
 			assert.Equal(t, tt.expectPass, parsed.Password)
-			assert.Equal(t, tt.expectOrgID, parsed.OrgID)
+			assert.Equal(t, tt.expectTenantID, parsed.TenantID)
 		})
 	}
 }
@@ -84,14 +84,14 @@ func TestAuthHandler_Register_RequestParsing(t *testing.T) {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 		Name     string `json:"name"`
-		OrgID    string `json:"tenant_id"`
+		TenantID    string `json:"tenant_id"`
 	}
 	err := json.Unmarshal([]byte(body), &parsed)
 	require.NoError(t, err)
 	assert.Equal(t, "new@example.com", parsed.Email)
 	assert.Equal(t, "MyP@ssw0rd!", parsed.Password)
 	assert.Equal(t, "New User", parsed.Name)
-	assert.Equal(t, "org-001", parsed.OrgID)
+	assert.Equal(t, "org-001", parsed.TenantID)
 }
 
 func TestAuthHandler_OrgSwitch_PathParsing(t *testing.T) {
@@ -119,13 +119,13 @@ func TestRBACHandler_BulkAssign_RequestParsing(t *testing.T) {
 	var parsed struct {
 		UserIDs []string `json:"user_ids"`
 		RoleIDs []string `json:"role_ids"`
-		OrgID   string   `json:"tenant_id"`
+		TenantID   string   `json:"tenant_id"`
 	}
 	err := json.Unmarshal([]byte(body), &parsed)
 	require.NoError(t, err)
 	assert.Len(t, parsed.UserIDs, 2)
 	assert.Len(t, parsed.RoleIDs, 1)
-	assert.Equal(t, "550e8400-e29b-41d4-a716-446655440004", parsed.OrgID)
+	assert.Equal(t, "550e8400-e29b-41d4-a716-446655440004", parsed.TenantID)
 }
 
 func TestInviteHandler_CreateInvite_RequestParsing(t *testing.T) {

@@ -10,10 +10,10 @@ import (
 )
 
 // ============================================================================
-// Geofence Engine — getOrgIDForVehicle Tests
+// Geofence Engine — getTenantIDForVehicle Tests
 // ============================================================================
 
-func TestGeofenceEngine_GetOrgIDForVehicle_MethodExists(t *testing.T) {
+func TestGeofenceEngine_GetTenantIDForVehicle_MethodExists(t *testing.T) {
 	logger := zap.NewNop()
 	// Verify the method exists on the engine struct
 	eng := NewGeofenceEngine(nil, nil, logger)
@@ -151,21 +151,21 @@ func TestGeofenceEventMessage_DwellType(t *testing.T) {
 // ============================================================================
 
 func TestRedisChannelFormat(t *testing.T) {
-	orgID := uuid.Must(uuid.NewRandom())
-	expected := "org:" + orgID.String() + ":geofence_alerts"
+	tenantID := uuid.Must(uuid.NewRandom())
+	expected := "org:" + tenantID.String() + ":geofence_alerts"
 
 	// Verify the channel format matches what WebSocketHandler subscribes to
-	channel := "org:" + orgID.String() + ":geofence_alerts"
+	channel := "org:" + tenantID.String() + ":geofence_alerts"
 	if channel != expected {
 		t.Errorf("channel format mismatch: expected %s, got %s", expected, channel)
 	}
 }
 
 func TestRedisTelemetryChannelFormat(t *testing.T) {
-	orgID := "550e8400-e29b-41d4-a716-446655440000"
-	expected := "org:" + orgID + ":telemetry"
+	tenantID := "550e8400-e29b-41d4-a716-446655440000"
+	expected := "org:" + tenantID + ":telemetry"
 
-	channel := "org:" + orgID + ":telemetry"
+	channel := "org:" + tenantID + ":telemetry"
 	if channel != expected {
 		t.Errorf("channel format mismatch: expected %s, got %s", expected, channel)
 	}

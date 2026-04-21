@@ -53,7 +53,7 @@ func (r *AuthRepository) GetUserByEmail(ctx context.Context, email string) (*mod
 	start2 := time.Now()
 	var user models.User
 	err = tx.QueryRow(ctx, query, email).Scan(
-		&user.ID, &user.OrgID, &user.Email, &user.Role, &user.PasswordHash,
+		&user.ID, &user.TenantID, &user.Email, &user.Role, &user.PasswordHash,
 		&user.CreatedAt, &user.CreatedBy, &user.UpdatedAt, &user.UpdatedBy,
 		&user.MfaEnabled, &user.MfaMethods, &user.MfaSecret, &user.LastPasswordChange,
 		&user.FailedLoginAttempts, &user.LockedUntil,
@@ -79,14 +79,14 @@ func (r *AuthRepository) CreateUser(ctx context.Context, user *models.User) erro
 		INSERT INTO users (id, tenant_id, email, password_hash, role, is_active, created_at, created_by, updated_at, updated_by, mfa_enabled, mfa_methods, last_password_change)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`
-	var targetOrgID interface{} = user.OrgID
-	if user.OrgID == uuid.Nil {
-		targetOrgID = nil
+	var targetTenantID interface{} = user.TenantID
+	if user.TenantID == uuid.Nil {
+		targetTenantID = nil
 	}
 
 	start := time.Now()
 	_, err := r.db.Exec(ctx, query,
-		user.ID, targetOrgID, user.Email, user.PasswordHash, user.Role, true,
+		user.ID, targetTenantID, user.Email, user.PasswordHash, user.Role, true,
 		user.CreatedAt, user.CreatedBy, user.UpdatedAt, user.UpdatedBy,
 		user.MfaEnabled, user.MfaMethods, user.LastPasswordChange,
 	)
@@ -112,7 +112,7 @@ func (r *AuthRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*models
 	start := time.Now()
 	var user models.User
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&user.ID, &user.OrgID, &user.Email, &user.Role,
+		&user.ID, &user.TenantID, &user.Email, &user.Role,
 		&user.CreatedAt, &user.CreatedBy, &user.UpdatedAt, &user.UpdatedBy,
 		&user.MfaEnabled, &user.MfaMethods, &user.MfaSecret, &user.LastPasswordChange,
 		&user.FailedLoginAttempts, &user.LockedUntil,
@@ -483,7 +483,7 @@ func (r *AuthRepository) GetUserByOidcLink(ctx context.Context, providerID uuid.
 	start := time.Now()
 	var u models.User
 	err := r.db.QueryRow(ctx, query, providerID, providerUserID).Scan(
-		&u.ID, &u.OrgID, &u.Email, &u.Role, &u.PasswordHash, &u.MfaEnabled, &u.MfaSecret, &u.FailedLoginAttempts, &u.LockedUntil, &u.CreatedAt,
+		&u.ID, &u.TenantID, &u.Email, &u.Role, &u.PasswordHash, &u.MfaEnabled, &u.MfaSecret, &u.FailedLoginAttempts, &u.LockedUntil, &u.CreatedAt,
 	)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
@@ -576,7 +576,7 @@ func (r *AuthRepository) SaveAPIKey(ctx context.Context, k *models.APIKey) error
 	query := `INSERT INTO api_keys (id, tenant_id, name, prefix, secret_hash, created_at, expires_at)
 			  VALUES ($1, $2, $3, $4, $5, $6, $7)`
 	start := time.Now()
-	_, err := r.db.Exec(ctx, query, k.ID, k.OrgID, k.Name, k.Prefix, k.SecretHash, k.CreatedAt, k.ExpiresAt)
+	_, err := r.db.Exec(ctx, query, k.ID, k.TenantID, k.Name, k.Prefix, k.SecretHash, k.CreatedAt, k.ExpiresAt)
 	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
@@ -587,7 +587,7 @@ func (r *AuthRepository) GetAPIKeyByPrefix(ctx context.Context, prefix string) (
 	start := time.Now()
 	var k models.APIKey
 	err := r.db.QueryRow(ctx, query, prefix).Scan(
-		&k.ID, &k.OrgID, &k.Name, &k.Prefix, &k.SecretHash, &k.CreatedAt, &k.ExpiresAt, &k.LastUsedAt, &k.Revoked,
+		&k.ID, &k.TenantID, &k.Name, &k.Prefix, &k.SecretHash, &k.CreatedAt, &k.ExpiresAt, &k.LastUsedAt, &k.Revoked,
 	)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
@@ -612,7 +612,7 @@ func (r *AuthRepository) GetServiceAccount(ctx context.Context, id uuid.UUID) (*
 	start := time.Now()
 	var sa models.ServiceAccount
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&sa.ID, &sa.OrgID, &sa.Name, &sa.SecretHash, &sa.CreatedAt,
+		&sa.ID, &sa.TenantID, &sa.Name, &sa.SecretHash, &sa.CreatedAt,
 	)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
@@ -650,10 +650,10 @@ func (r *AuthRepository) AnonymizeUser(ctx context.Context, userID uuid.UUID) er
 	return err
 }
 
-func (r *AuthRepository) ListAPIKeys(ctx context.Context, orgID uuid.UUID) ([]models.APIKey, error) {
+func (r *AuthRepository) ListAPIKeys(ctx context.Context, tenantID uuid.UUID) ([]models.APIKey, error) {
 	query := `SELECT id, tenant_id, name, prefix, secret_hash, created_at, expires_at, last_used_at, revoked FROM api_keys WHERE tenant_id = $1 ORDER BY created_at DESC`
 	start := time.Now()
-	rows, err := r.db.Query(ctx, query, orgID)
+	rows, err := r.db.Query(ctx, query, tenantID)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
@@ -663,7 +663,7 @@ func (r *AuthRepository) ListAPIKeys(ctx context.Context, orgID uuid.UUID) ([]mo
 	var keys []models.APIKey
 	for rows.Next() {
 		var k models.APIKey
-		if err := rows.Scan(&k.ID, &k.OrgID, &k.Name, &k.Prefix, &k.SecretHash, &k.CreatedAt, &k.ExpiresAt, &k.LastUsedAt, &k.Revoked); err != nil {
+		if err := rows.Scan(&k.ID, &k.TenantID, &k.Name, &k.Prefix, &k.SecretHash, &k.CreatedAt, &k.ExpiresAt, &k.LastUsedAt, &k.Revoked); err != nil {
 			return nil, err
 		}
 		keys = append(keys, k)
@@ -682,15 +682,15 @@ func (r *AuthRepository) RevokeAPIKey(ctx context.Context, id uuid.UUID) error {
 func (r *AuthRepository) CreateServiceAccount(ctx context.Context, sa *models.ServiceAccount) error {
 	query := `INSERT INTO service_accounts (id, tenant_id, name, description, client_id, client_secret_hash, role, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 	start := time.Now()
-	_, err := r.db.Exec(ctx, query, sa.ID, sa.OrgID, sa.Name, sa.Description, sa.ClientID, sa.ClientSecretHash, sa.Role, sa.CreatedAt, sa.UpdatedAt)
+	_, err := r.db.Exec(ctx, query, sa.ID, sa.TenantID, sa.Name, sa.Description, sa.ClientID, sa.ClientSecretHash, sa.Role, sa.CreatedAt, sa.UpdatedAt)
 	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
-func (r *AuthRepository) ListServiceAccounts(ctx context.Context, orgID uuid.UUID) ([]models.ServiceAccount, error) {
+func (r *AuthRepository) ListServiceAccounts(ctx context.Context, tenantID uuid.UUID) ([]models.ServiceAccount, error) {
 	query := `SELECT id, tenant_id, name, description, client_id, client_secret_hash, role, created_at, updated_at, last_used_at FROM service_accounts WHERE tenant_id = $1 ORDER BY created_at DESC`
 	start := time.Now()
-	rows, err := r.db.Query(ctx, query, orgID)
+	rows, err := r.db.Query(ctx, query, tenantID)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
@@ -700,7 +700,7 @@ func (r *AuthRepository) ListServiceAccounts(ctx context.Context, orgID uuid.UUI
 	var accounts []models.ServiceAccount
 	for rows.Next() {
 		var sa models.ServiceAccount
-		if err := rows.Scan(&sa.ID, &sa.OrgID, &sa.Name, &sa.Description, &sa.ClientID, &sa.ClientSecretHash, &sa.Role, &sa.CreatedAt, &sa.UpdatedAt, &sa.LastUsedAt); err != nil {
+		if err := rows.Scan(&sa.ID, &sa.TenantID, &sa.Name, &sa.Description, &sa.ClientID, &sa.ClientSecretHash, &sa.Role, &sa.CreatedAt, &sa.UpdatedAt, &sa.LastUsedAt); err != nil {
 			return nil, err
 		}
 		accounts = append(accounts, sa)
@@ -719,28 +719,28 @@ func (r *AuthRepository) CreateRole(ctx context.Context, role *models.Role) erro
 	query := `INSERT INTO roles (id, name, organization_id, description, is_system, created_at, updated_at)
 			  VALUES ($1, $2, $3, $4, $5, $6, $7)`
 	start := time.Now()
-	_, err := r.db.Exec(ctx, query, role.ID, role.Name, role.OrgID, role.Description, role.IsSystem, role.CreatedAt, role.UpdatedAt)
+	_, err := r.db.Exec(ctx, query, role.ID, role.Name, role.TenantID, role.Description, role.IsSystem, role.CreatedAt, role.UpdatedAt)
 	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
-func (r *AuthRepository) AssignRoleToUser(ctx context.Context, userID uuid.UUID, roleID uuid.UUID, orgID uuid.UUID) error {
+func (r *AuthRepository) AssignRoleToUser(ctx context.Context, userID uuid.UUID, roleID uuid.UUID, tenantID uuid.UUID) error {
 	query := `INSERT INTO user_roles (user_id, role_id, organization_id, granted_at)
 			  VALUES ($1, $2, $3, NOW()) ON CONFLICT DO NOTHING`
 	start := time.Now()
-	_, err := r.db.Exec(ctx, query, userID, roleID, orgID)
+	_, err := r.db.Exec(ctx, query, userID, roleID, tenantID)
 	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
-func (r *AuthRepository) GetUserRoles(ctx context.Context, userID uuid.UUID, orgID uuid.UUID) ([]models.Role, error) {
+func (r *AuthRepository) GetUserRoles(ctx context.Context, userID uuid.UUID, tenantID uuid.UUID) ([]models.Role, error) {
 	query := `SELECT r.id, r.name, uo.tenant_id, r.description, r.is_system, r.created_at, r.updated_at
 			  FROM roles r
 			  JOIN user_organizations uo ON r.name = uo.role
 			  WHERE uo.user_id = $1 AND uo.tenant_id = $2`
 
 	start := time.Now()
-	rows, err := r.db.Query(ctx, query, userID, orgID)
+	rows, err := r.db.Query(ctx, query, userID, tenantID)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
@@ -750,7 +750,7 @@ func (r *AuthRepository) GetUserRoles(ctx context.Context, userID uuid.UUID, org
 	var roles []models.Role
 	for rows.Next() {
 		var role models.Role
-		if err := rows.Scan(&role.ID, &role.Name, &role.OrgID, &role.Description, &role.IsSystem, &role.CreatedAt, &role.UpdatedAt); err != nil {
+		if err := rows.Scan(&role.ID, &role.Name, &role.TenantID, &role.Description, &role.IsSystem, &role.CreatedAt, &role.UpdatedAt); err != nil {
 			return nil, err
 		}
 		roles = append(roles, role)
@@ -758,14 +758,14 @@ func (r *AuthRepository) GetUserRoles(ctx context.Context, userID uuid.UUID, org
 	return roles, rows.Err()
 }
 
-func (r *AuthRepository) GetUserPermissions(ctx context.Context, userID uuid.UUID, orgID uuid.UUID) ([]string, error) {
+func (r *AuthRepository) GetUserPermissions(ctx context.Context, userID uuid.UUID, tenantID uuid.UUID) ([]string, error) {
 	query := `SELECT DISTINCT p.resource || ':' || p.action
 			  FROM permissions p
 			  JOIN user_organizations uo ON p.role_id = (SELECT id FROM roles WHERE name = uo.role)
 			  WHERE uo.user_id = $1 AND uo.tenant_id = $2`
 
 	start := time.Now()
-	rows, err := r.db.Query(ctx, query, userID, orgID)
+	rows, err := r.db.Query(ctx, query, userID, tenantID)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
@@ -783,7 +783,7 @@ func (r *AuthRepository) GetUserPermissions(ctx context.Context, userID uuid.UUI
 	return permissions, rows.Err()
 }
 
-func (r *AuthRepository) CheckPermission(ctx context.Context, userID uuid.UUID, orgID uuid.UUID, permission string) (bool, error) {
+func (r *AuthRepository) CheckPermission(ctx context.Context, userID uuid.UUID, tenantID uuid.UUID, permission string) (bool, error) {
 	parts := strings.Split(permission, ":")
 	if len(parts) != 2 {
 		return false, nil
@@ -796,7 +796,7 @@ func (r *AuthRepository) CheckPermission(ctx context.Context, userID uuid.UUID, 
 			  )`
 	start := time.Now()
 	var exists bool
-	err := r.db.QueryRow(ctx, query, userID, orgID, parts[0], parts[1]).Scan(&exists)
+	err := r.db.QueryRow(ctx, query, userID, tenantID, parts[0], parts[1]).Scan(&exists)
 	metrics.RecordDBQuery(query, time.Since(start))
 	return exists, err
 }
@@ -806,7 +806,7 @@ func (r *AuthRepository) GetInviteByCode(ctx context.Context, code string) (*mod
 	start := time.Now()
 	var invite models.Invite
 	err := r.db.QueryRow(ctx, query, code).Scan(
-		&invite.ID, &invite.Code, &invite.OrgID, &invite.Role, &invite.Expiry, &invite.CreatedAt, &invite.CreatedBy, &invite.Used,
+		&invite.ID, &invite.Code, &invite.TenantID, &invite.Role, &invite.Expiry, &invite.CreatedAt, &invite.CreatedBy, &invite.Used,
 	)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
@@ -822,7 +822,7 @@ func (r *AuthRepository) CreateInvite(ctx context.Context, invite *models.Invite
 	`
 	start := time.Now()
 	_, err := r.db.Exec(ctx, query,
-		invite.ID, invite.Code, invite.OrgID, invite.Role,
+		invite.ID, invite.Code, invite.TenantID, invite.Role,
 		invite.Expiry, invite.CreatedAt, invite.CreatedBy, invite.Used,
 	)
 	metrics.RecordDBQuery(query, time.Since(start))
@@ -846,13 +846,13 @@ func (r *AuthRepository) CreateOrganization(ctx context.Context, org *models.Org
 	return err
 }
 
-func (r *AuthRepository) RevokeAllOrgTokens(ctx context.Context, orgID uuid.UUID) error {
+func (r *AuthRepository) RevokeAllOrgTokens(ctx context.Context, tenantID uuid.UUID) error {
 	query := `
 		UPDATE refresh_tokens SET revoked = true, revoked_at = NOW() 
 		WHERE user_id IN (SELECT id FROM users WHERE tenant_id = $1)
 	`
 	start := time.Now()
-	_, err := r.db.Exec(ctx, query, orgID)
+	_, err := r.db.Exec(ctx, query, tenantID)
 	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }

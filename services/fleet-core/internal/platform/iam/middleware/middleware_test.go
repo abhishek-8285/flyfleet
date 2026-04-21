@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	"github.com/flyfleet/fleet-core/internal/platform/iam/models"
 	"github.com/flyfleet/fleet-core/internal/platform/iam/service"
 	"github.com/google/uuid"
@@ -18,7 +19,7 @@ type MockIAMService struct {
 	mock.Mock
 }
 
-func (m *MockIAMService) Register(ctx context.Context, email, password, fullName string, orgID uuid.UUID) (*models.User, error) {
+func (m *MockIAMService) Register(ctx context.Context, email, password, fullName string, tenantID uuid.UUID) (*models.User, error) {
 	return nil, nil // Not needed for middleware tests
 }
 
@@ -39,8 +40,8 @@ func (m *MockIAMService) CheckPermission(ctx context.Context, userID uuid.UUID, 
 	return args.Bool(0), args.Error(1)
 }
 
-func (m *MockIAMService) IsSessionActive(ctx context.Context, userID, orgID uuid.UUID, jti string) (bool, error) {
-	args := m.Called(ctx, userID, orgID, jti)
+func (m *MockIAMService) IsSessionActive(ctx context.Context, userID, tenantID uuid.UUID, jti string) (bool, error) {
+	args := m.Called(ctx, userID, tenantID, jti)
 	return args.Bool(0), args.Error(1)
 }
 
@@ -50,19 +51,19 @@ func TestAuthMiddleware(t *testing.T) {
 
 	// Case: Valid Token - verify UUIDs stored as strings
 	userID := uuid.New()
-	orgID := uuid.New()
-	mockSvc.On("ValidateToken", "valid-token").Return(&service.IAMClaims{UserID: userID, OrgID: orgID}, nil)
+	tenantID := uuid.New()
+	mockSvc.On("ValidateToken", "valid-token").Return(&service.IAMClaims{UserID: userID, TenantID: tenantID}, nil)
 
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// SECURITY FIX: Verify UserID is stored as string (not uuid.UUID)
-		userIDVal, ok := r.Context().Value(UserIDKey).(string)
-		assert.True(t, ok, "UserID should be string")
-		assert.Equal(t, userID.String(), userIDVal)
+		userIDVal, ok := r.Context().Value(ctxkeys.UserIDKey).(uuid.UUID)
+		assert.True(t, ok, "UserID should be uuid.UUID")
+		assert.Equal(t, userID, userIDVal)
 
-		// Verify OrgID is stored as string (not uuid.UUID)
-		orgIDVal, ok := r.Context().Value(OrgIDKey).(string)
-		assert.True(t, ok, "OrgID should be string")
-		assert.Equal(t, orgID.String(), orgIDVal)
+		// Verify TenantID is stored as string (not uuid.UUID)
+		tenantIDVal, ok := r.Context().Value(ctxkeys.TenantIDKey).(uuid.UUID)
+		assert.True(t, ok, "TenantID should be uuid.UUID")
+		assert.Equal(t, tenantID, tenantIDVal)
 
 		w.WriteHeader(http.StatusOK)
 	})
@@ -95,8 +96,8 @@ func TestRBACMiddleware(t *testing.T) {
 	mockSvc.On("CheckPermission", mock.Anything, userID, "vehicle", "read").Return(true, nil).Once()
 
 	req := httptest.NewRequest("GET", "/", nil)
-	// SECURITY FIX: Store UserID as string in context (as AuthMiddleware does)
-	ctx := context.WithValue(req.Context(), UserIDKey, userID.String())
+	// SECURITY FIX: Store UserID as uuid.UUID in context
+	ctx := context.WithValue(req.Context(), ctxkeys.UserIDKey, userID)
 	rr := httptest.NewRecorder()
 
 	handler(next).ServeHTTP(rr, req.WithContext(ctx))

@@ -11,7 +11,7 @@ import (
 
 // VehicleRepositoryer defines the interface for vehicle data access.
 type VehicleRepositoryer interface {
-	GetOrgVehicles(ctx context.Context, orgID uuid.UUID) ([]VehicleRecord, error)
+	GetOrgVehicles(ctx context.Context, tenantID uuid.UUID) ([]VehicleRecord, error)
 	GetDriverInfo(ctx context.Context, driverID uuid.UUID) (*models.DriverInfo, error)
 	GetDriversBatch(ctx context.Context, driverIDs []uuid.UUID) (map[uuid.UUID]*models.DriverInfo, error)
 }
@@ -21,7 +21,7 @@ type LiveCacher interface {
 	SetLiveLocation(ctx context.Context, vehicleID uuid.UUID, loc *models.LiveLocation) error
 	GetLiveLocation(ctx context.Context, vehicleID uuid.UUID) (*models.LiveLocation, error)
 	GetBatchLiveLocations(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]*models.LiveLocation, error)
-	PublishPositionUpdate(ctx context.Context, orgID uuid.UUID, msg []byte) error
+	PublishPositionUpdate(ctx context.Context, tenantID uuid.UUID, msg []byte) error
 	GetGeofenceState(ctx context.Context, vehicleID, geofenceID string) (bool, error)
 	SetGeofenceState(ctx context.Context, vehicleID, geofenceID string, inside bool) error
 }
@@ -36,13 +36,13 @@ type TelemetryRepositoryer interface {
 
 // GeofenceRepositoryer defines the interface for geofence data access.
 type GeofenceRepositoryer interface {
-	GetOrgGeofences(ctx context.Context, orgID uuid.UUID) ([]models.Geofence, error)
+	GetOrgGeofences(ctx context.Context, tenantID uuid.UUID) ([]models.Geofence, error)
 	CreateGeofence(ctx context.Context, g *models.Geofence) error
-	CheckPointInGeofences(ctx context.Context, orgID uuid.UUID, lat, lng float64) ([]models.Geofence, error)
+	CheckPointInGeofences(ctx context.Context, tenantID uuid.UUID, lat, lng float64) ([]models.Geofence, error)
 	LogGeofenceEvent(ctx context.Context, event *models.GeofenceEvent) error
 }
 
 // TenantChecker verifies that a vehicle belongs to an organization.
 type TenantChecker interface {
-	VehicleBelongsToOrg(ctx context.Context, orgID, vehicleID uuid.UUID) (bool, error)
+	VehicleBelongsToOrg(ctx context.Context, tenantID, vehicleID uuid.UUID) (bool, error)
 }

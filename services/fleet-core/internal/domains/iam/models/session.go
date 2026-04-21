@@ -9,7 +9,7 @@ import (
 type AuthToken struct {
 	ID           uuid.UUID  `json:"id"`
 	UserID       uuid.UUID  `json:"user_id"`
-	OrgID        uuid.UUID  `json:"tenant_id"`
+	TenantID        uuid.UUID  `json:"tenant_id"`
 	TokenHash    string     `json:"-"`
 	TokenType    string     `json:"token_type"` // access, refresh
 	DeviceID     string     `json:"device_id"`
@@ -25,7 +25,7 @@ type AuthToken struct {
 type Session struct {
 	ID          string    `json:"id"`
 	UserID      uuid.UUID `json:"user_id"`
-	OrgID       uuid.UUID `json:"tenant_id"`
+	TenantID       uuid.UUID `json:"tenant_id"`
 	Device      string    `json:"device"`
 	IP          string    `json:"ip"`
 	CreatedAt   time.Time `json:"created_at"`

@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -27,20 +26,8 @@ func (h *Handlers) SwitchContext(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 1. Extract the current authenticated actor from the JWT Context
-	var requestorID uuid.UUID
-
-	// Try standard UUID format from Shared Middleware
-	if uid, ok := r.Context().Value(middleware.UserIDKey).(uuid.UUID); ok {
-		requestorID = uid
-	} else if uidStr, ok := r.Context().Value(ctxkeys.UserIDKey).(string); ok {
-		// Fallback to legacy string format
-		parsed, err := uuid.Parse(uidStr)
-		if err != nil {
-			h.errorJSON(w, http.StatusUnauthorized, "Malformed User ID in Token")
-			return
-		}
-		requestorID = parsed
-	} else {
+	requestorID, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
 		h.errorJSON(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}

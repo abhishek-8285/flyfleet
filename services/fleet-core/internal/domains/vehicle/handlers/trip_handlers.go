@@ -44,7 +44,7 @@ func (h *TripHandlers) RegisterRoutes(r chi.Router) {
 // ListTrips handles GET /api/v1/trips
 func (h *TripHandlers) ListTrips(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("DEBUG: Executing VEHICLE DOMAIN TripHandlers.ListTrips")
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
 	query := r.URL.Query()
 	page, _ := strconv.Atoi(query.Get("page"))
@@ -64,7 +64,7 @@ func (h *TripHandlers) ListTrips(w http.ResponseWriter, r *http.Request) {
 	}
 
 	params := models.TripListParams{
-		OrganizationID: orgID,
+		TenantID:       tenantID,
 		Status:         status,
 		Page:           page,
 		Limit:          limit,
@@ -115,8 +115,8 @@ func (h *TripHandlers) CreateTrip(w http.ResponseWriter, r *http.Request) {
 	reqBytes, _ := json.Marshal(rawData)
 	json.Unmarshal(reqBytes, &req)
 
-	orgID := h.getOrgID(r)
-	trip, err := h.service.CreateTrip(r.Context(), orgID, &req)
+	tenantID := h.getTenantID(r)
+	trip, err := h.service.CreateTrip(r.Context(), tenantID, &req)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, "Failed to create trip", err)
 		return
@@ -221,8 +221,8 @@ func (h *TripHandlers) GetTelemetry(w http.ResponseWriter, r *http.Request) {
 
 // GetSettings handles GET /api/v1/trips/settings
 func (h *TripHandlers) GetSettings(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	settings, err := h.service.GetSettings(r.Context(), orgID)
+	tenantID := h.getTenantID(r)
+	settings, err := h.service.GetSettings(r.Context(), tenantID)
 	if err != nil {
 		h.writeError(w, http.StatusInternalServerError, "Failed to get settings", err)
 		return
@@ -239,7 +239,7 @@ func (h *TripHandlers) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	settings.OrganizationID = h.getOrgID(r)
+	settings.TenantID = h.getTenantID(r)
 	settings.UpdatedAt = time.Now()
 
 	if err := h.service.UpdateSettings(r.Context(), &settings); err != nil {
@@ -251,8 +251,8 @@ func (h *TripHandlers) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 // Helpers
-func (h *TripHandlers) getOrgID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
+func (h *TripHandlers) getTenantID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.TenantIDKey); val != nil {
 		switch v := val.(type) {
 		case uuid.UUID:
 			return v

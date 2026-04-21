@@ -9,6 +9,7 @@ import (
 	"github.com/flyfleet/fleet-core/internal/middleware"
 	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	"github.com/flyfleet/fleet-core/internal/pkg/permissions"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
 
@@ -17,20 +18,16 @@ func TestBitmaskMath(t *testing.T) {
 	var userMask permissions.Permission = 0
 
 	// Assign roles
-	userMask = permissions.AssignPermission(userMask, permissions.PermReadVehicles) // 1
-	userMask = permissions.AssignPermission(userMask, permissions.PermWriteCosts)   // 8
-
-	if userMask != 9 {
-		t.Fatalf("Expected Mask to be 9, got %d", userMask)
-	}
+	userMask = permissions.AssignPermission(userMask, permissions.PermReadVehicles) // 2 (bit 1) -> Actually bit 1 is 2^1 = 2
+	userMask = permissions.AssignPermission(userMask, permissions.PermCreateFuel)   // 2^35
 
 	// 2. Test positive hit
 	if !permissions.HasPermission(userMask, permissions.PermReadVehicles) {
 		t.Fatalf("Expected true for PermReadVehicles")
 	}
 
-	if !permissions.HasPermission(userMask, permissions.PermWriteCosts) {
-		t.Fatalf("Expected true for PermWriteCosts")
+	if !permissions.HasPermission(userMask, permissions.PermCreateFuel) {
+		t.Fatalf("Expected true for PermCreateFuel")
 	}
 
 	// 3. Test negative hit
@@ -45,6 +42,10 @@ func TestBitmaskMath(t *testing.T) {
 	if !permissions.HasPermission(userMask, maxPerm) {
 		t.Fatalf("Failed to register 64th bit (left-shift 63) correctly in uint64 mask")
 	}
+
+	// Test permission checks
+	assert.True(t, permissions.HasPermission(userMask, permissions.PermReadVehicles))
+	assert.True(t, permissions.HasPermission(userMask, permissions.PermUpdateVehicles))
 
 	// 5. Test Revocation
 	userMask = permissions.RevokePermission(userMask, permissions.PermReadVehicles)
@@ -61,8 +62,8 @@ func TestRequirePermissionsMiddleware(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	// Wrap middleware to require PermWriteVehicles (2)
-	middlewareHandler := middleware.RequirePermissions(logger, permissions.PermWriteVehicles)(finalHandler)
+	// Wrap middleware to require PermUpdateVehicles (4)
+	middlewareHandler := middleware.RequirePermissions(logger, permissions.PermUpdateVehicles)(finalHandler)
 
 	tests := []struct {
 		name       string

@@ -11,10 +11,10 @@ import (
 )
 
 type IdentityService interface {
-	CreateRole(ctx context.Context, orgID *uuid.UUID, name, description string, permissions []string) (*models.Role, error)
-	AssignRole(ctx context.Context, userID, roleID, orgID uuid.UUID) error
-	CheckPermission(ctx context.Context, userID, orgID uuid.UUID, permission string) (bool, error)
-	GetUserPermissions(ctx context.Context, userID, orgID uuid.UUID) ([]string, error)
+	CreateRole(ctx context.Context, tenantID *uuid.UUID, name, description string, permissions []string) (*models.Role, error)
+	AssignRole(ctx context.Context, userID, roleID, tenantID uuid.UUID) error
+	CheckPermission(ctx context.Context, userID, tenantID uuid.UUID, permission string) (bool, error)
+	GetUserPermissions(ctx context.Context, userID, tenantID uuid.UUID) ([]string, error)
 }
 
 type IdentityServiceImpl struct {
@@ -29,11 +29,11 @@ func NewIdentityService(repo AuthRepositoryInterface, logger *zap.Logger) Identi
 	}
 }
 
-func (s *IdentityServiceImpl) CreateRole(ctx context.Context, orgID *uuid.UUID, name, description string, permissions []string) (*models.Role, error) {
+func (s *IdentityServiceImpl) CreateRole(ctx context.Context, tenantID *uuid.UUID, name, description string, permissions []string) (*models.Role, error) {
 	role := &models.Role{
 		ID:          uuid.New(),
 		Name:        name,
-		OrgID:       orgID,
+		TenantID:       tenantID,
 		Description: description,
 		IsSystem:    false,
 		CreatedAt:   time.Now(),
@@ -50,18 +50,18 @@ func (s *IdentityServiceImpl) CreateRole(ctx context.Context, orgID *uuid.UUID, 
 	return role, nil
 }
 
-func (s *IdentityServiceImpl) AssignRole(ctx context.Context, userID, roleID, orgID uuid.UUID) error {
-	if err := s.repo.AssignRoleToUser(ctx, userID, roleID, orgID); err != nil {
+func (s *IdentityServiceImpl) AssignRole(ctx context.Context, userID, roleID, tenantID uuid.UUID) error {
+	if err := s.repo.AssignRoleToUser(ctx, userID, roleID, tenantID); err != nil {
 		return fmt.Errorf("failed to assign role: %w", err)
 	}
 	s.logger.Info("role assigned to user", zap.String("user_id", userID.String()), zap.String("role_id", roleID.String()))
 	return nil
 }
 
-func (s *IdentityServiceImpl) CheckPermission(ctx context.Context, userID, orgID uuid.UUID, permission string) (bool, error) {
-	return s.repo.CheckPermission(ctx, userID, orgID, permission)
+func (s *IdentityServiceImpl) CheckPermission(ctx context.Context, userID, tenantID uuid.UUID, permission string) (bool, error) {
+	return s.repo.CheckPermission(ctx, userID, tenantID, permission)
 }
 
-func (s *IdentityServiceImpl) GetUserPermissions(ctx context.Context, userID, orgID uuid.UUID) ([]string, error) {
-	return s.repo.GetUserPermissions(ctx, userID, orgID)
+func (s *IdentityServiceImpl) GetUserPermissions(ctx context.Context, userID, tenantID uuid.UUID) ([]string, error) {
+	return s.repo.GetUserPermissions(ctx, userID, tenantID)
 }

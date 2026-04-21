@@ -20,14 +20,14 @@ type QueueProvider interface {
 }
 
 type Repository interface {
-	ListInvoices(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.Invoice, int, error)
+	ListInvoices(ctx context.Context, tenantID uuid.UUID, page, size int) ([]models.Invoice, int, error)
 	CreateInvoice(ctx context.Context, inv *models.Invoice) error
 	GetInvoice(ctx context.Context, id uuid.UUID) (*models.Invoice, error)
 	UpdateInvoice(ctx context.Context, inv *models.Invoice) error
 	DeleteInvoice(ctx context.Context, id uuid.UUID) error
-	GetSettings(ctx context.Context, orgID uuid.UUID) (*models.BillingSettings, error)
+	GetSettings(ctx context.Context, tenantID uuid.UUID) (*models.BillingSettings, error)
 	UpdateSettings(ctx context.Context, s *models.BillingSettings) error
-	GetMetrics(ctx context.Context, orgID uuid.UUID) (*models.BillingMetrics, error)
+	GetMetrics(ctx context.Context, tenantID uuid.UUID) (*models.BillingMetrics, error)
 	RecordPayment(ctx context.Context, id uuid.UUID, amount float64) error
 	CreateTaxLines(ctx context.Context, lines []models.InvoiceTaxLine) error
 }
@@ -64,8 +64,8 @@ func NewBillingService(repo Repository, auditRepo *repository.AuditLogRepository
 	}
 }
 
-func (s *BillingService) ListInvoices(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.Invoice, int, error) {
-	return s.repo.ListInvoices(ctx, orgID, page, size)
+func (s *BillingService) ListInvoices(ctx context.Context, tenantID uuid.UUID, page, size int) ([]models.Invoice, int, error) {
+	return s.repo.ListInvoices(ctx, tenantID, page, size)
 }
 
 func (s *BillingService) CreateInvoice(ctx context.Context, inv *models.Invoice) error {
@@ -133,9 +133,9 @@ func (s *BillingService) CreateInvoice(ctx context.Context, inv *models.Invoice)
 	// 1. Generate Gapless Invoice Number if DRAFT or PENDING and not provided
 	if (inv.Status == "DRAFT" || inv.Status == "PENDING") && inv.InvoiceNumber == "" {
 		if s.seqServ != nil {
-			num, err := s.seqServ.GetNextInvoiceNumber(ctx, inv.OrgID)
+			num, err := s.seqServ.GetNextInvoiceNumber(ctx, inv.TenantID)
 			if err != nil {
-				s.logger.Error("Failed to generate invoice number", zap.Error(err), zap.String("tenant_id", inv.OrgID.String()))
+				s.logger.Error("Failed to generate invoice number", zap.Error(err), zap.String("tenant_id", inv.TenantID.String()))
 			} else {
 				inv.InvoiceNumber = num
 			}
@@ -143,12 +143,12 @@ func (s *BillingService) CreateInvoice(ctx context.Context, inv *models.Invoice)
 	}
 
 	// 2. Fetch Billing Settings for Tax Region
-	settings, err := s.repo.GetSettings(ctx, inv.OrgID)
+	settings, err := s.repo.GetSettings(ctx, inv.TenantID)
 	if s.taxServ != nil && settings != nil && settings.TaxCountry != "" {
 		// Calculate Regional Taxes
 		taxLines, err := s.taxServ.CalculateInvoiceTaxes(ctx, inv, settings.TaxCountry, settings.TaxState)
 		if err != nil {
-			s.logger.Error("Failed to calculate taxes", zap.Error(err), zap.String("tenant_id", inv.OrgID.String()))
+			s.logger.Error("Failed to calculate taxes", zap.Error(err), zap.String("tenant_id", inv.TenantID.String()))
 		} else if len(taxLines) > 0 {
 			// Update Invoice amounts based on calculated taxes
 			var totalTax float64
@@ -172,7 +172,7 @@ func (s *BillingService) CreateInvoice(ctx context.Context, inv *models.Invoice)
 
 	// Fire NATS notification for invoice created
 	if s.notifServ != nil {
-		_ = s.notifServ.PublishEvent(ctx, "invoice_created", inv.OrgID, map[string]interface{}{
+		_ = s.notifServ.PublishEvent(ctx, "invoice_created", inv.TenantID, map[string]interface{}{
 			"invoice_id":     inv.ID,
 			"invoice_number": inv.InvoiceNumber,
 			"total_amount":   inv.TotalAmount,
@@ -194,7 +194,7 @@ func (s *BillingService) CreateInvoice(ctx context.Context, inv *models.Invoice)
 
 	// Record Ledger Entry
 	if s.ledgerServ != nil {
-		_ = s.ledgerServ.RecordInvoiceIssue(ctx, inv.OrgID, inv.ID, inv.TotalAmount, inv.Currency)
+		_ = s.ledgerServ.RecordInvoiceIssue(ctx, inv.TenantID, inv.ID, inv.TotalAmount, inv.Currency)
 	}
 
 	return nil
@@ -325,12 +325,12 @@ func (s *BillingService) RecordPayment(ctx context.Context, id uuid.UUID, amount
 	// Record Ledger Entry
 	if s.ledgerServ != nil {
 		// Pass empty uuid for paymentID if none is provided via this basic API
-		_ = s.ledgerServ.RecordPaymentReceived(ctx, invoice.OrgID, invoice.ID, uuid.Nil, amount, invoice.Currency)
+		_ = s.ledgerServ.RecordPaymentReceived(ctx, invoice.TenantID, invoice.ID, uuid.Nil, amount, invoice.Currency)
 	}
 
 	// Fire NATS notification for payment success
 	if s.notifServ != nil {
-		_ = s.notifServ.PublishEvent(ctx, "payment_success", invoice.OrgID, map[string]interface{}{
+		_ = s.notifServ.PublishEvent(ctx, "payment_success", invoice.TenantID, map[string]interface{}{
 			"invoice_id":     id,
 			"amount_paid":    amount,
 			"balance_due":    invoice.BalanceDue,
@@ -341,15 +341,15 @@ func (s *BillingService) RecordPayment(ctx context.Context, id uuid.UUID, amount
 	return nil
 }
 
-func (s *BillingService) GetSettings(ctx context.Context, orgID uuid.UUID) (*models.BillingSettings, error) {
-	settings, err := s.repo.GetSettings(ctx, orgID)
+func (s *BillingService) GetSettings(ctx context.Context, tenantID uuid.UUID) (*models.BillingSettings, error) {
+	settings, err := s.repo.GetSettings(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
 	if settings == nil {
 		// Return default settings
 		return &models.BillingSettings{
-			OrgID:                orgID,
+			TenantID:                tenantID,
 			DefaultTaxRate:       18.0,
 			BaseCurrency:         "USD",
 			GracePeriodDays:      14,
@@ -363,14 +363,14 @@ func (s *BillingService) UpdateSettings(ctx context.Context, settings *models.Bi
 	return s.repo.UpdateSettings(ctx, settings)
 }
 
-func (s *BillingService) GetMetrics(ctx context.Context, orgID uuid.UUID) (*models.BillingMetrics, error) {
-	return s.repo.GetMetrics(ctx, orgID)
+func (s *BillingService) GetMetrics(ctx context.Context, tenantID uuid.UUID) (*models.BillingMetrics, error) {
+	return s.repo.GetMetrics(ctx, tenantID)
 }
 
 // GenerateDraftInvoice creates a draft invoice including subscription plan and usage
-func (s *BillingService) GenerateDraftInvoice(ctx context.Context, orgID uuid.UUID) (*models.Invoice, error) {
+func (s *BillingService) GenerateDraftInvoice(ctx context.Context, tenantID uuid.UUID) (*models.Invoice, error) {
 	// 1. Get Subscription
-	sub, err := s.subServ.GetSubscription(ctx, orgID)
+	sub, err := s.subServ.GetSubscription(ctx, tenantID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get subscription: %w", err)
 	}
@@ -395,7 +395,7 @@ func (s *BillingService) GenerateDraftInvoice(ctx context.Context, orgID uuid.UU
 	}
 
 	// 2. Get Usage Summaries
-	usageSummaries, err := s.meterServ.GetUnbilledUsageByOrg(ctx, orgID)
+	usageSummaries, err := s.meterServ.GetUnbilledUsageByOrg(ctx, tenantID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get usage: %w", err)
 	}
@@ -403,7 +403,7 @@ func (s *BillingService) GenerateDraftInvoice(ctx context.Context, orgID uuid.UU
 	// 3. Build Invoice
 	inv := &models.Invoice{
 		ID:            uuid.New(),
-		OrgID:         orgID,
+		TenantID:         tenantID,
 		InvoiceNumber: fmt.Sprintf("DRAFT-%s", time.Now().Format("20060102")),
 		InvoiceDate:   time.Now().UTC(),
 		DueDate:       time.Now().AddDate(0, 0, 14).UTC(), // Default 14 days
@@ -454,7 +454,7 @@ func (s *BillingService) GenerateDraftInvoice(ctx context.Context, orgID uuid.UU
 
 	// Mark usage as billed to this draft
 	if len(usageSummaries) > 0 {
-		err = s.meterServ.MarkUsageAsInvoiced(ctx, orgID, inv.ID)
+		err = s.meterServ.MarkUsageAsInvoiced(ctx, tenantID, inv.ID)
 		if err != nil {
 			s.logger.Warn("Failed to mark usage as billed", zap.Error(err))
 		}

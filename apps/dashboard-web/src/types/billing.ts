@@ -8,6 +8,10 @@ export interface InvoiceItem {
   unit_price: number;
   tax_percent: number;
   total: number;
+  hsn_sac?: string;
+  unit?: string;
+  list_price?: number;
+  discount_amount?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -31,6 +35,35 @@ export interface Invoice {
   tax_amount?: number;
   notes?: string;
   category?: string;
+  template_type?: "TAX_INVOICE" | "TRIP_NOTE";
+  
+  // Logistics
+  trip_id?: string;
+  vehicle_no?: string;
+  driver_name?: string;
+  driver_mobile?: string;
+  pickup_location?: string;
+  drop_location?: string;
+  pickup_time?: string;
+  drop_time?: string;
+  map_url?: string;
+  billed_distance?: number;
+
+  // Compliance
+  place_of_supply?: string;
+  reverse_charge?: boolean;
+  gstin_seller?: string;
+  pan_seller?: string;
+  eway_bill_no?: string;
+  irn?: string;
+
+  // Bank
+  bank_name?: string;
+  account_no?: string;
+  ifsc_code?: string;
+  branch_name?: string;
+  beneficiary_name?: string;
+
   items?: InvoiceItem[];
   created_at: string;
   updated_at: string;

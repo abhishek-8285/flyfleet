@@ -36,33 +36,33 @@ var (
 	CostPerOrganization = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "cost_per_organization_usd",
 		Help: "Daily cost attributed to each customer org",
-	}, []string{"org_id", "cost_category"})
+	}, []string{"tenant_id", "cost_category"})
 
 	CostPerTrip = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "cost_per_trip_usd",
 		Help: "Cost per completed trip",
-	}, []string{"org_id", "vehicle_type"})
+	}, []string{"tenant_id", "vehicle_type"})
 
 	CostPerDriver = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "cost_per_driver_usd",
 		Help: "Daily cost per active driver",
-	}, []string{"org_id"})
+	}, []string{"tenant_id"})
 
 	CostPerVehicle = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "cost_per_vehicle_usd",
 		Help: "Daily cost per active vehicle",
-	}, []string{"org_id", "vehicle_type"})
+	}, []string{"tenant_id", "vehicle_type"})
 
 	// Cost efficiency metrics
 	ResourceUtilizationEfficiency = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "cost_resource_utilization_efficiency_percentage",
 		Help: "Resource utilization efficiency (actual vs provisioned)",
-	}, []string{"org_id", "resource_type"})
+	}, []string{"tenant_id", "resource_type"})
 
 	CostUnderutilizationWaste = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "cost_underutilization_waste_usd",
 		Help: "Daily cost wasted due to underutilization",
-	}, []string{"org_id", "resource_type"})
+	}, []string{"tenant_id", "resource_type"})
 
 	IdleResourceCost = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "cost_idle_resource_usd",
@@ -121,17 +121,17 @@ var (
 	BudgetSetTotal = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "cost_budget_set_usd",
 		Help: "Monthly budget allocated per org/service",
-	}, []string{"org_id", "budget_type"})
+	}, []string{"tenant_id", "budget_type"})
 
 	BudgetConsumptionPercentage = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "cost_budget_consumption_percentage",
 		Help: "Budget consumption percentage (month-to-date)",
-	}, []string{"org_id"})
+	}, []string{"tenant_id"})
 
 	BudgetAlertTriggered = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "cost_budget_alert_triggered_total",
 		Help: "Budget threshold alerts triggered",
-	}, []string{"org_id", "threshold_percentage"})
+	}, []string{"tenant_id", "threshold_percentage"})
 
 	// Cost allocation tags
 	CostAllocatedByTag = promauto.NewGaugeVec(prometheus.GaugeOpts{

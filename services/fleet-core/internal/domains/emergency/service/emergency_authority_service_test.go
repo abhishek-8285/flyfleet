@@ -13,10 +13,10 @@ func TestNotifyAuthorities_CriticalDispatchesAll(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	svc := NewEmergencyAuthorityService(nil, nil, logger) // no NATS in unit tests
 
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	incident := &models.SOSIncident{
 		ID:             uuid.New(),
-		OrgID:          orgID,
+		TenantID:          tenantID,
 		VehicleID:      uuid.New(),
 		Severity:       models.SeverityCritical,
 		IncidentType:   models.TypePanic,

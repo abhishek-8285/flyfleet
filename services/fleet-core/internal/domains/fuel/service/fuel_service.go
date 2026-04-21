@@ -20,15 +20,15 @@ const (
 )
 
 type FuelService interface {
-	CreateLog(ctx context.Context, orgID uuid.UUID, userID uuid.UUID, req models.CreateFuelLogRequest) (*models.FuelLog, error)
-	GetLog(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*models.FuelLog, error)
+	CreateLog(ctx context.Context, tenantID uuid.UUID, userID uuid.UUID, req models.CreateFuelLogRequest) (*models.FuelLog, error)
+	GetLog(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) (*models.FuelLog, error)
 	ListLogs(ctx context.Context, filter models.FuelLogFilter) (*models.FuelLogListResponse, error)
-	UpdateLog(ctx context.Context, id uuid.UUID, orgID uuid.UUID, req models.UpdateFuelLogRequest) (*models.FuelLog, error)
-	DeleteLog(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error
-	ChangeStatus(ctx context.Context, id uuid.UUID, orgID uuid.UUID, req models.ChangeFuelLogStatusRequest) error
-	GetStats(ctx context.Context, orgID uuid.UUID, filter models.FuelLogFilter) (*models.FuelLogStats, error)
-	GetSettings(ctx context.Context, orgID uuid.UUID) (*models.FuelSettings, error)
-	UpdateSettings(ctx context.Context, orgID uuid.UUID, req models.UpdateFuelSettingsRequest) (*models.FuelSettings, error)
+	UpdateLog(ctx context.Context, id uuid.UUID, tenantID uuid.UUID, req models.UpdateFuelLogRequest) (*models.FuelLog, error)
+	DeleteLog(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) error
+	ChangeStatus(ctx context.Context, id uuid.UUID, tenantID uuid.UUID, req models.ChangeFuelLogStatusRequest) error
+	GetStats(ctx context.Context, tenantID uuid.UUID, filter models.FuelLogFilter) (*models.FuelLogStats, error)
+	GetSettings(ctx context.Context, tenantID uuid.UUID) (*models.FuelSettings, error)
+	UpdateSettings(ctx context.Context, tenantID uuid.UUID, req models.UpdateFuelSettingsRequest) (*models.FuelSettings, error)
 }
 
 type fuelService struct {
@@ -62,9 +62,9 @@ func NewFuelService(
 	}
 }
 
-func (s *fuelService) CreateLog(ctx context.Context, orgID uuid.UUID, userID uuid.UUID, req models.CreateFuelLogRequest) (*models.FuelLog, error) {
+func (s *fuelService) CreateLog(ctx context.Context, tenantID uuid.UUID, userID uuid.UUID, req models.CreateFuelLogRequest) (*models.FuelLog, error) {
 	// Validate odometer
-	lastOdo, err := s.repo.GetLastOdometer(ctx, req.VehicleID, orgID)
+	lastOdo, err := s.repo.GetLastOdometer(ctx, req.VehicleID, tenantID)
 	if err == nil && lastOdo > 0 {
 		if req.Odometer < lastOdo {
 			return nil, ErrInvalidOdometer
@@ -84,7 +84,7 @@ func (s *fuelService) CreateLog(ctx context.Context, orgID uuid.UUID, userID uui
 	}
 
 	// Check for duplicate transaction within window
-	isDuplicate, err := s.repo.CheckDuplicate(ctx, req.VehicleID, orgID, req.TransactionDate, DuplicateFuelLogWindow)
+	isDuplicate, err := s.repo.CheckDuplicate(ctx, req.VehicleID, tenantID, req.TransactionDate, DuplicateFuelLogWindow)
 	if err != nil {
 		s.logger.Error("failed to check for duplicate", zap.Error(err))
 	}
@@ -119,7 +119,7 @@ func (s *fuelService) CreateLog(ctx context.Context, orgID uuid.UUID, userID uui
 
 	log := &models.FuelLog{
 		ID:              uuid.New(),
-		OrganizationID:  orgID,
+		OrganizationID:  tenantID,
 		VehicleID:       req.VehicleID,
 		DriverID:        req.DriverID,
 		StationName:     req.StationName,
@@ -183,8 +183,8 @@ func (s *fuelService) CreateLog(ctx context.Context, orgID uuid.UUID, userID uui
 	return log, nil
 }
 
-func (s *fuelService) GetLog(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*models.FuelLog, error) {
-	log, err := s.repo.GetByID(ctx, id, orgID)
+func (s *fuelService) GetLog(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) (*models.FuelLog, error) {
+	log, err := s.repo.GetByID(ctx, id, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -204,8 +204,8 @@ func (s *fuelService) ListLogs(ctx context.Context, filter models.FuelLogFilter)
 	return s.repo.List(ctx, filter)
 }
 
-func (s *fuelService) UpdateLog(ctx context.Context, id uuid.UUID, orgID uuid.UUID, req models.UpdateFuelLogRequest) (*models.FuelLog, error) {
-	log, err := s.repo.GetByID(ctx, id, orgID)
+func (s *fuelService) UpdateLog(ctx context.Context, id uuid.UUID, tenantID uuid.UUID, req models.UpdateFuelLogRequest) (*models.FuelLog, error) {
+	log, err := s.repo.GetByID(ctx, id, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -293,8 +293,8 @@ func (s *fuelService) UpdateLog(ctx context.Context, id uuid.UUID, orgID uuid.UU
 	return log, nil
 }
 
-func (s *fuelService) DeleteLog(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error {
-	log, err := s.repo.GetByID(ctx, id, orgID)
+func (s *fuelService) DeleteLog(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) error {
+	log, err := s.repo.GetByID(ctx, id, tenantID)
 	if err != nil {
 		return err
 	}
@@ -304,7 +304,7 @@ func (s *fuelService) DeleteLog(ctx context.Context, id uuid.UUID, orgID uuid.UU
 	if log.Status == models.FuelLogStatusApproved || log.Status == models.FuelLogStatusRejected {
 		return ErrLogImmutable
 	}
-	if err := s.repo.Delete(ctx, id, orgID); err != nil {
+	if err := s.repo.Delete(ctx, id, tenantID); err != nil {
 		return err
 	}
 	s.writeAuditLog(ctx, &models.FuelAuditLog{
@@ -321,8 +321,8 @@ func (s *fuelService) DeleteLog(ctx context.Context, id uuid.UUID, orgID uuid.UU
 	return nil
 }
 
-func (s *fuelService) ChangeStatus(ctx context.Context, id uuid.UUID, orgID uuid.UUID, req models.ChangeFuelLogStatusRequest) error {
-	log, err := s.repo.GetByID(ctx, id, orgID)
+func (s *fuelService) ChangeStatus(ctx context.Context, id uuid.UUID, tenantID uuid.UUID, req models.ChangeFuelLogStatusRequest) error {
+	log, err := s.repo.GetByID(ctx, id, tenantID)
 	if err != nil {
 		return err
 	}
@@ -348,7 +348,7 @@ func (s *fuelService) ChangeStatus(ctx context.Context, id uuid.UUID, orgID uuid
 	}
 
 	// Update status
-	if err := s.repo.UpdateStatus(ctx, id, orgID, req.Status); err != nil {
+	if err := s.repo.UpdateStatus(ctx, id, tenantID, req.Status); err != nil {
 		return err
 	}
 	s.writeAuditLog(ctx, &models.FuelAuditLog{
@@ -367,12 +367,12 @@ func (s *fuelService) ChangeStatus(ctx context.Context, id uuid.UUID, orgID uuid
 	return nil
 }
 
-func (s *fuelService) GetStats(ctx context.Context, orgID uuid.UUID, filter models.FuelLogFilter) (*models.FuelLogStats, error) {
-	return s.repo.GetStats(ctx, orgID, filter)
+func (s *fuelService) GetStats(ctx context.Context, tenantID uuid.UUID, filter models.FuelLogFilter) (*models.FuelLogStats, error) {
+	return s.repo.GetStats(ctx, tenantID, filter)
 }
 
 // CalculateFuelEfficiency calculates fuel efficiency (km per liter) for a vehicle
-func (s *fuelService) CalculateFuelEfficiency(ctx context.Context, vehicleID, orgID uuid.UUID) (float64, error) {
+func (s *fuelService) CalculateFuelEfficiency(ctx context.Context, vehicleID, tenantID uuid.UUID) (float64, error) {
 	// Get last two approved fuel logs for the vehicle
 	// This would need a new repository method to get last N logs
 	// For now, return 0 as placeholder
@@ -380,7 +380,7 @@ func (s *fuelService) CalculateFuelEfficiency(ctx context.Context, vehicleID, or
 }
 
 // GetFuelEfficiencyHistory gets fuel efficiency history for a vehicle
-func (s *fuelService) GetFuelEfficiencyHistory(ctx context.Context, vehicleID, orgID uuid.UUID, limit int) ([]FuelEfficiencyRecord, error) {
+func (s *fuelService) GetFuelEfficiencyHistory(ctx context.Context, vehicleID, tenantID uuid.UUID, limit int) ([]FuelEfficiencyRecord, error) {
 	// This would need a new repository method
 	// For now, return empty slice
 	return []FuelEfficiencyRecord{}, nil
@@ -395,12 +395,12 @@ type FuelEfficiencyRecord struct {
 	Efficiency float64   `json:"efficiency_km_per_liter"`
 }
 
-func (s *fuelService) GetSettings(ctx context.Context, orgID uuid.UUID) (*models.FuelSettings, error) {
-	return s.settingsRepo.GetOrDefault(ctx, orgID)
+func (s *fuelService) GetSettings(ctx context.Context, tenantID uuid.UUID) (*models.FuelSettings, error) {
+	return s.settingsRepo.GetOrDefault(ctx, tenantID)
 }
 
-func (s *fuelService) UpdateSettings(ctx context.Context, orgID uuid.UUID, req models.UpdateFuelSettingsRequest) (*models.FuelSettings, error) {
-	settings, err := s.settingsRepo.GetOrDefault(ctx, orgID)
+func (s *fuelService) UpdateSettings(ctx context.Context, tenantID uuid.UUID, req models.UpdateFuelSettingsRequest) (*models.FuelSettings, error) {
+	settings, err := s.settingsRepo.GetOrDefault(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -425,9 +425,9 @@ func (s *fuelService) UpdateSettings(ctx context.Context, orgID uuid.UUID, req m
 	return settings, nil
 }
 
-func (s *fuelService) validateFuelLimits(ctx context.Context, orgID, driverID uuid.UUID, quantity, amount float64) error {
+func (s *fuelService) validateFuelLimits(ctx context.Context, tenantID, driverID uuid.UUID, quantity, amount float64) error {
 	// 1. Get Driver Specific Limits
-	limit, err := s.repo.GetDriverFuelLimit(ctx, driverID, orgID)
+	limit, err := s.repo.GetDriverFuelLimit(ctx, driverID, tenantID)
 	if err != nil {
 		s.logger.Error("failed to get driver fuel limit", zap.Error(err))
 	}
@@ -440,7 +440,7 @@ func (s *fuelService) validateFuelLimits(ctx context.Context, orgID, driverID uu
 		monthlyAmount = limit.MonthlyAmountLimit
 	} else {
 		// 2. Fallback to org settings
-		orgSettings, err := s.repo.GetOrgFuelSettings(ctx, orgID)
+		orgSettings, err := s.repo.GetOrgFuelSettings(ctx, tenantID)
 		if err != nil {
 			s.logger.Error("failed to get org fuel settings", zap.Error(err))
 		}
@@ -458,7 +458,7 @@ func (s *fuelService) validateFuelLimits(ctx context.Context, orgID, driverID uu
 
 	// 3. Check Daily Usage
 	startOfDay := time.Now().Truncate(24 * time.Hour)
-	usedDailyLiters, usedDailyAmount, err := s.repo.GetFuelUsage(ctx, driverID, orgID, startOfDay)
+	usedDailyLiters, usedDailyAmount, err := s.repo.GetFuelUsage(ctx, driverID, tenantID, startOfDay)
 	if err == nil {
 		if dailyLiters != nil && usedDailyLiters+quantity > *dailyLiters {
 			return ErrDailyFuelLimitExceeded
@@ -471,7 +471,7 @@ func (s *fuelService) validateFuelLimits(ctx context.Context, orgID, driverID uu
 	// 4. Check Monthly Usage
 	now := time.Now()
 	startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-	usedMonthlyLiters, usedMonthlyAmount, err := s.repo.GetFuelUsage(ctx, driverID, orgID, startOfMonth)
+	usedMonthlyLiters, usedMonthlyAmount, err := s.repo.GetFuelUsage(ctx, driverID, tenantID, startOfMonth)
 	if err == nil {
 		if monthlyLiters != nil && usedMonthlyLiters+quantity > *monthlyLiters {
 			return ErrMonthlyFuelLimitExceeded

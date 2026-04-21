@@ -10,7 +10,7 @@ import (
 type EInvoiceIRN struct {
 	ID                 uuid.UUID  `json:"id" db:"id"`
 	InvoiceID          uuid.UUID  `json:"invoice_id" db:"invoice_id"`
-	OrgID              uuid.UUID  `json:"tenant_id" db:"tenant_id"`
+	TenantID              uuid.UUID  `json:"tenant_id" db:"tenant_id"`
 	IRN                string     `json:"irn,omitempty" db:"irn"`
 	IRNStatus          string     `json:"irn_status" db:"irn_status"` // pending, generated, cancelled, failed
 	AckNo              string     `json:"ack_no,omitempty" db:"ack_no"`
@@ -33,7 +33,7 @@ type EInvoiceIRN struct {
 // EInvoiceConfig represents e-invoice configuration
 type EInvoiceConfig struct {
 	ID             uuid.UUID `json:"id" db:"id"`
-	OrgID          uuid.UUID `json:"tenant_id" db:"tenant_id"`
+	TenantID          uuid.UUID `json:"tenant_id" db:"tenant_id"`
 	AppKey         string    `json:"-" db:"app_key"`    // Never expose
 	SecretKey      string    `json:"-" db:"secret_key"` // Never expose
 	Username       string    `json:"-" db:"username"`   // Never expose
@@ -50,7 +50,7 @@ type EInvoiceConfig struct {
 // EInvoiceItemMapping represents HSN/SAC code mapping
 type EInvoiceItemMapping struct {
 	ID              uuid.UUID `json:"id" db:"id"`
-	OrgID           uuid.UUID `json:"tenant_id" db:"tenant_id"`
+	TenantID           uuid.UUID `json:"tenant_id" db:"tenant_id"`
 	ProductID       uuid.UUID `json:"product_id,omitempty" db:"product_id"`
 	HSNCode         string    `json:"hsn_code" db:"hsn_code"`
 	SACCode         string    `json:"sac_code,omitempty" db:"sac_code"`
@@ -99,10 +99,10 @@ func IsValidEnvironment(env string) bool {
 }
 
 // DefaultEInvoiceConfig returns default e-invoice configuration
-func DefaultEInvoiceConfig(orgID uuid.UUID) *EInvoiceConfig {
+func DefaultEInvoiceConfig(tenantID uuid.UUID) *EInvoiceConfig {
 	return &EInvoiceConfig{
 		ID:             uuid.New(),
-		OrgID:          orgID,
+		TenantID:          tenantID,
 		IsEnabled:      false,
 		Environment:    string(EInvoiceSandbox),
 		MandatoryAbove: 50000, // ₹50,000

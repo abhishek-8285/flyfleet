@@ -11,8 +11,8 @@ import (
 )
 
 type BillingService interface {
-	CheckLimit(ctx context.Context, orgID uuid.UUID, metric string) (bool, error)
-	GetOrganizationPlan(ctx context.Context, orgID uuid.UUID) (*models.Plan, error)
+	CheckLimit(ctx context.Context, tenantID uuid.UUID, metric string) (bool, error)
+	GetOrganizationPlan(ctx context.Context, tenantID uuid.UUID) (*models.Plan, error)
 }
 
 type billingService struct {
@@ -27,8 +27,8 @@ func NewBillingService(repo repository.BillingRepository, logger *zap.Logger) Bi
 	}
 }
 
-func (s *billingService) GetOrganizationPlan(ctx context.Context, orgID uuid.UUID) (*models.Plan, error) {
-	sub, err := s.repo.GetSubscriptionByOrganization(ctx, orgID)
+func (s *billingService) GetOrganizationPlan(ctx context.Context, tenantID uuid.UUID) (*models.Plan, error) {
+	sub, err := s.repo.GetSubscriptionByOrganization(ctx, tenantID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get subscription: %w", err)
 	}
@@ -41,13 +41,13 @@ func (s *billingService) GetOrganizationPlan(ctx context.Context, orgID uuid.UUI
 	return plan, nil
 }
 
-func (s *billingService) CheckLimit(ctx context.Context, orgID uuid.UUID, metric string) (bool, error) {
-	plan, err := s.GetOrganizationPlan(ctx, orgID)
+func (s *billingService) CheckLimit(ctx context.Context, tenantID uuid.UUID, metric string) (bool, error) {
+	plan, err := s.GetOrganizationPlan(ctx, tenantID)
 	if err != nil {
 		return false, err
 	}
 
-	usage, err := s.repo.GetUsage(ctx, orgID, metric)
+	usage, err := s.repo.GetUsage(ctx, tenantID, metric)
 	if err != nil {
 		return false, err
 	}

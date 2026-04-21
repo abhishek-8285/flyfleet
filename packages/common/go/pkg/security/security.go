@@ -63,9 +63,9 @@ func PIIField(key, value string) zap.Field {
 // Implementations should extract the caller's identity from the context and verify
 // membership in the organization (or super-admin privileges).
 type OrgValidator interface {
-	// ValidateOrgAccess checks if the caller (identified by context) can access orgID.
+	// ValidateOrgAccess checks if the caller (identified by context) can access tenantID.
 	// Returns nil if access is granted, or an error if denied.
-	ValidateOrgAccess(ctx context.Context, orgID string) error
+	ValidateOrgAccess(ctx context.Context, tenantID string) error
 }
 
 // tenantValidator wraps an OrgValidator to be used in the interceptor.
@@ -73,43 +73,43 @@ type tenantValidator struct {
 	validator OrgValidator
 }
 
-// TenantUnaryInterceptor enforces org_id presence AND validates membership.
+// TenantUnaryInterceptor enforces tenant_id presence AND validates membership.
 // It requires a validator to check that the caller is authorized for the org.
-// Extracts org_id from "x-org-id" or "x-organization-id" metadata keys.
+// Extracts tenant_id from "x-org-id" or "x-organization-id" metadata keys.
 func TenantUnaryInterceptor(validator OrgValidator) grpc.UnaryServerInterceptor {
 	if validator == nil {
 		panic("TenantUnaryInterceptor: validator is required (nil provided)")
 	}
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-		orgID := extractOrgIDFromMetadata(ctx)
-		if orgID == "" {
+		tenantID := extractTenantIDFromMetadata(ctx)
+		if tenantID == "" {
 			return nil, status.Error(codes.PermissionDenied, "organization context is required")
 		}
 
 		// Validate that the caller is authorized for this organization
-		if err := validator.ValidateOrgAccess(ctx, orgID); err != nil {
+		if err := validator.ValidateOrgAccess(ctx, tenantID); err != nil {
 			return nil, status.Error(codes.PermissionDenied, fmt.Sprintf("not authorized for organization: %v", err))
 		}
 
-		// Inject org_id into context for downstream use
-		ctx = context.WithValue(ctx, orgIDCtxKey, orgID)
+		// Inject tenant_id into context for downstream use
+		ctx = context.WithValue(ctx, tenantIDCtxKey, tenantID)
 		return handler(ctx, req)
 	}
 }
 
 type contextKey string
 
-const orgIDCtxKey contextKey = "org_id"
+const tenantIDCtxKey contextKey = "tenant_id"
 
-// GetOrgIDFromCtx retrieves the org_id from a gRPC context.
-func GetOrgIDFromCtx(ctx context.Context) string {
-	if v, ok := ctx.Value(orgIDCtxKey).(string); ok {
+// GetTenantIDFromCtx retrieves the tenant_id from a gRPC context.
+func GetTenantIDFromCtx(ctx context.Context) string {
+	if v, ok := ctx.Value(tenantIDCtxKey).(string); ok {
 		return v
 	}
 	return ""
 }
 
-func extractOrgIDFromMetadata(ctx context.Context) string {
+func extractTenantIDFromMetadata(ctx context.Context) string {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return ""
@@ -131,7 +131,7 @@ func extractOrgIDFromMetadata(ctx context.Context) string {
 type AuditEntry struct {
 	ID            string                 `json:"id"`
 	Timestamp     time.Time              `json:"timestamp"`
-	OrgID         string                 `json:"org_id"`
+	TenantID         string                 `json:"tenant_id"`
 	UserID        string                 `json:"user_id"`
 	Action        string                 `json:"action"`
 	Resource      string                 `json:"resource"`
@@ -156,11 +156,11 @@ func NewAuditLogger(logger *zap.Logger) *AuditLogger {
 }
 
 // Log creates a new audit entry with hash chaining.
-func (al *AuditLogger) Log(orgID, userID, action, resource, resourceID string, data map[string]interface{}) *AuditEntry {
+func (al *AuditLogger) Log(tenantID, userID, action, resource, resourceID string, data map[string]interface{}) *AuditEntry {
 	entry := &AuditEntry{
 		ID:           uuid.New().String(),
 		Timestamp:    time.Now().UTC(),
-		OrgID:        orgID,
+		TenantID:        tenantID,
 		UserID:       userID,
 		Action:       action,
 		Resource:     resource,
@@ -173,7 +173,7 @@ func (al *AuditLogger) Log(orgID, userID, action, resource, resourceID string, d
 	payload, _ := json.Marshal(map[string]interface{}{
 		"id":            entry.ID,
 		"timestamp":     entry.Timestamp,
-		"org_id":        entry.OrgID,
+		"tenant_id":        entry.TenantID,
 		"user_id":       entry.UserID,
 		"action":        entry.Action,
 		"resource":      entry.Resource,
@@ -190,7 +190,7 @@ func (al *AuditLogger) Log(orgID, userID, action, resource, resourceID string, d
 	// Structured log output
 	al.logger.Info("AUDIT",
 		zap.String("audit_id", entry.ID),
-		zap.String("org_id", entry.OrgID),
+		zap.String("tenant_id", entry.TenantID),
 		zap.String("user_id", MaskPII(entry.UserID)),
 		zap.String("action", entry.Action),
 		zap.String("resource", entry.Resource),

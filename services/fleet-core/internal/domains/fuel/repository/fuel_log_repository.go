@@ -17,22 +17,22 @@ import (
 type FuelLogRepository interface {
 	Create(ctx context.Context, log *models.FuelLog) error
 	CreateWithLimitValidation(ctx context.Context, log *models.FuelLog, quantity, amount float64) error
-	GetByID(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*models.FuelLog, error)
+	GetByID(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) (*models.FuelLog, error)
 	List(ctx context.Context, filter models.FuelLogFilter) (*models.FuelLogListResponse, error)
 	Update(ctx context.Context, log *models.FuelLog) error
-	Delete(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error
-	UpdateStatus(ctx context.Context, id uuid.UUID, orgID uuid.UUID, status models.FuelLogStatus) error
-	GetStats(ctx context.Context, orgID uuid.UUID, filter models.FuelLogFilter) (*models.FuelLogStats, error)
-	GetLastOdometer(ctx context.Context, vehicleID uuid.UUID, orgID uuid.UUID) (float64, error)
-	CheckDuplicate(ctx context.Context, vehicleID uuid.UUID, orgID uuid.UUID, transactionDate time.Time, minutes int) (bool, error)
+	Delete(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) error
+	UpdateStatus(ctx context.Context, id uuid.UUID, tenantID uuid.UUID, status models.FuelLogStatus) error
+	GetStats(ctx context.Context, tenantID uuid.UUID, filter models.FuelLogFilter) (*models.FuelLogStats, error)
+	GetLastOdometer(ctx context.Context, vehicleID uuid.UUID, tenantID uuid.UUID) (float64, error)
+	CheckDuplicate(ctx context.Context, vehicleID uuid.UUID, tenantID uuid.UUID, transactionDate time.Time, minutes int) (bool, error)
 	GetVehicleSpecs(ctx context.Context, vehicleID uuid.UUID) (*models.VehicleSpecs, error)
-	GetDriverFuelLimit(ctx context.Context, driverID uuid.UUID, orgID uuid.UUID) (*models.DriverFuelLimit, error)
-	GetOrgFuelSettings(ctx context.Context, orgID uuid.UUID) (*models.OrgFuelSettings, error)
-	GetFuelUsage(ctx context.Context, driverID uuid.UUID, orgID uuid.UUID, since time.Time) (float64, float64, error)
+	GetDriverFuelLimit(ctx context.Context, driverID uuid.UUID, tenantID uuid.UUID) (*models.DriverFuelLimit, error)
+	GetOrgFuelSettings(ctx context.Context, tenantID uuid.UUID) (*models.OrgFuelSettings, error)
+	GetFuelUsage(ctx context.Context, driverID uuid.UUID, tenantID uuid.UUID, since time.Time) (float64, float64, error)
 	GetLogsForAnomalyDetection(ctx context.Context, since time.Time) ([]models.FuelLog, error)
-	MarkAsAnomalous(ctx context.Context, id uuid.UUID, orgID uuid.UUID, reason string) error
+	MarkAsAnomalous(ctx context.Context, id uuid.UUID, tenantID uuid.UUID, reason string) error
 	CreateVendor(ctx context.Context, vendor *models.FuelVendor) error
-	ListVendors(ctx context.Context, orgID uuid.UUID) ([]models.FuelVendor, error)
+	ListVendors(ctx context.Context, tenantID uuid.UUID) ([]models.FuelVendor, error)
 }
 
 type fuelLogRepository struct {
@@ -68,7 +68,7 @@ func (r *fuelLogRepository) Create(ctx context.Context, log *models.FuelLog) err
 	return nil
 }
 
-func (r *fuelLogRepository) GetByID(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*models.FuelLog, error) {
+func (r *fuelLogRepository) GetByID(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) (*models.FuelLog, error) {
 	query := `
 		SELECT
 			id, organization_id, vehicle_id, driver_id, station_name, fuel_type,
@@ -80,7 +80,7 @@ func (r *fuelLogRepository) GetByID(ctx context.Context, id uuid.UUID, orgID uui
 	`
 	var log models.FuelLog
 	start := time.Now()
-	err := r.db.QueryRow(ctx, query, id, orgID).Scan(
+	err := r.db.QueryRow(ctx, query, id, tenantID).Scan(
 		&log.ID, &log.OrganizationID, &log.VehicleID, &log.DriverID, &log.StationName, &log.FuelType,
 		&log.Quantity, &log.UnitPrice, &log.TotalCost, &log.Odometer, &log.TransactionDate,
 		&log.Status, &log.GSTNumber, &log.GSTRate, &log.GSTAmount, &log.InvoiceNumber, &log.VendorGSTIN,
@@ -220,10 +220,10 @@ func (r *fuelLogRepository) Update(ctx context.Context, log *models.FuelLog) err
 	return nil
 }
 
-func (r *fuelLogRepository) Delete(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error {
+func (r *fuelLogRepository) Delete(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) error {
 	query := "DELETE FROM fuel_logs WHERE id = $1 AND organization_id = $2"
 	start := time.Now()
-	_, err := r.db.Exec(ctx, query, id, orgID)
+	_, err := r.db.Exec(ctx, query, id, tenantID)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("failed to delete fuel log: %w", err)
@@ -231,10 +231,10 @@ func (r *fuelLogRepository) Delete(ctx context.Context, id uuid.UUID, orgID uuid
 	return nil
 }
 
-func (r *fuelLogRepository) UpdateStatus(ctx context.Context, id uuid.UUID, orgID uuid.UUID, status models.FuelLogStatus) error {
+func (r *fuelLogRepository) UpdateStatus(ctx context.Context, id uuid.UUID, tenantID uuid.UUID, status models.FuelLogStatus) error {
 	query := "UPDATE fuel_logs SET status = $1, updated_at = NOW() WHERE id = $2 AND organization_id = $3"
 	start := time.Now()
-	_, err := r.db.Exec(ctx, query, status, id, orgID)
+	_, err := r.db.Exec(ctx, query, status, id, tenantID)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("failed to update fuel log status: %w", err)
@@ -266,7 +266,7 @@ func (r *fuelLogRepository) CreateAuditLog(ctx context.Context, entry *models.Fu
 	return nil
 }
 
-func (r *fuelLogRepository) GetStats(ctx context.Context, orgID uuid.UUID, filter models.FuelLogFilter) (*models.FuelLogStats, error) {
+func (r *fuelLogRepository) GetStats(ctx context.Context, tenantID uuid.UUID, filter models.FuelLogFilter) (*models.FuelLogStats, error) {
 	// Simple summary stats
 	query := `
 		SELECT
@@ -281,7 +281,7 @@ func (r *fuelLogRepository) GetStats(ctx context.Context, orgID uuid.UUID, filte
 		ByFuelType: make(map[string]float64),
 	}
 	start := time.Now()
-	err := r.db.QueryRow(ctx, query, orgID).Scan(
+	err := r.db.QueryRow(ctx, query, tenantID).Scan(
 		&stats.TotalConsumption, &stats.TotalCost, &stats.PendingApprovals,
 	)
 	metrics.RecordDBQuery(query, time.Since(start))
@@ -297,7 +297,7 @@ func (r *fuelLogRepository) GetStats(ctx context.Context, orgID uuid.UUID, filte
 		GROUP BY status
 	`
 	start = time.Now()
-	rows, err := r.db.Query(ctx, statusQuery, orgID)
+	rows, err := r.db.Query(ctx, statusQuery, tenantID)
 	metrics.RecordDBQuery(statusQuery, time.Since(start))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query status stats: %w", err)
@@ -319,7 +319,7 @@ func (r *fuelLogRepository) GetStats(ctx context.Context, orgID uuid.UUID, filte
 		GROUP BY fuel_type
 	`
 	start = time.Now()
-	rows2, err := r.db.Query(ctx, fuelQuery, orgID)
+	rows2, err := r.db.Query(ctx, fuelQuery, tenantID)
 	metrics.RecordDBQuery(fuelQuery, time.Since(start))
 	if err != nil {
 		return nil, fmt.Errorf("failed to query fuel type stats: %w", err)
@@ -344,7 +344,7 @@ func (r *fuelLogRepository) GetStats(ctx context.Context, orgID uuid.UUID, filte
 		WHERE organization_id = $1 AND status = 'APPROVED'
 	`
 	start = time.Now()
-	if err := r.db.QueryRow(ctx, distanceQuery, orgID).Scan(&minOdo, &maxOdo, &approvedFuel); err == nil {
+	if err := r.db.QueryRow(ctx, distanceQuery, tenantID).Scan(&minOdo, &maxOdo, &approvedFuel); err == nil {
 		metrics.RecordDBQuery(distanceQuery, time.Since(start))
 		distance := maxOdo - minOdo
 		if approvedFuel > 0 && distance > 0 {
@@ -358,7 +358,7 @@ func (r *fuelLogRepository) GetStats(ctx context.Context, orgID uuid.UUID, filte
 	return stats, nil
 }
 
-func (r *fuelLogRepository) GetLastOdometer(ctx context.Context, vehicleID uuid.UUID, orgID uuid.UUID) (float64, error) {
+func (r *fuelLogRepository) GetLastOdometer(ctx context.Context, vehicleID uuid.UUID, tenantID uuid.UUID) (float64, error) {
 	query := `
 		SELECT odometer
 		FROM fuel_logs
@@ -368,7 +368,7 @@ func (r *fuelLogRepository) GetLastOdometer(ctx context.Context, vehicleID uuid.
 	`
 	var odometer float64
 	start := time.Now()
-	err := r.db.QueryRow(ctx, query, vehicleID, orgID).Scan(&odometer)
+	err := r.db.QueryRow(ctx, query, vehicleID, tenantID).Scan(&odometer)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -380,7 +380,7 @@ func (r *fuelLogRepository) GetLastOdometer(ctx context.Context, vehicleID uuid.
 }
 
 // CheckDuplicate checks if a similar fuel transaction exists within the specified time window
-func (r *fuelLogRepository) CheckDuplicate(ctx context.Context, vehicleID uuid.UUID, orgID uuid.UUID, transactionDate time.Time, minutes int) (bool, error) {
+func (r *fuelLogRepository) CheckDuplicate(ctx context.Context, vehicleID uuid.UUID, tenantID uuid.UUID, transactionDate time.Time, minutes int) (bool, error) {
 	query := `
 		SELECT COUNT(*)
 		FROM fuel_logs
@@ -392,7 +392,7 @@ func (r *fuelLogRepository) CheckDuplicate(ctx context.Context, vehicleID uuid.U
 	`
 	var count int
 	start := time.Now()
-	err := r.db.QueryRow(ctx, query, vehicleID, orgID, transactionDate, minutes).Scan(&count)
+	err := r.db.QueryRow(ctx, query, vehicleID, tenantID, transactionDate, minutes).Scan(&count)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return false, fmt.Errorf("failed to check for duplicate: %w", err)
@@ -422,7 +422,7 @@ func (r *fuelLogRepository) GetVehicleSpecs(ctx context.Context, vehicleID uuid.
 	return &specs, nil
 }
 
-func (r *fuelLogRepository) GetDriverFuelLimit(ctx context.Context, driverID uuid.UUID, orgID uuid.UUID) (*models.DriverFuelLimit, error) {
+func (r *fuelLogRepository) GetDriverFuelLimit(ctx context.Context, driverID uuid.UUID, tenantID uuid.UUID) (*models.DriverFuelLimit, error) {
 	query := `
 		SELECT id, organization_id, driver_id, daily_liters_limit, monthly_liters_limit, 
 		       daily_amount_limit, monthly_amount_limit, currency, is_active, created_at, updated_at
@@ -431,7 +431,7 @@ func (r *fuelLogRepository) GetDriverFuelLimit(ctx context.Context, driverID uui
 	`
 	var limit models.DriverFuelLimit
 	start := time.Now()
-	err := r.db.QueryRow(ctx, query, driverID, orgID).Scan(
+	err := r.db.QueryRow(ctx, query, driverID, tenantID).Scan(
 		&limit.ID, &limit.OrganizationID, &limit.DriverID, &limit.DailyLitersLimit, &limit.MonthlyLitersLimit,
 		&limit.DailyAmountLimit, &limit.MonthlyAmountLimit, &limit.Currency, &limit.IsActive, &limit.CreatedAt, &limit.UpdatedAt,
 	)
@@ -445,7 +445,7 @@ func (r *fuelLogRepository) GetDriverFuelLimit(ctx context.Context, driverID uui
 	return &limit, nil
 }
 
-func (r *fuelLogRepository) GetOrgFuelSettings(ctx context.Context, orgID uuid.UUID) (*models.OrgFuelSettings, error) {
+func (r *fuelLogRepository) GetOrgFuelSettings(ctx context.Context, tenantID uuid.UUID) (*models.OrgFuelSettings, error) {
 	query := `
 		SELECT organization_id, default_daily_liters_limit, default_monthly_liters_limit,
 		       default_daily_amount_limit, default_monthly_amount_limit, currency, created_at, updated_at
@@ -454,7 +454,7 @@ func (r *fuelLogRepository) GetOrgFuelSettings(ctx context.Context, orgID uuid.U
 	`
 	var settings models.OrgFuelSettings
 	start := time.Now()
-	err := r.db.QueryRow(ctx, query, orgID).Scan(
+	err := r.db.QueryRow(ctx, query, tenantID).Scan(
 		&settings.OrganizationID, &settings.DefaultDailyLitersLimit, &settings.DefaultMonthlyLitersLimit,
 		&settings.DefaultDailyAmountLimit, &settings.DefaultMonthlyAmountLimit, &settings.Currency, &settings.CreatedAt, &settings.UpdatedAt,
 	)
@@ -468,7 +468,7 @@ func (r *fuelLogRepository) GetOrgFuelSettings(ctx context.Context, orgID uuid.U
 	return &settings, nil
 }
 
-func (r *fuelLogRepository) GetFuelUsage(ctx context.Context, driverID uuid.UUID, orgID uuid.UUID, since time.Time) (float64, float64, error) {
+func (r *fuelLogRepository) GetFuelUsage(ctx context.Context, driverID uuid.UUID, tenantID uuid.UUID, since time.Time) (float64, float64, error) {
 	query := `
 		SELECT COALESCE(SUM(quantity), 0), COALESCE(SUM(total_cost), 0)
 		FROM fuel_logs
@@ -476,7 +476,7 @@ func (r *fuelLogRepository) GetFuelUsage(ctx context.Context, driverID uuid.UUID
 	`
 	var totalLiters, totalAmount float64
 	start := time.Now()
-	err := r.db.QueryRow(ctx, query, driverID, orgID, since).Scan(&totalLiters, &totalAmount)
+	err := r.db.QueryRow(ctx, query, driverID, tenantID, since).Scan(&totalLiters, &totalAmount)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to get fuel usage: %w", err)
@@ -520,10 +520,10 @@ func (r *fuelLogRepository) GetLogsForAnomalyDetection(ctx context.Context, sinc
 	return logs, nil
 }
 
-func (r *fuelLogRepository) MarkAsAnomalous(ctx context.Context, id uuid.UUID, orgID uuid.UUID, reason string) error {
+func (r *fuelLogRepository) MarkAsAnomalous(ctx context.Context, id uuid.UUID, tenantID uuid.UUID, reason string) error {
 	query := "UPDATE fuel_logs SET anomaly_flag = TRUE, anomaly_reason = $1, updated_at = NOW() WHERE id = $2 AND organization_id = $3"
 	start := time.Now()
-	_, err := r.db.Exec(ctx, query, reason, id, orgID)
+	_, err := r.db.Exec(ctx, query, reason, id, tenantID)
 	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
@@ -543,11 +543,11 @@ func (r *fuelLogRepository) CreateVendor(ctx context.Context, vendor *models.Fue
 	return err
 }
 
-func (r *fuelLogRepository) ListVendors(ctx context.Context, orgID uuid.UUID) ([]models.FuelVendor, error) {
+func (r *fuelLogRepository) ListVendors(ctx context.Context, tenantID uuid.UUID) ([]models.FuelVendor, error) {
 	query := `SELECT id, organization_id, name, gstin, address, contact_phone, email, status, rating, metadata, created_at, updated_at
 			  FROM fuel_vendors WHERE organization_id = $1`
 	start := time.Now()
-	rows, err := r.db.Query(ctx, query, orgID)
+	rows, err := r.db.Query(ctx, query, tenantID)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, err
@@ -579,7 +579,7 @@ func (r *fuelLogRepository) CreateWithLimitValidation(ctx context.Context, log *
 	defer tx.Rollback(ctx)
 
 	driverID := log.DriverID
-	orgID := log.OrganizationID
+	tenantID := log.OrganizationID
 
 	// 1. Lock driver fuel limit row (if exists) to prevent concurrent modifications
 	var limit *models.DriverFuelLimit
@@ -591,7 +591,7 @@ func (r *fuelLogRepository) CreateWithLimitValidation(ctx context.Context, log *
 		FOR UPDATE SKIP LOCKED
 	`
 	qStart := time.Now()
-	err = tx.QueryRow(ctx, limitQuery, driverID, orgID).Scan(
+	err = tx.QueryRow(ctx, limitQuery, driverID, tenantID).Scan(
 		&limit.ID, &limit.OrganizationID, &limit.DriverID, &limit.DailyLitersLimit, &limit.MonthlyLitersLimit,
 		&limit.DailyAmountLimit, &limit.MonthlyAmountLimit, &limit.Currency, &limit.IsActive, &limit.CreatedAt, &limit.UpdatedAt,
 	)
@@ -612,7 +612,7 @@ func (r *fuelLogRepository) CreateWithLimitValidation(ctx context.Context, log *
 		FOR UPDATE SKIP LOCKED
 	`
 	qStart = time.Now()
-	err = tx.QueryRow(ctx, orgQuery, orgID).Scan(
+	err = tx.QueryRow(ctx, orgQuery, tenantID).Scan(
 		&orgSettings.OrganizationID, &orgSettings.DefaultDailyLitersLimit, &orgSettings.DefaultMonthlyLitersLimit,
 		&orgSettings.DefaultDailyAmountLimit, &orgSettings.DefaultMonthlyAmountLimit, &orgSettings.Currency, &orgSettings.CreatedAt, &orgSettings.UpdatedAt,
 	)
@@ -657,7 +657,7 @@ func (r *fuelLogRepository) CreateWithLimitValidation(ctx context.Context, log *
 
 		// Daily usage from start of day
 		qStart = time.Now()
-		err = tx.QueryRow(ctx, usageQuery, driverID, orgID, startOfDay).Scan(&usedDailyLiters, &usedDailyAmount)
+		err = tx.QueryRow(ctx, usageQuery, driverID, tenantID, startOfDay).Scan(&usedDailyLiters, &usedDailyAmount)
 		metrics.RecordDBQuery(usageQuery, time.Since(qStart))
 		if err != nil {
 			return fmt.Errorf("failed to get daily fuel usage: %w", err)
@@ -665,7 +665,7 @@ func (r *fuelLogRepository) CreateWithLimitValidation(ctx context.Context, log *
 
 		// Monthly usage from start of month
 		qStart = time.Now()
-		err = tx.QueryRow(ctx, usageQuery, driverID, orgID, startOfMonth).Scan(&usedMonthlyLiters, &usedMonthlyAmount)
+		err = tx.QueryRow(ctx, usageQuery, driverID, tenantID, startOfMonth).Scan(&usedMonthlyLiters, &usedMonthlyAmount)
 		metrics.RecordDBQuery(usageQuery, time.Since(qStart))
 		if err != nil {
 			return fmt.Errorf("failed to get monthly fuel usage: %w", err)

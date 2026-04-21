@@ -13,7 +13,7 @@ import (
 
 // BillingProcessor defines necessary billing operations
 type BillingProcessor interface {
-	GenerateDraftInvoice(ctx context.Context, orgID uuid.UUID) (*models.Invoice, error)
+	GenerateDraftInvoice(ctx context.Context, tenantID uuid.UUID) (*models.Invoice, error)
 	GetInvoice(ctx context.Context, invoiceID uuid.UUID) (*models.Invoice, error)
 }
 
@@ -71,16 +71,16 @@ func (ws *BillingWorkerServer) HandleGenerateInvoice(ctx context.Context, t *asy
 		return fmt.Errorf("json.Unmarshal failed: %v: %w", err, asynq.SkipRetry)
 	}
 
-	ws.logger.Info("Generating automated invoice", zap.String("tenant_id", payload.OrgID.String()))
+	ws.logger.Info("Generating automated invoice", zap.String("tenant_id", payload.TenantID.String()))
 
-	invoice, err := ws.service.GenerateDraftInvoice(ctx, payload.OrgID)
+	invoice, err := ws.service.GenerateDraftInvoice(ctx, payload.TenantID)
 	if err != nil {
-		ws.logger.Error("Failed to generate automated invoice", zap.Error(err), zap.String("tenant_id", payload.OrgID.String()))
+		ws.logger.Error("Failed to generate automated invoice", zap.Error(err), zap.String("tenant_id", payload.TenantID.String()))
 		return fmt.Errorf("generate draft invoice failed: %w", err)
 	}
 
 	ws.logger.Info("Successfully generated automated draft invoice",
-		zap.String("tenant_id", payload.OrgID.String()),
+		zap.String("tenant_id", payload.TenantID.String()),
 		zap.String("invoice_id", invoice.ID.String()))
 
 	return nil

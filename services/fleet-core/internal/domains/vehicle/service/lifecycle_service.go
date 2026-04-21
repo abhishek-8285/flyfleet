@@ -197,27 +197,27 @@ func (s *LifecycleService) emitEvent(ctx context.Context, vehicleID uuid.UUID, e
 // ensureVehicleOrgMatch verifies that the vehicle belongs to the organization from the request context.
 // Returns ErrVehicleNotFound if the check fails to avoid information leakage.
 func (s *LifecycleService) ensureVehicleOrgMatch(ctx context.Context, vehicle *models.Vehicle) error {
-	orgIDVal := ctx.Value("tenant_id")
-	if orgIDVal == nil {
+	tenantIDVal := ctx.Value("tenant_id")
+	if tenantIDVal == nil {
 		s.logger.Error("Organization context missing")
 		return ErrVehicleNotFound
 	}
-	var reqOrgID uuid.UUID
-	switch v := orgIDVal.(type) {
+	var reqTenantID uuid.UUID
+	switch v := tenantIDVal.(type) {
 	case string:
 		id, err := uuid.Parse(v)
 		if err != nil {
-			s.logger.Error("Invalid orgID in context", zap.Error(err))
+			s.logger.Error("Invalid tenantID in context", zap.Error(err))
 			return ErrVehicleNotFound
 		}
-		reqOrgID = id
+		reqTenantID = id
 	case uuid.UUID:
-		reqOrgID = v
+		reqTenantID = v
 	default:
-		s.logger.Error("Invalid orgID type", zap.Any("type", fmt.Sprintf("%T", orgIDVal)))
+		s.logger.Error("Invalid tenantID type", zap.Any("type", fmt.Sprintf("%T", tenantIDVal)))
 		return ErrVehicleNotFound
 	}
-	if vehicle.TenantID != reqOrgID {
+	if vehicle.TenantID != reqTenantID {
 		return ErrVehicleNotFound
 	}
 	return nil

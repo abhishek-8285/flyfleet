@@ -58,23 +58,19 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 // ─── Auth Helpers ─────────────────────────────────────────────────────────────
 
 func (h *Handler) tenantID(r *http.Request) uuid.UUID {
-	if v := r.Context().Value(ctxkeys.TenantIDKey); v != nil {
-		if s, ok := v.(string); ok {
-			id, _ := uuid.Parse(s)
-			return id
-		}
+	id, ok := ctxkeys.GetTenantID(r.Context())
+	if !ok {
+		return uuid.Nil
 	}
-	return uuid.Nil
+	return id
 }
 
 func (h *Handler) userID(r *http.Request) uuid.UUID {
-	if v := r.Context().Value(ctxkeys.UserIDKey); v != nil {
-		if s, ok := v.(string); ok {
-			id, _ := uuid.Parse(s)
-			return id
-		}
+	id, ok := ctxkeys.GetUserID(r.Context())
+	if !ok {
+		return uuid.Nil
 	}
-	return uuid.New()
+	return id
 }
 
 func parseID(r *http.Request, param string) (uuid.UUID, bool) {

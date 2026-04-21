@@ -12,6 +12,7 @@ import (
 	"github.com/flyfleet/fleet-core/internal/domains/analytics"
 	"github.com/flyfleet/fleet-core/internal/domains/tracking/models"
 	"github.com/flyfleet/fleet-core/internal/domains/tracking/repository"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
@@ -109,8 +110,8 @@ func (s *DeviceService) RegisterDevice(ctx context.Context, req *models.DeviceRe
 
 	// Parse optional IDs
 	if req.OrganizationID != "" {
-		if orgID, err := uuid.Parse(req.OrganizationID); err == nil {
-			device.OrganizationID = orgID
+		if tenantID, err := uuid.Parse(req.OrganizationID); err == nil {
+			device.OrganizationID = tenantID
 		}
 	}
 
@@ -149,19 +150,10 @@ func (s *DeviceService) RegisterDevice(ctx context.Context, req *models.DeviceRe
 }
 
 func (s *DeviceService) getUserID(ctx context.Context) uuid.UUID {
-	val := ctx.Value("user_id")
-	if val == nil {
-		return uuid.Nil
+	if id, ok := ctxkeys.GetUserID(ctx); ok {
+		return id
 	}
-	uidStr, ok := val.(string)
-	if !ok {
-		return uuid.Nil
-	}
-	uid, err := uuid.Parse(uidStr)
-	if err != nil {
-		return uuid.Nil
-	}
-	return uid
+	return uuid.Nil
 }
 
 // UpdateHeartbeat processes device heartbeat
@@ -411,8 +403,8 @@ func (s *DeviceService) DriverLogin(ctx context.Context, req *models.DriverLogin
 	// ── Analytics Cache Invalidation ──
 	if s.analytics != nil {
 		if did, err := uuid.Parse(req.DriverID); err == nil {
-			orgID := s.getOrgID(ctx)
-			_ = s.analytics.InvalidateDriverCache(ctx, did, orgID)
+			tenantID := s.getTenantID(ctx)
+			_ = s.analytics.InvalidateDriverCache(ctx, did, tenantID)
 		}
 	}
 
@@ -464,8 +456,8 @@ func (s *DeviceService) DriverLogout(ctx context.Context, req *models.DriverLogo
 	// ── Analytics Cache Invalidation ──
 	if s.analytics != nil {
 		if did, err := uuid.Parse(req.DriverID); err == nil {
-			orgID := s.getOrgID(ctx)
-			_ = s.analytics.InvalidateDriverCache(ctx, did, orgID)
+			tenantID := s.getTenantID(ctx)
+			_ = s.analytics.InvalidateDriverCache(ctx, did, tenantID)
 		}
 	}
 
@@ -511,8 +503,8 @@ func (s *DeviceService) UpdateDriverHOS(ctx context.Context, req *models.HOSUpda
 	// ── Analytics Cache Invalidation ──
 	if s.analytics != nil && (req.DutyStatus == "OFF_DUTY" || req.DutyStatus == "SLEEPER_BERTH") {
 		if did, err := uuid.Parse(req.DriverID); err == nil {
-			orgID := s.getOrgID(ctx)
-			_ = s.analytics.InvalidateDriverCache(ctx, did, orgID)
+			tenantID := s.getTenantID(ctx)
+			_ = s.analytics.InvalidateDriverCache(ctx, did, tenantID)
 		}
 	}
 
@@ -562,19 +554,9 @@ func (s *DeviceService) generateDeviceTokens(deviceID string) (string, string, i
 	return jwtToken, refreshToken, expiresAt.Unix(), nil
 }
 
-func (s *DeviceService) getOrgID(ctx context.Context) uuid.UUID {
-	val := ctx.Value("tenant_id")
-	if val == nil {
-		return uuid.Nil
+func (s *DeviceService) getTenantID(ctx context.Context) uuid.UUID {
+	if id, ok := ctxkeys.GetTenantID(ctx); ok {
+		return id
 	}
-	oidStr, ok := val.(string)
-	if !ok {
-		// Try uuid.UUID if it's already parsed (standard middleware)
-		if oid, ok := val.(uuid.UUID); ok {
-			return oid
-		}
-		return uuid.Nil
-	}
-	oid, _ := uuid.Parse(oidStr)
-	return oid
+	return uuid.Nil
 }

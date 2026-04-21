@@ -17,7 +17,7 @@ func generateFor(category string, filename string) {
 
 	invoice := &models.Invoice{
 		ID:            uuid.New(),
-		OrgID:         uuid.New(),
+		TenantID:         uuid.New(),
 		InvoiceNumber: "INV-" + category + "-001",
 		Category:      category,
 		CustomerName:  "Industrial " + category + " Client",
@@ -51,7 +51,7 @@ func generateFor(category string, filename string) {
 		},
 	}
 
-	generator := pdf.NewPDFGenerator(60 * time.Second)
+	generator := pdf.NewPDFGenerator(60*time.Second, os.Getenv("CHROME_PATH"))
 	html := pdf.GenerateInvoiceHTML(invoice, items)
 
 	pdfData, err := generator.GenerateFromHTML(context.Background(), html, pdf.DefaultA4Portrait())

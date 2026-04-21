@@ -17,7 +17,7 @@ type RouteOptimizationService interface {
 	GetOptimizationRequest(ctx context.Context, id string) (*models.RouteOptimizationRequest, error)
 	UpdateOptimizationRequest(ctx context.Context, id string, updates map[string]interface{}) error
 	DeleteOptimizationRequest(ctx context.Context, id string) error
-	ListOptimizationRequests(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.RouteOptimizationRequest, int, error)
+	ListOptimizationRequests(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.RouteOptimizationRequest, int, error)
 
 	GetOptimizationResult(ctx context.Context, id string) (*models.RouteOptimizationResult, error)
 	GetOptimizationResultByRequestID(ctx context.Context, requestID string) (*models.RouteOptimizationResult, error)
@@ -106,8 +106,8 @@ func (s *RouteOptimizationServiceImpl) DeleteOptimizationRequest(ctx context.Con
 }
 
 // ListOptimizationRequests retrieves route optimization requests for an organization
-func (s *RouteOptimizationServiceImpl) ListOptimizationRequests(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.RouteOptimizationRequest, int, error) {
-	requests, total, err := s.repo.ListOptimizationRequests(ctx, orgID, limit, offset)
+func (s *RouteOptimizationServiceImpl) ListOptimizationRequests(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.RouteOptimizationRequest, int, error) {
+	requests, total, err := s.repo.ListOptimizationRequests(ctx, tenantID, limit, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list optimization requests: %w", err)
 	}

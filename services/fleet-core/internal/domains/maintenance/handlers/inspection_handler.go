@@ -43,10 +43,10 @@ func (h *InspectionHandler) RegisterRoutes(r chi.Router) {
 // --- Templates ---
 
 func (h *InspectionHandler) ListTemplates(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	vehicleType := r.URL.Query().Get("vehicle_type")
 
-	templates, err := h.repo.ListTemplates(r.Context(), orgID, vehicleType)
+	templates, err := h.repo.ListTemplates(r.Context(), tenantID, vehicleType)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -56,14 +56,14 @@ func (h *InspectionHandler) ListTemplates(w http.ResponseWriter, r *http.Request
 }
 
 func (h *InspectionHandler) CreateTemplate(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
 	var template models.InspectionTemplate
 	if err := json.NewDecoder(r.Body).Decode(&template); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	template.OrgID = orgID
+	template.TenantID = tenantID
 
 	if err := h.repo.CreateTemplate(r.Context(), &template); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -96,7 +96,7 @@ func (h *InspectionHandler) GetTemplate(w http.ResponseWriter, r *http.Request) 
 // --- Inspections ---
 
 func (h *InspectionHandler) CreateInspection(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	userID := h.getUserID(r)
 
 	var inspection models.VehicleInspection
@@ -104,7 +104,7 @@ func (h *InspectionHandler) CreateInspection(w http.ResponseWriter, r *http.Requ
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	inspection.OrgID = orgID
+	inspection.TenantID = tenantID
 	inspection.InspectorID = userID
 
 	if err := h.repo.CreateInspection(r.Context(), &inspection); err != nil {
@@ -162,10 +162,10 @@ func (h *InspectionHandler) writeErrorResponse(w http.ResponseWriter, statusCode
 	h.writeJSONResponse(w, statusCode, map[string]string{"error": message})
 }
 
-func (h *InspectionHandler) getOrgID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
-		if orgIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(orgIDStr); err == nil {
+func (h *InspectionHandler) getTenantID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.TenantIDKey); val != nil {
+		if tenantIDStr, ok := val.(string); ok {
+			if id, err := uuid.Parse(tenantIDStr); err == nil {
 				return id
 			}
 		}

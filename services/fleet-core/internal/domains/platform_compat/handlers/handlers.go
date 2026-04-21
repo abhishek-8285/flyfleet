@@ -70,9 +70,9 @@ func (h *Handlers) writeErrorResponse(w http.ResponseWriter, status int, err err
 }
 
 func (h *Handlers) WebsocketCompat(w http.ResponseWriter, r *http.Request) {
-	orgIDStr := r.Header.Get("X-Org-ID")
-	if orgIDStr == "" {
-		orgIDStr = r.URL.Query().Get("tenant_id")
+	tenantIDStr := r.Header.Get("X-Org-ID")
+	if tenantIDStr == "" {
+		tenantIDStr = r.URL.Query().Get("tenant_id")
 	}
 
 	authHeader := r.Header.Get("Authorization")
@@ -82,39 +82,39 @@ func (h *Handlers) WebsocketCompat(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if orgIDStr == "" {
+	if tenantIDStr == "" {
 		h.logger.Warn("Websocket connect attempt without X-Org-ID")
 		http.Error(w, "X-Org-ID header required", http.StatusForbidden)
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr)
+	tenantID, err := uuid.Parse(tenantIDStr)
 	if err != nil {
-		h.logger.Warn("Websocket connect attempt with invalid OrgID", zap.String("tenant_id", orgIDStr))
-		http.Error(w, "Invalid OrgID", http.StatusForbidden)
+		h.logger.Warn("Websocket connect attempt with invalid TenantID", zap.String("tenant_id", tenantIDStr))
+		http.Error(w, "Invalid TenantID", http.StatusForbidden)
 		return
 	}
 
-	var jwtOrgID string
+	var jwtTenantID string
 	if strings.HasPrefix(authHeader, "Bearer ") {
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 		token, _, err := new(jwt.Parser).ParseUnverified(tokenStr, jwt.MapClaims{})
 		if err == nil {
 			if claims, ok := token.Claims.(jwt.MapClaims); ok {
 				if orgClaim, ok := claims["tenant_id"].(string); ok {
-					jwtOrgID = orgClaim
+					jwtTenantID = orgClaim
 				}
 			}
 		}
 	}
 
-	if jwtOrgID != orgIDStr {
-		h.logger.Warn("Tenant Isolation Violation", zap.String("requested_org", orgIDStr), zap.String("jwt_org", jwtOrgID))
+	if jwtTenantID != tenantIDStr {
+		h.logger.Warn("Tenant Isolation Violation", zap.String("requested_org", tenantIDStr), zap.String("jwt_org", jwtTenantID))
 		http.Error(w, "Tenant isolation violation", http.StatusForbidden)
 		return
 	}
 
-	h.hub.HandleWebsocket(w, r, orgID)
+	h.hub.HandleWebsocket(w, r, tenantID)
 }
 
 func (h *Handlers) DashboardStats(w http.ResponseWriter, r *http.Request) {

@@ -46,7 +46,7 @@ func (m *MockExchangeRepo) LogSecurityEvent(ctx context.Context, event *models.S
 }
 
 // Stubs to fulfill AuthService token generation dependencies
-func (m *MockExchangeRepo) GetUserPermissions(ctx context.Context, userID uuid.UUID, orgID uuid.UUID) ([]string, error) {
+func (m *MockExchangeRepo) GetUserPermissions(ctx context.Context, userID uuid.UUID, tenantID uuid.UUID) ([]string, error) {
 	return []string{"basic"}, nil
 }
 func (m *MockExchangeRepo) GetRolePermissions(ctx context.Context, role string) ([]string, error) {
@@ -70,25 +70,25 @@ func TestSwitchContextAuthorization(t *testing.T) {
 	adminID := uuid.New()
 	adminOrg := uuid.New()
 	adminUser := &models.User{
-		ID: adminID, OrgID: adminOrg, Role: "super_admin",
+		ID: adminID, TenantID: adminOrg, Role: "super_admin",
 	}
 
 	parentID := uuid.New()
 	parentOrg := uuid.New()
 	parentUser := &models.User{
-		ID: parentID, OrgID: parentOrg, Role: "fleet_manager",
+		ID: parentID, TenantID: parentOrg, Role: "fleet_manager",
 	}
 
 	targetID := uuid.New()
 	targetOrg := uuid.New()
 	targetUser := &models.User{
-		ID: targetID, OrgID: targetOrg, Role: "org_admin", PermissionMask: 15,
+		ID: targetID, TenantID: targetOrg, Role: "org_admin", PermissionMask: 15,
 	}
 
 	strangerID := uuid.New()
 	strangerOrg := uuid.New()
 	strangerUser := &models.User{
-		ID: strangerID, OrgID: strangerOrg, Role: "driver",
+		ID: strangerID, TenantID: strangerOrg, Role: "driver",
 	}
 
 	repo.users[adminID] = adminUser

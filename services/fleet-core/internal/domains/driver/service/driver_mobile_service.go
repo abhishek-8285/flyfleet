@@ -13,14 +13,14 @@ import (
 )
 
 // UpdateDutyStatus updates the driver's duty status (HOOS) with compliance validation
-func (s *DriverService) UpdateDutyStatus(ctx context.Context, driverID string, orgID uuid.UUID, req *models.DutyStatusLog) error {
+func (s *DriverService) UpdateDutyStatus(ctx context.Context, driverID string, tenantID uuid.UUID, req *models.DutyStatusLog) error {
 	dID, err := uuid.Parse(driverID)
 	if err != nil {
 		return fmt.Errorf("invalid driver id: %w", err)
 	}
 
 	// Use DutyStatusService for validation and creation
-	log, err := s.dutyStatus.UpdateDutyStatus(ctx, dID, orgID, req.Status, req.Location, req.Remarks)
+	log, err := s.dutyStatus.UpdateDutyStatus(ctx, dID, tenantID, req.Status, req.Location, req.Remarks)
 	if err != nil {
 		return err
 	}
@@ -41,13 +41,13 @@ func (s *DriverService) UpdateDutyStatus(ctx context.Context, driverID string, o
 }
 
 // SendMessage sends a message from driver to dispatch
-func (s *DriverService) SendMessage(ctx context.Context, driverID, orgID string, content, msgType, attachmentURL string) (*models.DriverMessage, error) {
+func (s *DriverService) SendMessage(ctx context.Context, driverID, tenantID string, content, msgType, attachmentURL string) (*models.DriverMessage, error) {
 	// Verify driver ownership
 	driver, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
 		return nil, err
 	}
-	if driver == nil || driver.OrgID != orgID {
+	if driver == nil || driver.TenantID != tenantID {
 		return nil, fmt.Errorf("unauthorized access to driver data")
 	}
 
@@ -72,13 +72,13 @@ func (s *DriverService) SendMessage(ctx context.Context, driverID, orgID string,
 }
 
 // GetMessages retrieves messages for a driver
-func (s *DriverService) GetMessages(ctx context.Context, driverID, orgID string, page, pageSize int) ([]*models.DriverMessage, error) {
+func (s *DriverService) GetMessages(ctx context.Context, driverID, tenantID string, page, pageSize int) ([]*models.DriverMessage, error) {
 	// Verify driver ownership
 	driver, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
 		return nil, err
 	}
-	if driver == nil || driver.OrgID != orgID {
+	if driver == nil || driver.TenantID != tenantID {
 		return nil, fmt.Errorf("unauthorized access to driver data")
 	}
 
@@ -94,13 +94,13 @@ func (s *DriverService) GetMessages(ctx context.Context, driverID, orgID string,
 }
 
 // SubmitExpense submits a new expense claim
-func (s *DriverService) SubmitExpense(ctx context.Context, driverID, orgID string, req *models.DriverExpense) (*models.DriverExpense, error) {
+func (s *DriverService) SubmitExpense(ctx context.Context, driverID, tenantID string, req *models.DriverExpense) (*models.DriverExpense, error) {
 	// Verify driver ownership
 	driver, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
 		return nil, err
 	}
-	if driver == nil || driver.OrgID != orgID {
+	if driver == nil || driver.TenantID != tenantID {
 		return nil, fmt.Errorf("unauthorized access to driver data")
 	}
 
@@ -119,13 +119,13 @@ func (s *DriverService) SubmitExpense(ctx context.Context, driverID, orgID strin
 }
 
 // GetExpenses retrieves expenses for a driver
-func (s *DriverService) GetExpenses(ctx context.Context, driverID, orgID string) ([]*models.DriverExpense, error) {
+func (s *DriverService) GetExpenses(ctx context.Context, driverID, tenantID string) ([]*models.DriverExpense, error) {
 	// Verify driver ownership
 	driver, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
 		return nil, err
 	}
-	if driver == nil || driver.OrgID != orgID {
+	if driver == nil || driver.TenantID != tenantID {
 		return nil, fmt.Errorf("unauthorized access to driver data")
 	}
 
@@ -133,8 +133,8 @@ func (s *DriverService) GetExpenses(ctx context.Context, driverID, orgID string)
 }
 
 // TriggerSOS triggers an emergency SOS alert
-func (s *DriverService) TriggerSOS(ctx context.Context, driverID, orgID string, location *models.Location) error {
-	s.logger.Info("TriggerSOS called", zap.String("driver_id", driverID), zap.String("tenant_id", orgID))
+func (s *DriverService) TriggerSOS(ctx context.Context, driverID, tenantID string, location *models.Location) error {
+	s.logger.Info("TriggerSOS called", zap.String("driver_id", driverID), zap.String("tenant_id", tenantID))
 	// Verify driver ownership
 	driverRecord, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
@@ -146,9 +146,9 @@ func (s *DriverService) TriggerSOS(ctx context.Context, driverID, orgID string, 
 		return fmt.Errorf("driver not found")
 	}
 	// Skip org check for certification test if org is the default test org
-	if driverRecord.OrgID != orgID && orgID != "00000000-0000-0000-0000-000000000001" {
-		s.logger.Warn("TriggerSOS: unauthorized", zap.String("driver_org", driverRecord.OrgID), zap.String("req_org", orgID))
-		return fmt.Errorf("unauthorized access to driver data (driver org: %s, req org: %s)", driverRecord.OrgID, orgID)
+	if driverRecord.TenantID != tenantID && tenantID != "00000000-0000-0000-0000-000000000001" {
+		s.logger.Warn("TriggerSOS: unauthorized", zap.String("driver_org", driverRecord.TenantID), zap.String("req_org", tenantID))
+		return fmt.Errorf("unauthorized access to driver data (driver org: %s, req org: %s)", driverRecord.TenantID, tenantID)
 	}
 
 	s.logger.Warn("SOS ALERT TRIGGERED",

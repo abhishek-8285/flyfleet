@@ -104,8 +104,8 @@ func TestMultiTenant_SuggestionEngineReturnsOnlyOwnOrgVehicles(t *testing.T) {
 	orgB := uuid.New()
 
 	// Org A requests suggestions
-	// SuggestionEngine.GetByOrgID(ctx, orgA, ...) must be called
-	// NOT GetByOrgID(ctx, orgB, ...)
+	// SuggestionEngine.GetByTenantID(ctx, orgA, ...) must be called
+	// NOT GetByTenantID(ctx, orgB, ...)
 
 	// If vehicle from Org B somehow leaks into results, it's a security bug
 	vehicleOrgs := map[uuid.UUID]uuid.UUID{
@@ -138,14 +138,14 @@ func TestMultiTenant_ShardedNATSEvents(t *testing.T) {
 	// NATS events must include tenant_id for proper routing
 	eventA := struct {
 		Subject string
-		OrgID   string
+		TenantID   string
 	}{
 		Subject: "trip.assigned",
-		OrgID:   orgA.String(),
+		TenantID:   orgA.String(),
 	}
 
 	// Org B consumers must NOT receive Org A events
-	assert.Equal(t, orgA.String(), eventA.OrgID,
+	assert.Equal(t, orgA.String(), eventA.TenantID,
 		"Event tenant_id must match the dispatching org")
 }
 
@@ -174,9 +174,9 @@ func TestMultiTenant_ReadOnlyOrgCannotDispatch(t *testing.T) {
 
 func TestMultiTenant_ContextPropagation(t *testing.T) {
 	// Verify tenant_id flows through the entire dispatch chain
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
-	ctx := context.WithValue(context.Background(), "tenant_id", orgID.String())
+	ctx := context.WithValue(context.Background(), "tenant_id", tenantID.String())
 
 	// Extract org from context (simulates TenantContextMiddleware)
 	extractedOrgStr, ok := ctx.Value("tenant_id").(string)
@@ -184,6 +184,6 @@ func TestMultiTenant_ContextPropagation(t *testing.T) {
 
 	extractedOrg, err := uuid.Parse(extractedOrgStr)
 	require.NoError(t, err)
-	assert.Equal(t, orgID, extractedOrg,
+	assert.Equal(t, tenantID, extractedOrg,
 		"Extracted tenant_id must match the original")
 }

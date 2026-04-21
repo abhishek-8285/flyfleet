@@ -39,13 +39,13 @@ func (h *BillingConfigHandler) RegisterRoutes(r chi.Router) {
 
 // GetConfig retrieves billing configuration
 func (h *BillingConfigHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
 		return
 	}
 
-	config, err := h.svc.GetConfig(r.Context(), orgID)
+	config, err := h.svc.GetConfig(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("Failed to get billing config", zap.Error(err))
 		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
@@ -57,8 +57,8 @@ func (h *BillingConfigHandler) GetConfig(w http.ResponseWriter, r *http.Request)
 
 // UpdateConfig updates billing configuration
 func (h *BillingConfigHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
 		return
 	}
@@ -77,7 +77,7 @@ func (h *BillingConfigHandler) UpdateConfig(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	config, err := h.svc.UpdateConfig(r.Context(), orgID, userID, &req)
+	config, err := h.svc.UpdateConfig(r.Context(), tenantID, userID, &req)
 	if err != nil {
 		h.logger.Error("Failed to update billing config", zap.Error(err))
 		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
@@ -89,13 +89,13 @@ func (h *BillingConfigHandler) UpdateConfig(w http.ResponseWriter, r *http.Reque
 
 // DeleteConfig deletes billing configuration
 func (h *BillingConfigHandler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
 		return
 	}
 
-	if err := h.svc.DeleteConfig(r.Context(), orgID); err != nil {
+	if err := h.svc.DeleteConfig(r.Context(), tenantID); err != nil {
 		h.logger.Error("Failed to delete billing config", zap.Error(err))
 		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
 		return
@@ -115,30 +115,27 @@ func (h *BillingConfigHandler) errorJSON(w http.ResponseWriter, r *http.Request,
 	h.json(w, map[string]string{"error": message, "trace_id": coremiddleware.GetTraceID(r.Context())}, status)
 }
 
-func (h *BillingConfigHandler) getOrgID(r *http.Request) uuid.UUID {
+func (h *BillingConfigHandler) getTenantID(r *http.Request) uuid.UUID {
 	ctx := r.Context()
 
-	// Exhaustive list of all known organization context keys
-	keys := []interface{}{
-		coremiddleware.CtxOrgID, // internal/middleware
-		ctxkeys.OrgIDKey,        // internal/pkg/ctxkeys
-		ctxkeys.TenantIDKey,     // internal/pkg/ctxkeys
-		middleware.OrgIDKey,     // shared/pkg/middleware
-		"tenant_id",
-		"tenant_id",
+	// Consolidate to standard keys
+	val := ctx.Value(ctxkeys.TenantIDKey)
+	if val == nil {
+		// Fallback for shared middleware or raw strings
+		if v := ctx.Value(middleware.TenantIDKey); v != nil {
+			val = v
+		} else if v := ctx.Value("tenant_id"); v != nil {
+			val = v
+		}
 	}
 
-	for _, k := range keys {
-		if val := ctx.Value(k); val != nil {
-			// Try uuid.UUID first
-			if oid, ok := val.(uuid.UUID); ok && oid != uuid.Nil {
+	if val != nil {
+		if oid, ok := val.(uuid.UUID); ok && oid != uuid.Nil {
+			return oid
+		}
+		if s, ok := val.(string); ok && s != "" {
+			if oid, err := uuid.Parse(s); err == nil && oid != uuid.Nil {
 				return oid
-			}
-			// Try string fallback
-			if s, ok := val.(string); ok && s != "" {
-				if oid, err := uuid.Parse(s); err == nil && oid != uuid.Nil {
-					return oid
-				}
 			}
 		}
 	}
@@ -149,23 +146,22 @@ func (h *BillingConfigHandler) getOrgID(r *http.Request) uuid.UUID {
 func (h *BillingConfigHandler) getUserID(r *http.Request) uuid.UUID {
 	ctx := r.Context()
 
-	keys := []interface{}{
-		coremiddleware.CtxUserID,
-		ctxkeys.UserIDKey,
-		middleware.UserIDKey,
-		"user_id",
-		"sub",
+	val := ctx.Value(ctxkeys.UserIDKey)
+	if val == nil {
+		if v := ctx.Value(middleware.UserIDKey); v != nil {
+			val = v
+		} else if v := ctx.Value("user_id"); v != nil {
+			val = v
+		}
 	}
 
-	for _, k := range keys {
-		if val := ctx.Value(k); val != nil {
-			if uid, ok := val.(uuid.UUID); ok && uid != uuid.Nil {
+	if val != nil {
+		if uid, ok := val.(uuid.UUID); ok && uid != uuid.Nil {
+			return uid
+		}
+		if s, ok := val.(string); ok && s != "" {
+			if uid, err := uuid.Parse(s); err == nil && uid != uuid.Nil {
 				return uid
-			}
-			if s, ok := val.(string); ok && s != "" {
-				if uid, err := uuid.Parse(s); err == nil && uid != uuid.Nil {
-					return uid
-				}
 			}
 		}
 	}

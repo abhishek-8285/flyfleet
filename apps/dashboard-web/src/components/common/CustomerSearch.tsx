@@ -35,9 +35,9 @@ const CustomerSearch: React.FC<CustomerSearchProps> = ({ onSelect, defaultValue 
 
     setLoading(true);
     try {
-      const { customers } = await customerV2Service.listCustomers(10, 0);
+      const { data } = await customerV2Service.listCustomers(1, 50); // Fetch first 50 for local filtering
       // Client-side filtering for better UX on small lists, though API should handle it ideally
-      const filtered = customers.filter(c => 
+      const filtered = data.filter(c => 
         c.name.toLowerCase().includes(val.toLowerCase()) || 
         c.email?.toLowerCase().includes(val.toLowerCase()) ||
         c.phone?.includes(val)

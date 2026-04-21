@@ -51,7 +51,7 @@ func (m *mockAuthService) VerifyMFA(ctx context.Context, req models.MFAVerifyReq
 func (m *mockAuthService) Refresh(ctx context.Context, refreshToken, ip, ua string) (*models.AuthTokensResponse, error) {
 	return m.refreshResp, m.refreshErr
 }
-func (m *mockAuthService) Register(ctx context.Context, email, password, name string, orgID uuid.UUID) (*models.AuthTokensResponse, error) {
+func (m *mockAuthService) Register(ctx context.Context, email, password, name string, tenantID uuid.UUID) (*models.AuthTokensResponse, error) {
 	return m.registerResp, m.registerErr
 }
 func (m *mockAuthService) ForgotPassword(ctx context.Context, email string) error {
@@ -63,13 +63,16 @@ func (m *mockAuthService) ResetPasswordWithToken(ctx context.Context, token, new
 func (m *mockAuthService) Logout(ctx context.Context, userID uuid.UUID, tokenJTI string) error {
 	return m.logoutErr
 }
-func (m *mockAuthService) SwitchOrg(ctx context.Context, userID uuid.UUID, targetOrgID uuid.UUID, ip, ua string) (*models.OrgSwitchResponse, error) {
+func (m *mockAuthService) SwitchOrg(ctx context.Context, userID uuid.UUID, targetTenantID uuid.UUID, ip, ua string) (*models.OrgSwitchResponse, error) {
 	return m.switchOrgResp, m.switchOrgErr
 }
 func (m *mockAuthService) GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]models.OrgInfo, error) {
 	return m.orgs, m.orgsErr
 }
 func (m *mockAuthService) VerifyEmail(ctx context.Context, token string) error { return nil }
+func (m *mockAuthService) ResetPasswordForced(ctx context.Context, userID uuid.UUID, newPassword string) error {
+	return m.resetErr
+}
 
 type mockPasswordService struct {
 	validateErr error
@@ -97,10 +100,10 @@ type mockSessionService struct {
 	revokeErr error
 }
 
-func (m *mockSessionService) ListSessions(ctx context.Context, userID, orgID uuid.UUID) ([]models.Session, error) {
+func (m *mockSessionService) ListSessions(ctx context.Context, userID, tenantID uuid.UUID) ([]models.Session, error) {
 	return m.sessions, m.sessErr
 }
-func (m *mockSessionService) RevokeSession(ctx context.Context, userID, orgID uuid.UUID, sessionID string) error {
+func (m *mockSessionService) RevokeSession(ctx context.Context, userID, tenantID uuid.UUID, sessionID string) error {
 	return m.revokeErr
 }
 func (m *mockSessionService) RevokeAllSessions(ctx context.Context, userID uuid.UUID) error {
@@ -124,17 +127,20 @@ func (m *mockUserService) ListUsers(ctx context.Context, params models.ListUsers
 func (m *mockUserService) GetUser(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	return m.userResp, m.userErr
 }
-func (m *mockUserService) UpdateUserStatus(ctx context.Context, userID uuid.UUID, status string, actorID uuid.UUID) error {
+func (m *mockUserService) UpdateUserStatus(ctx context.Context, userID, tenantID uuid.UUID, status string, actorID uuid.UUID) error {
 	return m.statusErr
 }
-func (m *mockUserService) UpdateUserPreferences(ctx context.Context, userID uuid.UUID, sidebarCollapsed *bool, language *string, actorID uuid.UUID) error {
+func (m *mockUserService) UpdateUserPreferences(ctx context.Context, userID, tenantID uuid.UUID, sidebarCollapsed *bool, language *string, actorID uuid.UUID) error {
 	return nil
 }
-func (m *mockUserService) DeleteUser(ctx context.Context, userID uuid.UUID, actorID uuid.UUID) error {
+func (m *mockUserService) DeleteUser(ctx context.Context, userID, tenantID uuid.UUID, actorID uuid.UUID) error {
 	return m.deleteErr
 }
 func (m *mockUserService) GetUserAuditLog(ctx context.Context, userID uuid.UUID, limit int) ([]models.AuditLog, error) {
 	return m.auditResp, m.auditErr
+}
+func (m *mockUserService) CreateUser(ctx context.Context, tenantID uuid.UUID, req models.CreateUserRequest, actorID uuid.UUID) (*models.User, error) {
+	return m.userResp, m.userErr
 }
 
 type mockInvitationService struct {
@@ -148,7 +154,7 @@ type mockInvitationService struct {
 	validateErr error
 }
 
-func (m *mockInvitationService) CreateInvite(ctx context.Context, orgID, invitedBy uuid.UUID, email string, roleIDs []uuid.UUID, message string) (*models.Invitation, error) {
+func (m *mockInvitationService) CreateInvite(ctx context.Context, tenantID, invitedBy uuid.UUID, email string, roleIDs []uuid.UUID, message string) (*models.Invitation, error) {
 	return m.inviteResp, m.inviteErr
 }
 func (m *mockInvitationService) AcceptInvite(ctx context.Context, token, name, password string) (*models.User, error) {
@@ -188,41 +194,41 @@ type mockRBACService struct {
 	unassignErr error
 }
 
-func (m *mockRBACService) ListRoles(ctx context.Context, orgID uuid.UUID) ([]models.Role, error) {
+func (m *mockRBACService) ListRoles(ctx context.Context, tenantID uuid.UUID) ([]models.Role, error) {
 	return m.roles, m.rolesErr
 }
 func (m *mockRBACService) GetRole(ctx context.Context, id uuid.UUID) (*models.Role, error) {
 	return m.roleResp, m.roleErr
 }
-func (m *mockRBACService) CreateRole(ctx context.Context, orgID uuid.UUID, name, description string, perms []string, createdBy uuid.UUID) (*models.Role, error) {
+func (m *mockRBACService) CreateRole(ctx context.Context, tenantID uuid.UUID, name, description string, perms []string, createdBy uuid.UUID) (*models.Role, error) {
 	return m.createResp, m.createErr
 }
-func (m *mockRBACService) UpdateRole(ctx context.Context, id, orgID uuid.UUID, name, description string) error {
+func (m *mockRBACService) UpdateRole(ctx context.Context, id, tenantID uuid.UUID, name, description string) error {
 	return m.updateErr
 }
-func (m *mockRBACService) UpdateRolePermissions(ctx context.Context, id, orgID uuid.UUID, perms []string) error { return nil }
-func (m *mockRBACService) CloneRole(ctx context.Context, sourceID, orgID uuid.UUID, name, description string, createdBy uuid.UUID) (*models.Role, error) {
+func (m *mockRBACService) UpdateRolePermissions(ctx context.Context, id, tenantID uuid.UUID, perms []string) error { return nil }
+func (m *mockRBACService) CloneRole(ctx context.Context, sourceID, tenantID uuid.UUID, name, description string, createdBy uuid.UUID) (*models.Role, error) {
 	return m.cloneResp, m.cloneErr
 }
-func (m *mockRBACService) DeleteRole(ctx context.Context, id, orgID uuid.UUID) error {
+func (m *mockRBACService) DeleteRole(ctx context.Context, id, tenantID uuid.UUID) error {
 	return m.deleteErr
 }
-func (m *mockRBACService) GetPermissionMatrix(ctx context.Context, orgID uuid.UUID) ([]models.RolePermissionMatrixEntry, error) {
+func (m *mockRBACService) GetPermissionMatrix(ctx context.Context, tenantID uuid.UUID) ([]models.RolePermissionMatrixEntry, error) {
 	return m.matrix, m.matrixErr
 }
-func (m *mockRBACService) AssignRole(ctx context.Context, userID, roleID, orgID, assignedBy uuid.UUID) error {
+func (m *mockRBACService) AssignRole(ctx context.Context, userID, roleID, tenantID, assignedBy uuid.UUID) error {
 	return m.assignErr
 }
-func (m *mockRBACService) BulkAssignRoles(ctx context.Context, userIDs, roleIDs []uuid.UUID, orgID, assignedBy uuid.UUID) *service.BulkAssignResult {
+func (m *mockRBACService) BulkAssignRoles(ctx context.Context, userIDs, roleIDs []uuid.UUID, tenantID, assignedBy uuid.UUID) *service.BulkAssignResult {
 	return m.bulkResp
 }
-func (m *mockRBACService) UnassignRole(ctx context.Context, userID, roleID, orgID uuid.UUID) error {
+func (m *mockRBACService) UnassignRole(ctx context.Context, userID, roleID, tenantID uuid.UUID) error {
 	return m.unassignErr
 }
-func (m *mockRBACService) GetUserRoles(ctx context.Context, userID, orgID uuid.UUID) ([]models.Role, error) {
+func (m *mockRBACService) GetUserRoles(ctx context.Context, userID, tenantID uuid.UUID) ([]models.Role, error) {
 	return m.userRoles, m.userRolesErr
 }
-func (m *mockRBACService) GetUserPermissions(ctx context.Context, userID, orgID uuid.UUID) ([]string, error) {
+func (m *mockRBACService) GetUserPermissions(ctx context.Context, userID, tenantID uuid.UUID) ([]string, error) {
 	return m.userPerms, m.userPermsErr
 }
 func (m *mockRBACService) ListAllPermissions(ctx context.Context) ([]models.Permission, error) {
@@ -262,7 +268,7 @@ func (m *mockUserRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.User,
 func (m *mockUserRepo) UpdateProfile(ctx context.Context, id uuid.UUID, name, phone, avatarURL string) error {
 	return m.updateErr
 }
-func (m *mockUserRepo) UpdatePreferences(ctx context.Context, id uuid.UUID, sidebarCollapsed *bool, language *string) error {
+func (m *mockUserRepo) UpdatePreferences(ctx context.Context, id, tenantID uuid.UUID, sidebarCollapsed *bool, language *string) error {
 	return nil
 }
 func (m *mockUserRepo) GetOrganizations(ctx context.Context, id uuid.UUID) ([]models.OrgInfo, error) {
@@ -596,7 +602,7 @@ func TestUserHandler_ListUsers_Success(t *testing.T) {
 	h := newTestUserHandler(mockSvc)
 
 	r := req("GET", "/admin/users?page=1&page_size=20", "")
-	r = r.WithContext(context.WithValue(r.Context(), CtxKeyOrgID, uuid.New().String()))
+	r = r.WithContext(context.WithValue(r.Context(), CtxKeyTenantID, uuid.New().String()))
 
 	w := httptest.NewRecorder()
 	h.ListUsers(w, r)
@@ -615,7 +621,7 @@ func TestUserHandler_ListUsers_WithFilters(t *testing.T) {
 	h := newTestUserHandler(mockSvc)
 
 	r := req("GET", "/admin/users?page=2&page_size=50&search=john&status=active", "")
-	r = r.WithContext(context.WithValue(r.Context(), CtxKeyOrgID, uuid.New().String()))
+	r = r.WithContext(context.WithValue(r.Context(), CtxKeyTenantID, uuid.New().String()))
 
 	w := httptest.NewRecorder()
 	h.ListUsers(w, r)
@@ -671,12 +677,12 @@ func TestInviteHandler_CreateInvite_Success(t *testing.T) {
 	h := newTestInviteHandler(mockSvc)
 
 	roleID := uuid.New()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	actorID := uuid.New()
 	body := `{"email":"new@example.com","role_ids":["` + roleID.String() + `"],"message":"Welcome!"}`
 	r := httptest.NewRequest("POST", "/admin/users/invite", strings.NewReader(body))
 	r.Header.Set("Content-Type", "application/json")
-	r = r.WithContext(context.WithValue(r.Context(), CtxKeyOrgID, orgID.String()))
+	r = r.WithContext(context.WithValue(r.Context(), CtxKeyTenantID, tenantID.String()))
 	r = r.WithContext(context.WithValue(r.Context(), CtxKeyUserID, actorID.String()))
 
 	w := httptest.NewRecorder()
@@ -705,7 +711,7 @@ func TestInviteHandler_ValidateToken_Success(t *testing.T) {
 // ─── RBAC Handler Tests ───
 
 func TestRBACHandler_ListRoles_Success(t *testing.T) {
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	mockSvc := &mockRBACService{
 		roles: []models.Role{
 			{Name: "org_admin", IsSystem: true},
@@ -715,7 +721,7 @@ func TestRBACHandler_ListRoles_Success(t *testing.T) {
 	h := newTestRBACHandler(mockSvc)
 
 	r := req("GET", "/admin/rbac/roles", "")
-	r = r.WithContext(context.WithValue(r.Context(), CtxKeyOrgID, orgID.String()))
+	r = r.WithContext(context.WithValue(r.Context(), CtxKeyTenantID, tenantID.String()))
 
 	w := httptest.NewRecorder()
 	h.ListRoles(w, r)
@@ -736,7 +742,7 @@ func TestRBACHandler_CloneRole_Success(t *testing.T) {
 	body := `{"name":"dispatcher_copy","description":"Copy"}`
 	r := httptest.NewRequest("POST", "/admin/rbac/roles/"+sourceID.String()+"/clone", strings.NewReader(body))
 	r.Header.Set("Content-Type", "application/json")
-	r = r.WithContext(context.WithValue(r.Context(), CtxKeyOrgID, uuid.New().String()))
+	r = r.WithContext(context.WithValue(r.Context(), CtxKeyTenantID, uuid.New().String()))
 	r = r.WithContext(context.WithValue(r.Context(), CtxKeyUserID, uuid.New().String()))
 	w := httptest.NewRecorder()
 
@@ -759,7 +765,7 @@ func TestRBACHandler_GetPermissionMatrix_Success(t *testing.T) {
 	h := newTestRBACHandler(mockSvc)
 
 	r := req("GET", "/admin/rbac/matrix", "")
-	r = r.WithContext(context.WithValue(r.Context(), CtxKeyOrgID, uuid.New().String()))
+	r = r.WithContext(context.WithValue(r.Context(), CtxKeyTenantID, uuid.New().String()))
 
 	w := httptest.NewRecorder()
 	h.GetPermissionMatrix(w, r)

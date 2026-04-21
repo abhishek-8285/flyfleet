@@ -12,7 +12,7 @@ import (
 
 // GSTIntegrationService defines the interface for GST portal integration
 type GSTIntegrationService interface {
-	VerifyGSTIN(ctx context.Context, orgID uuid.UUID, gstin string) (*models.GSTCompliance, error)
+	VerifyGSTIN(ctx context.Context, tenantID uuid.UUID, gstin string) (*models.GSTCompliance, error)
 	SyncCompliance(ctx context.Context) error
 }
 
@@ -28,13 +28,13 @@ func NewGSTIntegrationService(repo repository.IndiaIntegrationRepository, logger
 	}
 }
 
-func (s *GSTIntegrationServiceImpl) VerifyGSTIN(ctx context.Context, orgID uuid.UUID, gstin string) (*models.GSTCompliance, error) {
+func (s *GSTIntegrationServiceImpl) VerifyGSTIN(ctx context.Context, tenantID uuid.UUID, gstin string) (*models.GSTCompliance, error) {
 	s.logger.Info("verifying GSTIN", zap.String("gstin", gstin))
 
 	// Mock GST Portal API Call
 	compliance := &models.GSTCompliance{
 		ID:                 uuid.New().String(),
-		OrganizationID:     orgID,
+		OrganizationID:     tenantID,
 		GSTIN:              gstin,
 		Status:             "active",
 		LegalName:          "Mock Legal Name",
@@ -51,7 +51,7 @@ func (s *GSTIntegrationServiceImpl) VerifyGSTIN(ctx context.Context, orgID uuid.
 		RequestPayload:  map[string]string{"gstin": gstin},
 		ResponsePayload: compliance,
 		Status:          200,
-		OrganizationID:  &orgID,
+		OrganizationID:  &tenantID,
 	}
 	_ = s.repo.CreateIntegrationLog(ctx, log)
 

@@ -32,7 +32,7 @@ func (r *InventoryRepository) Create(ctx context.Context, part *models.Inventory
 		RETURNING id, created_at, updated_at
 	`
 	return r.db.QueryRow(ctx, query,
-		part.OrgID, part.PartNumber, part.Name, part.Description,
+		part.TenantID, part.PartNumber, part.Name, part.Description,
 		part.StockLocation, part.QuantityAvailable, part.ReorderLevel, part.UnitCost,
 	).Scan(&part.ID, &part.CreatedAt, &part.UpdatedAt)
 }
@@ -47,7 +47,7 @@ func (r *InventoryRepository) GetByID(ctx context.Context, id uuid.UUID) (*model
 	`
 	part := &models.InventoryPart{}
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&part.ID, &part.OrgID, &part.PartNumber, &part.Name, &part.Description,
+		&part.ID, &part.TenantID, &part.PartNumber, &part.Name, &part.Description,
 		&part.StockLocation, &part.QuantityAvailable, &part.ReorderLevel, &part.UnitCost,
 		&part.CreatedAt, &part.UpdatedAt,
 	)
@@ -86,7 +86,7 @@ func (r *InventoryRepository) List(ctx context.Context, filter models.InventoryF
 	argIdx := 1
 
 	conditions = append(conditions, fmt.Sprintf("tenant_id = $%d", argIdx))
-	args = append(args, filter.OrgID)
+	args = append(args, filter.TenantID)
 	argIdx++
 
 	if filter.Search != "" {
@@ -144,7 +144,7 @@ func (r *InventoryRepository) List(ctx context.Context, filter models.InventoryF
 	for rows.Next() {
 		var part models.InventoryPart
 		if err := rows.Scan(
-			&part.ID, &part.OrgID, &part.PartNumber, &part.Name, &part.Description,
+			&part.ID, &part.TenantID, &part.PartNumber, &part.Name, &part.Description,
 			&part.StockLocation, &part.QuantityAvailable, &part.ReorderLevel, &part.UnitCost,
 			&part.CreatedAt, &part.UpdatedAt,
 		); err != nil {
@@ -185,11 +185,11 @@ func (r *InventoryRepository) RestoreStock(ctx context.Context, id uuid.UUID, qu
 }
 
 // GetLowStockCount returns count of parts below reorder level
-func (r *InventoryRepository) GetLowStockCount(ctx context.Context, orgID uuid.UUID) (int, error) {
+func (r *InventoryRepository) GetLowStockCount(ctx context.Context, tenantID uuid.UUID) (int, error) {
 	var count int
 	err := r.db.QueryRow(ctx,
 		"SELECT COUNT(*) FROM inventory_parts WHERE tenant_id = $1 AND quantity_available <= reorder_level",
-		orgID,
+		tenantID,
 	).Scan(&count)
 	return count, err
 }

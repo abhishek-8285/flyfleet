@@ -47,7 +47,7 @@ service FleetService {
 
 message Vehicle {
   string id = 1;
-  string org_id = 2;
+  string tenant_id = 2;
   string license_plate = 3;
   string model = 4;
   string make = 5;
@@ -60,7 +60,7 @@ message Vehicle {
 
 message Driver {
   string id = 1;
-  string org_id = 2;
+  string tenant_id = 2;
   string first_name = 3;
   string last_name = 4;
   string email = 5;
@@ -83,7 +83,7 @@ message CreateVehicleRequest {
   string make = 3;
   int32 year = 4;
   string vin = 5;
-  string org_id = 6;
+  string tenant_id = 6;
 }
 
 message CreateVehicleResponse {
@@ -99,7 +99,7 @@ message GetVehicleResponse {
 }
 
 message ListVehiclesRequest {
-  string org_id = 1;
+  string tenant_id = 1;
   int32 page = 2;
   int32 limit = 3;
 }
@@ -129,7 +129,7 @@ message DeleteVehicleResponse {}
 
 // Driver Messages
 message CreateDriverRequest {
-  string org_id = 1;
+  string tenant_id = 1;
   string first_name = 2;
   string last_name = 3;
   string email = 4;
@@ -152,7 +152,7 @@ message GetDriverResponse {
 }
 
 message ListDriversRequest {
-  string org_id = 1;
+  string tenant_id = 1;
   int32 page = 2;
   int32 limit = 3;
   optional string status = 4;
@@ -220,7 +220,7 @@ enum WorkOrderPriority {
 
 message WorkOrder {
   string id = 1;
-  string org_id = 2;
+  string tenant_id = 2;
   string vehicle_id = 3;
   string title = 4;
   string description = 5;
@@ -240,7 +240,7 @@ message WorkOrder {
 
 message Inspection {
   string id = 1;
-  string org_id = 2;
+  string tenant_id = 2;
   string vehicle_id = 3;
   string inspector_id = 4;
   string status = 5;
@@ -251,7 +251,7 @@ message Inspection {
 }
 
 message CreateWorkOrderRequest {
-  string org_id = 1;
+  string tenant_id = 1;
   string vehicle_id = 2;
   string title = 3;
   string description = 4;
@@ -276,7 +276,7 @@ message GetWorkOrderResponse {
 }
 
 message ListWorkOrdersRequest {
-  string org_id = 1;
+  string tenant_id = 1;
   int32 page = 2;
   int32 limit = 3;
   optional string vehicle_id = 4;
@@ -312,7 +312,7 @@ message ChangeWorkOrderStatusResponse {
 }
 
 message CreateInspectionRequest {
-  string org_id = 1;
+  string tenant_id = 1;
   string vehicle_id = 2;
   string inspector_id = 3;
   int64 odometer = 4;
@@ -324,7 +324,7 @@ message CreateInspectionResponse {
 }
 
 message ListInspectionsRequest {
-  string org_id = 1;
+  string tenant_id = 1;
   int32 page = 2;
   int32 limit = 3;
   optional string vehicle_id = 4;
@@ -338,7 +338,7 @@ message ListInspectionsResponse {
 // Fuel Messages
 message FuelLog {
   string id = 1;
-  string org_id = 2;
+  string tenant_id = 2;
   string vehicle_id = 3;
   string driver_id = 4;
   string station_name = 5;
@@ -356,7 +356,7 @@ message FuelLog {
 }
 
 message CreateFuelLogRequest {
-  string org_id = 1;
+  string tenant_id = 1;
   string vehicle_id = 2;
   string driver_id = 3;
   string station_name = 4;
@@ -375,7 +375,7 @@ message CreateFuelLogResponse {
 }
 
 message ListFuelLogsRequest {
-  string org_id = 1;
+  string tenant_id = 1;
   int32 page = 2;
   int32 limit = 3;
   optional string vehicle_id = 4;
@@ -388,7 +388,7 @@ message ListFuelLogsResponse {
 }
 
 message GetFuelStatsRequest {
-  string org_id = 1;
+  string tenant_id = 1;
   optional string vehicle_id = 2;
 }
 
@@ -402,7 +402,7 @@ message GetFuelStatsResponse {
 // Telemetry Messages
 message Telemetry {
   string vehicle_id = 1;
-  string org_id = 2;
+  string tenant_id = 2;
   string device_id = 3;
   double latitude = 4;
   double longitude = 5;
@@ -432,7 +432,7 @@ message GetLatestTelemetryResponse {
 }
 
 message GetFleetStatsRequest {
-  string org_id = 1;
+  string tenant_id = 1;
 }
 
 message GetFleetStatsResponse {

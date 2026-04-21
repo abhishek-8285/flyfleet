@@ -9,7 +9,7 @@ import (
 // BillingConfiguration represents per-organization billing customization
 type BillingConfiguration struct {
 	ID             uuid.UUID `json:"id" db:"id"`
-	OrgID          uuid.UUID `json:"tenant_id" db:"tenant_id" validate:"required"`
+	TenantID          uuid.UUID `json:"tenant_id" db:"tenant_id" validate:"required"`
 	CompanyName    string    `json:"company_name" db:"company_name" validate:"required"`
 	CompanyAddress string    `json:"company_address" db:"company_address"`
 	CompanyGSTIN   string    `json:"company_gstin" db:"company_gstin"`
@@ -88,10 +88,10 @@ type BillingConfigRequest struct {
 }
 
 // DefaultBillingConfig returns default billing configuration
-func DefaultBillingConfig(orgID uuid.UUID) *BillingConfiguration {
+func DefaultBillingConfig(tenantID uuid.UUID) *BillingConfiguration {
 	return &BillingConfiguration{
 		ID:                      uuid.New(),
-		OrgID:                   orgID,
+		TenantID:                   tenantID,
 		CompanyName:             "Organization",
 		PrimaryColor:            "#3b82f6",
 		SecondaryColor:          "#1e40af",

@@ -20,7 +20,7 @@ func TestPDFGenerator_BinaryValidation(t *testing.T) {
 	}
 
 	// Skip in short mode if chromedp takes too long, but we want this to run
-	generator := pdf.NewPDFGenerator(15 * time.Second)
+	generator := pdf.NewPDFGenerator(15*time.Second, "")
 
 	html := `<html><body><h1>Binary Test</h1><p>Checking PDF Header</p></body></html>`
 	opts := pdf.DefaultA4Portrait()

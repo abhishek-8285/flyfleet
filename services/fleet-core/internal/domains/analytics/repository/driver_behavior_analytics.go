@@ -48,7 +48,7 @@ func (r *AnalyticsRepositoryImpl) CreateDriverBehaviorAnalytics(ctx context.Cont
 }
 
 // GetDriverBehaviorAnalytics retrieves driver behavior analytics by ID
-func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalytics(ctx context.Context, id string, orgID uuid.UUID) (*models.DriverBehaviorAnalytics, error) {
+func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalytics(ctx context.Context, id string, tenantID uuid.UUID) (*models.DriverBehaviorAnalytics, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := `
@@ -63,7 +63,7 @@ func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalytics(ctx context.Context
 	var analytics models.DriverBehaviorAnalytics
 	var improvementSuggestionsJSON []byte
 
-	err := r.db.QueryRow(ctx, query, id, orgID).Scan(
+	err := r.db.QueryRow(ctx, query, id, tenantID).Scan(
 		&analytics.ID, &analytics.DriverID, &analytics.OrganizationID, &analytics.AnalysisPeriodStart,
 		&analytics.AnalysisPeriodEnd, &analytics.TotalDrivingHours, &analytics.AggressiveAccelerationCount,
 		&analytics.HardBrakingCount, &analytics.SharpTurnCount, &analytics.OverSpeedingCount,
@@ -88,13 +88,13 @@ func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalytics(ctx context.Context
 }
 
 // GetDriverBehaviorAnalyticsByDriver retrieves driver behavior analytics by driver ID
-func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalyticsByDriver(ctx context.Context, driverID uuid.UUID, orgID uuid.UUID, limit, offset int) ([]*models.DriverBehaviorAnalytics, int, error) {
+func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalyticsByDriver(ctx context.Context, driverID uuid.UUID, tenantID uuid.UUID, limit, offset int) ([]*models.DriverBehaviorAnalytics, int, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	// Count query
 	countQuery := "SELECT COUNT(*) FROM driver_behavior_analytics WHERE driver_id = $1 AND organization_id = $2"
 	var totalCount int
-	err := r.db.QueryRow(ctx, countQuery, driverID, orgID).Scan(&totalCount)
+	err := r.db.QueryRow(ctx, countQuery, driverID, tenantID).Scan(&totalCount)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count driver behavior analytics: %w", err)
 	}
@@ -112,7 +112,7 @@ func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalyticsByDriver(ctx context
 		LIMIT $3 OFFSET $4
 	`
 
-	rows, err := r.executeWithObservability(ctx, query, driverID, orgID, limit, offset)
+	rows, err := r.executeWithObservability(ctx, query, driverID, tenantID, limit, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to query driver behavior analytics: %w", err)
 	}
@@ -148,13 +148,13 @@ func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalyticsByDriver(ctx context
 }
 
 // GetDriverBehaviorAnalyticsByOrg retrieves driver behavior analytics by organization
-func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalyticsByOrg(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.DriverBehaviorAnalytics, int, error) {
+func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalyticsByOrg(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.DriverBehaviorAnalytics, int, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	// Count query
 	countQuery := "SELECT COUNT(*) FROM driver_behavior_analytics WHERE organization_id = $1"
 	var totalCount int
-	err := r.db.QueryRow(ctx, countQuery, orgID).Scan(&totalCount)
+	err := r.db.QueryRow(ctx, countQuery, tenantID).Scan(&totalCount)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count driver behavior analytics by org: %w", err)
 	}
@@ -172,7 +172,7 @@ func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalyticsByOrg(ctx context.Co
 		LIMIT $2 OFFSET $3
 	`
 
-	rows, err := r.executeWithObservability(ctx, query, orgID, limit, offset)
+	rows, err := r.executeWithObservability(ctx, query, tenantID, limit, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to query driver behavior analytics by org: %w", err)
 	}
@@ -208,7 +208,7 @@ func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalyticsByOrg(ctx context.Co
 }
 
 // UpdateDriverBehaviorAnalytics updates existing driver behavior analytics
-func (r *AnalyticsRepositoryImpl) UpdateDriverBehaviorAnalytics(ctx context.Context, id string, orgID uuid.UUID, updates map[string]interface{}) error {
+func (r *AnalyticsRepositoryImpl) UpdateDriverBehaviorAnalytics(ctx context.Context, id string, tenantID uuid.UUID, updates map[string]interface{}) error {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	setParts := []string{}
@@ -229,7 +229,7 @@ func (r *AnalyticsRepositoryImpl) UpdateDriverBehaviorAnalytics(ctx context.Cont
 		return errors.New("no updates provided")
 	}
 
-	args = append(args, id, orgID)
+	args = append(args, id, tenantID)
 	query := fmt.Sprintf("UPDATE driver_behavior_analytics SET %s WHERE id = $%d AND organization_id = $%d",
 		strings.Join(setParts, ", "), argIndex, argIndex+1)
 
@@ -241,11 +241,11 @@ func (r *AnalyticsRepositoryImpl) UpdateDriverBehaviorAnalytics(ctx context.Cont
 }
 
 // DeleteDriverBehaviorAnalytics deletes driver behavior analytics
-func (r *AnalyticsRepositoryImpl) DeleteDriverBehaviorAnalytics(ctx context.Context, id string, orgID uuid.UUID) error {
+func (r *AnalyticsRepositoryImpl) DeleteDriverBehaviorAnalytics(ctx context.Context, id string, tenantID uuid.UUID) error {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := "DELETE FROM driver_behavior_analytics WHERE id = $1 AND organization_id = $2"
-	_, err := r.db.Exec(ctx, query, id, orgID)
+	_, err := r.db.Exec(ctx, query, id, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to delete driver behavior analytics %s: %w", id, err)
 	}
@@ -253,12 +253,12 @@ func (r *AnalyticsRepositoryImpl) DeleteDriverBehaviorAnalytics(ctx context.Cont
 }
 
 // ListDriverBehaviorAnalytics retrieves driver behavior analytics with filtering
-func (r *AnalyticsRepositoryImpl) ListDriverBehaviorAnalytics(ctx context.Context, orgID uuid.UUID, periodStart, periodEnd *time.Time, cursor string, limit, offset int) ([]*models.DriverBehaviorAnalytics, int, error) {
+func (r *AnalyticsRepositoryImpl) ListDriverBehaviorAnalytics(ctx context.Context, tenantID uuid.UUID, periodStart, periodEnd *time.Time, cursor string, limit, offset int) ([]*models.DriverBehaviorAnalytics, int, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	// Count query
 	countQuery := "SELECT COUNT(*) FROM driver_behavior_analytics WHERE organization_id = $1"
-	countArgs := []interface{}{orgID}
+	countArgs := []interface{}{tenantID}
 
 	// Filter conditions
 	whereConditions := []string{"organization_id = $1"}
@@ -298,7 +298,7 @@ func (r *AnalyticsRepositoryImpl) ListDriverBehaviorAnalytics(ctx context.Contex
 		WHERE organization_id = $1
 	`
 
-	args := []interface{}{orgID}
+	args := []interface{}{tenantID}
 	argIndex = 2
 
 	whereConditions = []string{} // Reset for main query

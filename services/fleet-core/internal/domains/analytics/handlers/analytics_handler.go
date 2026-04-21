@@ -204,9 +204,9 @@ func (h *AnalyticsHandler) CreatePredictiveModel(w http.ResponseWriter, r *http.
 // GetPredictiveModel handles retrieving a predictive model by ID
 func (h *AnalyticsHandler) GetPredictiveModel(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
-	model, err := h.service.GetPredictiveModel(r.Context(), id, orgID)
+	model, err := h.service.GetPredictiveModel(r.Context(), id, tenantID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
@@ -219,14 +219,14 @@ func (h *AnalyticsHandler) GetPredictiveModel(w http.ResponseWriter, r *http.Req
 func (h *AnalyticsHandler) GetPredictiveModelByVersion(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get("name")
 	version := r.URL.Query().Get("version")
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
 	if name == "" || version == "" {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Name and version are required", nil)
 		return
 	}
 
-	model, err := h.service.GetPredictiveModelByVersion(r.Context(), name, version, orgID)
+	model, err := h.service.GetPredictiveModelByVersion(r.Context(), name, version, tenantID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
@@ -238,7 +238,7 @@ func (h *AnalyticsHandler) GetPredictiveModelByVersion(w http.ResponseWriter, r 
 // UpdatePredictiveModel handles updating an existing predictive model
 func (h *AnalyticsHandler) UpdatePredictiveModel(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
 	var req models.UpdatePredictiveModelRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -267,7 +267,7 @@ func (h *AnalyticsHandler) UpdatePredictiveModel(w http.ResponseWriter, r *http.
 	}
 	updates["updated_at"] = time.Now()
 
-	if err := h.service.UpdatePredictiveModel(r.Context(), id, orgID, updates); err != nil {
+	if err := h.service.UpdatePredictiveModel(r.Context(), id, tenantID, updates); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -278,9 +278,9 @@ func (h *AnalyticsHandler) UpdatePredictiveModel(w http.ResponseWriter, r *http.
 // DeletePredictiveModel handles deleting a predictive model
 func (h *AnalyticsHandler) DeletePredictiveModel(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
-	if err := h.service.DeletePredictiveModel(r.Context(), id, orgID); err != nil {
+	if err := h.service.DeletePredictiveModel(r.Context(), id, tenantID); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -291,7 +291,7 @@ func (h *AnalyticsHandler) DeletePredictiveModel(w http.ResponseWriter, r *http.
 // ListPredictiveModels handles listing predictive models with filtering
 func (h *AnalyticsHandler) ListPredictiveModels(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	modelTypeStr := parseStringParam(query, "type")
 	statusStr := parseStringParam(query, "status")
 	
@@ -306,7 +306,7 @@ func (h *AnalyticsHandler) ListPredictiveModels(w http.ResponseWriter, r *http.R
 	limit, offset := parsePaginationParams(query)
 	cursor := query.Get("cursor")
 
-	modelsList, totalCount, err := h.service.ListPredictiveModels(r.Context(), orgID, modelType, status, cursor, limit, offset)
+	modelsList, totalCount, err := h.service.ListPredictiveModels(r.Context(), tenantID, modelType, status, cursor, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -330,8 +330,8 @@ func (h *AnalyticsHandler) ListPredictiveModels(w http.ResponseWriter, r *http.R
 // CreatePredictionResult handles creating a new prediction result
 func (h *AnalyticsHandler) CreatePredictionResult(w http.ResponseWriter, r *http.Request) {
 	// Rate limiting
-	orgID := h.getOrgID(r)
-	if !predictionLimiter.Allow(orgID.String()) {
+	tenantID := h.getTenantID(r)
+	if !predictionLimiter.Allow(tenantID.String()) {
 		h.writeErrorResponse(w, http.StatusTooManyRequests, "Rate limit exceeded: Maximum 60 requests per minute", nil)
 		return
 	}
@@ -349,7 +349,7 @@ func (h *AnalyticsHandler) CreatePredictionResult(w http.ResponseWriter, r *http
 	}
 
 	// Ensure organization ID matches the one from context
-	result.OrganizationID = orgID
+	result.OrganizationID = tenantID
 
 	// Set ID and timestamps
 	result.ID = uuid.New().String()
@@ -368,9 +368,9 @@ func (h *AnalyticsHandler) CreatePredictionResult(w http.ResponseWriter, r *http
 // GetPredictionResult handles retrieving a prediction result by ID
 func (h *AnalyticsHandler) GetPredictionResult(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
-	result, err := h.service.GetPredictionResult(r.Context(), id, orgID)
+	result, err := h.service.GetPredictionResult(r.Context(), id, tenantID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
@@ -382,11 +382,11 @@ func (h *AnalyticsHandler) GetPredictionResult(w http.ResponseWriter, r *http.Re
 // GetPredictionResultsByModel handles retrieving prediction results by model ID
 func (h *AnalyticsHandler) GetPredictionResultsByModel(w http.ResponseWriter, r *http.Request) {
 	modelID := chi.URLParam(r, "modelId")
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
 	limit, offset := parsePaginationParams(r.URL.Query())
 
-	results, totalCount, err := h.service.GetPredictionResultsByModel(r.Context(), modelID, orgID, limit, offset)
+	results, totalCount, err := h.service.GetPredictionResultsByModel(r.Context(), modelID, tenantID, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -402,20 +402,20 @@ func (h *AnalyticsHandler) GetPredictionResultsByModel(w http.ResponseWriter, r 
 
 // GetPredictionResultsByOrg handles retrieving prediction results by organization
 func (h *AnalyticsHandler) GetPredictionResultsByOrg(w http.ResponseWriter, r *http.Request) {
-	orgIDStr := r.URL.Query().Get("orgId")
-	orgID, err := uuid.Parse(orgIDStr)
+	tenantIDStr := r.URL.Query().Get("orgId")
+	tenantID, err := uuid.Parse(tenantIDStr)
 	if err != nil {
-		orgID = h.getOrgID(r)
+		tenantID = h.getTenantID(r)
 	}
 
-	if orgID == uuid.Nil {
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid organization ID", nil)
 		return
 	}
 
 	limit, offset := parsePaginationParams(r.URL.Query())
 
-	results, totalCount, err := h.service.GetPredictionResultsByOrg(r.Context(), orgID, limit, offset)
+	results, totalCount, err := h.service.GetPredictionResultsByOrg(r.Context(), tenantID, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -432,13 +432,13 @@ func (h *AnalyticsHandler) GetPredictionResultsByOrg(w http.ResponseWriter, r *h
 // ListPredictionResults handles listing prediction results with filtering
 func (h *AnalyticsHandler) ListPredictionResults(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	orgIDStr := query.Get("orgId")
-	orgID, err := uuid.Parse(orgIDStr)
+	tenantIDStr := query.Get("orgId")
+	tenantID, err := uuid.Parse(tenantIDStr)
 	if err != nil {
-		orgID = h.getOrgID(r)
+		tenantID = h.getTenantID(r)
 	}
 
-	if orgID == uuid.Nil {
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid organization ID", nil)
 		return
 	}
@@ -458,7 +458,7 @@ func (h *AnalyticsHandler) ListPredictionResults(w http.ResponseWriter, r *http.
 	limit, offset := parsePaginationParams(query)
 	cursor := query.Get("cursor")
 
-	results, totalCount, err := h.service.ListPredictionResults(r.Context(), orgID, modelID, anomalyDetected, cursor, limit, offset)
+	results, totalCount, err := h.service.ListPredictionResults(r.Context(), tenantID, modelID, anomalyDetected, cursor, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -482,8 +482,8 @@ func (h *AnalyticsHandler) ListPredictionResults(w http.ResponseWriter, r *http.
 // CreateAnalyticsJob handles creating a new analytics job
 func (h *AnalyticsHandler) CreateAnalyticsJob(w http.ResponseWriter, r *http.Request) {
 	// Rate limiting (shared with fleet analytics as they are both heavy)
-	orgID := h.getOrgID(r)
-	if !fleetAnalyticsLimiter.Allow(orgID.String()) {
+	tenantID := h.getTenantID(r)
+	if !fleetAnalyticsLimiter.Allow(tenantID.String()) {
 		h.writeErrorResponse(w, http.StatusTooManyRequests, "Rate limit exceeded: Maximum 10 requests per minute", nil)
 		return
 	}
@@ -501,7 +501,7 @@ func (h *AnalyticsHandler) CreateAnalyticsJob(w http.ResponseWriter, r *http.Req
 	}
 
 	// Ensure organization ID matches context
-	job.OrganizationID = orgID
+	job.OrganizationID = tenantID
 
 	// Set ID and timestamps
 	job.ID = uuid.New().String()
@@ -519,9 +519,9 @@ func (h *AnalyticsHandler) CreateAnalyticsJob(w http.ResponseWriter, r *http.Req
 // GetAnalyticsJob handles retrieving an analytics job by ID
 func (h *AnalyticsHandler) GetAnalyticsJob(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
-	job, err := h.service.GetAnalyticsJob(r.Context(), id, orgID)
+	job, err := h.service.GetAnalyticsJob(r.Context(), id, tenantID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
@@ -533,7 +533,7 @@ func (h *AnalyticsHandler) GetAnalyticsJob(w http.ResponseWriter, r *http.Reques
 // UpdateAnalyticsJob handles updating an existing analytics job
 func (h *AnalyticsHandler) UpdateAnalyticsJob(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
 	var req models.UpdateAnalyticsJobRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -567,7 +567,7 @@ func (h *AnalyticsHandler) UpdateAnalyticsJob(w http.ResponseWriter, r *http.Req
 	}
 	updates["updated_at"] = time.Now()
 
-	if err := h.service.UpdateAnalyticsJob(r.Context(), id, orgID, updates); err != nil {
+	if err := h.service.UpdateAnalyticsJob(r.Context(), id, tenantID, updates); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -578,9 +578,9 @@ func (h *AnalyticsHandler) UpdateAnalyticsJob(w http.ResponseWriter, r *http.Req
 // DeleteAnalyticsJob handles deleting an analytics job
 func (h *AnalyticsHandler) DeleteAnalyticsJob(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
-	if err := h.service.DeleteAnalyticsJob(r.Context(), id, orgID); err != nil {
+	if err := h.service.DeleteAnalyticsJob(r.Context(), id, tenantID); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -602,13 +602,13 @@ func (h *AnalyticsHandler) ListAnalyticsJobs(w http.ResponseWriter, r *http.Requ
 		status = &statusStr
 	}
 
-	orgIDStr := query.Get("orgId")
-	orgID, err := uuid.Parse(orgIDStr)
+	tenantIDStr := query.Get("orgId")
+	tenantID, err := uuid.Parse(tenantIDStr)
 	if err != nil {
-		orgID = h.getOrgID(r)
+		tenantID = h.getTenantID(r)
 	}
 
-	if orgID == uuid.Nil {
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid organization ID", nil)
 		return
 	}
@@ -616,7 +616,7 @@ func (h *AnalyticsHandler) ListAnalyticsJobs(w http.ResponseWriter, r *http.Requ
 	limit, offset := parsePaginationParams(query)
 	cursor := query.Get("cursor")
 
-	jobs, totalCount, err := h.service.ListAnalyticsJobs(r.Context(), jobType, status, orgID, cursor, limit, offset)
+	jobs, totalCount, err := h.service.ListAnalyticsJobs(r.Context(), jobType, status, tenantID, cursor, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -668,9 +668,9 @@ func (h *AnalyticsHandler) CreateFleetAnalytics(w http.ResponseWriter, r *http.R
 // GetFleetAnalytics handles retrieving fleet analytics by ID
 func (h *AnalyticsHandler) GetFleetAnalytics(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
-	analytics, err := h.service.GetFleetAnalytics(r.Context(), id, orgID)
+	analytics, err := h.service.GetFleetAnalytics(r.Context(), id, tenantID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
@@ -682,23 +682,23 @@ func (h *AnalyticsHandler) GetFleetAnalytics(w http.ResponseWriter, r *http.Requ
 // GetFleetAnalyticsByPeriod handles retrieving fleet analytics by organization and date period
 func (h *AnalyticsHandler) GetFleetAnalyticsByPeriod(w http.ResponseWriter, r *http.Request) {
 	// Rate limiting: 10 requests per minute per org
-	orgIDStr := r.URL.Query().Get("orgId")
-	if orgIDStr == "" {
-		orgIDStr = h.getOrgID(r).String()
+	tenantIDStr := r.URL.Query().Get("orgId")
+	if tenantIDStr == "" {
+		tenantIDStr = h.getTenantID(r).String()
 	}
-	if !fleetAnalyticsLimiter.Allow(orgIDStr) {
+	if !fleetAnalyticsLimiter.Allow(tenantIDStr) {
 		h.writeErrorResponse(w, http.StatusTooManyRequests, "Rate limit exceeded: Maximum 10 requests per minute", nil)
 		return
 	}
 
 	query := r.URL.Query()
-	orgIDStr = query.Get("orgId")
-	orgID, err := uuid.Parse(orgIDStr)
+	tenantIDStr = query.Get("orgId")
+	tenantID, err := uuid.Parse(tenantIDStr)
 	if err != nil {
-		orgID = h.getOrgID(r)
+		tenantID = h.getTenantID(r)
 	}
 
-	if orgID == uuid.Nil {
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid organization ID", nil)
 		return
 	}
@@ -718,7 +718,7 @@ func (h *AnalyticsHandler) GetFleetAnalyticsByPeriod(w http.ResponseWriter, r *h
 		return
 	}
 
-	analytics, err := h.service.GetFleetAnalyticsByPeriod(r.Context(), orgID, startDate, endDate)
+	analytics, err := h.service.GetFleetAnalyticsByPeriod(r.Context(), tenantID, startDate, endDate)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -766,7 +766,7 @@ func (h *AnalyticsHandler) UpdateFleetAnalytics(w http.ResponseWriter, r *http.R
 	}
 	updates["updated_at"] = time.Now()
 
-	if err := h.service.UpdateFleetAnalytics(r.Context(), id, h.getOrgID(r), updates); err != nil {
+	if err := h.service.UpdateFleetAnalytics(r.Context(), id, h.getTenantID(r), updates); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -777,9 +777,9 @@ func (h *AnalyticsHandler) UpdateFleetAnalytics(w http.ResponseWriter, r *http.R
 // DeleteFleetAnalytics handles deleting fleet analytics
 func (h *AnalyticsHandler) DeleteFleetAnalytics(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
-	if err := h.service.DeleteFleetAnalytics(r.Context(), id, orgID); err != nil {
+	if err := h.service.DeleteFleetAnalytics(r.Context(), id, tenantID); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -790,13 +790,13 @@ func (h *AnalyticsHandler) DeleteFleetAnalytics(w http.ResponseWriter, r *http.R
 // ListFleetAnalytics handles listing fleet analytics with filtering
 func (h *AnalyticsHandler) ListFleetAnalytics(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	orgIDStr := query.Get("orgId")
-	orgID, err := uuid.Parse(orgIDStr)
+	tenantIDStr := query.Get("orgId")
+	tenantID, err := uuid.Parse(tenantIDStr)
 	if err != nil {
-		orgID = h.getOrgID(r)
+		tenantID = h.getTenantID(r)
 	}
 
-	if orgID == uuid.Nil {
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid organization ID", nil)
 		return
 	}
@@ -824,7 +824,7 @@ func (h *AnalyticsHandler) ListFleetAnalytics(w http.ResponseWriter, r *http.Req
 	limit, offset := parsePaginationParams(query)
 	cursor := query.Get("cursor")
 
-	analyticsList, totalCount, err := h.service.ListFleetAnalytics(r.Context(), orgID, startDate, endDate, cursor, limit, offset)
+	analyticsList, totalCount, err := h.service.ListFleetAnalytics(r.Context(), tenantID, startDate, endDate, cursor, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -848,8 +848,8 @@ func (h *AnalyticsHandler) ListFleetAnalytics(w http.ResponseWriter, r *http.Req
 // CreateDriverBehaviorAnalytics handles creating new driver behavior analytics
 func (h *AnalyticsHandler) CreateDriverBehaviorAnalytics(w http.ResponseWriter, r *http.Request) {
 	// Rate limiting
-	orgID := h.getOrgID(r)
-	if !driverBehaviorLimiter.Allow(orgID.String()) {
+	tenantID := h.getTenantID(r)
+	if !driverBehaviorLimiter.Allow(tenantID.String()) {
 		h.writeErrorResponse(w, http.StatusTooManyRequests, "Rate limit exceeded", nil)
 		return
 	}
@@ -867,7 +867,7 @@ func (h *AnalyticsHandler) CreateDriverBehaviorAnalytics(w http.ResponseWriter, 
 	}
 
 	// Ensure organization ID matches context
-	analytics.OrganizationID = orgID
+	analytics.OrganizationID = tenantID
 
 	// Set ID and timestamps
 	analytics.ID = uuid.New().String()
@@ -886,9 +886,9 @@ func (h *AnalyticsHandler) CreateDriverBehaviorAnalytics(w http.ResponseWriter, 
 // GetDriverBehaviorAnalytics handles retrieving driver behavior analytics by ID
 func (h *AnalyticsHandler) GetDriverBehaviorAnalytics(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
-	analytics, err := h.service.GetDriverBehaviorAnalytics(r.Context(), id, orgID)
+	analytics, err := h.service.GetDriverBehaviorAnalytics(r.Context(), id, tenantID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
@@ -901,7 +901,7 @@ func (h *AnalyticsHandler) GetDriverBehaviorAnalytics(w http.ResponseWriter, r *
 func (h *AnalyticsHandler) GetDriverBehaviorAnalyticsByDriver(w http.ResponseWriter, r *http.Request) {
 	driverIDStr := r.URL.Query().Get("driverId")
 	driverID, err := uuid.Parse(driverIDStr)
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID", err)
 		return
@@ -909,7 +909,7 @@ func (h *AnalyticsHandler) GetDriverBehaviorAnalyticsByDriver(w http.ResponseWri
 
 	limit, offset := parsePaginationParams(r.URL.Query())
 
-	analytics, totalCount, err := h.service.GetDriverBehaviorAnalyticsByDriver(r.Context(), driverID, orgID, limit, offset)
+	analytics, totalCount, err := h.service.GetDriverBehaviorAnalyticsByDriver(r.Context(), driverID, tenantID, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -925,20 +925,20 @@ func (h *AnalyticsHandler) GetDriverBehaviorAnalyticsByDriver(w http.ResponseWri
 
 // GetDriverBehaviorAnalyticsByOrg handles retrieving driver behavior analytics by organization
 func (h *AnalyticsHandler) GetDriverBehaviorAnalyticsByOrg(w http.ResponseWriter, r *http.Request) {
-	orgIDStr := r.URL.Query().Get("orgId")
-	orgID, err := uuid.Parse(orgIDStr)
+	tenantIDStr := r.URL.Query().Get("orgId")
+	tenantID, err := uuid.Parse(tenantIDStr)
 	if err != nil {
-		orgID = h.getOrgID(r)
+		tenantID = h.getTenantID(r)
 	}
 
-	if orgID == uuid.Nil {
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid organization ID", nil)
 		return
 	}
 
 	limit, offset := parsePaginationParams(r.URL.Query())
 
-	analytics, totalCount, err := h.service.GetDriverBehaviorAnalyticsByOrg(r.Context(), orgID, limit, offset)
+	analytics, totalCount, err := h.service.GetDriverBehaviorAnalyticsByOrg(r.Context(), tenantID, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -985,7 +985,7 @@ func (h *AnalyticsHandler) UpdateDriverBehaviorAnalytics(w http.ResponseWriter, 
 	}
 	updates["updated_at"] = time.Now()
 
-	if err := h.service.UpdateDriverBehaviorAnalytics(r.Context(), id, h.getOrgID(r), updates); err != nil {
+	if err := h.service.UpdateDriverBehaviorAnalytics(r.Context(), id, h.getTenantID(r), updates); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -996,9 +996,9 @@ func (h *AnalyticsHandler) UpdateDriverBehaviorAnalytics(w http.ResponseWriter, 
 // DeleteDriverBehaviorAnalytics handles deleting driver behavior analytics
 func (h *AnalyticsHandler) DeleteDriverBehaviorAnalytics(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
-	if err := h.service.DeleteDriverBehaviorAnalytics(r.Context(), id, orgID); err != nil {
+	if err := h.service.DeleteDriverBehaviorAnalytics(r.Context(), id, tenantID); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -1008,12 +1008,12 @@ func (h *AnalyticsHandler) DeleteDriverBehaviorAnalytics(w http.ResponseWriter, 
 
 // ListDriverBehaviorAnalytics handles listing driver behavior analytics with filtering
 func (h *AnalyticsHandler) ListDriverBehaviorAnalytics(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	periodStart, periodEnd := parsePeriodParams(r)
 	cursor := r.URL.Query().Get("cursor")
 	limit, offset := parsePaginationParams(r.URL.Query())
 
-	analytics, totalCount, err := h.service.ListDriverBehaviorAnalytics(r.Context(), orgID, periodStart, periodEnd, cursor, limit, offset)
+	analytics, totalCount, err := h.service.ListDriverBehaviorAnalytics(r.Context(), tenantID, periodStart, periodEnd, cursor, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -1054,12 +1054,12 @@ func (h *AnalyticsHandler) CreatePredictiveMaintenanceAnalytics(w http.ResponseW
 
 // ListPredictiveMaintenanceAnalytics handles listing predictive maintenance analytics
 func (h *AnalyticsHandler) ListPredictiveMaintenanceAnalytics(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	vehicleID := parseUUIDParam(r, "vehicleID")
 	cursor := r.URL.Query().Get("cursor")
 	limit, offset := parsePaginationParams(r.URL.Query())
 
-	analytics, totalCount, err := h.service.ListPredictiveMaintenanceAnalytics(r.Context(), orgID, vehicleID, cursor, limit, offset)
+	analytics, totalCount, err := h.service.ListPredictiveMaintenanceAnalytics(r.Context(), tenantID, vehicleID, cursor, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -1077,7 +1077,7 @@ func (h *AnalyticsHandler) ListPredictiveMaintenanceAnalytics(w http.ResponseWri
 func (h *AnalyticsHandler) GetPredictiveMaintenanceAnalyticsByVehicle(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicleId")
 	vehicleID, err := uuid.Parse(vehicleIDStr)
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid vehicle ID", err)
 		return
@@ -1085,7 +1085,7 @@ func (h *AnalyticsHandler) GetPredictiveMaintenanceAnalyticsByVehicle(w http.Res
 
 	limit, offset := parsePaginationParams(r.URL.Query())
 
-	analytics, totalCount, err := h.service.GetPredictiveMaintenanceAnalyticsByVehicle(r.Context(), vehicleID, orgID, limit, offset)
+	analytics, totalCount, err := h.service.GetPredictiveMaintenanceAnalyticsByVehicle(r.Context(), vehicleID, tenantID, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -1102,9 +1102,9 @@ func (h *AnalyticsHandler) GetPredictiveMaintenanceAnalyticsByVehicle(w http.Res
 // GetPredictiveMaintenanceAnalytics handles retrieving predictive maintenance analytics by ID
 func (h *AnalyticsHandler) GetPredictiveMaintenanceAnalytics(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
-	analytics, err := h.service.GetPredictiveMaintenanceAnalytics(r.Context(), id, orgID)
+	analytics, err := h.service.GetPredictiveMaintenanceAnalytics(r.Context(), id, tenantID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusNotFound, err.Error(), nil)
 		return
@@ -1116,7 +1116,7 @@ func (h *AnalyticsHandler) GetPredictiveMaintenanceAnalytics(w http.ResponseWrit
 // UpdatePredictiveMaintenanceAnalytics handles updating predictive maintenance analytics
 func (h *AnalyticsHandler) UpdatePredictiveMaintenanceAnalytics(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
 	var req map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -1126,7 +1126,7 @@ func (h *AnalyticsHandler) UpdatePredictiveMaintenanceAnalytics(w http.ResponseW
 
 	req["updated_at"] = time.Now()
 
-	if err := h.service.UpdatePredictiveMaintenanceAnalytics(r.Context(), id, orgID, req); err != nil {
+	if err := h.service.UpdatePredictiveMaintenanceAnalytics(r.Context(), id, tenantID, req); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -1137,9 +1137,9 @@ func (h *AnalyticsHandler) UpdatePredictiveMaintenanceAnalytics(w http.ResponseW
 // DeletePredictiveMaintenanceAnalytics handles deleting predictive maintenance analytics
 func (h *AnalyticsHandler) DeletePredictiveMaintenanceAnalytics(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
-	if err := h.service.DeletePredictiveMaintenanceAnalytics(r.Context(), id, orgID); err != nil {
+	if err := h.service.DeletePredictiveMaintenanceAnalytics(r.Context(), id, tenantID); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -1311,9 +1311,9 @@ func parseUUIDParam(r *http.Request, paramName string) *uuid.UUID {
 	return &id
 }
 
-// getOrgID extracts organization ID from request context
-func (h *AnalyticsHandler) getOrgID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value("orgID"); val != nil {
+// getTenantID extracts organization ID from request context
+func (h *AnalyticsHandler) getTenantID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value("tenantID"); val != nil {
 		switch v := val.(type) {
 		case uuid.UUID:
 			return v
@@ -1354,10 +1354,10 @@ func (h *AnalyticsHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 
 // GetFleetSummary returns fleet summary statistics
 func (h *AnalyticsHandler) GetFleetSummary(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	// Stub implementation - returns empty summary
 	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{
-		"tenant_id": orgID,
+		"tenant_id": tenantID,
 		"summary": map[string]interface{}{},
 	})
 }

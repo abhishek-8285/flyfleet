@@ -16,14 +16,14 @@ import (
 
 func main() {
 	if len(os.Args) < 4 {
-		fmt.Println("Usage: gen_customer_key <name> <email> <org_id>")
+		fmt.Println("Usage: gen_customer_key <name> <email> <tenant_id>")
 		fmt.Println("Example: gen_customer_key \"ABC Logistics\" \"admin@abc.io\" \"799ca0ba-6343-44d0-99ca-b12a841f07d7\"")
 		os.Exit(1)
 	}
 
 	name := os.Args[1]
 	email := os.Args[2]
-	orgID := os.Args[3]
+	tenantID := os.Args[3]
 
 	ctx := context.Background()
 
@@ -54,10 +54,10 @@ func main() {
 	customerID := uuid.New()
 
 	// 3. Insert Customer into Legacy Schema for Portal Access
-	query := `INSERT INTO customers (id, org_id, name, email, api_key, api_secret_hash, status, created_at, updated_at)
+	query := `INSERT INTO customers (id, tenant_id, name, email, api_key, api_secret_hash, status, created_at, updated_at)
 			  VALUES ($1, $2, $3, $4, $5, $6, 'active', NOW(), NOW())`
 
-	_, err = pool.Exec(ctx, query, customerID, orgID, name, email, fullKey, hashedKey)
+	_, err = pool.Exec(ctx, query, customerID, tenantID, name, email, fullKey, hashedKey)
 	if err != nil {
 		log.Fatalf("Failed to insert customer: %v", err)
 	}

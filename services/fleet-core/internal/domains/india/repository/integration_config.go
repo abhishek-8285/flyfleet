@@ -101,7 +101,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetIntegrationConfig(ctx context.Contex
 }
 
 // GetIntegrationConfigByServiceType retrieves an integration configuration by service type and organization
-func (r *IndiaIntegrationRepositoryImpl) GetIntegrationConfigByServiceType(ctx context.Context, orgID uuid.UUID, serviceType string) (*models.IntegrationConfig, error) {
+func (r *IndiaIntegrationRepositoryImpl) GetIntegrationConfigByServiceType(ctx context.Context, tenantID uuid.UUID, serviceType string) (*models.IntegrationConfig, error) {
 	query := `
 		SELECT id, tenant_id, service_type, api_endpoint, api_key, username, password,
 		       client_id, client_secret, environment, active, last_sync_at, next_sync_at,
@@ -111,7 +111,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetIntegrationConfigByServiceType(ctx c
 
 	var config models.IntegrationConfig
 
-	row := r.db.QueryRow(ctx, query, orgID, serviceType)
+	row := r.db.QueryRow(ctx, query, tenantID, serviceType)
 	err := row.Scan(
 		&config.ID,
 		&config.OrganizationID,
@@ -213,9 +213,9 @@ func (r *IndiaIntegrationRepositoryImpl) DeleteIntegrationConfig(ctx context.Con
 }
 
 // ListIntegrationConfigs retrieves integration configurations with filtering
-func (r *IndiaIntegrationRepositoryImpl) ListIntegrationConfigs(ctx context.Context, orgID uuid.UUID, serviceType *string, active *bool, limit, offset int) ([]*models.IntegrationConfig, int, error) {
+func (r *IndiaIntegrationRepositoryImpl) ListIntegrationConfigs(ctx context.Context, tenantID uuid.UUID, serviceType *string, active *bool, limit, offset int) ([]*models.IntegrationConfig, int, error) {
 	countQuery := "SELECT COUNT(*) FROM integration_configs WHERE tenant_id = $1"
-	args := []interface{}{orgID}
+	args := []interface{}{tenantID}
 	argIndex := 2
 
 	whereClause := "WHERE tenant_id = $1"

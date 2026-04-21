@@ -9,6 +9,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUIStrings } from "../../../hooks/useUIStrings";
 import billingService from "../../../services/billingService";
+import { invoicingV2Service } from "../../../services/invoicingV2Service";
 import { BillingMetrics, Invoice } from "../../../types/billing";
 import UsageOverview from "./UsageOverview";
 import SubscriptionPlans from "./SubscriptionPlans";
@@ -30,14 +31,22 @@ const BillingDashboard: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      const [invoicesData, metricsData, settingsData] = await Promise.all([
-        billingService.getInvoices(1, 5),
+      const [invoicesData, v2InvoicesData, metricsData, settingsData] = await Promise.all([
+        billingService.getInvoices(1, 10),
+        invoicingV2Service.listInvoices(10, 0),
         billingService.getMetrics(),
         billingService.getSettings(),
       ]);
-      setInvoices(invoicesData?.data || []);
+      
+      // Merge and sort by date descending
+      const allInvoices = [
+        ...(invoicesData?.data || []),
+        ...(v2InvoicesData?.invoices || [])
+      ].sort((a, b) => new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime());
+
+      setInvoices(allInvoices.slice(0, 10)); // Top 10
       setMetrics(metricsData);
-      // Use real settings for stat cards
+      
       setBillingData({
         balance: metricsData?.pending_payment || 0,
         next_billing_date: settingsData?.auto_invoicing_enabled ? "Auto-generated" : "Manual",
@@ -46,7 +55,7 @@ const BillingDashboard: React.FC = () => {
     } catch (error) {
       console.error("Failed to fetch billing data", error);
     } finally {
-      setLoading((status) => false);
+      setLoading(false);
     }
   };
 
@@ -103,7 +112,7 @@ const BillingDashboard: React.FC = () => {
             </span>
           </div>
           <div className="text-3xl font-bold text-white">
-            ${billingData?.balance?.toFixed(2)}
+            ₹{billingData?.balance?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
         </div>
 
@@ -207,6 +216,7 @@ const BillingDashboard: React.FC = () => {
               {invoices.map((invoice) => (
                 <tr
                   key={invoice.id}
+                  onClick={() => navigate(`/admin/billing/invoices/${invoice.id}`)}
                   className="hover:bg-white/5 transition-colors cursor-pointer"
                 >
                   <td className="px-6 py-4">
@@ -230,7 +240,7 @@ const BillingDashboard: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-white font-semibold">
-                      ₹{invoice.total_amount.toLocaleString()}
+                      ₹{invoice.total_amount.toLocaleString('en-IN')}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -293,11 +303,15 @@ const BillingDashboard: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {invoices.filter(i => i.category === "Miscellaneous").map((invoice) => (
-                    <tr key={invoice.id} className="hover:bg-white/5 transition-colors cursor-pointer">
+                    <tr
+                      key={invoice.id}
+                      onClick={() => navigate(`/admin/billing/invoices/${invoice.id}`)}
+                      className="hover:bg-white/5 transition-colors cursor-pointer"
+                    >
                       <td className="px-6 py-4 text-white font-medium">#{invoice.id.substring(0, 8).toUpperCase()}</td>
                       <td className="px-6 py-4 text-gray-300">{invoice.customer_name}</td>
                       <td className="px-6 py-4 text-gray-400">{new Date(invoice.invoice_date).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 text-white font-semibold">₹{invoice.total_amount.toLocaleString()}</td>
+                      <td className="px-6 py-4 text-white font-semibold">₹{invoice.total_amount.toLocaleString('en-IN')}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${statusColors[invoice.status]}`}>
                           {invoice.status}

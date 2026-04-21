@@ -12,7 +12,7 @@ import (
 type TechnicianRepository interface {
 	CreateTechnician(ctx context.Context, tech *models.Technician) error
 	GetTechnicianByID(ctx context.Context, id uuid.UUID) (*models.Technician, error)
-	ListTechnicians(ctx context.Context, orgID uuid.UUID) ([]*models.Technician, error)
+	ListTechnicians(ctx context.Context, tenantID uuid.UUID) ([]*models.Technician, error)
 	UpdateTechnician(ctx context.Context, tech *models.Technician) error
 	DeleteTechnician(ctx context.Context, id uuid.UUID) error
 
@@ -41,7 +41,7 @@ func (r *MaintenanceRepositoryImpl) CreateTechnician(ctx context.Context, tech *
 	certJSON, _ := json.Marshal(tech.Certifications)
 
 	_, err := r.db.Exec(ctx, query,
-		tech.ID, tech.OrgID, tech.UserID, tech.Name, tech.Specialization,
+		tech.ID, tech.TenantID, tech.UserID, tech.Name, tech.Specialization,
 		certJSON, tech.HourlyRate, tech.AvailabilityStatus, tech.CurrentWorkload,
 		tech.CreatedAt, tech.UpdatedAt,
 	)
@@ -57,7 +57,7 @@ func (r *MaintenanceRepositoryImpl) GetTechnicianByID(ctx context.Context, id uu
 	var tech models.Technician
 	var certJSON []byte
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&tech.ID, &tech.OrgID, &tech.UserID, &tech.Name, &tech.Specialization,
+		&tech.ID, &tech.TenantID, &tech.UserID, &tech.Name, &tech.Specialization,
 		&certJSON, &tech.HourlyRate, &tech.AvailabilityStatus, &tech.CurrentWorkload,
 		&tech.CreatedAt, &tech.UpdatedAt,
 	)
@@ -92,13 +92,13 @@ func (r *MaintenanceRepositoryImpl) UpdateWorkload(ctx context.Context, techID u
 	return err
 }
 
-func (r *MaintenanceRepositoryImpl) ListTechnicians(ctx context.Context, orgID uuid.UUID) ([]*models.Technician, error) {
+func (r *MaintenanceRepositoryImpl) ListTechnicians(ctx context.Context, tenantID uuid.UUID) ([]*models.Technician, error) {
 	query := `
 		SELECT id, tenant_id, user_id, name, specialization, certifications,
 			   hourly_rate, availability_status, current_workload, created_at, updated_at
 		FROM maintenance_technicians WHERE tenant_id = $1`
 
-	rows, err := r.db.Query(ctx, query, orgID)
+	rows, err := r.db.Query(ctx, query, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func (r *MaintenanceRepositoryImpl) ListTechnicians(ctx context.Context, orgID u
 		var tech models.Technician
 		var certJSON []byte
 		err := rows.Scan(
-			&tech.ID, &tech.OrgID, &tech.UserID, &tech.Name, &tech.Specialization,
+			&tech.ID, &tech.TenantID, &tech.UserID, &tech.Name, &tech.Specialization,
 			&certJSON, &tech.HourlyRate, &tech.AvailabilityStatus, &tech.CurrentWorkload,
 			&tech.CreatedAt, &tech.UpdatedAt,
 		)
@@ -151,7 +151,7 @@ func (r *MaintenanceRepositoryImpl) UpdateTechnician(ctx context.Context, tech *
 	certJSON, _ := json.Marshal(tech.Certifications)
 
 	_, err := r.db.Exec(ctx, query,
-		tech.OrgID, tech.UserID, tech.Name, tech.Specialization,
+		tech.TenantID, tech.UserID, tech.Name, tech.Specialization,
 		certJSON, tech.HourlyRate, tech.AvailabilityStatus, tech.CurrentWorkload,
 		tech.ID,
 	)

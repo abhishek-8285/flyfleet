@@ -34,11 +34,11 @@ func (h *GeofenceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *GeofenceHandler) handleGet(w http.ResponseWriter, r *http.Request) {
-	// FIX: GetOrgID takes context.Context, returns google/uuid — convert to gofrs
-	middlewareOrgID := middleware.GetOrgID(r.Context())
-	orgID, _ := uuid.FromString(middlewareOrgID.String())
+	// FIX: GetTenantID takes context.Context, returns google/uuid — convert to gofrs
+	middlewareTenantID := middleware.GetTenantID(r.Context())
+	tenantID, _ := uuid.FromString(middlewareTenantID.String())
 
-	geofences, err := h.geoRepo.GetOrgGeofences(r.Context(), orgID)
+	geofences, err := h.geoRepo.GetOrgGeofences(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("failed to list geofences", zap.Error(err))
 		http.Error(w, `{"error":"internal error"}`, http.StatusInternalServerError)
@@ -76,13 +76,13 @@ func (h *GeofenceHandler) handlePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// FIX: GetOrgID takes context.Context, returns google/uuid — convert to gofrs
-	middlewareOrgID := middleware.GetOrgID(r.Context())
-	orgID, _ := uuid.FromString(middlewareOrgID.String())
+	// FIX: GetTenantID takes context.Context, returns google/uuid — convert to gofrs
+	middlewareTenantID := middleware.GetTenantID(r.Context())
+	tenantID, _ := uuid.FromString(middlewareTenantID.String())
 
 	g := &models.Geofence{
 		ID:          uuid.Must(uuid.NewV4()),
-		OrgID:       orgID,
+		TenantID:       tenantID,
 		Name:        req.Name,
 		Type:        req.Type,
 		CenterLat:   req.CenterLat,

@@ -21,7 +21,7 @@ type AlertRequestDTO struct {
 }
 
 // ToModel converts the DTO to a domain model, setting the organization ID
-func (r AlertRequestDTO) ToModel(orgID uuid.UUID) models.AlertRequest {
+func (r AlertRequestDTO) ToModel(tenantID uuid.UUID) models.AlertRequest {
 	return models.AlertRequest{
 		UserID:         r.UserID,
 		Recipient:      r.Recipient,
@@ -29,7 +29,7 @@ func (r AlertRequestDTO) ToModel(orgID uuid.UUID) models.AlertRequest {
 		Priority:       r.Priority,
 		Data:           r.Data,
 		Metadata:       r.Metadata,
-		OrganizationID: orgID, // Injected from context, never from client
+		OrganizationID: tenantID, // Injected from context, never from client
 	}
 }
 
@@ -40,10 +40,10 @@ type UserPreferenceUpdateDTO struct {
 }
 
 // ToModel converts the DTO to a domain model
-func (r UserPreferenceUpdateDTO) ToModel(userID, orgID uuid.UUID) models.UserPreference {
+func (r UserPreferenceUpdateDTO) ToModel(userID, tenantID uuid.UUID) models.UserPreference {
 	return models.UserPreference{
 		UserID:         userID,
-		OrganizationID: orgID,
+		OrganizationID: tenantID,
 		Channel:        r.Channel,
 		Enabled:        r.Enabled,
 	}
@@ -60,7 +60,7 @@ type CreateTemplateRequestDTO struct {
 }
 
 // ToModel converts the DTO to a domain model, setting the organization ID
-func (r CreateTemplateRequestDTO) ToModel(orgID uuid.UUID) models.Template {
+func (r CreateTemplateRequestDTO) ToModel(tenantID uuid.UUID) models.Template {
 	return models.Template{
 		Name:           r.Name,
 		Channel:        r.Channel,
@@ -68,7 +68,7 @@ func (r CreateTemplateRequestDTO) ToModel(orgID uuid.UUID) models.Template {
 		Subject:        r.Subject,
 		Body:           r.Body,
 		Metadata:       r.Metadata,
-		OrganizationID: orgID, // Injected from context
+		OrganizationID: tenantID, // Injected from context
 	}
 }
 

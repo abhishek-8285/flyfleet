@@ -26,7 +26,7 @@ func TestLocalStorage_CorruptionDetection(t *testing.T) {
 	ctx := context.Background()
 	inv := &models.Invoice{
 		ID:            uuid.New(),
-		OrgID:         uuid.New(),
+		TenantID:         uuid.New(),
 		InvoiceNumber: "INV-CORRUPT-TEST",
 		InvoiceDate:   time.Now(),
 	}

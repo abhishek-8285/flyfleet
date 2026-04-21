@@ -51,13 +51,13 @@ func newMockE2EDependencies() *mockE2EDependencies {
 // TestE2E_BookingToDispatchToTrip validates the complete dispatch flow.
 func TestE2E_BookingToDispatchToTrip(t *testing.T) {
 	deps := newMockE2EDependencies()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
 	// ── Step 1: Create a confirmed booking ──────────────────────────────────
 	bookingID := uuid.New()
 	deps.customerRepo.bookings[bookingID] = &mockE2EBooking{
 		ID:        bookingID,
-		OrgID:     orgID,
+		TenantID:     tenantID,
 		CargoType: "LCV",
 		Weight:    250.0,
 		Status:    "CONFIRMED",
@@ -69,7 +69,7 @@ func TestE2E_BookingToDispatchToTrip(t *testing.T) {
 	deps.customerRepo.shipments[shipmentID] = &mockE2EShipment{
 		ID:         shipmentID,
 		BookingID:  &bookingID,
-		OrgID:      orgID,
+		TenantID:      tenantID,
 		Status:     "CONFIRMED",
 		DistanceKm: &distKm,
 		Origin:     []byte(`{"address":"Delhi Warehouse","latitude":28.6139,"longitude":77.2090}`),
@@ -80,7 +80,7 @@ func TestE2E_BookingToDispatchToTrip(t *testing.T) {
 	vehicleID := uuid.New()
 	deps.vehicleRepo.vehicles[vehicleID] = &mockE2EVehicle{
 		ID:              vehicleID,
-		OrgID:           orgID,
+		TenantID:           tenantID,
 		Status:          "ACTIVE",
 		Registration:    "DL01AB1234",
 		CapacityTonnage: 1.5,
@@ -93,7 +93,7 @@ func TestE2E_BookingToDispatchToTrip(t *testing.T) {
 	driverID := uuid.New()
 	deps.driverRepo.drivers[driverID] = &mockE2EDriver{
 		ID:     driverID,
-		OrgID:  orgID,
+		TenantID:  tenantID,
 		Status: "active",
 		Rating: 4.8,
 	}
@@ -104,7 +104,7 @@ func TestE2E_BookingToDispatchToTrip(t *testing.T) {
 	assert.Nil(t, driver.CurrentTripID, "Driver must not be on active trip")
 
 	// ── Step 6: Dispatch ───────────────────────────────────────────────────
-	trip, err := deps.tripService.Create(context.Background(), orgID.String(), &mockE2ETripRequest{
+	trip, err := deps.tripService.Create(context.Background(), tenantID.String(), &mockE2ETripRequest{
 		VehicleID: vehicleID.String(),
 		DriverID:  driverID.String(),
 	})
@@ -125,16 +125,16 @@ func TestE2E_BookingToDispatchToTrip(t *testing.T) {
 	deps.eventBus.Publish(context.Background(), "trip.assigned", map[string]interface{}{
 		"trip_id":     trip.ID,
 		"shipment_id": shipmentID.String(),
-		"tenant_id":      orgID.String(),
-	}, orgID.String())
+		"tenant_id":      tenantID.String(),
+	}, tenantID.String())
 	
 	deps.eventBus.Publish(context.Background(), "shipment.assigned", map[string]interface{}{
 		"trip_id":     trip.ID,
 		"shipment_id": shipmentID.String(),
-	}, orgID.String())
+	}, tenantID.String())
 
 	for _, evt := range deps.eventBus.published {
-		assert.Equal(t, orgID.String(), evt.OrgID)
+		assert.Equal(t, tenantID.String(), evt.TenantID)
 	}
 
 	// ── Step 9: Verify active trip ─────────────────────────────────────────
@@ -145,13 +145,13 @@ func TestE2E_BookingToDispatchToTrip(t *testing.T) {
 // TestE2E_RejectDispatchForBusyDriver validates rejection logic.
 func TestE2E_RejectDispatchForBusyDriver(t *testing.T) {
 	deps := newMockE2EDependencies()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
 	driverID := uuid.New()
 	tripID := uuid.New().String()
 	deps.driverRepo.drivers[driverID] = &mockE2EDriver{
 		ID:            driverID,
-		OrgID:         orgID,
+		TenantID:         tenantID,
 		Status:        "active",
 		CurrentTripID: &tripID,
 	}
@@ -163,12 +163,12 @@ func TestE2E_RejectDispatchForBusyDriver(t *testing.T) {
 // TestE2E_RejectDispatchForVehicleOnTrip validates rejection logic.
 func TestE2E_RejectDispatchForVehicleOnTrip(t *testing.T) {
 	deps := newMockE2EDependencies()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
 	vehicleID := uuid.New()
 	deps.vehicleRepo.vehicles[vehicleID] = &mockE2EVehicle{
 		ID:     vehicleID,
-		OrgID:  orgID,
+		TenantID:  tenantID,
 		Status: "ACTIVE",
 	}
 
@@ -186,7 +186,7 @@ type mockE2ECustomerRepo struct {
 type mockE2EShipment struct {
 	ID          uuid.UUID
 	BookingID   *uuid.UUID
-	OrgID       uuid.UUID
+	TenantID       uuid.UUID
 	TripID      *uuid.UUID
 	Status      string
 	DistanceKm  *float64
@@ -196,7 +196,7 @@ type mockE2EShipment struct {
 
 type mockE2EBooking struct {
 	ID        uuid.UUID
-	OrgID     uuid.UUID
+	TenantID     uuid.UUID
 	CargoType string
 	Weight    float64
 	Status    string
@@ -208,7 +208,7 @@ type mockE2EVehicleRepo struct {
 
 type mockE2EVehicle struct {
 	ID              uuid.UUID
-	OrgID           uuid.UUID
+	TenantID           uuid.UUID
 	Status          string
 	Registration    string
 	CapacityTonnage float64
@@ -220,7 +220,7 @@ type mockE2EDriverRepo struct {
 
 type mockE2EDriver struct {
 	ID            uuid.UUID
-	OrgID         uuid.UUID
+	TenantID         uuid.UUID
 	Status        string
 	Rating        float64
 	CurrentTripID *string
@@ -244,7 +244,7 @@ type mockE2ETripRequest struct {
 	DriverID  string
 }
 
-func (m *mockE2ETripService) Create(ctx context.Context, orgID string, req interface{}) (*mockE2ETrip, error) {
+func (m *mockE2ETripService) Create(ctx context.Context, tenantID string, req interface{}) (*mockE2ETrip, error) {
 	trip := &mockE2ETrip{ID: uuid.New().String(), Status: "CREATED"}
 	m.created = append(m.created, trip)
 	return trip, nil
@@ -257,14 +257,14 @@ type mockE2EEventBus struct {
 type mockE2EPublishedEvent struct {
 	Subject string
 	Data    interface{}
-	OrgID   string
+	TenantID   string
 }
 
-func (m *mockE2EEventBus) Publish(ctx context.Context, subject string, data interface{}, orgID string) error {
+func (m *mockE2EEventBus) Publish(ctx context.Context, subject string, data interface{}, tenantID string) error {
 	m.published = append(m.published, mockE2EPublishedEvent{
 		Subject: subject,
 		Data:    data,
-		OrgID:   orgID,
+		TenantID:   tenantID,
 	})
 	return nil
 }

@@ -34,7 +34,7 @@ func (r *TripRepository) Create(ctx context.Context, trip *models.Trip) error {
 	_, err := r.db.Exec(ctx, query,
 		trip.ID, trip.TripID, trip.VehicleID, trip.DriverID,
 		startLocJSON, endLocJSON, trip.StartTime, trip.EndTime,
-		trip.Distance, trip.Status, trip.OrganizationID, trip.FuelConsumed, trip.CreatedAt, trip.UpdatedAt)
+		trip.Distance, trip.Status, trip.TenantID, trip.FuelConsumed, trip.CreatedAt, trip.UpdatedAt)
 	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
@@ -47,7 +47,7 @@ func (r *TripRepository) scanTrip(row interface {
 	err := row.Scan(
 		&trip.ID, &trip.TripID, &trip.VehicleID, &trip.DriverID,
 		&startLocJSON, &endLocJSON, &trip.StartTime, &trip.EndTime,
-		&trip.Distance, &trip.Status, &trip.OrganizationID, &trip.FuelConsumed, &trip.CreatedAt, &trip.UpdatedAt)
+		&trip.Distance, &trip.Status, &trip.TenantID, &trip.FuelConsumed, &trip.CreatedAt, &trip.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (r *TripRepository) List(ctx context.Context, params models.TripListParams)
 
 	// Build dynamic query
 	baseQuery := `FROM trips WHERE tenant_id = $1`
-	args := []interface{}{params.OrganizationID}
+	args := []interface{}{params.TenantID}
 	argIdx := 2
 
 	if params.Status != "" {
@@ -139,7 +139,7 @@ func (r *TripRepository) List(ctx context.Context, params models.TripListParams)
 		if err := rows.Scan(
 			&trip.ID, &trip.TripID, &trip.VehicleID, &trip.DriverID,
 			&startLocJSON, &endLocJSON, &trip.StartTime, &trip.EndTime,
-			&trip.Distance, &trip.Status, &trip.OrganizationID, &trip.FuelConsumed, &trip.CreatedAt, &trip.UpdatedAt,
+			&trip.Distance, &trip.Status, &trip.TenantID, &trip.FuelConsumed, &trip.CreatedAt, &trip.UpdatedAt,
 		); err != nil {
 			return nil, 0, err
 		}
@@ -252,17 +252,17 @@ func (r *TripRepository) GetTelemetry(ctx context.Context, tripID uuid.UUID, lim
 }
 
 // Settings methods
-func (r *TripRepository) GetSettings(ctx context.Context, orgID uuid.UUID) (*models.TripSettings, error) {
+func (r *TripRepository) GetSettings(ctx context.Context, tenantID uuid.UUID) (*models.TripSettings, error) {
 	query := `SELECT id, tenant_id, retention_period, policies, updated_at FROM trip_settings WHERE tenant_id = $1`
 	var s models.TripSettings
 	var policiesJSON []byte
 	start := time.Now()
-	err := r.db.QueryRow(ctx, query, orgID).Scan(&s.ID, &s.OrganizationID, &s.RetentionPeriod, &policiesJSON, &s.UpdatedAt)
+	err := r.db.QueryRow(ctx, query, tenantID).Scan(&s.ID, &s.TenantID, &s.RetentionPeriod, &policiesJSON, &s.UpdatedAt)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		// Return defaults if not found
 		return &models.TripSettings{
-			OrganizationID:  orgID,
+			TenantID:        tenantID,
 			RetentionPeriod: 36,
 			Policies:        map[string]interface{}{},
 			UpdatedAt:       time.Now(),
@@ -281,7 +281,7 @@ func (r *TripRepository) UpsertSettings(ctx context.Context, s *models.TripSetti
 			retention_period = $3, policies = $4, updated_at = NOW()
 	`
 	start := time.Now()
-	_, err := r.db.Exec(ctx, query, uuid.New(), s.OrganizationID, s.RetentionPeriod, policiesJSON)
+	_, err := r.db.Exec(ctx, query, uuid.New(), s.TenantID, s.RetentionPeriod, policiesJSON)
 	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }

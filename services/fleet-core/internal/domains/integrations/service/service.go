@@ -15,27 +15,27 @@ import (
 
 type IntegrationsService interface {
 	// Integrations
-	CreateIntegration(ctx context.Context, orgID uuid.UUID, name, iType, provider string, config any) (*models.Integration, error)
-	GetIntegration(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*models.Integration, error)
-	ListIntegrations(ctx context.Context, orgID uuid.UUID) ([]*models.Integration, error)
-	UpdateIntegration(ctx context.Context, id uuid.UUID, orgID uuid.UUID, name, iType, provider, status string, config any) error
-	DeleteIntegration(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error
-	TestConnection(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (bool, string, error)
+	CreateIntegration(ctx context.Context, tenantID uuid.UUID, name, iType, provider string, config any) (*models.Integration, error)
+	GetIntegration(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) (*models.Integration, error)
+	ListIntegrations(ctx context.Context, tenantID uuid.UUID) ([]*models.Integration, error)
+	UpdateIntegration(ctx context.Context, id uuid.UUID, tenantID uuid.UUID, name, iType, provider, status string, config any) error
+	DeleteIntegration(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) error
+	TestConnection(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) (bool, string, error)
 
 	// API Clients
-	CreateAPIClient(ctx context.Context, orgID uuid.UUID, name string, scopes []string, expiryDays int) (*models.APIClient, string, error)
-	RotateAPIClientKey(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (string, error)
-	ListAPIClients(ctx context.Context, orgID uuid.UUID) ([]*models.APIClient, error)
-	DeleteAPIClient(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error
+	CreateAPIClient(ctx context.Context, tenantID uuid.UUID, name string, scopes []string, expiryDays int) (*models.APIClient, string, error)
+	RotateAPIClientKey(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) (string, error)
+	ListAPIClients(ctx context.Context, tenantID uuid.UUID) ([]*models.APIClient, error)
+	DeleteAPIClient(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) error
 
 	// Webhooks
-	CreateWebhook(ctx context.Context, orgID uuid.UUID, url string, events []string) (*models.Webhook, error)
-	ListWebhooks(ctx context.Context, orgID uuid.UUID) ([]*models.Webhook, error)
-	UpdateWebhook(ctx context.Context, id uuid.UUID, orgID uuid.UUID, url string, events []string, status string) error
-	DeleteWebhook(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error
+	CreateWebhook(ctx context.Context, tenantID uuid.UUID, url string, events []string) (*models.Webhook, error)
+	ListWebhooks(ctx context.Context, tenantID uuid.UUID) ([]*models.Webhook, error)
+	UpdateWebhook(ctx context.Context, id uuid.UUID, tenantID uuid.UUID, url string, events []string, status string) error
+	DeleteWebhook(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) error
 
 	// Logs
-	ListLogs(ctx context.Context, orgID uuid.UUID, integrationID *uuid.UUID, limit, offset int) ([]*models.IntegrationLog, error)
+	ListLogs(ctx context.Context, tenantID uuid.UUID, integrationID *uuid.UUID, limit, offset int) ([]*models.IntegrationLog, error)
 }
 
 type integrationsService struct {
@@ -52,11 +52,11 @@ func NewIntegrationsService(repo repository.Repository, encryptKey string, logge
 	}
 }
 
-func (s *integrationsService) CreateIntegration(ctx context.Context, orgID uuid.UUID, name, iType, provider string, config any) (*models.Integration, error) {
+func (s *integrationsService) CreateIntegration(ctx context.Context, tenantID uuid.UUID, name, iType, provider string, config any) (*models.Integration, error) {
 	userID := s.getUserID(ctx)
 	integration := &models.Integration{
 		ID:        uuid.New(),
-		OrgID:     orgID,
+		TenantID:     tenantID,
 		Name:      name,
 		Type:      iType,
 		Provider:  provider,
@@ -69,19 +69,19 @@ func (s *integrationsService) CreateIntegration(ctx context.Context, orgID uuid.
 	return integration, err
 }
 
-func (s *integrationsService) GetIntegration(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*models.Integration, error) {
-	return s.repo.GetIntegration(ctx, id, orgID)
+func (s *integrationsService) GetIntegration(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) (*models.Integration, error) {
+	return s.repo.GetIntegration(ctx, id, tenantID)
 }
 
-func (s *integrationsService) ListIntegrations(ctx context.Context, orgID uuid.UUID) ([]*models.Integration, error) {
-	return s.repo.ListIntegrations(ctx, orgID)
+func (s *integrationsService) ListIntegrations(ctx context.Context, tenantID uuid.UUID) ([]*models.Integration, error) {
+	return s.repo.ListIntegrations(ctx, tenantID)
 }
 
-func (s *integrationsService) UpdateIntegration(ctx context.Context, id uuid.UUID, orgID uuid.UUID, name, iType, provider, status string, config any) error {
+func (s *integrationsService) UpdateIntegration(ctx context.Context, id uuid.UUID, tenantID uuid.UUID, name, iType, provider, status string, config any) error {
 	userID := s.getUserID(ctx)
 	integration := &models.Integration{
 		ID:        id,
-		OrgID:     orgID,
+		TenantID:     tenantID,
 		Name:      name,
 		Type:      iType,
 		Provider:  provider,
@@ -92,17 +92,17 @@ func (s *integrationsService) UpdateIntegration(ctx context.Context, id uuid.UUI
 	return s.repo.UpdateIntegration(ctx, integration)
 }
 
-func (s *integrationsService) DeleteIntegration(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error {
-	return s.repo.DeleteIntegration(ctx, id, orgID)
+func (s *integrationsService) DeleteIntegration(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) error {
+	return s.repo.DeleteIntegration(ctx, id, tenantID)
 }
 
-func (s *integrationsService) TestConnection(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (bool, string, error) {
+func (s *integrationsService) TestConnection(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) (bool, string, error) {
 	// Mock implementation for now
 	time.Sleep(1 * time.Second)
 	return true, "Connection successful", nil
 }
 
-func (s *integrationsService) CreateAPIClient(ctx context.Context, orgID uuid.UUID, name string, scopes []string, expiryDays int) (*models.APIClient, string, error) {
+func (s *integrationsService) CreateAPIClient(ctx context.Context, tenantID uuid.UUID, name string, scopes []string, expiryDays int) (*models.APIClient, string, error) {
 	rawKey := generateSecureKey(32)
 	hash, _ := bcrypt.GenerateFromPassword([]byte(rawKey), bcrypt.DefaultCost)
 
@@ -116,7 +116,7 @@ func (s *integrationsService) CreateAPIClient(ctx context.Context, orgID uuid.UU
 	u := uuid.New()
 	client := &models.APIClient{
 		ID:               uuid.New(),
-		OrgID:            orgID,
+		TenantID:            tenantID,
 		ClientID:         "cli_" + hex.EncodeToString(u[:8]),
 		ClientSecretHash: string(hash),
 		Name:             name,
@@ -131,8 +131,8 @@ func (s *integrationsService) CreateAPIClient(ctx context.Context, orgID uuid.UU
 	return client, rawKey, err
 }
 
-func (s *integrationsService) RotateAPIClientKey(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (string, error) {
-	client, err := s.repo.GetAPIClient(ctx, id, orgID)
+func (s *integrationsService) RotateAPIClientKey(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) (string, error) {
+	client, err := s.repo.GetAPIClient(ctx, id, tenantID)
 	if err != nil {
 		return "", err
 	}
@@ -145,19 +145,19 @@ func (s *integrationsService) RotateAPIClientKey(ctx context.Context, id uuid.UU
 	return rawKey, s.repo.UpdateAPIClient(ctx, client)
 }
 
-func (s *integrationsService) ListAPIClients(ctx context.Context, orgID uuid.UUID) ([]*models.APIClient, error) {
-	return s.repo.ListAPIClients(ctx, orgID)
+func (s *integrationsService) ListAPIClients(ctx context.Context, tenantID uuid.UUID) ([]*models.APIClient, error) {
+	return s.repo.ListAPIClients(ctx, tenantID)
 }
 
-func (s *integrationsService) DeleteAPIClient(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error {
-	return s.repo.DeleteAPIClient(ctx, id, orgID)
+func (s *integrationsService) DeleteAPIClient(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) error {
+	return s.repo.DeleteAPIClient(ctx, id, tenantID)
 }
 
-func (s *integrationsService) CreateWebhook(ctx context.Context, orgID uuid.UUID, url string, events []string) (*models.Webhook, error) {
+func (s *integrationsService) CreateWebhook(ctx context.Context, tenantID uuid.UUID, url string, events []string) (*models.Webhook, error) {
 	userID := s.getUserID(ctx)
 	webhook := &models.Webhook{
 		ID:        uuid.New(),
-		OrgID:     orgID,
+		TenantID:     tenantID,
 		URL:       url,
 		Events:    events,
 		Secret:    "whsec_" + generateSecureKey(16),
@@ -169,15 +169,15 @@ func (s *integrationsService) CreateWebhook(ctx context.Context, orgID uuid.UUID
 	return webhook, err
 }
 
-func (s *integrationsService) ListWebhooks(ctx context.Context, orgID uuid.UUID) ([]*models.Webhook, error) {
-	return s.repo.ListWebhooks(ctx, orgID)
+func (s *integrationsService) ListWebhooks(ctx context.Context, tenantID uuid.UUID) ([]*models.Webhook, error) {
+	return s.repo.ListWebhooks(ctx, tenantID)
 }
 
-func (s *integrationsService) UpdateWebhook(ctx context.Context, id uuid.UUID, orgID uuid.UUID, url string, events []string, status string) error {
+func (s *integrationsService) UpdateWebhook(ctx context.Context, id uuid.UUID, tenantID uuid.UUID, url string, events []string, status string) error {
 	userID := s.getUserID(ctx)
 	webhook := &models.Webhook{
 		ID:        id,
-		OrgID:     orgID,
+		TenantID:     tenantID,
 		URL:       url,
 		Events:    events,
 		Status:    status,
@@ -199,12 +199,12 @@ func (s *integrationsService) getUserID(ctx context.Context) uuid.UUID {
 	return uid
 }
 
-func (s *integrationsService) DeleteWebhook(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error {
-	return s.repo.DeleteWebhook(ctx, id, orgID)
+func (s *integrationsService) DeleteWebhook(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) error {
+	return s.repo.DeleteWebhook(ctx, id, tenantID)
 }
 
-func (s *integrationsService) ListLogs(ctx context.Context, orgID uuid.UUID, integrationID *uuid.UUID, limit, offset int) ([]*models.IntegrationLog, error) {
-	return s.repo.ListIntegrationLogs(ctx, orgID, integrationID, limit, offset)
+func (s *integrationsService) ListLogs(ctx context.Context, tenantID uuid.UUID, integrationID *uuid.UUID, limit, offset int) ([]*models.IntegrationLog, error) {
+	return s.repo.ListIntegrationLogs(ctx, tenantID, integrationID, limit, offset)
 }
 
 func generateSecureKey(n int) string {

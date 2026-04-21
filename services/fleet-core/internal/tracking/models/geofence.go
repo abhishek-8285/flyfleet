@@ -15,7 +15,7 @@ const (
 // Geofence represents a virtual geographic boundary for an organization.
 type Geofence struct {
 	ID           uuid.UUID  `json:"id"`
-	OrgID        uuid.UUID  `json:"org_id"`
+	TenantID     uuid.UUID  `json:"tenant_id"`
 	Name         string     `json:"name"`
 	Description  string     `json:"description"`
 	Type         string     `json:"type"` // circle | polygon

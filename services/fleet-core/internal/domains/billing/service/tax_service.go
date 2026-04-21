@@ -66,6 +66,6 @@ func NewSequenceService(repo *repository.SequenceRepository, logger *zap.Logger)
 }
 
 // GetNextInvoiceNumber increments and returns the next sequential invoice number
-func (s *SequenceService) GetNextInvoiceNumber(ctx context.Context, orgID uuid.UUID) (string, error) {
-	return s.repo.GetNextInvoiceNumber(ctx, orgID)
+func (s *SequenceService) GetNextInvoiceNumber(ctx context.Context, tenantID uuid.UUID) (string, error) {
+	return s.repo.GetNextInvoiceNumber(ctx, tenantID)
 }

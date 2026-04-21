@@ -191,9 +191,9 @@ func (r *IndiaIntegrationRepositoryImpl) DeleteGSTCompliance(ctx context.Context
 }
 
 // ListGSTCompliances retrieves GST compliance records with filtering
-func (r *IndiaIntegrationRepositoryImpl) ListGSTCompliances(ctx context.Context, orgID uuid.UUID, status *string, limit, offset int) ([]*models.GSTCompliance, int, error) {
+func (r *IndiaIntegrationRepositoryImpl) ListGSTCompliances(ctx context.Context, tenantID uuid.UUID, status *string, limit, offset int) ([]*models.GSTCompliance, int, error) {
 	countQuery := "SELECT COUNT(*) FROM gst_compliances WHERE tenant_id = $1"
-	args := []interface{}{orgID}
+	args := []interface{}{tenantID}
 	argIndex := 2
 
 	whereClause := "WHERE tenant_id = $1"

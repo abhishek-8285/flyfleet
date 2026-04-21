@@ -13,7 +13,7 @@ type IdentifyRequest struct {
 type LoginRequest struct {
 	Email          string `json:"email"`
 	Password       string `json:"password"`
-	OrgID          string `json:"tenant_id"`
+	TenantID          string `json:"tenant_id"`
 	RememberDevice bool   `json:"remember_device"`
 }
 
@@ -42,6 +42,10 @@ type ResetPasswordRequest struct {
 	NewPassword string `json:"new_password"`
 }
 
+type ForcedResetPasswordRequest struct {
+	NewPassword string `json:"new_password"`
+}
+
 type SSOLoginRequest struct {
 	Code  string `json:"code"`
 	State string `json:"state"`
@@ -66,6 +70,13 @@ type InviteUserRequest struct {
 	Email    string      `json:"email"`
 	RoleIDs  []uuid.UUID `json:"role_ids"`
 	Message  string      `json:"message,omitempty"`
+}
+
+type CreateUserRequest struct {
+	Email    string      `json:"email"`
+	Name     string      `json:"name"`
+	Password string      `json:"password"`
+	RoleIDs  []uuid.UUID `json:"role_ids"`
 }
 
 type BulkInviteRequest struct {
@@ -99,13 +110,13 @@ type UpdateRolePermissionsRequest struct {
 type AssignRoleRequest struct {
 	UserID uuid.UUID `json:"user_id"`
 	RoleID uuid.UUID `json:"role_id"`
-	OrgID  uuid.UUID `json:"tenant_id"`
+	TenantID  uuid.UUID `json:"tenant_id"`
 }
 
 type UnassignRoleRequest struct {
 	UserID uuid.UUID `json:"user_id"`
 	RoleID uuid.UUID `json:"role_id"`
-	OrgID  uuid.UUID `json:"tenant_id"`
+	TenantID  uuid.UUID `json:"tenant_id"`
 }
 
 type SetupTOTPRequest struct {
@@ -128,7 +139,7 @@ type DisableMFARequest struct {
 }
 
 type SwitchOrgRequest struct {
-	OrgID string `json:"tenant_id"`
+	TenantID string `json:"tenant_id"`
 }
 
 type ProfileUpdateRequest struct {
@@ -138,6 +149,7 @@ type ProfileUpdateRequest struct {
 }
 
 type ListUsersParams struct {
+	TenantID uuid.UUID
 	Page     int
 	PageSize int
 	Search   string
@@ -161,11 +173,12 @@ type IdentifyResponse struct {
 }
 
 type AuthTokensResponse struct {
-	AccessToken  string     `json:"access_token"`
-	RefreshToken string     `json:"refresh_token"`
-	TokenType    string     `json:"token_type"`
-	ExpiresIn    int        `json:"expires_in"`
-	User         UserInfo   `json:"user"`
+	AccessToken       string     `json:"access_token"`
+	RefreshToken      string     `json:"refresh_token"`
+	TokenType         string     `json:"token_type"`
+	ExpiresIn         int        `json:"expires_in"`
+	User              UserInfo   `json:"user"`
+	MustResetPassword bool       `json:"must_reset_password"`
 }
 
 type MFARequiredResponse struct {
@@ -176,14 +189,15 @@ type MFARequiredResponse struct {
 }
 
 type UserInfo struct {
-	ID           uuid.UUID `json:"id"`
-	Email        string    `json:"email"`
-	Name         string    `json:"name"`
-	AvatarURL    string    `json:"avatar_url,omitempty"`
-	Role         string    `json:"role"`
-	OrgID        uuid.UUID `json:"tenant_id"`
-	OrgName      string    `json:"org_name"`
-	Permissions  []string  `json:"permissions"`
+	ID                uuid.UUID `json:"id"`
+	Email             string    `json:"email"`
+	Name              string    `json:"name"`
+	AvatarURL         string    `json:"avatar_url,omitempty"`
+	Role              string    `json:"role"`
+	TenantID          uuid.UUID `json:"tenant_id"`
+	OrgName           string    `json:"org_name"`
+	Permissions       []string  `json:"permissions"`
+	MustResetPassword bool      `json:"must_reset_password"`
 }
 
 type ProfileResponse struct {

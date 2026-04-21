@@ -54,7 +54,7 @@ const (
 )
 
 // UpdateDutyStatus updates driver's duty status with validation
-func (s *DutyStatusService) UpdateDutyStatus(ctx context.Context, driverID, orgID uuid.UUID, newStatus string, location *models.Location, remarks string) (*models.DutyStatusLog, error) {
+func (s *DutyStatusService) UpdateDutyStatus(ctx context.Context, driverID, tenantID uuid.UUID, newStatus string, location *models.Location, remarks string) (*models.DutyStatusLog, error) {
 	// Validate status
 	validStatuses := map[string]bool{
 		StatusOffDuty:      true,

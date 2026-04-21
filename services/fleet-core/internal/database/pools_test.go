@@ -44,16 +44,16 @@ func TestPoolPoisoningSimulation(t *testing.T) {
 	}
 
 	// 3. The Attack Vector:
-	// The middleware attempts to set "flyfleet.current_org_id = 'malicious'"
+	// The middleware attempts to set "flyfleet.current_tenant_id = 'malicious'"
 	// In strict systems, 'set_config' is used.
-	_, err = conn1.Exec(ctx, "SELECT set_config('flyfleet.current_org_id', 'malicious-org-id', false)")
+	_, err = conn1.Exec(ctx, "SELECT set_config('flyfleet.current_tenant_id', 'malicious-org-id', false)")
 	if err != nil {
 		t.Fatalf("Failed to inject malicious context: %v", err)
 	}
 
 	// Verify the injection took hold
 	var injectedOrg string
-	err = conn1.QueryRow(ctx, "SHOW flyfleet.current_org_id").Scan(&injectedOrg)
+	err = conn1.QueryRow(ctx, "SHOW flyfleet.current_tenant_id").Scan(&injectedOrg)
 	if err != nil {
 		t.Fatalf("Failed to query malicious context: %v", err)
 	}
@@ -62,7 +62,7 @@ func TestPoolPoisoningSimulation(t *testing.T) {
 	}
 
 	// 4. To simulate a "Poisoned Reset" failing, we actually just release the connection.
-	// Our `AfterRelease` uses strict `RESET flyfleet.current_org_id`. This works natively.
+	// Our `AfterRelease` uses strict `RESET flyfleet.current_tenant_id`. This works natively.
 	// We want to prove that the NEXT connection out of the pool DOES NOT have the org.
 	conn1.Release()
 
@@ -74,7 +74,7 @@ func TestPoolPoisoningSimulation(t *testing.T) {
 	defer conn2.Release()
 
 	var cleanOrg string
-	err = conn2.QueryRow(ctx, "SHOW flyfleet.current_org_id").Scan(&cleanOrg)
+	err = conn2.QueryRow(ctx, "SHOW flyfleet.current_tenant_id").Scan(&cleanOrg)
 
 	// In PostgreSQL, SHOW throws an error if the custom variable is unrecognized (unset)
 	// Or it returns empty string if set explicitly to empty.
@@ -86,7 +86,7 @@ func TestPoolPoisoningSimulation(t *testing.T) {
 	} else {
 		// It exists but must be an empty string
 		if cleanOrg != "" {
-			t.Fatalf("FATAL RLS LEAK: Second connection acquired returned org_id '%s' from previous tenant!", cleanOrg)
+			t.Fatalf("FATAL RLS LEAK: Second connection acquired returned tenant_id '%s' from previous tenant!", cleanOrg)
 		}
 	}
 
@@ -96,7 +96,7 @@ func TestPoolPoisoningSimulation(t *testing.T) {
 // TestRLSNoBypass verifies the security fix for CWE-284 (RLS Poisoning)
 // The original code had an optimization that could bypass RLS setup when:
 //
-//	lastOrgID == orgIDStr && userIDStr == "" && roleStr == ""
+//	lastTenantID == tenantIDStr && userIDStr == "" && roleStr == ""
 //
 // This test ensures that bypass condition has been removed and session variables
 // are ALWAYS enforced in BeforeAcquire.
@@ -104,7 +104,7 @@ func TestRLSNoBypass(t *testing.T) {
 	t.Run("BeforeAcquire logic does not contain bypass optimization", func(t *testing.T) {
 		// The fix removes the following pattern:
 		//
-		// if lastOrgID == orgIDStr && userIDStr == "" && roleStr == "" {
+		// if lastTenantID == tenantIDStr && userIDStr == "" && roleStr == "" {
 		//     return true // bypass!
 		// }
 		//
@@ -116,18 +116,18 @@ func TestRLSNoBypass(t *testing.T) {
 		// we document the invariant here and rely on code review.
 
 		// The invariant: BeforeAcquire must always execute the SECURITY-critical
-		// SET config statements for all three session variables (org_id, user_id, role)
+		// SET config statements for all three session variables (tenant_id, user_id, role)
 		// regardless of any connection state caching.
 		t.Log("BeforeAcquire must ALWAYS set session variables; no caching-based bypass exists")
 	})
 
-	t.Run("Context key types are consistent (string org_id, string user_id)", func(t *testing.T) {
-		// Verify that the ctxkeys package uses string types for org_id and user_id
+	t.Run("Context key types are consistent (string tenant_id, string user_id)", func(t *testing.T) {
+		// Verify that the ctxkeys package uses string types for tenant_id and user_id
 		// This prevents type mismatch issues that could cause RLS bypass
-		_ = ctxkeys.OrgIDKey
+		_ = ctxkeys.TenantIDKey
 		_ = ctxkeys.UserIDKey
 		// The keys are of type contextKey (string)
 		// Values stored must be strings per the security fix
-		t.Log("Context keys expect string values for OrgID and UserID")
+		t.Log("Context keys expect string values for TenantID and UserID")
 	})
 }

@@ -41,8 +41,8 @@ func (h *DocumentHandlers) UploadDocument(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeError(w, http.StatusUnauthorized, "Organization ID required")
 		return
 	}
@@ -58,7 +58,7 @@ func (h *DocumentHandlers) UploadDocument(w http.ResponseWriter, r *http.Request
 	}
 
 	uploaderID := h.getUserID(r)
-	doc, err := h.docsSvc.Upload(r.Context(), vehicleID, orgID, &req, uploaderID)
+	doc, err := h.docsSvc.Upload(r.Context(), vehicleID, tenantID, &req, uploaderID)
 	if err != nil {
 		if err.Error() == "vehicle not found" {
 			h.writeError(w, http.StatusNotFound, "Vehicle not found")
@@ -80,13 +80,13 @@ func (h *DocumentHandlers) ListDocuments(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeError(w, http.StatusUnauthorized, "Organization ID required")
 		return
 	}
 
-	docs, err := h.docsSvc.ListDocuments(r.Context(), vehicleID, orgID)
+	docs, err := h.docsSvc.ListDocuments(r.Context(), vehicleID, tenantID)
 	if err != nil {
 		h.logger.Error("list documents failed", zap.Error(err))
 		h.writeError(w, http.StatusInternalServerError, "Failed to list documents")
@@ -106,8 +106,8 @@ func (h *DocumentHandlers) VerifyDocumentHash(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeError(w, http.StatusUnauthorized, "Organization ID required")
 		return
 	}
@@ -118,7 +118,7 @@ func (h *DocumentHandlers) VerifyDocumentHash(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	doc, err := h.docsSvc.GetDocument(r.Context(), docID, orgID)
+	doc, err := h.docsSvc.GetDocument(r.Context(), docID, tenantID)
 	if err != nil {
 		h.logger.Error("get document failed", zap.Error(err))
 		h.writeError(w, http.StatusInternalServerError, "Failed to retrieve document")
@@ -156,8 +156,8 @@ func (h *DocumentHandlers) writeError(w http.ResponseWriter, code int, msg strin
 	h.writeJSON(w, code, map[string]string{"error": msg})
 }
 
-func (h *DocumentHandlers) getOrgID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
+func (h *DocumentHandlers) getTenantID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.TenantIDKey); val != nil {
 		if s, ok := val.(string); ok {
 			if id, err := uuid.Parse(s); err == nil {
 				return id

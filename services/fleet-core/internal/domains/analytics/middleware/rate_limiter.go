@@ -13,7 +13,7 @@ import (
 
 type contextKey string
 
-const OrgIDKey contextKey = "tenant_id"
+const TenantIDKey contextKey = "tenant_id"
 
 // RateLimiter enforces a request quota per organization using Redis
 type RateLimiter struct {
@@ -30,18 +30,18 @@ func NewRateLimiter(c *cache.AnalyticsCache, s analytics.AnalyticsService, l *za
 func (rl *RateLimiter) OrgRateLimit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		orgID, ok := ctx.Value(OrgIDKey).(uuid.UUID)
-		if !ok || orgID == uuid.Nil {
+		tenantID, ok := ctx.Value(TenantIDKey).(uuid.UUID)
+		if !ok || tenantID == uuid.Nil {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		limit, err := rl.service.GetDynamicRateLimit(ctx, orgID)
+		limit, err := rl.service.GetDynamicRateLimit(ctx, tenantID)
 		if err != nil {
 			limit = 10 // Phase 7 fallback
 		}
 
-		key := fmt.Sprintf("rate_limit:%s:%d", orgID.String(), time.Now().Unix())
+		key := fmt.Sprintf("rate_limit:%s:%d", tenantID.String(), time.Now().Unix())
 
 		val, err := rl.cache.Increment(ctx, key, 1*time.Second)
 		if err != nil {
@@ -52,7 +52,7 @@ func (rl *RateLimiter) OrgRateLimit(next http.Handler) http.Handler {
 
 		if int(val) > limit {
 			rl.logger.Warn("Organization rate limit exceeded",
-				zap.String("tenant_id", orgID.String()),
+				zap.String("tenant_id", tenantID.String()),
 				zap.Int("limit", limit))
 			w.Header().Set("Retry-After", "1")
 			http.Error(w, fmt.Sprintf("Organization rate limit exceeded (%d req/sec)", limit), http.StatusTooManyRequests)

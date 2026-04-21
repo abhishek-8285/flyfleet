@@ -76,8 +76,8 @@ func (h *EnterpriseFinanceHandlers) RegisterRoutes(r chi.Router) {
 
 // GenerateEInvoice handles POST /gst/einvoice
 func (h *EnterpriseFinanceHandlers) GenerateEInvoice(w http.ResponseWriter, r *http.Request) {
-	orgID := middleware.GetOrgID(r.Context())
-	if orgID == uuid.Nil {
+	tenantID := middleware.GetTenantID(r.Context())
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
 		return
@@ -87,7 +87,7 @@ func (h *EnterpriseFinanceHandlers) GenerateEInvoice(w http.ResponseWriter, r *h
 		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
 		return
 	}
-	req.OrgID = orgID
+	req.TenantID = tenantID
 
 	inv, err := h.eInvoice.GenerateEInvoice(r.Context(), req)
 	if err != nil {
@@ -121,8 +121,8 @@ func (h *EnterpriseFinanceHandlers) GetEInvoice(w http.ResponseWriter, r *http.R
 
 // DeductTDS handles POST /tds/deduct
 func (h *EnterpriseFinanceHandlers) DeductTDS(w http.ResponseWriter, r *http.Request) {
-	orgID := middleware.GetOrgID(r.Context())
-	if orgID == uuid.Nil {
+	tenantID := middleware.GetTenantID(r.Context())
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
 		return
@@ -132,7 +132,7 @@ func (h *EnterpriseFinanceHandlers) DeductTDS(w http.ResponseWriter, r *http.Req
 		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
 		return
 	}
-	req.OrgID = orgID
+	req.TenantID = tenantID
 
 	record, err := h.tds.DeductTDS(r.Context(), req)
 	if err != nil {
@@ -147,8 +147,8 @@ func (h *EnterpriseFinanceHandlers) DeductTDS(w http.ResponseWriter, r *http.Req
 
 // GetTDSReport handles GET /tds/report?fy=2024-25&quarter=Q1
 func (h *EnterpriseFinanceHandlers) GetTDSReport(w http.ResponseWriter, r *http.Request) {
-	orgID := middleware.GetOrgID(r.Context())
-	if orgID == uuid.Nil {
+	tenantID := middleware.GetTenantID(r.Context())
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
 		return
@@ -156,7 +156,7 @@ func (h *EnterpriseFinanceHandlers) GetTDSReport(w http.ResponseWriter, r *http.
 	fy := r.URL.Query().Get("fy")
 	quarter := r.URL.Query().Get("quarter")
 
-	records, err := h.tds.GetTDSReport(r.Context(), orgID, fy, quarter)
+	records, err := h.tds.GetTDSReport(r.Context(), tenantID, fy, quarter)
 	if err != nil {
 		http.Error(w, `{"error":"failed to get TDS report"}`, http.StatusInternalServerError)
 		return
@@ -171,13 +171,13 @@ func (h *EnterpriseFinanceHandlers) GetTDSReport(w http.ResponseWriter, r *http.
 
 // CreateVendorPayment handles POST /vendors/payments
 func (h *EnterpriseFinanceHandlers) CreateVendorPayment(w http.ResponseWriter, r *http.Request) {
-	orgID := middleware.GetOrgID(r.Context())
-	if orgID == uuid.Nil {
+	tenantID := middleware.GetTenantID(r.Context())
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
 		return
 	}
-	createdBy := orgID // simplified; in production use JWT claims
+	createdBy := tenantID // simplified; in production use JWT claims
 
 	var req models.CreateVendorPaymentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -185,7 +185,7 @@ func (h *EnterpriseFinanceHandlers) CreateVendorPayment(w http.ResponseWriter, r
 		return
 	}
 
-	payment, err := h.vendorPay.CreatePayment(r.Context(), orgID, createdBy, req)
+	payment, err := h.vendorPay.CreatePayment(r.Context(), tenantID, createdBy, req)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
@@ -198,8 +198,8 @@ func (h *EnterpriseFinanceHandlers) CreateVendorPayment(w http.ResponseWriter, r
 
 // ListVendorPayments handles GET /vendors/payments
 func (h *EnterpriseFinanceHandlers) ListVendorPayments(w http.ResponseWriter, r *http.Request) {
-	orgID := middleware.GetOrgID(r.Context())
-	if orgID == uuid.Nil {
+	tenantID := middleware.GetTenantID(r.Context())
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
 		return
@@ -213,7 +213,7 @@ func (h *EnterpriseFinanceHandlers) ListVendorPayments(w http.ResponseWriter, r 
 		}
 	}
 
-	payments, err := h.vendorPay.ListPayments(r.Context(), orgID, vendorID)
+	payments, err := h.vendorPay.ListPayments(r.Context(), tenantID, vendorID)
 	if err != nil {
 		http.Error(w, `{"error":"failed to list payments"}`, http.StatusInternalServerError)
 		return
@@ -233,14 +233,14 @@ func (h *EnterpriseFinanceHandlers) GetTripProfit(w http.ResponseWriter, r *http
 		http.Error(w, `{"error":"invalid trip id"}`, http.StatusBadRequest)
 		return
 	}
-	orgID := middleware.GetOrgID(r.Context())
-	if orgID == uuid.Nil {
+	tenantID := middleware.GetTenantID(r.Context())
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
 		return
 	}
 
-	result, err := h.tripProfit.CalculateTripProfit(r.Context(), tripID, orgID)
+	result, err := h.tripProfit.CalculateTripProfit(r.Context(), tripID, tenantID)
 	if err != nil {
 		http.Error(w, `{"error":"failed to calculate trip profit"}`, http.StatusInternalServerError)
 		return
@@ -252,14 +252,14 @@ func (h *EnterpriseFinanceHandlers) GetTripProfit(w http.ResponseWriter, r *http
 
 // GetFinanceDashboard handles GET /finance/dashboard
 func (h *EnterpriseFinanceHandlers) GetFinanceDashboard(w http.ResponseWriter, r *http.Request) {
-	orgID := middleware.GetOrgID(r.Context())
-	if orgID == uuid.Nil {
+	tenantID := middleware.GetTenantID(r.Context())
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
 		return
 	}
 
-	metrics, err := h.tripProfit.GetDashboardMetrics(r.Context(), orgID)
+	metrics, err := h.tripProfit.GetDashboardMetrics(r.Context(), tenantID)
 	if err != nil {
 		http.Error(w, `{"error":"failed to get dashboard metrics"}`, http.StatusInternalServerError)
 		return
@@ -271,14 +271,14 @@ func (h *EnterpriseFinanceHandlers) GetFinanceDashboard(w http.ResponseWriter, r
 
 // RunReconciliation handles POST /reconciliation/run
 func (h *EnterpriseFinanceHandlers) RunReconciliation(w http.ResponseWriter, r *http.Request) {
-	orgID := middleware.GetOrgID(r.Context())
-	if orgID == uuid.Nil {
+	tenantID := middleware.GetTenantID(r.Context())
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
 		return
 	}
 
-	matched, unmatched, err := h.reconSvc.RunReconciliation(r.Context(), orgID)
+	matched, unmatched, err := h.reconSvc.RunReconciliation(r.Context(), tenantID)
 	if err != nil {
 		http.Error(w, `{"error":"reconciliation failed"}`, http.StatusInternalServerError)
 		return
@@ -307,8 +307,8 @@ func (h *EnterpriseFinanceHandlers) ManualMatch(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	orgID := middleware.GetOrgID(r.Context())
-	if orgID == uuid.Nil {
+	tenantID := middleware.GetTenantID(r.Context())
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
 		return

@@ -28,7 +28,7 @@ type GSTInvoice struct {
 	Status        GSTInvoiceStatus `json:"status" db:"status"`
 	EntityType    string           `json:"entity_type" db:"entity_type"`
 	EntityID      *uuid.UUID       `json:"entity_id,omitempty" db:"entity_id"`
-	OrgID         uuid.UUID        `json:"tenant_id" db:"tenant_id"`
+	TenantID         uuid.UUID        `json:"tenant_id" db:"tenant_id"`
 	GSTIN         string           `json:"gstin" db:"gstin"`
 	BuyerGSTIN    *string          `json:"buyer_gstin,omitempty" db:"buyer_gstin"`
 	TotalAmount   float64          `json:"total_amount" db:"total_amount"`
@@ -44,7 +44,7 @@ type GSTInvoice struct {
 type GenerateEInvoiceRequest struct {
 	EntityType    string    `json:"entity_type" validate:"required,oneof=fuel_transaction expense_report"`
 	EntityID      uuid.UUID `json:"entity_id" validate:"required,uuid"`
-	OrgID         uuid.UUID `json:"tenant_id" validate:"required,uuid"`
+	TenantID         uuid.UUID `json:"tenant_id" validate:"required,uuid"`
 	SellerGSTIN   string    `json:"seller_gstin" validate:"required,len=15"`
 	BuyerGSTIN    *string   `json:"buyer_gstin,omitempty" validate:"omitempty,len=15"`
 	TotalAmount   float64   `json:"total_amount" validate:"required,gt=0"`
@@ -58,7 +58,7 @@ type TDSRecord struct {
 	EntityType     string     `json:"entity_type" db:"entity_type"`
 	EntityID       uuid.UUID  `json:"entity_id" db:"entity_id"`
 	VendorID       *uuid.UUID `json:"vendor_id,omitempty" db:"vendor_id"`
-	OrgID          uuid.UUID  `json:"tenant_id" db:"tenant_id"`
+	TenantID          uuid.UUID  `json:"tenant_id" db:"tenant_id"`
 	PANNumber      *string    `json:"pan_number,omitempty" db:"pan_number"`
 	TDSSection     string     `json:"tds_section" db:"tds_section"`
 	GrossAmount    float64    `json:"gross_amount" db:"gross_amount"`
@@ -77,7 +77,7 @@ type DeductTDSRequest struct {
 	EntityType  string     `json:"entity_type" validate:"required"`
 	EntityID    uuid.UUID  `json:"entity_id" validate:"required,uuid"`
 	VendorID    *uuid.UUID `json:"vendor_id,omitempty"`
-	OrgID       uuid.UUID  `json:"tenant_id" validate:"required,uuid"`
+	TenantID       uuid.UUID  `json:"tenant_id" validate:"required,uuid"`
 	GrossAmount float64    `json:"gross_amount" validate:"required,gt=0"`
 	TDSSection  string     `json:"tds_section" validate:"required"`
 }
@@ -97,7 +97,7 @@ const (
 type VendorPayment struct {
 	ID               uuid.UUID           `json:"id" db:"id"`
 	VendorID         uuid.UUID           `json:"vendor_id" db:"vendor_id"`
-	OrgID            uuid.UUID           `json:"tenant_id" db:"tenant_id"`
+	TenantID            uuid.UUID           `json:"tenant_id" db:"tenant_id"`
 	InvoiceNumber    string              `json:"invoice_number" db:"invoice_number"`
 	Amount           float64             `json:"amount" db:"amount"`
 	TDSDeducted      float64             `json:"tds_deducted" db:"tds_deducted"`
@@ -187,7 +187,7 @@ type FraudIncident struct {
 	ID             uuid.UUID      `json:"id" db:"id"`
 	EntityType     string         `json:"entity_type" db:"entity_type"`
 	EntityID       uuid.UUID      `json:"entity_id" db:"entity_id"`
-	OrgID          uuid.UUID      `json:"tenant_id" db:"tenant_id"`
+	TenantID          uuid.UUID      `json:"tenant_id" db:"tenant_id"`
 	VehicleID      *uuid.UUID     `json:"vehicle_id,omitempty" db:"vehicle_id"`
 	DriverID       *uuid.UUID     `json:"driver_id,omitempty" db:"driver_id"`
 	FraudScore     float64        `json:"fraud_score" db:"fraud_score"`
@@ -205,7 +205,7 @@ type FraudIncident struct {
 type TripProfitability struct {
 	ID              uuid.UUID  `json:"id" db:"id"`
 	TripID          uuid.UUID  `json:"trip_id" db:"trip_id"`
-	OrgID           uuid.UUID  `json:"tenant_id" db:"tenant_id"`
+	TenantID           uuid.UUID  `json:"tenant_id" db:"tenant_id"`
 	VehicleID       *uuid.UUID `json:"vehicle_id,omitempty" db:"vehicle_id"`
 	DriverID        *uuid.UUID `json:"driver_id,omitempty" db:"driver_id"`
 	TripRevenue     float64    `json:"trip_revenue" db:"trip_revenue"`
@@ -225,7 +225,7 @@ type TripProfitability struct {
 // --- Dashboard Metrics ---
 
 type FinanceDashboardMetrics struct {
-	OrgID         uuid.UUID `json:"tenant_id"`
+	TenantID         uuid.UUID `json:"tenant_id"`
 	MetricMonth   time.Time `json:"metric_month"`
 	TotalRevenue  float64   `json:"total_revenue"`
 	TotalFuelCost float64   `json:"total_fuel_cost"`
@@ -249,7 +249,7 @@ type FuelCardReconciliation struct {
 	ID                    uuid.UUID            `json:"id" db:"id"`
 	CardTransactionID     *uuid.UUID           `json:"card_transaction_id,omitempty" db:"card_transaction_id"`
 	InternalTransactionID *uuid.UUID           `json:"internal_transaction_id,omitempty" db:"internal_transaction_id"`
-	OrgID                 uuid.UUID            `json:"tenant_id" db:"tenant_id"`
+	TenantID                 uuid.UUID            `json:"tenant_id" db:"tenant_id"`
 	Status                ReconciliationStatus `json:"status" db:"status"`
 	Variance              float64              `json:"variance" db:"variance"`
 	CardAmount            *float64             `json:"card_amount,omitempty" db:"card_amount"`
@@ -262,7 +262,7 @@ type FuelCardReconciliation struct {
 
 type FuelCardTransaction struct {
 	ID                    uuid.UUID      `json:"id" db:"id"`
-	OrgID                 uuid.UUID      `json:"tenant_id" db:"tenant_id"`
+	TenantID                 uuid.UUID      `json:"tenant_id" db:"tenant_id"`
 	VehicleID             *uuid.UUID     `json:"vehicle_id,omitempty" db:"vehicle_id"`
 	CardID                string         `json:"card_id" db:"card_id"`
 	CardNumber            string         `json:"card_number" db:"card_number"`

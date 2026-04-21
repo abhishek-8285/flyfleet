@@ -33,7 +33,7 @@ func TestCreateGeofence_UnauthorizedWithoutHeaders(t *testing.T) {
 func TestListGeofences_RequiresUserAndOrg(t *testing.T) {
 	r := routerForAuthTests()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	ctx := context.WithValue(req.Context(), sharedmw.OrgIDKey, uuid.New())
+	ctx := context.WithValue(req.Context(), sharedmw.TenantIDKey, uuid.New())
 	req = req.WithContext(ctx)
 	res := httptest.NewRecorder()
 

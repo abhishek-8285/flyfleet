@@ -25,13 +25,13 @@ type mockDispatchService struct {
 	redispatchCalled bool
 }
 
-func (m *mockDispatchService) Assign(ctx context.Context, orgID uuid.UUID, req service.AssignRequest) (*service.AssignResult, error) {
+func (m *mockDispatchService) Assign(ctx context.Context, tenantID uuid.UUID, req service.AssignRequest) (*service.AssignResult, error) {
 	m.assignCalled = true
 	m.lastAssign = req
 	return m.assignResult, m.assignErr
 }
 
-func (m *mockDispatchService) Redispatch(ctx context.Context, orgID uuid.UUID, req service.RedispatchRequest) (*service.RedispatchResult, error) {
+func (m *mockDispatchService) Redispatch(ctx context.Context, tenantID uuid.UUID, req service.RedispatchRequest) (*service.RedispatchResult, error) {
 	m.redispatchCalled = true
 	return nil, nil
 }

@@ -21,8 +21,8 @@ func (h *BillingHandler) ListHardwareProducts(w http.ResponseWriter, r *http.Req
 }
 
 func (h *BillingHandler) AssignHardware(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
 		return
 	}
@@ -33,7 +33,7 @@ func (h *BillingHandler) AssignHardware(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	req.OrgID = orgID
+	req.TenantID = tenantID
 
 	if err := h.validator.Struct(&req); err != nil {
 		h.errorJSON(w, r, "Validation failed: "+err.Error(), http.StatusBadRequest)

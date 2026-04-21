@@ -13,7 +13,7 @@ type IAMRepository interface {
 	CreateUser(ctx context.Context, user *models.User) error
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 	GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, error)
-	GetRolesByOrganization(ctx context.Context, orgID uuid.UUID) ([]*models.Role, error)
+	GetRolesByOrganization(ctx context.Context, tenantID uuid.UUID) ([]*models.Role, error)
 	AssignRole(ctx context.Context, userID, roleID uuid.UUID) error
 	GetPermissionsForUser(ctx context.Context, userID uuid.UUID) ([]*models.Permission, error)
 }
@@ -82,9 +82,9 @@ func (r *iamRepository) GetUserByID(ctx context.Context, userID uuid.UUID) (*mod
 	return user, nil
 }
 
-func (r *iamRepository) GetRolesByOrganization(ctx context.Context, orgID uuid.UUID) ([]*models.Role, error) {
+func (r *iamRepository) GetRolesByOrganization(ctx context.Context, tenantID uuid.UUID) ([]*models.Role, error) {
 	query := `SELECT id, name, tenant_id, description FROM roles WHERE tenant_id = $1 OR tenant_id IS NULL`
-	rows, err := r.db.Query(ctx, query, orgID)
+	rows, err := r.db.Query(ctx, query, tenantID)
 	if err != nil {
 		return nil, err
 	}

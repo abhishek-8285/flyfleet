@@ -60,7 +60,7 @@ func (s *AnalyticsServiceImpl) CreateAnalyticsJob(ctx context.Context, job *mode
 }
 
 // GetAnalyticsJob retrieves an analytics job by ID
-func (s *AnalyticsServiceImpl) GetAnalyticsJob(ctx context.Context, id string, orgID uuid.UUID) (*models.AnalyticsJob, error) {
+func (s *AnalyticsServiceImpl) GetAnalyticsJob(ctx context.Context, id string, tenantID uuid.UUID) (*models.AnalyticsJob, error) {
 	start := time.Now()
 	var err error
 	var res *models.AnalyticsJob
@@ -72,7 +72,7 @@ func (s *AnalyticsServiceImpl) GetAnalyticsJob(ctx context.Context, id string, o
 			rowCount = 1
 		}
 		params := map[string]interface{}{"id": id}
-		s.logQuery(ctx, orgID, "get_analytics_job", params, time.Since(start), rowCount, cacheHit, err)
+		s.logQuery(ctx, tenantID, "get_analytics_job", params, time.Since(start), rowCount, cacheHit, err)
 	}()
 
 	if id == "" {
@@ -82,27 +82,27 @@ func (s *AnalyticsServiceImpl) GetAnalyticsJob(ctx context.Context, id string, o
 
 	if s.cache != nil {
 		params := map[string]interface{}{"id": id}
-		cacheKey := s.cache.GenerateKey(ctx, orgID.String(), "fleet", "", "analytics_job", params)
+		cacheKey := s.cache.GenerateKey(ctx, tenantID.String(), "fleet", "", "analytics_job", params)
 		if exists, _ := s.cache.Get(ctx, cacheKey, &res); exists {
 			cacheHit = true
 			return res, nil
 		}
 
-		res, err = s.repo.GetAnalyticsJob(ctx, id, orgID)
+		res, err = s.repo.GetAnalyticsJob(ctx, id, tenantID)
 		if err == nil && res != nil {
 			params := map[string]interface{}{"id": id}
-			cacheKey := s.cache.GenerateKey(ctx, orgID.String(), "fleet", "", "analytics_job", params)
+			cacheKey := s.cache.GenerateKey(ctx, tenantID.String(), "fleet", "", "analytics_job", params)
 			_ = s.cache.Set(ctx, cacheKey, res, 0)
 		}
 		return res, err
 	}
 
-	res, err = s.repo.GetAnalyticsJob(ctx, id, orgID)
+	res, err = s.repo.GetAnalyticsJob(ctx, id, tenantID)
 	return res, err
 }
 
 // UpdateAnalyticsJob updates an existing analytics job with validation
-func (s *AnalyticsServiceImpl) UpdateAnalyticsJob(ctx context.Context, id string, orgID uuid.UUID, updates map[string]interface{}) error {
+func (s *AnalyticsServiceImpl) UpdateAnalyticsJob(ctx context.Context, id string, tenantID uuid.UUID, updates map[string]interface{}) error {
 	if id == "" {
 		return errors.New("ID is required")
 	}
@@ -110,32 +110,32 @@ func (s *AnalyticsServiceImpl) UpdateAnalyticsJob(ctx context.Context, id string
 		return errors.New("updates are required")
 	}
 
-	err := s.repo.UpdateAnalyticsJob(ctx, id, orgID, updates)
+	err := s.repo.UpdateAnalyticsJob(ctx, id, tenantID, updates)
 	if err == nil && s.cache != nil {
 		params := map[string]interface{}{"id": id}
-		cacheKey := s.cache.GenerateKey(ctx, orgID.String(), "fleet", "", "analytics_job", params)
+		cacheKey := s.cache.GenerateKey(ctx, tenantID.String(), "fleet", "", "analytics_job", params)
 		_ = s.cache.Invalidate(ctx, cacheKey)
 	}
 	return err
 }
 
 // DeleteAnalyticsJob deletes an analytics job
-func (s *AnalyticsServiceImpl) DeleteAnalyticsJob(ctx context.Context, id string, orgID uuid.UUID) error {
+func (s *AnalyticsServiceImpl) DeleteAnalyticsJob(ctx context.Context, id string, tenantID uuid.UUID) error {
 	if id == "" {
 		return errors.New("ID is required")
 	}
 
-	err := s.repo.DeleteAnalyticsJob(ctx, id, orgID)
+	err := s.repo.DeleteAnalyticsJob(ctx, id, tenantID)
 	if err == nil && s.cache != nil {
 		params := map[string]interface{}{"id": id}
-		cacheKey := s.cache.GenerateKey(ctx, orgID.String(), "fleet", "", "analytics_job", params)
+		cacheKey := s.cache.GenerateKey(ctx, tenantID.String(), "fleet", "", "analytics_job", params)
 		_ = s.cache.Invalidate(ctx, cacheKey)
 	}
 	return err
 }
 
 // ListAnalyticsJobs retrieves analytics jobs with filtering
-func (s *AnalyticsServiceImpl) ListAnalyticsJobs(ctx context.Context, jobType *string, status *string, orgID uuid.UUID, cursor string, limit, offset int) ([]*models.AnalyticsJob, int, error) {
+func (s *AnalyticsServiceImpl) ListAnalyticsJobs(ctx context.Context, jobType *string, status *string, tenantID uuid.UUID, cursor string, limit, offset int) ([]*models.AnalyticsJob, int, error) {
 	start := time.Now()
 	var err error
 	var data []*models.AnalyticsJob
@@ -150,10 +150,10 @@ func (s *AnalyticsServiceImpl) ListAnalyticsJobs(ctx context.Context, jobType *s
 		if status != nil {
 			params["status"] = *status
 		}
-		s.logQuery(ctx, orgID, "list_analytics_jobs", params, time.Since(start), len(data), cacheHit, err)
+		s.logQuery(ctx, tenantID, "list_analytics_jobs", params, time.Since(start), len(data), cacheHit, err)
 	}()
 
-	if orgID == uuid.Nil {
+	if tenantID == uuid.Nil {
 		err = errors.New("organization ID is required")
 		return nil, 0, err
 	}
@@ -178,7 +178,7 @@ func (s *AnalyticsServiceImpl) ListAnalyticsJobs(ctx context.Context, jobType *s
 		if status != nil {
 			params["status"] = *status
 		}
-		cacheKey := s.cache.GenerateKey(ctx, orgID.String(), "fleet", "", "list_analytics_jobs", params)
+		cacheKey := s.cache.GenerateKey(ctx, tenantID.String(), "fleet", "", "list_analytics_jobs", params)
 		type listResult struct {
 			Data  []*models.AnalyticsJob
 			Total int
@@ -191,14 +191,14 @@ func (s *AnalyticsServiceImpl) ListAnalyticsJobs(ctx context.Context, jobType *s
 			return data, total, nil
 		}
 
-		data, total, err = s.repo.ListAnalyticsJobs(ctx, jobType, status, orgID, cursor, limit, offset)
+		data, total, err = s.repo.ListAnalyticsJobs(ctx, jobType, status, tenantID, cursor, limit, offset)
 		if err == nil {
 			_ = s.cache.Set(ctx, cacheKey, listResult{Data: data, Total: total}, 0)
 		}
 		return data, total, err
 	}
 
-	data, total, err = s.repo.ListAnalyticsJobs(ctx, jobType, status, orgID, cursor, limit, offset)
+	data, total, err = s.repo.ListAnalyticsJobs(ctx, jobType, status, tenantID, cursor, limit, offset)
 	return data, total, err
 }
 

@@ -9,8 +9,8 @@ import (
 )
 
 func (h *BillingHandler) ProrateUpgrade(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
 		return
 	}
@@ -24,8 +24,8 @@ func (h *BillingHandler) ProrateUpgrade(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := h.advSubService.UpgradePlan(r.Context(), orgID, req.NewPlanID); err != nil {
-		h.logger.Error("Failed to upgrade plan with proration", zap.Error(err), zap.String("tenant_id", orgID.String()))
+	if err := h.advSubService.UpgradePlan(r.Context(), tenantID, req.NewPlanID); err != nil {
+		h.logger.Error("Failed to upgrade plan with proration", zap.Error(err), zap.String("tenant_id", tenantID.String()))
 		h.errorJSON(w, r, "Failed to upgrade plan: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -34,8 +34,8 @@ func (h *BillingHandler) ProrateUpgrade(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *BillingHandler) RedeemCoupon(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
 		return
 	}
@@ -51,8 +51,8 @@ func (h *BillingHandler) RedeemCoupon(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.advSubService.RedeemCoupon(r.Context(), orgID, req.Code, req.SubscriptionID, req.InvoiceID); err != nil {
-		h.logger.Error("Failed to redeem coupon", zap.Error(err), zap.String("tenant_id", orgID.String()), zap.String("code", req.Code))
+	if err := h.advSubService.RedeemCoupon(r.Context(), tenantID, req.Code, req.SubscriptionID, req.InvoiceID); err != nil {
+		h.logger.Error("Failed to redeem coupon", zap.Error(err), zap.String("tenant_id", tenantID.String()), zap.String("code", req.Code))
 		h.errorJSON(w, r, "Failed to redeem coupon: "+err.Error(), http.StatusBadRequest)
 		return
 	}

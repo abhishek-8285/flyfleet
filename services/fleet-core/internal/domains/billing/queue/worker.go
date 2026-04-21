@@ -20,7 +20,7 @@ import (
 
 // BillingConfigProvider defines the interface needed for organization branding
 type BillingConfigProvider interface {
-	GetConfig(ctx context.Context, orgID uuid.UUID) (*models.BillingConfiguration, error)
+	GetConfig(ctx context.Context, tenantID uuid.UUID) (*models.BillingConfiguration, error)
 }
 
 // DocumentProvider defines the interface for invoice document storage
@@ -91,10 +91,10 @@ func (w *InvoiceWorker) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	}
 
 	// 2. Fetch Branding Config
-	config, err := w.billingConfigService.GetConfig(ctx, invoice.OrgID)
+	config, err := w.billingConfigService.GetConfig(ctx, invoice.TenantID)
 	if err != nil {
-		w.logger.Warn("Failed to fetch billing config, using defaults", zap.Error(err), zap.String("tenant_id", invoice.OrgID.String()))
-		config = models.DefaultBillingConfig(invoice.OrgID)
+		w.logger.Warn("Failed to fetch billing config, using defaults", zap.Error(err), zap.String("tenant_id", invoice.TenantID.String()))
+		config = models.DefaultBillingConfig(invoice.TenantID)
 	}
 
 	// 3. Fetch Compiled Template

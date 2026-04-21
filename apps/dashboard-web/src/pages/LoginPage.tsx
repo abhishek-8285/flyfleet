@@ -100,7 +100,7 @@ const OrgSelectStep: React.FC = () => {
         organization: switchData.organization,
         user: {
            ...completeAuthData.user,
-           org_id: orgId,
+           tenant_id: orgId,        // MUST be tenant_id — finishAuth reads this
            orgName: switchData.organization?.name,
         }
       };
@@ -397,13 +397,18 @@ const Login: React.FC = () => {
     const refreshTokenResult = authData.refresh_token || "";
 
     if (responseOrgId) {
-      localStorage.setItem('org_id', responseOrgId);
+      localStorage.setItem('tenant_id', responseOrgId);  // MUST be tenant_id — apiClient reads this key
     }
 
     login(token, refreshTokenResult, userData);
 
     if (rememberMe) {
       localStorage.setItem("remembered_email", emailOrPhone);
+    }
+
+    if (authData.must_reset_password || authData.user?.must_reset_password) {
+      navigate("/reset-password-forced");
+      return;
     }
 
     const role = (authData.user?.role_id || authData.user?.role || "").toLowerCase();

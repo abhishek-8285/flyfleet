@@ -35,7 +35,7 @@ func NewNATSPublisher(url string, logger *zap.Logger) (*NATSPublisher, error) {
 }
 
 func (p *NATSPublisher) Publish(ctx context.Context, eventType string, payload interface{}) error {
-	orgID, _ := middleware.GetOrgID(ctx)
+	tenantID, _ := middleware.GetTenantID(ctx)
 
 	event := domain.Event{
 		ID:        uuid.New(),
@@ -44,7 +44,7 @@ func (p *NATSPublisher) Publish(ctx context.Context, eventType string, payload i
 		Source:    "billing-service",
 		Payload:   payload,
 		Metadata: domain.Metadata{
-			OrgID: orgID,
+			TenantID: tenantID,
 		},
 	}
 

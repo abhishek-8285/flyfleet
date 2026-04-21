@@ -46,7 +46,7 @@ func (r *AnalyticsRepositoryImpl) CreateFleetAnalytics(ctx context.Context, anal
 }
 
 // GetFleetAnalytics retrieves fleet analytics by ID
-func (r *AnalyticsRepositoryImpl) GetFleetAnalytics(ctx context.Context, id string, orgID uuid.UUID) (*models.FleetAnalytics, error) {
+func (r *AnalyticsRepositoryImpl) GetFleetAnalytics(ctx context.Context, id string, tenantID uuid.UUID) (*models.FleetAnalytics, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := `
@@ -62,7 +62,7 @@ func (r *AnalyticsRepositoryImpl) GetFleetAnalytics(ctx context.Context, id stri
 
 	var analytics models.FleetAnalytics
 
-	err := r.db.QueryRow(ctx, query, id, orgID).Scan(
+	err := r.db.QueryRow(ctx, query, id, tenantID).Scan(
 		&analytics.ID, &analytics.OrganizationID, &analytics.StartDate, &analytics.EndDate,
 		&analytics.TotalVehicles, &analytics.ActiveVehicles, &analytics.TotalDistance,
 		&analytics.AverageSpeed, &analytics.TotalFuelConsumption, &analytics.AverageFuelEfficiency,
@@ -85,7 +85,7 @@ func (r *AnalyticsRepositoryImpl) GetFleetAnalytics(ctx context.Context, id stri
 }
 
 // GetFleetAnalyticsByPeriod retrieves fleet analytics by organization and date period
-func (r *AnalyticsRepositoryImpl) GetFleetAnalyticsByPeriod(ctx context.Context, orgID uuid.UUID, startDate, endDate time.Time) (*models.FleetAnalytics, error) {
+func (r *AnalyticsRepositoryImpl) GetFleetAnalyticsByPeriod(ctx context.Context, tenantID uuid.UUID, startDate, endDate time.Time) (*models.FleetAnalytics, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := `
@@ -102,7 +102,7 @@ func (r *AnalyticsRepositoryImpl) GetFleetAnalyticsByPeriod(ctx context.Context,
 
 	var analytics models.FleetAnalytics
 
-	err := r.db.QueryRow(ctx, query, orgID, startDate, endDate).Scan(
+	err := r.db.QueryRow(ctx, query, tenantID, startDate, endDate).Scan(
 		&analytics.ID, &analytics.OrganizationID, &analytics.StartDate, &analytics.EndDate,
 		&analytics.TotalVehicles, &analytics.ActiveVehicles, &analytics.TotalDistance,
 		&analytics.AverageSpeed, &analytics.TotalFuelConsumption, &analytics.AverageFuelEfficiency,
@@ -125,7 +125,7 @@ func (r *AnalyticsRepositoryImpl) GetFleetAnalyticsByPeriod(ctx context.Context,
 }
 
 // UpdateFleetAnalytics updates existing fleet analytics
-func (r *AnalyticsRepositoryImpl) UpdateFleetAnalytics(ctx context.Context, id string, orgID uuid.UUID, updates map[string]interface{}) error {
+func (r *AnalyticsRepositoryImpl) UpdateFleetAnalytics(ctx context.Context, id string, tenantID uuid.UUID, updates map[string]interface{}) error {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	setParts := []string{}
@@ -146,7 +146,7 @@ func (r *AnalyticsRepositoryImpl) UpdateFleetAnalytics(ctx context.Context, id s
 		return errors.New("no updates provided")
 	}
 
-	args = append(args, id, orgID)
+	args = append(args, id, tenantID)
 	query := fmt.Sprintf("UPDATE fleet_analytics SET %s WHERE id = $%d AND organization_id = $%d",
 		strings.Join(setParts, ", "), argIndex, argIndex+1)
 
@@ -158,11 +158,11 @@ func (r *AnalyticsRepositoryImpl) UpdateFleetAnalytics(ctx context.Context, id s
 }
 
 // DeleteFleetAnalytics deletes fleet analytics
-func (r *AnalyticsRepositoryImpl) DeleteFleetAnalytics(ctx context.Context, id string, orgID uuid.UUID) error {
+func (r *AnalyticsRepositoryImpl) DeleteFleetAnalytics(ctx context.Context, id string, tenantID uuid.UUID) error {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := "DELETE FROM fleet_analytics WHERE id = $1 AND organization_id = $2"
-	_, err := r.db.Exec(ctx, query, id, orgID)
+	_, err := r.db.Exec(ctx, query, id, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to delete fleet analytics %s: %w", id, err)
 	}
@@ -170,7 +170,7 @@ func (r *AnalyticsRepositoryImpl) DeleteFleetAnalytics(ctx context.Context, id s
 }
 
 // ListFleetAnalytics retrieves fleet analytics with filtering
-func (r *AnalyticsRepositoryImpl) ListFleetAnalytics(ctx context.Context, orgID uuid.UUID, startDate, endDate *time.Time, cursor string, limit, offset int) ([]*models.FleetAnalytics, int, error) {
+func (r *AnalyticsRepositoryImpl) ListFleetAnalytics(ctx context.Context, tenantID uuid.UUID, startDate, endDate *time.Time, cursor string, limit, offset int) ([]*models.FleetAnalytics, int, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 
@@ -197,7 +197,7 @@ func (r *AnalyticsRepositoryImpl) ListFleetAnalytics(ctx context.Context, orgID 
 	`
 	countQuery := `SELECT COUNT(*) FROM fleet_analytics WHERE organization_id = $1`
 
-	args := []interface{}{orgID}
+	args := []interface{}{tenantID}
 	argIndex := 2
 	var conditions []string
 

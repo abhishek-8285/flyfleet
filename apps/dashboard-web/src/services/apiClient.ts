@@ -48,20 +48,20 @@ apiClient.interceptors.request.use(
       }
     }
 
-    // Get org_id from localStorage (user preference, not security-critical)
-    let orgId = localStorage.getItem('org_id');
+    // Get tenant_id from localStorage (user preference, not security-critical)
+    let tenantId = localStorage.getItem('tenant_id');
 
-    // If org_id is not in localStorage but we have user data in Redux, use that
-    // Normalization: check both org_id and tenant_id
-    if (!orgId) {
-      if (state.auth.user?.org_id) {
-        orgId = state.auth.user.org_id;
-      } else if ((state.auth.user as any)?.tenant_id) {
-        orgId = (state.auth.user as any).tenant_id;
+    // If tenant_id is not in localStorage but we have user data in Redux, use that
+    // Normalization: check both tenant_id and org_id
+    if (!tenantId) {
+      if ((state.auth.user as any)?.tenant_id) {
+        tenantId = (state.auth.user as any).tenant_id;
+      } else if (state.auth.user?.org_id) {
+        tenantId = state.auth.user.org_id;
       }
       
-      if (orgId) {
-        localStorage.setItem('org_id', orgId);
+      if (tenantId) {
+        localStorage.setItem('tenant_id', tenantId);
       }
     }
 
@@ -69,11 +69,11 @@ apiClient.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    if (orgId && token) {
-      config.headers['X-Org-ID'] = orgId;
-      console.log('[apiClient] Authenticated request with org_id:', orgId, 'to:', config.url);
-    } else if (orgId) {
-      console.debug('[apiClient] Public request context — suppressing X-Org-ID for:', config.url);
+    if (tenantId && token) {
+      config.headers['X-Tenant-ID'] = tenantId;
+      console.log('[apiClient] Authenticated request with tenant_id:', tenantId, 'to:', config.url);
+    } else if (tenantId) {
+      console.debug('[apiClient] Public request context — suppressing X-Tenant-ID for:', config.url);
     }
 
     const traceId = createTraceId();
@@ -121,16 +121,17 @@ apiClient.interceptors.response.use(
     const configUrl = response.config?.url || '';
     
     if (configUrl.includes('/auth/')) {
-      // Normalization: Handle both org_id and tenant_id in both flat and nested structures
+      // Normalization: Handle both tenant_id and org_id in both flat and nested structures
       const userPayload = responseData?.user || responseData;
-      const orgId = userPayload?.org_id || 
-                    userPayload?.tenant_id || 
+      const tenantId = userPayload?.tenant_id || 
+                    userPayload?.org_id || 
                     responseData?.organization?.id || 
+                    responseData?.organization?.tenant_id ||
                     responseData?.organization?.org_id;
 
-      if (orgId) {
-        localStorage.setItem('org_id', orgId);
-        console.log('[apiClient] ✅ Stored normalized org_id from', configUrl, ':', orgId);
+      if (tenantId) {
+        localStorage.setItem('tenant_id', tenantId);
+        console.log('[apiClient] ✅ Stored normalized tenant_id from', configUrl, ':', tenantId);
       }
     }
     return responseData;
@@ -162,14 +163,14 @@ apiClient.interceptors.response.use(
       try {
         // Refresh using the stored refresh_token from localStorage
         const refreshToken = localStorage.getItem('refresh_token');
-        const orgId = localStorage.getItem('org_id');
+        const tenantId = localStorage.getItem('tenant_id');
         const res = await axios.post(
           `${API_URL}/auth/refresh`,
           { refresh_token: refreshToken },
           {
             headers: {
               'Content-Type': 'application/json',
-              'X-Org-ID': orgId || '',
+              'X-Tenant-ID': tenantId || '',
             },
           }
         );
@@ -199,7 +200,7 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         isRefreshing = false;
-        if (window.location.pathname !== '/login') {
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/session-expired') {
           store.dispatch(setToken(null));
           store.dispatch(setUser(null));
           // Clear cookie on refresh failure
@@ -208,7 +209,7 @@ apiClient.interceptors.response.use(
           } catch (e) {
             // Ignore logout errors
           }
-          window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+          window.location.href = `/session-expired?redirect=${encodeURIComponent(window.location.pathname)}`;
         }
         return Promise.reject(refreshError);
       }

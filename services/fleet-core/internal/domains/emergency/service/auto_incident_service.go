@@ -64,7 +64,7 @@ func (s *AutoIncidentService) Start(ctx context.Context) error {
 func (s *AutoIncidentService) handleImpactEvent(m *nats.Msg) {
 	var event struct {
 		VehicleID string  `json:"vehicle_id"`
-		OrgID     string  `json:"tenant_id"` // Present but should NOT be trusted
+		TenantID     string  `json:"tenant_id"` // Present but should NOT be trusted
 		GForce    float64 `json:"g_force"`
 		Lat       float64 `json:"lat"`
 		Lng       float64 `json:"lng"`
@@ -96,30 +96,30 @@ func (s *AutoIncidentService) handleImpactEvent(m *nats.Msg) {
 			return
 		}
 
-		parsedOrgID, err := uuid.Parse(event.OrgID)
+		parsedTenantID, err := uuid.Parse(event.TenantID)
 		if err != nil {
-			s.log.Error("Invalid tenant_id in impact event", zap.String("vehicle_id", event.VehicleID), zap.String("raw_org_id", event.OrgID))
+			s.log.Error("Invalid tenant_id in impact event", zap.String("vehicle_id", event.VehicleID), zap.String("raw_tenant_id", event.TenantID))
 			return
 		}
 
 		// CRITICAL SECURITY CHECK: Ensure the tenant_id from message matches vehicle's actual org
-		if vehicle.TenantID != parsedOrgID {
+		if vehicle.TenantID != parsedTenantID {
 			s.log.Error("Cross-tenant message injection attempt detected!",
 				zap.String("vehicle_id", event.VehicleID),
-				zap.String("msg_org", event.OrgID),
+				zap.String("msg_org", event.TenantID),
 				zap.String("actual_org", vehicle.TenantID.String()),
 				zap.Float64("g_force", event.GForce))
 			return // Reject - possible spoofing attack
 		}
 
-		s.triggerAutoIncident(event.VehicleID, parsedOrgID.String(), models.TypeVehicleAccident, event.Lat, event.Lng, "Automated crash detection (High G-Force)")
+		s.triggerAutoIncident(event.VehicleID, parsedTenantID.String(), models.TypeVehicleAccident, event.Lat, event.Lng, "Automated crash detection (High G-Force)")
 	}
 }
 
 func (s *AutoIncidentService) handleRolloverEvent(m *nats.Msg) {
 	var event struct {
 		VehicleID string  `json:"vehicle_id"`
-		OrgID     string  `json:"tenant_id"`
+		TenantID     string  `json:"tenant_id"`
 		Lat       float64 `json:"lat"`
 		Lng       float64 `json:"lng"`
 	}
@@ -148,28 +148,28 @@ func (s *AutoIncidentService) handleRolloverEvent(m *nats.Msg) {
 		return
 	}
 
-	parsedOrgID, err := uuid.Parse(event.OrgID)
+	parsedTenantID, err := uuid.Parse(event.TenantID)
 	if err != nil {
-		s.log.Error("Invalid tenant_id in rollover event", zap.String("vehicle_id", event.VehicleID), zap.String("raw_org_id", event.OrgID))
+		s.log.Error("Invalid tenant_id in rollover event", zap.String("vehicle_id", event.VehicleID), zap.String("raw_tenant_id", event.TenantID))
 		return
 	}
 
 	// CRITICAL SECURITY CHECK: Ensure org ownership
-	if vehicle.TenantID != parsedOrgID {
+	if vehicle.TenantID != parsedTenantID {
 		s.log.Error("Cross-tenant message injection attempt detected!",
 			zap.String("vehicle_id", event.VehicleID),
-			zap.String("msg_org", event.OrgID),
+			zap.String("msg_org", event.TenantID),
 			zap.String("actual_org", vehicle.TenantID.String()))
 		return
 	}
 
-	s.triggerAutoIncident(event.VehicleID, parsedOrgID.String(), models.TypeVehicleAccident, event.Lat, event.Lng, "Automated rollover detection")
+	s.triggerAutoIncident(event.VehicleID, parsedTenantID.String(), models.TypeVehicleAccident, event.Lat, event.Lng, "Automated rollover detection")
 }
 
 func (s *AutoIncidentService) handleFireEvent(m *nats.Msg) {
 	var event struct {
 		VehicleID string  `json:"vehicle_id"`
-		OrgID     string  `json:"tenant_id"`
+		TenantID     string  `json:"tenant_id"`
 		Lat       float64 `json:"lat"`
 		Lng       float64 `json:"lng"`
 	}
@@ -198,30 +198,30 @@ func (s *AutoIncidentService) handleFireEvent(m *nats.Msg) {
 		return
 	}
 
-	parsedOrgID, err := uuid.Parse(event.OrgID)
+	parsedTenantID, err := uuid.Parse(event.TenantID)
 	if err != nil {
-		s.log.Error("Invalid tenant_id in fire event", zap.String("vehicle_id", event.VehicleID), zap.String("raw_org_id", event.OrgID))
+		s.log.Error("Invalid tenant_id in fire event", zap.String("vehicle_id", event.VehicleID), zap.String("raw_tenant_id", event.TenantID))
 		return
 	}
 
 	// CRITICAL SECURITY CHECK: Ensure org ownership
-	if vehicle.TenantID != parsedOrgID {
+	if vehicle.TenantID != parsedTenantID {
 		s.log.Error("Cross-tenant message injection attempt detected!",
 			zap.String("vehicle_id", event.VehicleID),
-			zap.String("msg_org", event.OrgID),
+			zap.String("msg_org", event.TenantID),
 			zap.String("actual_org", vehicle.TenantID.String()))
 		return
 	}
 
-	s.triggerAutoIncident(event.VehicleID, parsedOrgID.String(), models.TypeFireAlert, event.Lat, event.Lng, "Automated engine fire detection")
+	s.triggerAutoIncident(event.VehicleID, parsedTenantID.String(), models.TypeFireAlert, event.Lat, event.Lng, "Automated engine fire detection")
 }
 
-func (s *AutoIncidentService) triggerAutoIncident(vehicleID, orgID string, incidentType models.IncidentType, lat, lng float64, notes string) {
-	parsedOrgID, _ := uuid.Parse(orgID)
+func (s *AutoIncidentService) triggerAutoIncident(vehicleID, tenantID string, incidentType models.IncidentType, lat, lng float64, notes string) {
+	parsedTenantID, _ := uuid.Parse(tenantID)
 
 	req := models.CreateSOSRequest{
 		VehicleID:       vehicleID,
-		OrgID:           parsedOrgID,
+		TenantID:           parsedTenantID,
 		IncidentType:    incidentType,
 		PanicSource:     models.SourceTelematics,
 		Latitude:        lat,

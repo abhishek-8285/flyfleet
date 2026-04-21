@@ -19,8 +19,8 @@ func (h *BillingHandler) IssueCreditNote(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	req.CreditNote.OrgID = h.getOrgID(r)
-	if req.CreditNote.OrgID == uuid.Nil {
+	req.CreditNote.TenantID = h.getTenantID(r)
+	if req.CreditNote.TenantID == uuid.Nil {
 		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
 		return
 	}
@@ -36,8 +36,8 @@ func (h *BillingHandler) IssueCreditNote(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *BillingHandler) ListCreditNotes(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
 		return
 	}
@@ -45,7 +45,7 @@ func (h *BillingHandler) ListCreditNotes(w http.ResponseWriter, r *http.Request)
 	page := h.readInt(r, "page", 1)
 	size := h.readInt(r, "size", 20)
 
-	results, total, err := h.creditNoteService.ListCreditNotes(r.Context(), orgID, page, size)
+	results, total, err := h.creditNoteService.ListCreditNotes(r.Context(), tenantID, page, size)
 	if err != nil {
 		h.logger.Error("Failed to list credit notes", zap.Error(err))
 		h.errorJSON(w, r, err.Error(), http.StatusInternalServerError)

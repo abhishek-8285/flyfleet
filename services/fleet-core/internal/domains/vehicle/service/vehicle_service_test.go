@@ -30,8 +30,8 @@ func (m *MockVehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*mod
 	return args.Get(0).(*models.Vehicle), args.Error(1)
 }
 
-func (m *MockVehicleRepository) GetByOrgID(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.Vehicle, int64, error) {
-	args := m.Called(ctx, orgID, limit, offset)
+func (m *MockVehicleRepository) GetByTenantID(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.Vehicle, int64, error) {
+	args := m.Called(ctx, tenantID, limit, offset)
 	if args.Get(0) == nil {
 		return nil, 0, args.Error(2)
 	}
@@ -43,13 +43,13 @@ func (m *MockVehicleRepository) Update(ctx context.Context, vehicle *models.Vehi
 	return args.Error(0)
 }
 
-func (m *MockVehicleRepository) Delete(ctx context.Context, id, orgID uuid.UUID) error {
-	args := m.Called(ctx, id, orgID)
+func (m *MockVehicleRepository) Delete(ctx context.Context, id, tenantID uuid.UUID) error {
+	args := m.Called(ctx, id, tenantID)
 	return args.Error(0)
 }
 
-func (m *MockVehicleRepository) AssignDriver(ctx context.Context, vehicleID, orgID, driverID uuid.UUID) error {
-	args := m.Called(ctx, vehicleID, orgID, driverID)
+func (m *MockVehicleRepository) AssignDriver(ctx context.Context, vehicleID, tenantID, driverID uuid.UUID) error {
+	args := m.Called(ctx, vehicleID, tenantID, driverID)
 	return args.Error(0)
 }
 
@@ -77,8 +77,8 @@ func (m *MockVehicleRepository) Search(ctx context.Context, params models.Vehicl
 	return args.Get(0).([]*models.Vehicle), args.Get(1).(int64), args.Error(2)
 }
 
-func (m *MockVehicleRepository) IsGPSAvailable(ctx context.Context, orgID uuid.UUID, deviceID string, excludingVehicleID *uuid.UUID) (bool, string, error) {
-	args := m.Called(ctx, orgID, deviceID, excludingVehicleID)
+func (m *MockVehicleRepository) IsGPSAvailable(ctx context.Context, tenantID uuid.UUID, deviceID string, excludingVehicleID *uuid.UUID) (bool, string, error) {
+	args := m.Called(ctx, tenantID, deviceID, excludingVehicleID)
 	return args.Bool(0), args.String(1), args.Error(2)
 }
 
@@ -92,7 +92,7 @@ func setupTestService(t *testing.T) (*VehicleService, *MockVehicleRepository) {
 func TestVehicleService_CreateVehicle_Success(t *testing.T) {
 	service, mockRepo := setupTestService(t)
 	ctx := context.Background()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
 	req := &models.CreateVehicleRequest{
 		RegistrationNumber: "ABC-1234",
@@ -102,22 +102,22 @@ func TestVehicleService_CreateVehicle_Success(t *testing.T) {
 	}
 
 	// Expect uniqueness check first (returns nil = not found)
-	mockRepo.On("GetByRegistrationNumber", ctx, orgID, "ABC-1234").Return(nil, nil)
+	mockRepo.On("GetByRegistrationNumber", ctx, tenantID, "ABC-1234").Return(nil, nil)
 	mockRepo.On("Create", ctx, mock.Anything).Return(nil)
 
-	vehicle, err := service.CreateVehicle(ctx, req, orgID)
+	vehicle, err := service.CreateVehicle(ctx, req, tenantID)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, vehicle)
 	assert.Equal(t, "ABC-1234", vehicle.RegistrationNumber)
 	assert.Equal(t, models.StatusActive, vehicle.Status)
-	assert.Equal(t, orgID, vehicle.TenantID)
+	assert.Equal(t, tenantID, vehicle.TenantID)
 	mockRepo.AssertExpectations(t)
 }
 
 func TestVehicleService_CreateVehicle_InvalidYear(t *testing.T) {
 	ctx := context.Background()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
 	req := &models.CreateVehicleRequest{
 		RegistrationNumber: "ABC-1234",
@@ -129,10 +129,10 @@ func TestVehicleService_CreateVehicle_InvalidYear(t *testing.T) {
 	mockRepo := &MockVehicleRepository{}
 	service := NewVehicleService(mockRepo, zap.NewNop())
 	// Returns nil = not duplicate
-	mockRepo.On("GetByRegistrationNumber", ctx, orgID, "ABC-1234").Return(nil, nil)
+	mockRepo.On("GetByRegistrationNumber", ctx, tenantID, "ABC-1234").Return(nil, nil)
 	mockRepo.On("Create", ctx, mock.Anything).Return(nil)
 
-	vehicle, err := service.CreateVehicle(ctx, req, orgID)
+	vehicle, err := service.CreateVehicle(ctx, req, tenantID)
 
 	// Service doesn't validate year directly — that's handler's job
 	assert.NoError(t, err)
@@ -179,16 +179,16 @@ func TestVehicleService_GetVehicle_NotFound(t *testing.T) {
 func TestVehicleService_ListVehicles_Success(t *testing.T) {
 	service, mockRepo := setupTestService(t)
 	ctx := context.Background()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
 	expectedVehicles := []*models.Vehicle{
 		{ID: uuid.New(), RegistrationNumber: "ABC-1234"},
 		{ID: uuid.New(), RegistrationNumber: "XYZ-5678"},
 	}
 
-	mockRepo.On("GetByOrgID", ctx, orgID, 20, 0).Return(expectedVehicles, int64(2), nil)
+	mockRepo.On("GetByTenantID", ctx, tenantID, 20, 0).Return(expectedVehicles, int64(2), nil)
 
-	vehicles, total, err := service.ListVehicles(ctx, orgID, 1, 20)
+	vehicles, total, err := service.ListVehicles(ctx, tenantID, 1, 20)
 
 	assert.NoError(t, err)
 	assert.Len(t, vehicles, 2)
@@ -246,18 +246,18 @@ func TestVehicleService_DeleteVehicle_Success(t *testing.T) {
 	service, mockRepo := setupTestService(t)
 	ctx := context.Background()
 	vehicleID := uuid.New()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
 	// DeleteVehicle first calls GetByID to check status
 	existingVehicle := &models.Vehicle{
 		ID:       vehicleID,
-		TenantID: orgID,
+		TenantID: tenantID,
 		Status:   models.StatusActive,
 	}
 	mockRepo.On("GetByID", ctx, vehicleID).Return(existingVehicle, nil)
-	mockRepo.On("Delete", ctx, vehicleID, orgID).Return(nil)
+	mockRepo.On("Delete", ctx, vehicleID, tenantID).Return(nil)
 
-	err := service.DeleteVehicle(ctx, vehicleID, orgID)
+	err := service.DeleteVehicle(ctx, vehicleID, tenantID)
 
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
@@ -267,12 +267,12 @@ func TestVehicleService_DeleteVehicle_NotFound(t *testing.T) {
 	service, mockRepo := setupTestService(t)
 	ctx := context.Background()
 	vehicleID := uuid.New()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
 	// GetByID returns not-found first
 	mockRepo.On("GetByID", ctx, vehicleID).Return(nil, ErrVehicleNotFound)
 
-	err := service.DeleteVehicle(ctx, vehicleID, orgID)
+	err := service.DeleteVehicle(ctx, vehicleID, tenantID)
 
 	assert.Error(t, err)
 	mockRepo.AssertExpectations(t)
@@ -282,19 +282,19 @@ func TestVehicleService_AssignDriver_Success(t *testing.T) {
 	service, mockRepo := setupTestService(t)
 	ctx := context.Background()
 	vehicleID := uuid.New()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	driverID := uuid.New()
 
 	updatedVehicle := &models.Vehicle{
 		ID:       vehicleID,
-		TenantID: orgID,
+		TenantID: tenantID,
 		Status:   models.StatusActive,
 	}
 
-	mockRepo.On("AssignDriver", ctx, vehicleID, orgID, driverID).Return(nil)
+	mockRepo.On("AssignDriver", ctx, vehicleID, tenantID, driverID).Return(nil)
 	mockRepo.On("GetByID", ctx, vehicleID).Return(updatedVehicle, nil)
 
-	vehicle, err := service.AssignDriver(ctx, vehicleID, orgID, driverID)
+	vehicle, err := service.AssignDriver(ctx, vehicleID, tenantID, driverID)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, vehicle)

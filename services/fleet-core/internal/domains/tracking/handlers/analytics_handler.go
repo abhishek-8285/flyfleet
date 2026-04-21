@@ -45,8 +45,8 @@ func (ah *AnalyticsHandler) errorJSON(w http.ResponseWriter, message string, sta
 
 // GetVehicleAnalytics handles GET /analytics/vehicle/:id
 func (ah *AnalyticsHandler) GetVehicleAnalytics(w http.ResponseWriter, r *http.Request) {
-	orgID := middleware.GetOrgID(r.Context())
-	if orgID == "" {
+	tenantID := middleware.GetTenantID(r.Context())
+	if tenantID == "" {
 		ah.errorJSON(w, "missing organization context", http.StatusForbidden)
 		return
 	}
@@ -61,8 +61,8 @@ func (ah *AnalyticsHandler) GetVehicleAnalytics(w http.ResponseWriter, r *http.R
 	startTime := time.Now().AddDate(0, 0, -7)
 	endTime := time.Now()
 
-	// Process analytics (RLS-enforced via OrgID and Transaction)
-	err = ah.analytics.ProcessAdvancedAnalytics(r.Context(), orgID, vehicleID, startTime, endTime)
+	// Process analytics (RLS-enforced via TenantID and Transaction)
+	err = ah.analytics.ProcessAdvancedAnalytics(r.Context(), tenantID, vehicleID, startTime, endTime)
 	if err != nil {
 		ah.logger.Error("Failed to process analytics", zap.Error(err))
 		ah.errorJSON(w, "Failed to process analytics", http.StatusInternalServerError)

@@ -24,29 +24,29 @@ func NewBillingConfigService(repo *repository.BillingConfigRepository, logger *z
 }
 
 // GetConfig gets billing configuration for an organization
-func (s *BillingConfigService) GetConfig(ctx context.Context, orgID uuid.UUID) (*models.BillingConfiguration, error) {
-	config, err := s.repo.GetByOrgID(ctx, orgID)
+func (s *BillingConfigService) GetConfig(ctx context.Context, tenantID uuid.UUID) (*models.BillingConfiguration, error) {
+	config, err := s.repo.GetByTenantID(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Return default if not found
 	if config == nil {
-		config = models.DefaultBillingConfig(orgID)
+		config = models.DefaultBillingConfig(tenantID)
 	}
 
 	return config, nil
 }
 
 // GetOrCreateConfig gets or creates billing configuration
-func (s *BillingConfigService) GetOrCreateConfig(ctx context.Context, orgID, userID uuid.UUID) (*models.BillingConfiguration, error) {
-	return s.repo.GetOrCreate(ctx, orgID, userID)
+func (s *BillingConfigService) GetOrCreateConfig(ctx context.Context, tenantID, userID uuid.UUID) (*models.BillingConfiguration, error) {
+	return s.repo.GetOrCreate(ctx, tenantID, userID)
 }
 
 // UpdateConfig updates billing configuration
-func (s *BillingConfigService) UpdateConfig(ctx context.Context, orgID, userID uuid.UUID, req *models.BillingConfigRequest) (*models.BillingConfiguration, error) {
+func (s *BillingConfigService) UpdateConfig(ctx context.Context, tenantID, userID uuid.UUID, req *models.BillingConfigRequest) (*models.BillingConfiguration, error) {
 	// Get existing or create new
-	config, err := s.repo.GetOrCreate(ctx, orgID, userID)
+	config, err := s.repo.GetOrCreate(ctx, tenantID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func (s *BillingConfigService) UpdateConfig(ctx context.Context, orgID, userID u
 	}
 
 	s.logger.Info("Billing configuration updated",
-		zap.String("tenant_id", orgID.String()),
+		zap.String("tenant_id", tenantID.String()),
 		zap.String("company_name", config.CompanyName),
 	)
 
@@ -106,8 +106,8 @@ func (s *BillingConfigService) UpdateConfig(ctx context.Context, orgID, userID u
 }
 
 // DeleteConfig soft-deletes billing configuration
-func (s *BillingConfigService) DeleteConfig(ctx context.Context, orgID uuid.UUID) error {
-	return s.repo.Delete(ctx, orgID)
+func (s *BillingConfigService) DeleteConfig(ctx context.Context, tenantID uuid.UUID) error {
+	return s.repo.Delete(ctx, tenantID)
 }
 
 // ValidateConfig validates billing configuration

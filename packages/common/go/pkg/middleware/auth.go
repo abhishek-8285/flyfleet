@@ -13,9 +13,9 @@ import (
 type ContextKey string
 
 const (
-	UserIDKey ContextKey = "user_id"
-	OrgIDKey  ContextKey = "org_id"
-	RoleKey   ContextKey = "role"
+	UserIDKey   ContextKey = "user_id"
+	TenantIDKey ContextKey = "tenant_id"
+	RoleKey     ContextKey = "role"
 )
 
 // SecretProvider defines an interface for retrieving the JWT secret.
@@ -73,9 +73,9 @@ func AuthMiddleware(sp SecretProvider) func(http.Handler) http.Handler {
 				ctx = context.WithValue(ctx, UserIDKey, userIDStr)
 			}
 
-			// Inject org_id into context
-			if orgIDStr, ok := claims["org_id"].(string); ok {
-				ctx = context.WithValue(ctx, OrgIDKey, orgIDStr)
+			// Inject tenant_id into context
+			if tenantIDStr, ok := claims["tenant_id"].(string); ok {
+				ctx = context.WithValue(ctx, TenantIDKey, tenantIDStr)
 			}
 
 			// Inject role into context

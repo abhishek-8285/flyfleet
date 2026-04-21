@@ -7,7 +7,7 @@
       "parameters": [
         {
           "in": "query",
-          "name": "org_id",
+          "name": "tenant_id",
           "required": true,
           "schema": {
             "format": "uuid",
@@ -237,7 +237,7 @@
       "parameters": [
         {
           "in": "query",
-          "name": "org_id",
+          "name": "tenant_id",
           "required": false,
           "schema": {
             "format": "uuid",

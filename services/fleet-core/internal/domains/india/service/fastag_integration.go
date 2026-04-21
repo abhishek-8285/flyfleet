@@ -15,7 +15,7 @@ import (
 
 // FastagIntegrationService defines the interface for FASTag integration
 type FastagIntegrationService interface {
-	FetchTransactions(ctx context.Context, orgID uuid.UUID, tagNumber string, from, to time.Time) ([]*models.FASTagTransaction, error)
+	FetchTransactions(ctx context.Context, tenantID uuid.UUID, tagNumber string, from, to time.Time) ([]*models.FASTagTransaction, error)
 	SyncTransactions(ctx context.Context) error
 }
 
@@ -35,7 +35,7 @@ func NewFastagIntegrationService(repo repository.IndiaIntegrationRepository, det
 	}
 }
 
-func (s *FastagIntegrationServiceImpl) FetchTransactions(ctx context.Context, orgID uuid.UUID, tagNumber string, from, to time.Time) ([]*models.FASTagTransaction, error) {
+func (s *FastagIntegrationServiceImpl) FetchTransactions(ctx context.Context, tenantID uuid.UUID, tagNumber string, from, to time.Time) ([]*models.FASTagTransaction, error) {
 	if err := s.limiter.Wait(ctx); err != nil {
 		return nil, fmt.Errorf("rate limit exceeded: %w", err)
 	}
@@ -43,7 +43,7 @@ func (s *FastagIntegrationServiceImpl) FetchTransactions(ctx context.Context, or
 
 	// Mock NPCI API Call
 	// In production, this would use a real NPCI client
-	mockTransactions := s.getMockNPCITransactions(orgID, tagNumber, from, to)
+	mockTransactions := s.getMockNPCITransactions(tenantID, tagNumber, from, to)
 
 	// Log the integration request
 	log := &models.IntegrationLog{
@@ -55,7 +55,7 @@ func (s *FastagIntegrationServiceImpl) FetchTransactions(ctx context.Context, or
 		},
 		ResponsePayload: mockTransactions,
 		Status:          200,
-		OrganizationID:  &orgID,
+		OrganizationID:  &tenantID,
 	}
 	if err := s.repo.CreateIntegrationLog(ctx, log); err != nil {
 		s.logger.Error("failed to create integration log", zap.Error(err))
@@ -95,14 +95,14 @@ func (s *FastagIntegrationServiceImpl) SyncTransactions(ctx context.Context) err
 	return nil
 }
 
-func (s *FastagIntegrationServiceImpl) getMockNPCITransactions(orgID uuid.UUID, tagNumber string, from, to time.Time) []*models.FASTagTransaction {
+func (s *FastagIntegrationServiceImpl) getMockNPCITransactions(tenantID uuid.UUID, tagNumber string, from, to time.Time) []*models.FASTagTransaction {
 	return []*models.FASTagTransaction{
 		{
 			ID:              uuid.New().String(),
 			TagNumber:       tagNumber,
 			VehicleID:       uuid.New(), // In real case, link to actual vehicle
 			DriverID:        uuid.New(), // In real case, link to actual driver
-			OrganizationID:  orgID,
+			OrganizationID:  tenantID,
 			TransactionID:   fmt.Sprintf("TXN-%d", time.Now().UnixNano()),
 			TransactionType: "debit",
 			Amount:          150.00,

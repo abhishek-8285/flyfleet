@@ -24,13 +24,13 @@ func NewLedgerService(repo *repository.LedgerRepository, logger *zap.Logger) *Le
 }
 
 // GetBalance retrieves the current prepaid balance for an organization
-func (s *LedgerService) GetBalance(ctx context.Context, orgID uuid.UUID, currency string) (*models.CustomerBalance, error) {
-	return s.repo.GetOrCreateBalance(ctx, orgID, currency)
+func (s *LedgerService) GetBalance(ctx context.Context, tenantID uuid.UUID, currency string) (*models.CustomerBalance, error) {
+	return s.repo.GetOrCreateBalance(ctx, tenantID, currency)
 }
 
 // ApplyCredit adds promotional or prepaid credit to a customer's wallet
-func (s *LedgerService) ApplyCredit(ctx context.Context, orgID uuid.UUID, amount float64, currency, refType string, refID *uuid.UUID, desc *string) error {
-	balance, err := s.repo.GetOrCreateBalance(ctx, orgID, currency)
+func (s *LedgerService) ApplyCredit(ctx context.Context, tenantID uuid.UUID, amount float64, currency, refType string, refID *uuid.UUID, desc *string) error {
+	balance, err := s.repo.GetOrCreateBalance(ctx, tenantID, currency)
 	if err != nil {
 		return err
 	}
@@ -46,13 +46,13 @@ func (s *LedgerService) ApplyCredit(ctx context.Context, orgID uuid.UUID, amount
 	}
 
 	if err := s.repo.ApplyCreditTransaction(ctx, tx); err != nil {
-		s.logger.Error("Failed to apply credit", zap.Error(err), zap.String("tenant_id", orgID.String()))
+		s.logger.Error("Failed to apply credit", zap.Error(err), zap.String("tenant_id", tenantID.String()))
 		return fmt.Errorf("failed to apply credit: %w", err)
 	}
 
 	// 2. Ledger Recording
 	ledgerEntry := &models.LedgerEntry{
-		OrgID:         orgID,
+		TenantID:         tenantID,
 		EntryType:     models.LedgerTypeCreditApplied,
 		Amount:        amount, // Money goes into Customer Credits list
 		Currency:      currency,
@@ -65,10 +65,10 @@ func (s *LedgerService) ApplyCredit(ctx context.Context, orgID uuid.UUID, amount
 }
 
 // RecordInvoiceIssue logs an immutable general ledger entry when a final invoice is generated
-func (s *LedgerService) RecordInvoiceIssue(ctx context.Context, orgID uuid.UUID, invoiceID uuid.UUID, amount float64, currency string) error {
+func (s *LedgerService) RecordInvoiceIssue(ctx context.Context, tenantID uuid.UUID, invoiceID uuid.UUID, amount float64, currency string) error {
 	desc := "Invoice Issued"
 	entry := &models.LedgerEntry{
-		OrgID:         orgID,
+		TenantID:         tenantID,
 		EntryType:     models.LedgerTypeInvoiceIssued,
 		Amount:        amount,
 		Currency:      currency,
@@ -80,10 +80,10 @@ func (s *LedgerService) RecordInvoiceIssue(ctx context.Context, orgID uuid.UUID,
 }
 
 // RecordPaymentReceived logs successful payments mapping AR to Cash
-func (s *LedgerService) RecordPaymentReceived(ctx context.Context, orgID uuid.UUID, invoiceID, paymentID uuid.UUID, amount float64, currency string) error {
+func (s *LedgerService) RecordPaymentReceived(ctx context.Context, tenantID uuid.UUID, invoiceID, paymentID uuid.UUID, amount float64, currency string) error {
 	desc := "Payment Received"
 	entry := &models.LedgerEntry{
-		OrgID:         orgID,
+		TenantID:         tenantID,
 		EntryType:     models.LedgerTypePaymentReceived,
 		Amount:        amount,
 		Currency:      currency,
@@ -96,10 +96,10 @@ func (s *LedgerService) RecordPaymentReceived(ctx context.Context, orgID uuid.UU
 }
 
 // RecordCreditApplied logs the application of a credit note against an invoice
-func (s *LedgerService) RecordCreditApplied(ctx context.Context, orgID uuid.UUID, invoiceID, creditNoteID uuid.UUID, amount float64, currency string) error {
+func (s *LedgerService) RecordCreditApplied(ctx context.Context, tenantID uuid.UUID, invoiceID, creditNoteID uuid.UUID, amount float64, currency string) error {
 	desc := "Credit Note Applied"
 	entry := &models.LedgerEntry{
-		OrgID:         orgID,
+		TenantID:         tenantID,
 		EntryType:     models.LedgerTypeCreditApplied,
 		Amount:        -amount, // applying a credit reduces accounts receivable
 		Currency:      currency,
@@ -112,9 +112,9 @@ func (s *LedgerService) RecordCreditApplied(ctx context.Context, orgID uuid.UUID
 }
 
 // ScheduleRevenue ensures that upfront payments for subscriptions (e.g., Annual plans) are set to be recognized over time rather than all at once.
-func (s *LedgerService) ScheduleRevenue(ctx context.Context, orgID uuid.UUID, invoiceLineID uuid.UUID, amount float64, currency string, start, end time.Time) error {
+func (s *LedgerService) ScheduleRevenue(ctx context.Context, tenantID uuid.UUID, invoiceLineID uuid.UUID, amount float64, currency string, start, end time.Time) error {
 	schedule := &models.RevenueSchedule{
-		OrgID:             orgID,
+		TenantID:             tenantID,
 		InvoiceLineItemID: invoiceLineID,
 		TotalAmount:       amount,
 		Currency:          currency,

@@ -20,7 +20,7 @@ func (r *AuditRepository) Log(ctx context.Context, entry models.AuditLog) error 
 	_, err := r.pool.Exec(ctx, `
 		INSERT INTO audit_logs (user_id, tenant_id, action, resource, data, ip_address, user_agent)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		entry.UserID, entry.OrgID, entry.Action, entry.Resource,
+		entry.UserID, entry.TenantID, entry.Action, entry.Resource,
 		entry.Data, entry.IP, entry.UserAgent,
 	)
 	return err
@@ -40,7 +40,7 @@ func (r *AuditRepository) GetUserAuditLog(ctx context.Context, userID uuid.UUID,
 	var entries []models.AuditLog
 	for rows.Next() {
 		var e models.AuditLog
-		if err := rows.Scan(&e.ID, &e.UserID, &e.OrgID, &e.Action, &e.Resource,
+		if err := rows.Scan(&e.ID, &e.UserID, &e.TenantID, &e.Action, &e.Resource,
 			&e.Data, &e.IP, &e.UserAgent, &e.CreatedAt); err != nil {
 			return nil, err
 		}

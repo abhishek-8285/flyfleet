@@ -122,10 +122,10 @@ func (r *VideoRepositoryImpl) DeleteRetentionPolicy(ctx context.Context, id stri
 }
 
 // ListRetentionPolicies retrieves retention policies with filtering
-func (r *VideoRepositoryImpl) ListRetentionPolicies(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.VideoRetentionPolicy, int, error) {
+func (r *VideoRepositoryImpl) ListRetentionPolicies(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.VideoRetentionPolicy, int, error) {
 	countQuery := "SELECT COUNT(*) FROM video_retention_policies WHERE organization_id = $1"
 	var totalCount int
-	err := r.db.QueryRow(ctx, countQuery, orgID).Scan(&totalCount)
+	err := r.db.QueryRow(ctx, countQuery, tenantID).Scan(&totalCount)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count retention policies: %w", err)
 	}
@@ -138,7 +138,7 @@ func (r *VideoRepositoryImpl) ListRetentionPolicies(ctx context.Context, orgID u
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3`
 
-	rows, err := r.db.Query(ctx, query, orgID, limit, offset)
+	rows, err := r.db.Query(ctx, query, tenantID, limit, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to list retention policies: %w", err)
 	}

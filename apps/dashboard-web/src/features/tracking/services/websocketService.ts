@@ -17,22 +17,22 @@ class TelemetryWebSocket {
     private readonly MAX_RECONNECT = 5;
     private readonly BASE_DELAY = 1000;
     private token: string = '';
-    private orgId: string = '';
+    private tenantId: string = '';
     private reconnectTimeout: NodeJS.Timeout | null = null;
     private shouldReconnect: boolean = true;
 
-    connect(token: string, orgId: string) {
-        if (!token || !orgId) {
-            console.warn('TelemetryWebSocket: Missing token or orgId, skipping connection');
+    connect(token: string, tenantId: string) {
+        if (!token || !tenantId) {
+            console.warn('TelemetryWebSocket: Missing token or tenantId, skipping connection');
             return;
         }
 
         this.token = token;
-        this.orgId = orgId;
+        this.tenantId = tenantId;
         this.reconnectAttempts = 0;
         this.shouldReconnect = true;
 
-        const wsUrl = `${this.getWsBaseUrl()}/ws/telemetry?token=${token}&org_id=${orgId}`;
+        const wsUrl = `${this.getWsBaseUrl()}/ws/telemetry?token=${token}&tenant_id=${tenantId}`;
         this.ws = new WebSocket(wsUrl);
 
         this.ws.onopen = this.handleOpen.bind(this);
@@ -97,7 +97,7 @@ class TelemetryWebSocket {
 
         if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
         this.reconnectTimeout = setTimeout(() => {
-            this.connect(this.token, this.orgId);
+            this.connect(this.token, this.tenantId);
         }, delay);
     }
 
@@ -107,7 +107,7 @@ class TelemetryWebSocket {
                 const response = await fetch('/api/v1/vehicles/locations', {
                     headers: {
                         'Authorization': `Bearer ${this.token}`,
-                        'X-Org-ID': this.orgId
+                        'X-Tenant-ID': this.tenantId
                     }
                 });
                 const data = await response.json();

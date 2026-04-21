@@ -35,26 +35,26 @@ func TestTenantGuard_Ownership(t *testing.T) {
 	mockService := new(MockAnalyticsService)
 	handler := NewAnalyticsHandler(mockService, guard, logger)
 
-	orgID := uuid.New()
-	otherOrgID := uuid.New()
+	tenantID := uuid.New()
+	otherTenantID := uuid.New()
 	vehicleID := uuid.New()
 
 	t.Run("Authorized Vehicle Access", func(t *testing.T) {
 		// Mock DB check: vehicle exists for this org
 		mockDB.ExpectQuery("SELECT EXISTS").
-			WithArgs(vehicleID, orgID).
+			WithArgs(vehicleID, tenantID).
 			WillReturnRows(mockDB.NewRows([]string{"exists"}).AddRow(true))
 
 		req, _ := http.NewRequest("GET", "/stats/vehicle/"+vehicleID.String(), nil)
 		// Inject org ID into context (as the authentication middleware would)
-		ctx := context.WithValue(req.Context(), middleware.OrgIDKey, orgID)
+		ctx := context.WithValue(req.Context(), middleware.TenantIDKey, tenantID)
 		req = req.WithContext(ctx)
 
 		w := httptest.NewRecorder()
 		r := chi.NewRouter()
 		handler.RegisterRoutes(r)
 
-		mockService.On("GetVehicleDailyStats", mock.Anything, vehicleID, orgID, mock.Anything, mock.Anything).
+		mockService.On("GetVehicleDailyStats", mock.Anything, vehicleID, tenantID, mock.Anything, mock.Anything).
 			Return(nil, nil).Once()
 
 		r.ServeHTTP(w, req)
@@ -66,11 +66,11 @@ func TestTenantGuard_Ownership(t *testing.T) {
 	t.Run("Unauthorized Vehicle Access (Cross-Tenant)", func(t *testing.T) {
 		// Mock DB check: vehicle does NOT belong to this org
 		mockDB.ExpectQuery("SELECT EXISTS").
-			WithArgs(vehicleID, otherOrgID).
+			WithArgs(vehicleID, otherTenantID).
 			WillReturnRows(mockDB.NewRows([]string{"exists"}).AddRow(false))
 
 		req, _ := http.NewRequest("GET", "/stats/vehicle/"+vehicleID.String(), nil)
-		ctx := context.WithValue(req.Context(), middleware.OrgIDKey, otherOrgID)
+		ctx := context.WithValue(req.Context(), middleware.TenantIDKey, otherTenantID)
 		req = req.WithContext(ctx)
 
 		w := httptest.NewRecorder()

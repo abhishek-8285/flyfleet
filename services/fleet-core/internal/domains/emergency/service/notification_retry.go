@@ -25,7 +25,7 @@ func NewNotificationRetryService(nc *nats.Conn, logger *zap.Logger) *Notificatio
 
 type NotificationRequest struct {
 	IncidentID uuid.UUID
-	OrgID      uuid.UUID
+	TenantID      uuid.UUID
 	ContactID  uuid.UUID
 	Type       string // SMS, EMAIL
 	Target     string // Phone or Email
@@ -60,7 +60,7 @@ func (s *NotificationRetryService) retryLoop(req NotificationRequest) {
 	s.logger.Error("Notification exhausted all retries", zap.String("incident_id", req.IncidentID.String()))
 
 	// Phase 7: Metric increment
-	emergency.NotificationFailuresTotal.WithLabelValues(req.OrgID.String(), req.Type).Inc()
+	emergency.NotificationFailuresTotal.WithLabelValues(req.TenantID.String(), req.Type).Inc()
 
 	s.publishFailure(req)
 }

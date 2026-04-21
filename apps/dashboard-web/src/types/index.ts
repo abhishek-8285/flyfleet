@@ -1,5 +1,5 @@
 export interface UserOrganization {
-  org_id: string;
+  tenant_id: string;
   org_name: string;
   role: string;
   vehicle_count?: number;
@@ -14,11 +14,12 @@ export interface User {
   name: string;
   role?: string;           // Optional for backwards compatibility
   role_id?: string;       // Primary role identifier used in RBAC
-  org_id?: string;        // Organization ID
+  tenant_id?: string;      // Tenant ID
   permissions: string[];  // Array of permission strings like "vehicle:read"
   theme?: string;
   language?: string;
   sidebar_collapsed?: boolean;
+  must_reset_password?: boolean;
   organizations?: UserOrganization[]; // Organizations the user is authorized for
 }
 
@@ -33,7 +34,7 @@ export interface AuthState {
 
 export interface Vehicle {
   id: string;
-  org_id: string;
+  tenant_id: string;
   registrationNumber: string;
   registration_number: string; // compatibility with backend snake_case
   type: string;
@@ -57,12 +58,25 @@ export interface Driver {
   first_name?: string;
   last_name?: string;
   phone: string;
+  email?: string;
   license_number: string;
+  license_type?: string;
   license_expiry?: string;
+  employment_type?: string;
   status: string;
   rating?: number;
   behavior_score?: number;
+  experience_years?: number;
+  employee_code?: string;
+  joining_date?: string;
   updated_at?: string;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+  };
+  metadata?: Record<string, any>;
 }
 
 export interface Location {

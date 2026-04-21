@@ -40,16 +40,16 @@ func (m *mockEmergencyRepo) GetIncidentByID(ctx context.Context, id uuid.UUID) (
 func (m *mockEmergencyRepo) UpdateIncidentStatus(ctx context.Context, id uuid.UUID, status models.SOSStatus, userID *uuid.UUID) error {
 	return nil
 }
-func (m *mockEmergencyRepo) GetActiveIncidentsByOrg(ctx context.Context, orgID uuid.UUID) ([]models.SOSIncident, error) {
+func (m *mockEmergencyRepo) GetActiveIncidentsByOrg(ctx context.Context, tenantID uuid.UUID) ([]models.SOSIncident, error) {
 	return nil, nil
 }
-func (m *mockEmergencyRepo) GetEmergencyContacts(ctx context.Context, orgID uuid.UUID) ([]models.EmergencyContact, error) {
+func (m *mockEmergencyRepo) GetEmergencyContacts(ctx context.Context, tenantID uuid.UUID) ([]models.EmergencyContact, error) {
 	return nil, nil
 }
 func (m *mockEmergencyRepo) CreateEscalation(ctx context.Context, escalation *models.EmergencyEscalation) error {
 	return nil
 }
-func (m *mockEmergencyRepo) ListResponseUnits(ctx context.Context, orgID uuid.UUID) ([]models.EmergencyResponseUnit, error) {
+func (m *mockEmergencyRepo) ListResponseUnits(ctx context.Context, tenantID uuid.UUID) ([]models.EmergencyResponseUnit, error) {
 	return nil, nil
 }
 func (m *mockEmergencyRepo) LogIncidentAction(ctx context.Context, log *models.IncidentLog) error {
@@ -67,7 +67,7 @@ func (m *mockEmergencyRepo) CreateMedia(ctx context.Context, media *models.Incid
 func (m *mockEmergencyRepo) UpdateDriverFeedback(ctx context.Context, incidentID uuid.UUID, feedback, notes string) error {
 	return nil
 }
-func (m *mockEmergencyRepo) GetIncidentMetrics(ctx context.Context, orgID uuid.UUID, start, end time.Time) (*repository.IncidentMetrics, error) {
+func (m *mockEmergencyRepo) GetIncidentMetrics(ctx context.Context, tenantID uuid.UUID, start, end time.Time) (*repository.IncidentMetrics, error) {
 	return nil, nil
 }
 func (m *mockEmergencyRepo) CreateVehicleSnapshot(ctx context.Context, snapshot *models.IncidentVehicleSnapshot) error {
@@ -88,10 +88,10 @@ func (m *mockEmergencyRepo) GetAuthoritiesByLocation(ctx context.Context, lat, l
 func (m *mockEmergencyRepo) IncrementDeviceEventRetry(ctx context.Context, id uuid.UUID, nextRetryAt time.Time) error {
 	return nil
 }
-func (m *mockEmergencyRepo) GetIncidentTypeDistribution(ctx context.Context, orgID uuid.UUID) ([]models.IncidentTypeCount, error) {
+func (m *mockEmergencyRepo) GetIncidentTypeDistribution(ctx context.Context, tenantID uuid.UUID) ([]models.IncidentTypeCount, error) {
 	return nil, nil
 }
-func (m *mockEmergencyRepo) GetVehicleSafetyScores(ctx context.Context, orgID uuid.UUID) ([]models.VehicleSafetyScore, error) {
+func (m *mockEmergencyRepo) GetVehicleSafetyScores(ctx context.Context, tenantID uuid.UUID) ([]models.VehicleSafetyScore, error) {
 	return nil, nil
 }
 func (m *mockEmergencyRepo) ArchiveOldSnapshots(ctx context.Context, olderThan time.Time) (int64, error) {
@@ -109,10 +109,10 @@ func (m *mockEmergencyRepo) ArchiveOldMedia(ctx context.Context, olderThan time.
 func (m *mockEmergencyRepo) UpdateContactResponse(ctx context.Context, incidentID, contactID uuid.UUID, status string, notes string) error {
 	return nil
 }
-func (m *mockEmergencyRepo) GetTopLocations(ctx context.Context, orgID uuid.UUID, limit int) ([]string, error) {
+func (m *mockEmergencyRepo) GetTopLocations(ctx context.Context, tenantID uuid.UUID, limit int) ([]string, error) {
 	return nil, nil
 }
-func (m *mockEmergencyRepo) GetIncidentsCount(ctx context.Context, orgID uuid.UUID, since time.Time) (int, error) {
+func (m *mockEmergencyRepo) GetIncidentsCount(ctx context.Context, tenantID uuid.UUID, since time.Time) (int, error) {
 	return 0, nil
 }
 func (m *mockEmergencyRepo) GetStalledIncidents(ctx context.Context, stalledFor time.Duration) ([]models.SOSIncident, error) {
@@ -130,7 +130,7 @@ func (m *mockEmergencyRepo) MarkDeviceEventDelivered(ctx context.Context, id uui
 func (m *mockEmergencyRepo) CreateContact(ctx context.Context, contact *models.EmergencyContact) error {
 	return nil
 }
-func (m *mockEmergencyRepo) ListContacts(ctx context.Context, orgID uuid.UUID) ([]models.EmergencyContact, error) {
+func (m *mockEmergencyRepo) ListContacts(ctx context.Context, tenantID uuid.UUID) ([]models.EmergencyContact, error) {
 	return nil, nil
 }
 func (m *mockEmergencyRepo) ListActiveIncidents(ctx context.Context) ([]models.SOSIncident, error) {
@@ -148,7 +148,7 @@ func (m *mockEmergencyRepo) UpdateEscalationStatus(ctx context.Context, id uuid.
 func (m *mockEmergencyRepo) CreateResponseUnit(ctx context.Context, unit *models.EmergencyResponseUnit) error {
 	return nil
 }
-func (m *mockEmergencyRepo) UpdateVehicleHaltState(ctx context.Context, vehicleID uuid.UUID, orgID uuid.UUID, halted bool) error {
+func (m *mockEmergencyRepo) UpdateVehicleHaltState(ctx context.Context, vehicleID uuid.UUID, tenantID uuid.UUID, halted bool) error {
 	return nil
 }
 func (m *mockEmergencyRepo) GetVehicleHaltState(ctx context.Context, vehicleID uuid.UUID) (bool, error) {
@@ -160,7 +160,7 @@ func (m *mockEmergencyRepo) GetMediaByIncident(ctx context.Context, incidentID u
 func (m *mockEmergencyRepo) GetVehicleSnapshot(ctx context.Context, incidentID uuid.UUID) (*models.IncidentVehicleSnapshot, error) {
 	return nil, nil
 }
-func (m *mockEmergencyRepo) GetIncidentsByDay(ctx context.Context, orgID uuid.UUID, days int) ([]models.DailyIncidentCount, error) {
+func (m *mockEmergencyRepo) GetIncidentsByDay(ctx context.Context, tenantID uuid.UUID, days int) ([]models.DailyIncidentCount, error) {
 	return nil, nil
 }
 func (m *mockEmergencyRepo) CreateIncidentSnapshot(ctx context.Context, snapshot *models.IncidentSnapshot) error {
@@ -169,7 +169,7 @@ func (m *mockEmergencyRepo) CreateIncidentSnapshot(ctx context.Context, snapshot
 func (m *mockEmergencyRepo) GetCriticalIncidentsForSnapshot(ctx context.Context, since time.Time) ([]models.SOSIncident, error) {
 	return nil, nil
 }
-func (m *mockEmergencyRepo) ExportIncidents(ctx context.Context, orgID uuid.UUID, start, end time.Time) ([]models.SOSIncident, error) {
+func (m *mockEmergencyRepo) ExportIncidents(ctx context.Context, tenantID uuid.UUID, start, end time.Time) ([]models.SOSIncident, error) {
 	return nil, nil
 }
 func (m *mockEmergencyRepo) Ping(ctx context.Context) error { return nil }

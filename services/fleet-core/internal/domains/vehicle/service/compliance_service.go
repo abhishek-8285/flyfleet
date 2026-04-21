@@ -34,16 +34,16 @@ func NewComplianceService(
 }
 
 // VerifyCompliance upserts compliance records and derives compliance status.
-func (s *ComplianceService) VerifyCompliance(ctx context.Context, vehicleID, orgID uuid.UUID, req *models.VerifyComplianceRequest) (*models.VehicleCompliance, *models.ComplianceStatus, error) {
+func (s *ComplianceService) VerifyCompliance(ctx context.Context, vehicleID, tenantID uuid.UUID, req *models.VerifyComplianceRequest) (*models.VehicleCompliance, *models.ComplianceStatus, error) {
 	// Ensure vehicle exists and belongs to the organization
 	vehicle, err := s.vRepo.GetByID(ctx, vehicleID)
 	if err != nil {
 		return nil, nil, err
 	}
-	if vehicle.TenantID != orgID {
+	if vehicle.TenantID != tenantID {
 		s.logger.Warn("unauthorized compliance verification attempt",
 			zap.String("vehicle_id", vehicleID.String()),
-			zap.String("tenant_id", orgID.String()),
+			zap.String("tenant_id", tenantID.String()),
 			zap.String("vehicle_tenant", vehicle.TenantID.String()))
 		return nil, nil, fmt.Errorf("vehicle not found")
 	}
@@ -79,16 +79,16 @@ func (s *ComplianceService) VerifyCompliance(ctx context.Context, vehicleID, org
 }
 
 // GetCompliance returns the compliance record for a vehicle.
-func (s *ComplianceService) GetCompliance(ctx context.Context, vehicleID, orgID uuid.UUID) (*models.VehicleCompliance, *models.ComplianceStatus, error) {
+func (s *ComplianceService) GetCompliance(ctx context.Context, vehicleID, tenantID uuid.UUID) (*models.VehicleCompliance, *models.ComplianceStatus, error) {
 	// Verify vehicle belongs to org
 	vehicle, err := s.vRepo.GetByID(ctx, vehicleID)
 	if err != nil {
 		return nil, nil, err
 	}
-	if vehicle.TenantID != orgID {
+	if vehicle.TenantID != tenantID {
 		s.logger.Warn("unauthorized compliance access attempt",
 			zap.String("vehicle_id", vehicleID.String()),
-			zap.String("tenant_id", orgID.String()))
+			zap.String("tenant_id", tenantID.String()))
 		return nil, &models.ComplianceStatus{IsCompliant: false}, nil
 	}
 

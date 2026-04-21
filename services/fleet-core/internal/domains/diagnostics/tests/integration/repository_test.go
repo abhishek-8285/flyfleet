@@ -15,13 +15,13 @@ import (
 
 func TestRepository_DeviceOperations(t *testing.T) {
 	ctx := context.Background()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	deviceID := uuid.New()
 
 	t.Run("CreateDevice", func(t *testing.T) {
 		device := &models.Device{
 			ID:         deviceID,
-			OrgID:      orgID,
+			TenantID:      tenantID,
 			DeviceIMEI: ptr("123456789012345"),
 			Status:     ptr("ACTIVE"),
 		}
@@ -30,7 +30,7 @@ func TestRepository_DeviceOperations(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Verify
-		fetched, err := repo.GetDevice(ctx, deviceID, orgID)
+		fetched, err := repo.GetDevice(ctx, deviceID, tenantID)
 		assert.NoError(t, err)
 		assert.Equal(t, device.DeviceIMEI, fetched.DeviceIMEI)
 	})

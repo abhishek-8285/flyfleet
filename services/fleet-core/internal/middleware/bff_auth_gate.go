@@ -14,21 +14,13 @@ import (
 
 // GetUserID retrieves the user ID from context.
 func GetUserID(ctx context.Context) uuid.UUID {
-	val, ok := ctx.Value(ctxkeys.UserIDKey).(string)
-	if !ok {
-		return uuid.Nil
-	}
-	id, _ := uuid.Parse(val)
+	id, _ := ctxkeys.GetUserID(ctx)
 	return id
 }
 
-// GetOrgID retrieves the organization ID from context.
-func GetOrgID(ctx context.Context) uuid.UUID {
-	val, ok := ctx.Value(ctxkeys.OrgIDKey).(string)
-	if !ok {
-		return uuid.Nil
-	}
-	id, _ := uuid.Parse(val)
+// GetTenantID retrieves the organization ID from context.
+func GetTenantID(ctx context.Context) uuid.UUID {
+	id, _ := ctxkeys.GetTenantID(ctx)
 	return id
 }
 
@@ -125,13 +117,13 @@ func NewBFFAuthGate(jwtSecret string, publicPrefixes []string) func(http.Handler
 			}
 
 			if tenantID, ok := claims["tenant_id"].(string); ok {
-				ctx = context.WithValue(ctx, ctxkeys.OrgIDKey, tenantID)
+				ctx = context.WithValue(ctx, ctxkeys.TenantIDKey, tenantID)
 				ctx = context.WithValue(ctx, ctxkeys.TenantIDKey, tenantID)
 				r.Header.Set("X-Org-ID", tenantID)
-			} else if orgID, ok := claims["org_id"].(string); ok {
-				ctx = context.WithValue(ctx, ctxkeys.OrgIDKey, orgID)
-				ctx = context.WithValue(ctx, ctxkeys.TenantIDKey, orgID)
-				r.Header.Set("X-Org-ID", orgID)
+			} else if tenantID, ok := claims["tenant_id"].(string); ok {
+				ctx = context.WithValue(ctx, ctxkeys.TenantIDKey, tenantID)
+				ctx = context.WithValue(ctx, ctxkeys.TenantIDKey, tenantID)
+				r.Header.Set("X-Org-ID", tenantID)
 			}
 
 			if role, ok := claims["rol"].(string); ok {

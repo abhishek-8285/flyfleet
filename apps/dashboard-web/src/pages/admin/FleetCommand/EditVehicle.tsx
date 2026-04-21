@@ -1,15 +1,30 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  Shield, 
+  Activity, 
+  Truck, 
+  Cpu, 
+  Globe, 
+  Save,
+  ArrowLeft,
+  Info,
+  History,
+  Trash2,
+  AlertTriangle
+} from "lucide-react";
 import apiClient from "../../../services/apiClient";
 import { 
   FUEL_TYPES, VEHICLE_TYPES, OWNERSHIP_TYPES, 
-  STATUS_OPTIONS, WEIGHT_UNITS, getFuelUnits,
-  GPS_DEVICE_TYPES 
+  ODOMETER_UNITS, WEIGHT_UNITS, getFuelUnits,
+  STATUS_OPTIONS
 } from "./constants";
 import { toKm, toTonnes, toLitres } from "./utils";
 import { TextInput, SelectInput, ToggleInput } from "../../../components/common/FormFields";
 import { DropdownOption } from "../../../types/common";
 
+// ── Types ──
 interface FormState {
   make: string;
   model: string;
@@ -39,6 +54,14 @@ interface FormState {
   speed_limit: string;
 }
 
+type FieldName = keyof FormState;
+
+const STEPS = [
+  { id: 1, label: "Identity", icon: Truck, description: "Vehicle classification & status" },
+  { id: 2, label: "Hardware", icon: Cpu, description: "Engineering & technical specs" },
+  { id: 3, label: "Network", icon: Activity, description: "Telemetry & organizational hooks" },
+];
+
 export const EditVehicle: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -50,150 +73,100 @@ export const EditVehicle: React.FC = () => {
     immobilizer_enabled: false, ais140_compliant: false, status: "ACTIVE", notes: "",
     odometer: "0", odometer_unit: "km", speed_limit: "0", current_driver_id: "",
   });
-  const [units, setUnits] = useState({ capacity: "tonnes", fuel: "litres" });
-  const [saving, setSaving] = useState(false);
-  const [submitError, setSubmitError] = useState("");
+  const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [vehicle, setVehicle] = useState<any>(null);
-  const [charCount, setCharCount] = useState(0);
-
+  
   const [gpsDeviceTypes, setGpsDeviceTypes] = useState<DropdownOption[]>([]);
   const [dropdowns, setDropdowns] = useState({
-    vehicles: [] as { value: string; label: string }[],
-    drivers: [] as { value: string; label: string }[],
-    branches: [] as { value: string; label: string }[],
-    costCenters: [] as { value: string; label: string }[],
+    vehicles: [] as DropdownOption[],
+    drivers: [] as DropdownOption[],
+    branches: [] as DropdownOption[],
+    costCenters: [] as DropdownOption[],
   });
 
   useEffect(() => { 
-    fetchVehicle(); 
-    fetchDropdowns();
+    const fetchData = async () => {
+        try {
+          const [vDetails, vList, dResp, bResp, cResp, tResp] = await Promise.all([
+            apiClient.get(`/admin/vehicles/${id}`),
+            apiClient.get("/admin/vehicles"),
+            apiClient.get("/admin/drivers"),
+            apiClient.get("/admin/branches"),
+            apiClient.get("/admin/cost-centers"),
+            apiClient.get("/ui/settings/gps-types")
+          ]);
+          
+          const v = vDetails.data;
+          setVehicle(v);
+          setForm({
+            make: v.make || "", model: v.model || "", year: v.year ? v.year.toString() : "",
+            vin_number: v.vin_number || "", fuel_type: v.fuel_type || "DIESEL",
+            vehicle_type: v.vehicle_type || "", ownership_type: v.ownership_type || "OWNED",
+            capacity_tonnage: v.capacity_tonnage ? v.capacity_tonnage.toString() : "",
+            fuel_tank_capacity: v.fuel_tank_capacity ? v.fuel_tank_capacity.toString() : "",
+            gps_device_id: v.gps_device_id || "",
+            gps_enabled: v.gps_enabled || false,
+            gps_device_type: v.gps_device_type || "AIS140_HARDWIRED",
+            color: v.color || "",
+            chassis_number: v.chassis_number || "", engine_number: v.engine_number || "",
+            parent_vehicle_id: v.parent_vehicle_id || "", branch_id: v.branch_id || "",
+            cost_center_id: v.cost_center_id || "",
+            current_driver_id: v.current_driver_id || "",
+            immobilizer_enabled: v.immobilizer_enabled || false,
+            ais140_compliant: v.ais140_compliant || false,
+            status: v.status || "ACTIVE", notes: v.notes || "",
+            odometer: v.odometer ? (v.odometer / 1000).toString() : "0",
+            odometer_unit: "km",
+            speed_limit: v.speed_limit ? v.speed_limit.toString() : "0",
+          });
+
+          setDropdowns({
+            vehicles: (vList.data?.vehicles || []).map((v: any) => ({ value: v.id, label: v.registration_number })),
+            drivers: (dResp.data?.drivers || []).map((d: any) => ({ value: d.id, label: `${d.first_name} ${d.last_name}` })),
+            branches: (bResp.data?.data || []).map((b: any) => ({ value: b.id, label: b.name })),
+            costCenters: (cResp.data?.data || []).map((c: any) => ({ value: c.id, label: c.name })),
+          });
+          setGpsDeviceTypes(tResp.data || []);
+        } catch (err) {
+          console.error("Failed to fetch vehicle data:", err);
+        } finally {
+          setLoading(false);
+        }
+    };
+    fetchData();
   }, [id]);
 
-  const fetchDropdowns = async () => {
-    try {
-      const [vResp, dResp, bResp, cResp, tResp] = await Promise.all([
-        apiClient.get("/admin/vehicles"),
-        apiClient.get("/admin/drivers"),
-        apiClient.get("/admin/branches"),
-        apiClient.get("/admin/cost-centers"),
-        apiClient.get("/ui/settings/gps-types")
-      ]);
-      setDropdowns(prev => ({
-        ...prev,
-        vehicles: (vResp.data?.vehicles || vResp.data || []).map((v: any) => ({
-          value: v.id,
-          label: `${v.registration_number || v.license_plate} (${v.make} ${v.model})`
-        })),
-        drivers: (dResp.data?.drivers || dResp.data || []).map((d: any) => ({
-          value: d.id,
-          label: `${d.first_name} ${d.last_name} (${d.employee_id})`
-        })),
-        branches: bResp.data?.data || bResp.data || [],
-        costCenters: cResp.data?.data || cResp.data || []
-      }));
-      setGpsDeviceTypes(tResp.data || []);
-    } catch (err) {
-      console.error("Failed to fetch dropdown data:", err);
-      // Fallback for mission-critical UX
-      setGpsDeviceTypes([
-         { value: "AIS140_HARDWIRED", label: "AIS-140 Hardwired (Static)" },
-         { value: "AIS140_OBD", label: "AIS-140 OBD (Static)" }
-      ]);
-    }
+  const updateField = (name: FieldName, value: any) => {
+    setForm(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => {
+        const n = { ...prev };
+        delete n[name];
+        return n;
+    });
   };
 
-  const fetchVehicle = async () => {
-    try {
-      const res = await apiClient.get(`/admin/vehicles/${id}`);
-      const v = res.data;
-      setVehicle(v);
-      setForm({
-        make: v.make || "", model: v.model || "", year: v.year ? v.year.toString() : "",
-        vin_number: v.vin_number || "", fuel_type: v.fuel_type || "DIESEL",
-        vehicle_type: v.vehicle_type || "", ownership_type: v.ownership_type || "OWNED",
-        capacity_tonnage: v.capacity_tonnage ? v.capacity_tonnage.toString() : "",
-        fuel_tank_capacity: v.fuel_tank_capacity ? v.fuel_tank_capacity.toString() : "",
-        gps_device_id: v.gps_device_id || "",
-        gps_enabled: v.gps_enabled || false,
-        gps_device_type: v.gps_device_type || "AIS140_HARDWIRED",
-        color: v.color || "",
-        chassis_number: v.chassis_number || "", engine_number: v.engine_number || "",
-        parent_vehicle_id: v.parent_vehicle_id || "", branch_id: v.branch_id || "",
-        cost_center_id: v.cost_center_id || "",
-        current_driver_id: v.current_driver_id || "",
-        immobilizer_enabled: v.immobilizer_enabled || false,
-        ais140_compliant: v.ais140_compliant || false,
-        status: v.status || "ACTIVE", notes: v.notes || "",
-        odometer: v.odometer ? (v.odometer / 1000).toString() : "0",
-        odometer_unit: "km",
-        speed_limit: v.speed_limit ? v.speed_limit.toString() : "0",
-      });
-      setCharCount((v.notes || "").length);
-      if (v.fuel_type === "CNG") setUnits((p) => ({ ...p, fuel: "kg" }));
-    } catch (err) {
-      console.error("Failed to fetch vehicle:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-    if (name === "notes") setCharCount(value.length);
-  }, []);
-
-  const handleToggle = useCallback((field: keyof FormState) => {
-    setForm((prev) => ({ ...prev, [field]: !prev[field] }));
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitError("");
+  const handleSubmit = async () => {
     setSaving(true);
-
-    const payload: any = {
-      vehicle_type: form.vehicle_type, fuel_type: form.fuel_type,
-      ownership_type: form.ownership_type, status: form.status,
-    };
-    if (form.make) payload.make = form.make.trim();
-    if (form.model) payload.model = form.model.trim();
-    if (form.year) payload.year = parseInt(form.year);
-    if (form.vin_number) payload.vin_number = form.vin_number.trim().toUpperCase();
-    if (form.chassis_number) payload.chassis_number = form.chassis_number.trim();
-    if (form.engine_number) payload.engine_number = form.engine_number.trim();
-    if (form.capacity_tonnage) payload.capacity_tonnage = toTonnes(parseFloat(form.capacity_tonnage), units.capacity);
-    if (form.fuel_tank_capacity) {
-      payload.fuel_tank_capacity = form.fuel_type === "CNG"
-        ? parseFloat(form.fuel_tank_capacity)
-        : toLitres(parseFloat(form.fuel_tank_capacity), units.fuel);
-    }
-    if (form.gps_device_id) payload.gps_device_id = form.gps_device_id.trim();
-    if (form.color) payload.color = form.color.trim();
-    if (form.branch_id) payload.branch_id = form.branch_id.trim();
-    if (form.cost_center_id) payload.cost_center_id = form.cost_center_id.trim();
-    if (form.current_driver_id) payload.current_driver_id = form.current_driver_id.trim();
-    if (form.parent_vehicle_id) payload.parent_vehicle_id = form.parent_vehicle_id.trim();
-    if (form.odometer) payload.odometer = Math.round(toKm(parseFloat(form.odometer), form.odometer_unit) * 1000);
-    if (form.speed_limit) payload.speed_limit = parseFloat(form.speed_limit);
-    
-    payload.gps_enabled = form.gps_enabled;
-    if (payload.gps_enabled) {
-      payload.gps_device_id = form.gps_device_id.trim();
-      payload.gps_device_type = form.gps_device_type;
-    }
-
-    payload.immobilizer_enabled = form.immobilizer_enabled;
-    payload.ais140_compliant = form.ais140_compliant;
-
+    setSubmitError("");
     try {
+      const payload = {
+        ...form,
+        registration_number: vehicle.registration_number, // Keep original
+        year: parseInt(form.year) || 0,
+        capacity_tonnage: parseFloat(form.capacity_tonnage) || 0,
+        fuel_tank_capacity: parseFloat(form.fuel_tank_capacity) || 0,
+        speed_limit: parseFloat(form.speed_limit) || 0,
+        odometer: Math.round(toKm(parseFloat(form.odometer) || 0, form.odometer_unit) * 1000),
+      };
       await apiClient.put(`/admin/vehicles/${id}`, payload);
       navigate(`/admin/vehicles/${id}`);
     } catch (err: any) {
-      const msg = err.response?.data?.error || err.response?.data?.message || err.message;
-      setSubmitError(msg || "Failed to update vehicle.");
+      setSubmitError(err.response?.data?.error || "Failed to update asset node.");
     } finally {
       setSaving(false);
     }
@@ -205,378 +178,297 @@ export const EditVehicle: React.FC = () => {
       await apiClient.delete(`/admin/vehicles/${id}`);
       navigate("/admin/vehicles");
     } catch (err: any) {
-      setSubmitError(err.response?.data?.error || "Failed to delete vehicle");
+      setSubmitError(err.response?.data?.error || "Purge failed.");
     }
   };
 
   if (loading) return (
-    <div className="flex-1 flex items-center justify-center bg-background-dark">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    <div className="flex h-screen bg-[#0a0a0b] items-center justify-center">
+       <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
     </div>
   );
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-background-dark overflow-hidden">
-      {/* Header */}
-      <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-20">
-        <div className="flex flex-col">
-          <nav className="flex items-center text-xs text-text-muted mb-0.5">
-            <span className="hover:text-white cursor-pointer transition-colors" onClick={() => navigate("/admin/vehicles")}>Vehicles</span>
-            <span className="material-symbols-outlined text-[14px] mx-0.5">chevron_right</span>
-            <span className="hover:text-white cursor-pointer transition-colors" onClick={() => navigate("/admin/vehicles")}>Fleet List</span>
-            <span className="material-symbols-outlined text-[14px] mx-0.5">chevron_right</span>
-            <span className="text-white font-medium">Edit Vehicle</span>
-          </nav>
-          <h2 className="text-white text-lg font-bold">
-            Edit Vehicle: {vehicle?.make} {vehicle?.model} #{vehicle?.registration_number?.slice(-4) || vehicle?.id?.slice(-4)}
-          </h2>
+    <div className="flex h-screen bg-[#0a0a0b] overflow-hidden">
+      {/* ── Left Navigation Rail ── */}
+      <div className="w-24 border-r border-[#1a1a1c] bg-[#0d0d0f] flex flex-col items-center py-10 gap-10">
+        <div className="w-12 h-12 bg-primary/20 rounded-2xl flex items-center justify-center border border-primary/20">
+          <Truck className="text-primary w-6 h-6" />
         </div>
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate(`/admin/vehicles/${id}`)} className="px-4 py-2 border border-border-color hover:bg-surface-dark text-text-muted hover:text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors">
-            Cancel
-          </button>
-          <button type="submit" form="edit-vehicle-form" disabled={saving} className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20 disabled:opacity-50">
-            <span className="material-symbols-outlined text-[16px]">save</span>
-            Save Changes
-          </button>
+        
+        <div className="flex flex-col gap-6">
+          {STEPS.map((s) => {
+            const Icon = s.icon;
+            const isActive = currentStep === s.id;
+            return (
+              <button
+                key={s.id}
+                onClick={() => setCurrentStep(s.id)}
+                className={`group relative w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
+                  isActive ? "bg-primary shadow-lg shadow-primary/20" : "hover:bg-white/5"
+                }`}
+              >
+                <Icon className={`w-5 h-5 ${isActive ? "text-white" : "text-text-muted group-hover:text-white"}`} />
+                {isActive && (
+                  <motion.div 
+                    layoutId="active-pill"
+                    className="absolute -right-[1px] w-1 h-6 bg-primary rounded-l-full"
+                  />
+                )}
+                <div className="absolute left-16 px-3 py-1 bg-surface-darker border border-border-color rounded-md text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  {s.label}
+                </div>
+              </button>
+            );
+          })}
         </div>
-      </header>
 
-      {/* Form */}
-      <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-        <form id="edit-vehicle-form" onSubmit={handleSubmit} className="max-w-5xl mx-auto space-y-8">
-          {submitError && (
-            <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger flex items-center gap-2 animate-shake">
-              <span className="material-symbols-outlined text-sm">error</span>{submitError}
-            </div>
-          )}
-
-          {/* Section 1: Basic Information */}
-          <div className="bg-surface-dark rounded-xl border border-border-color p-6 shadow-xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-              <span className="material-symbols-outlined text-6xl text-white">badge</span>
-            </div>
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border-color">
-              <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
-                <span className="material-symbols-outlined text-[18px]">directions_car</span>
-              </div>
-              <h3 className="text-white font-semibold text-sm">Vehicle Information</h3>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <TextInput
-                label="Make" name="make" value={form.make} onChange={handleChange}
-                placeholder="e.g. Tata, Mahindra" icon="factory"
-              />
-              <TextInput
-                label="Model" name="model" value={form.model} onChange={handleChange}
-                placeholder="e.g. Prima, Furio" icon="model_training"
-              />
-              <TextInput
-                label="Year" name="year" value={form.year} onChange={handleChange}
-                placeholder="e.g. 2024" icon="calendar_today"
-              />
-              <TextInput
-                label="VIN Number" name="vin_number" value={form.vin_number} onChange={handleChange}
-                placeholder="17-digit chassis number" icon="fingerprint" maxLength={17}
-              />
-              <TextInput
-                label="Registration" name="registration_number" value={vehicle?.registration_number || ""}
-                onChange={() => {}} icon="license" className="opacity-70 pointer-events-none"
-              />
-              <SelectInput
-                label="Operational Status" name="status" value={form.status} 
-                onChange={handleChange} options={STATUS_OPTIONS} icon="traffic"
-              />
-            </div>
-          </div>
-
-          {/* Section 2: Hierarchy & Assignment */}
-          <div className="bg-surface-dark rounded-xl border border-border-color p-6 shadow-xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-              <span className="material-symbols-outlined text-6xl text-white">account_tree</span>
-            </div>
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border-color">
-              <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
-                <span className="material-symbols-outlined text-[18px]">hub</span>
-              </div>
-              <h3 className="text-white font-semibold text-sm">Hierarchy & Assignment</h3>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <SelectInput
-                label="Branch / Depot" name="branch_id" value={form.branch_id}
-                onChange={handleChange} options={dropdowns.branches} icon="location_on"
-                placeholder="Select assigned branch"
-              />
-              <SelectInput
-                label="Cost Center" name="cost_center_id" value={form.cost_center_id}
-                onChange={handleChange} options={dropdowns.costCenters} icon="payments"
-                placeholder="Select billing group"
-              />
-              <SelectInput
-                label="Parent Asset (Trailer/Convoy)" name="parent_vehicle_id" value={form.parent_vehicle_id}
-                onChange={handleChange} options={dropdowns.vehicles} icon="link"
-                placeholder="Search vehicles..."
-              />
-              <SelectInput
-                label="Primary Driver" name="current_driver_id" value={form.current_driver_id}
-                onChange={handleChange} options={dropdowns.drivers} icon="person"
-                placeholder="Assign a driver"
-              />
-            </div>
-          </div>
-
-          {/* Section: Hardware & Tracking (Consolidated) */}
-          <div className="bg-surface-dark rounded-xl border border-border-color p-6 shadow-xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-              <span className="material-symbols-outlined text-6xl text-white">satellite_alt</span>
-            </div>
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border-color">
-              <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
-                <span className="material-symbols-outlined text-[18px]">router</span>
-              </div>
-              <h3 className="text-white font-semibold text-sm">Hardware & Telemetry</h3>
-            </div>
-
-            <div className="space-y-6">
-              <div className="bg-surface-darker/50 rounded-xl p-6 border border-border-color/50 space-y-6">
-                <ToggleInput
-                  label="Enable GPS Tracking"
-                  description="Broadcast real-time location to dispatch center"
-                  checked={form.gps_enabled}
-                  onChange={(checked) => setForm((prev) => ({ ...prev, gps_enabled: checked }))}
-                />
-
-                {form.gps_enabled && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <TextInput
-                      name="gps_device_id"
-                      value={form.gps_device_id}
-                      onChange={handleChange}
-                      label="GPS Device Serial / IMEI"
-                      placeholder="e.g. 35789210..."
-                      icon="gps_fixed"
-                      maxLength={100}
-                      hint="Must be registered in Asset Inventory"
-                    />
-                    <SelectInput
-                      name="gps_device_type"
-                      value={form.gps_device_type}
-                      onChange={handleChange}
-                      label="Device Protocol"
-                      options={gpsDeviceTypes}
-                      icon="settings_input_component"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <ToggleInput
-                    label="Immobilizer" description="Remote engine lock capability"
-                    checked={form.immobilizer_enabled}
-                    onChange={(checked) => setForm(p => ({ ...p, immobilizer_enabled: checked }))}
-                    icon="lock"
-                  />
-                  <ToggleInput
-                    label="AIS-140 Compliant" description="Govt tracking standards"
-                    checked={form.ais140_compliant}
-                    onChange={(checked) => setForm(p => ({ ...p, ais140_compliant: checked }))}
-                    icon="gavel"
-                  />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-surface-dark rounded-xl border border-border-color p-6 shadow-xl space-y-6">
-             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border-color">
-              <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
-                <span className="material-symbols-outlined text-[18px]">speed</span>
-              </div>
-              <h3 className="text-white font-semibold text-sm">Operational Metrics</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <div className="space-y-1.5 lg:col-span-1">
-                <label className="text-xs font-medium text-text-muted uppercase tracking-wide">Current Odometer Reading</label>
-                <div className="flex gap-2">
-                  <TextInput
-                    label="" name="odometer" value={form.odometer}
-                    onChange={handleChange} type="number" placeholder="0"
-                    className="flex-1"
-                  />
-                  <select 
-                    name="odometer_unit"
-                    value={form.odometer_unit} 
-                    onChange={handleChange}
-                    className="bg-surface-darker border border-border-color rounded-lg px-2 text-xs text-white focus:ring-1 focus:ring-primary outline-none"
-                  >
-                    <option value="km">km</option>
-                    <option value="mi">mi</option>
-                  </select>
-                </div>
-              </div>
-              <TextInput
-                label="Safety Speed Limit (km/h)" name="speed_limit" value={form.speed_limit}
-                onChange={handleChange} type="number" placeholder="80" icon="speed"
-              />
-            </div>
-          </div>
-
-          {/* Section 3: Technical Specifications */}
-          <div className="bg-surface-dark rounded-xl border border-border-color p-6 shadow-xl">
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border-color">
-              <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
-                <span className="material-symbols-outlined text-[18px]">settings_suggest</span>
-              </div>
-              <h3 className="text-white font-semibold text-sm">Technical Specifications</h3>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <SelectInput
-                label="Vehicle Body Type" name="vehicle_type" value={form.vehicle_type}
-                onChange={handleChange} options={VEHICLE_TYPES} icon="local_shipping"
-                placeholder="Select type"
-              />
-              <SelectInput
-                label="Fuel Engine Type" name="fuel_type" value={form.fuel_type}
-                onChange={handleChange} options={FUEL_TYPES} icon="local_gas_station"
-              />
-              <SelectInput
-                label="Ownership Model" name="ownership_type" value={form.ownership_type}
-                onChange={handleChange} options={OWNERSHIP_TYPES} icon="key"
-              />
-
-              <div className="space-y-1.5 lg:col-span-1">
-                <label className="text-xs font-medium text-text-muted uppercase tracking-wide">Payload Capacity</label>
-                <div className="flex gap-2">
-                  <TextInput
-                    label="" name="capacity_tonnage" value={form.capacity_tonnage}
-                    onChange={handleChange} type="number" placeholder="0.00"
-                    className="flex-1"
-                  />
-                  <select 
-                    value={units.capacity} 
-                    onChange={(e) => setUnits(p => ({ ...p, capacity: e.target.value }))}
-                    className="bg-surface-darker border border-border-color rounded-lg px-2 text-xs text-white focus:ring-1 focus:ring-primary outline-none"
-                  >
-                    {WEIGHT_UNITS.map(u => <option key={u.value} value={u.value}>{u.value}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-1.5 lg:col-span-1">
-                <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                  {form.fuel_type === "CNG" ? "Cylinder Capacity (kg)" : "Fuel Tank Capacity"}
-                </label>
-                <div className="flex gap-2">
-                  <TextInput
-                    label="" name="fuel_tank_capacity" value={form.fuel_tank_capacity}
-                    onChange={handleChange} type="number" placeholder="0.00"
-                    className="flex-1"
-                  />
-                  {form.fuel_type !== "CNG" && (
-                    <select 
-                      value={units.fuel} 
-                      onChange={(e) => setUnits(p => ({ ...p, fuel: e.target.value }))}
-                      className="bg-surface-darker border border-border-color rounded-lg px-2 text-xs text-white focus:ring-1 focus:ring-primary outline-none"
-                    >
-                      <option value="litres">L</option>
-                      <option value="gallons">gal</option>
-                    </select>
-                  )}
-                </div>
-              </div>
-
-              <TextInput
-                label="Exterior Color" name="color" value={form.color}
-                onChange={handleChange} placeholder="e.g. Arctic White" icon="palette"
-              />
-            </div>
-          </div>
-
-          {/* Section 4: Notes & Metadata */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              {/* COMPLIANCE SECTION REMOVED - MERGED INTO HARDWARE */}
-
-              {/* Notes */}
-              <div className="bg-surface-dark rounded-xl border border-border-color p-6 shadow-xl">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
-                    <span className="material-symbols-outlined text-[18px]">description</span>
-                  </div>
-                  <h3 className="text-white font-semibold text-sm">Operational Notes</h3>
-                </div>
-                <textarea 
-                  name="notes" value={form.notes} onChange={handleChange} rows={5} maxLength={500}
-                  placeholder="Internal notes about vehicle history or specs..."
-                  className="w-full bg-surface-darker border border-border-color rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder-text-muted/30 transition-all resize-none"
-                />
-                <div className="flex justify-between items-center mt-2 px-1">
-                  <span className="text-[10px] text-text-muted">Avoid sensitive data in notes</span>
-                  <span className={`text-[10px] font-medium ${charCount > 450 ? "text-warning" : "text-text-muted"}`}>{charCount}/500</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Side Info Panel */}
-            <div className="lg:col-span-1 bg-surface-dark rounded-xl border border-border-color p-6 shadow-xl flex flex-col">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined text-[18px]">info</span>
-                </div>
-                <h3 className="text-white font-semibold text-sm">System Metadata</h3>
-              </div>
-              <div className="flex-1 space-y-4">
-                <div className="flex justify-between items-center bg-surface-darker p-3 rounded-lg border border-border-color">
-                  <span className="text-xs text-text-muted">Vehicle ID</span>
-                  <span className="text-xs font-mono text-white">#{vehicle?.id?.slice(-8).toUpperCase()}</span>
-                </div>
-                <div className="flex justify-between items-center bg-surface-darker p-3 rounded-lg border border-border-color">
-                  <span className="text-xs text-text-muted">Last Active</span>
-                  <span className="text-xs text-white">2 hrs ago</span>
-                </div>
-                <div className="flex justify-between items-center bg-surface-darker p-3 rounded-lg border border-border-color">
-                  <span className="text-xs text-text-muted">Created</span>
-                  <span className="text-xs text-white">{vehicle?.created_at ? new Date(vehicle.created_at).toLocaleDateString() : "—"}</span>
-                </div>
-              </div>
-              
-              <div className="mt-8">
-                <button 
-                  type="button" onClick={handleDelete}
-                  className={`w-full py-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 group ${
-                    confirmDelete
-                      ? "bg-danger hover:bg-red-600 text-white shadow-lg shadow-danger/20"
-                      : "border border-danger/30 text-danger hover:bg-danger/10"
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[18px] group-hover:animate-pulse">
-                    {confirmDelete ? "delete_forever" : "delete"}
-                  </span>
-                  {confirmDelete ? "CONFIRM PERMANENT DELETE" : "DELETE ASSET"}
-                </button>
-                {confirmDelete && (
-                  <p className="text-[10px] text-danger text-center mt-2 uppercase tracking-tighter">This action cannot be undone</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </form>
+        <div className="mt-auto flex flex-col gap-6 mb-4">
+           <button 
+             onClick={() => navigate(`/admin/vehicles/${id}/history`)}
+             className="w-12 h-12 rounded-xl flex items-center justify-center hover:bg-white/5 transition-all text-text-muted hover:text-white"
+           >
+              <History className="w-5 h-5" />
+           </button>
+           <button 
+             onClick={handleDelete}
+             className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${confirmDelete ? "bg-danger text-white scale-110" : "hover:bg-danger/10 text-text-muted hover:text-danger"}`}
+           >
+              <Trash2 className="w-5 h-5" />
+           </button>
+        </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-surface-darker border-t border-border-color px-6 py-2 flex items-center justify-between text-[10px] text-text-muted z-20 flex-shrink-0">
-        <span>© {new Date().getFullYear()} Enterprise Fleet Manager. Vehicle Module V2.1</span>
-        <div className="flex items-center gap-4">
-          <span>Data Sync: <span className="text-success">Active</span></span>
-          <span>Server Time: <span className="font-mono text-white">{new Date().toUTCString().slice(17, 25)} UTC</span></span>
+      {/* ── Main Content Area ── */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Form Pane */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar bg-gradient-to-br from-[#0a0a0b] to-[#0d0d0f]">
+          <div className="max-w-3xl mx-auto px-10 py-16">
+            <header className="mb-12">
+              <div className="flex items-center gap-3 text-[10px] font-bold text-primary uppercase tracking-[0.2em] mb-4">
+                <Shield className="w-3 h-3" /> Reconfiguring Asset Cluster
+              </div>
+              <h1 className="text-4xl font-black text-white tracking-tight mb-4">
+                Update <span className="text-primary">Registry</span> Node
+              </h1>
+              <p className="text-text-muted text-sm max-w-xl leading-relaxed">
+                Modifying technical specifications for node <span className="text-white font-mono">{vehicle.registration_number}</span>. Change history is logged for compliance.
+              </p>
+            </header>
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentStep}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+              >
+                {currentStep === 1 && (
+                  <div className="space-y-12">
+                    <section className="space-y-8">
+                       <h3 className="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-3">
+                         <div className="w-1.5 h-1.5 rounded-full bg-primary" /> core identity
+                       </h3>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                         <TextInput label="Registration (Read Only)" name="registration_number" value={vehicle.registration_number} disabled className="opacity-50" />
+                         <SelectInput label="Registry Classification" name="vehicle_type" value={form.vehicle_type} options={VEHICLE_TYPES} onChange={(e) => updateField("vehicle_type", e.target.value)} />
+                       </div>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                         <SelectInput label="Financial Model" name="ownership_type" value={form.ownership_type} options={OWNERSHIP_TYPES} onChange={(e) => updateField("ownership_type", e.target.value)} />
+                         <SelectInput label="Operational Status" name="status" value={form.status} options={STATUS_OPTIONS} onChange={(e) => updateField("status", e.target.value)} />
+                       </div>
+                    </section>
+                  </div>
+                )}
+
+                {currentStep === 2 && (
+                  <div className="space-y-12">
+                    <section className="space-y-8">
+                       <h3 className="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-3">
+                         <div className="w-1.5 h-1.5 rounded-full bg-primary" /> Engineering Metadata
+                       </h3>
+                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                         <TextInput label="Manufacturer" name="make" value={form.make} onChange={(e) => updateField("make", e.target.value)} />
+                         <TextInput label="Variant/Model" name="model" value={form.model} onChange={(e) => updateField("model", e.target.value)} />
+                         <TextInput label="Deployment Year" name="year" value={form.year} onChange={(e) => updateField("year", e.target.value)} />
+                       </div>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                         <TextInput label="VIN Signal" name="vin_number" value={form.vin_number} onChange={(e) => updateField("vin_number", e.target.value)} />
+                         <TextInput label="Chassis Vector" name="chassis_number" value={form.chassis_number} onChange={(e) => updateField("chassis_number", e.target.value)} />
+                       </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                         <TextInput label="Engine Sequence" name="engine_number" value={form.engine_number} onChange={(e) => updateField("engine_number", e.target.value)} />
+                         <TextInput label="Registry Color" name="color" value={form.color} onChange={(e) => updateField("color", e.target.value)} />
+                       </div>
+                    </section>
+                    
+                    <section className="space-y-8">
+                       <h3 className="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-3">
+                         <div className="w-1.5 h-1.5 rounded-full bg-primary" /> Operational Metrics
+                       </h3>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                         <TextInput label="Net Capacity (Tonnes)" name="capacity_tonnage" type="number" value={form.capacity_tonnage} onChange={(e) => updateField("capacity_tonnage", e.target.value)} />
+                         <TextInput label="Fuel Reservoir (Litres)" name="fuel_tank_capacity" type="number" value={form.fuel_tank_capacity} onChange={(e) => updateField("fuel_tank_capacity", e.target.value)} />
+                         <TextInput label="Update Odometer" name="odometer" type="number" value={form.odometer} onChange={(e) => updateField("odometer", e.target.value)} />
+                         <TextInput label="Neural Speed Limit" name="speed_limit" type="number" value={form.speed_limit} onChange={(e) => updateField("speed_limit", e.target.value)} />
+                       </div>
+                    </section>
+                  </div>
+                )}
+
+                {currentStep === 3 && (
+                  <div className="space-y-12">
+                    <section className="space-y-8">
+                       <h3 className="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-3">
+                         <div className="w-1.5 h-1.5 rounded-full bg-primary" /> Telemetry Interface
+                       </h3>
+                       <div className="p-6 rounded-2xl bg-primary/5 border border-primary/20 space-y-6">
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-1">
+                               <h4 className="text-sm font-bold flex items-center gap-2">
+                                 <Globe className="w-4 h-4 text-primary" /> Uplink Connectivity
+                               </h4>
+                               <p className="text-xs text-text-muted">Broadcast real-time positional data to the control tower.</p>
+                            </div>
+                            <ToggleInput label="" checked={form.gps_enabled} onChange={(v) => updateField("gps_enabled", v)} />
+                          </div>
+                          
+                          {form.gps_enabled && (
+                            <motion.div 
+                              initial={{ opacity: 0, height: 0 }} 
+                              animate={{ opacity: 1, height: "auto" }}
+                              className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-primary/10"
+                            >
+                              <TextInput label="Device Serial (IMEI)" name="gps_device_id" value={form.gps_device_id} onChange={(e) => updateField("gps_device_id", e.target.value)} />
+                              <SelectInput label="Link Protocol" name="gps_device_type" value={form.gps_device_type} options={gpsDeviceTypes} onChange={(e) => updateField("gps_device_type", e.target.value)} />
+                            </motion.div>
+                          )}
+                       </div>
+                    </section>
+
+                    <section className="space-y-8">
+                       <h3 className="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-3">
+                         <div className="w-1.5 h-1.5 rounded-full bg-primary" /> Org Hierarchy
+                       </h3>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                         <SelectInput label="Operational Branch" name="branch_id" value={form.branch_id} options={dropdowns.branches} onChange={(e) => updateField("branch_id", e.target.value)} />
+                         <SelectInput label="Cost Allocation" name="cost_center_id" value={form.cost_center_id} options={dropdowns.costCenters} onChange={(e) => updateField("cost_center_id", e.target.value)} />
+                         <SelectInput label="Guardian Driver" name="current_driver_id" value={form.current_driver_id} options={dropdowns.drivers} onChange={(e) => updateField("current_driver_id", e.target.value)} />
+                         <SelectInput label="Parent Unified Node" name="parent_vehicle_id" value={form.parent_vehicle_id} options={dropdowns.vehicles} onChange={(e) => updateField("parent_vehicle_id", e.target.value)} />
+                       </div>
+                    </section>
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+
+            <div className="mt-20 pt-10 border-t border-[#1a1a1c] flex items-center justify-between">
+              <button
+                onClick={() => navigate(`/admin/vehicles/${id}`)}
+                className="flex items-center gap-2 text-xs font-bold text-text-muted hover:text-white transition-colors"
+                disabled={saving}
+              >
+                <ArrowLeft className="w-4 h-4" /> Discard Changes
+              </button>
+
+              <button
+                onClick={handleSubmit}
+                disabled={saving}
+                className="px-10 py-4 bg-primary text-white rounded-2xl text-xs font-black hover:bg-primary/90 transition-all flex items-center gap-4 active:scale-95 shadow-2xl shadow-primary/20 disabled:opacity-50"
+              >
+                {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
+                {saving ? "Committing Node..." : "Save Configuration"}
+              </button>
+            </div>
+            
+            {submitError && (
+              <div className="mt-6 p-4 rounded-xl bg-danger/10 border border-danger/20 flex items-center gap-3 text-xs text-danger">
+                 <AlertTriangle className="w-4 h-4" /> {submitError}
+              </div>
+            )}
+          </div>
         </div>
-      </footer>
+
+        {/* ── Asset Preview Pane ── */}
+        <div className="w-[480px] border-l border-[#1a1a1c] bg-[#0d0d0f] flex flex-col items-center justify-center p-12 relative">
+          <div className="absolute top-12 left-10 flex items-center gap-3">
+             <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+             <span className="text-[10px] font-bold text-success uppercase tracking-widest text-white/40">Real-time Visualization Engine</span>
+          </div>
+
+          <div className="w-full space-y-12">
+            {/* Holographic Asset Card */}
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-[2.5rem] blur-2xl opacity-50 group-hover:opacity-100 transition duration-1000" />
+              <div className="relative bg-[#141416] border border-white/5 rounded-[2.5rem] p-10 overflow-hidden shadow-2xl">
+                {/* Number Plate Style Header */}
+                <div className="flex flex-col items-center mb-10">
+                   <div className="bg-white px-6 py-2 rounded-md shadow-white/5 border border-black/10 flex items-center gap-3 mb-6 transform -rotate-1">
+                      <div className="w-2 h-2 rounded-full bg-blue-600" />
+                      <span className="text-black font-mono font-black text-xl tracking-tight">
+                        {vehicle.registration_number}
+                      </span>
+                   </div>
+                   <div className="text-[10px] font-bold text-text-muted uppercase tracking-[0.3em]">Fleet Registry Node</div>
+                </div>
+
+                {/* Chassis Status Info */}
+                <div className="space-y-6">
+                   <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                      <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Truck className="w-4 h-4 text-primary" />
+                         </div>
+                         <div className="flex flex-col">
+                            <span className="text-[10px] text-text-muted font-bold uppercase">Classification</span>
+                            <span className="text-sm font-bold text-white">{form.vehicle_type || "Awaiting Class..."}</span>
+                         </div>
+                      </div>
+                      <div className="text-right">
+                         <span className="text-[10px] text-text-muted font-bold uppercase">Fuel</span>
+                         <div className="text-sm font-bold text-white">{form.fuel_type}</div>
+                      </div>
+                   </div>
+
+                   <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                         <span className="text-[10px] text-text-muted font-bold uppercase block mb-1">Payload Max</span>
+                         <span className="text-lg font-black text-white">{form.capacity_tonnage || "0"}<span className="text-xs font-medium ml-1 text-text-muted">TONS</span></span>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                         <span className="text-[10px] text-text-muted font-bold uppercase block mb-1">Speed Thresh</span>
+                         <span className="text-lg font-black text-white">{form.speed_limit || "0"}<span className="text-xs font-medium ml-1 text-text-muted">KMPH</span></span>
+                      </div>
+                   </div>
+
+                   <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                         <Activity className={`w-4 h-4 ${form.gps_enabled ? "text-success" : "text-text-muted"}`} />
+                         <span className="text-[10px] font-bold text-white uppercase tracking-wider">Telemetry Uplink</span>
+                      </div>
+                      <span className={`text-[10px] font-black uppercase tracking-tighter ${form.gps_enabled ? "text-success" : "text-text-muted"}`}>
+                        {form.gps_enabled ? "Streaming Online" : "Link Terminated"}
+                      </span>
+                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Context Tip */}
+            <div className="flex gap-4 p-6 rounded-3xl bg-white/5 border border-white/5">
+               <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+                  <Info className="w-5 h-5 text-white/60" />
+               </div>
+               <div className="space-y-1">
+                  <h4 className="text-[10px] font-bold text-white uppercase tracking-widest">Registry Advisor</h4>
+                  <p className="text-xs text-text-muted leading-relaxed">Updating the neural speed limit will trigger a recalibration across all active routes for this node.</p>
+               </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
-
 
 export default EditVehicle;

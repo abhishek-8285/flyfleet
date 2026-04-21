@@ -8,6 +8,7 @@ import (
 	"github.com/flyfleet/fleet-core/internal/domains/iam/repository"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -75,7 +76,7 @@ func (s *UserService) GetUser(ctx context.Context, id uuid.UUID) (*models.User, 
 }
 
 // UpdateUserStatus changes a user's status (active, disabled, locked).
-func (s *UserService) UpdateUserStatus(ctx context.Context, userID uuid.UUID, status string, actorID uuid.UUID) error {
+func (s *UserService) UpdateUserStatus(ctx context.Context, userID, tenantID uuid.UUID, status string, actorID uuid.UUID) error {
 	var userStatus models.UserStatus
 	switch status {
 	case "active":
@@ -88,7 +89,7 @@ func (s *UserService) UpdateUserStatus(ctx context.Context, userID uuid.UUID, st
 		return ErrInvalidStatus
 	}
 
-	if err := s.userRepo.UpdateStatus(ctx, userID, userStatus); err != nil {
+	if err := s.userRepo.UpdateStatus(ctx, userID, tenantID, userStatus); err != nil {
 		return err
 	}
 
@@ -112,8 +113,8 @@ func (s *UserService) UpdateUserStatus(ctx context.Context, userID uuid.UUID, st
 }
 
 // DeleteUser soft-deletes a user by disabling their account.
-func (s *UserService) DeleteUser(ctx context.Context, userID uuid.UUID, actorID uuid.UUID) error {
-	if err := s.userRepo.SoftDelete(ctx, userID); err != nil {
+func (s *UserService) DeleteUser(ctx context.Context, userID, tenantID uuid.UUID, actorID uuid.UUID) error {
+	if err := s.userRepo.SoftDelete(ctx, userID, tenantID); err != nil {
 		return err
 	}
 
@@ -145,8 +146,8 @@ func (s *UserService) GetUserAuditLog(ctx context.Context, userID uuid.UUID, lim
 }
 
 // UpdateUserPreferences updates user UI preferences (sidebar state, language).
-func (s *UserService) UpdateUserPreferences(ctx context.Context, userID uuid.UUID, sidebarCollapsed *bool, language *string, actorID uuid.UUID) error {
-	if err := s.userRepo.UpdatePreferences(ctx, userID, sidebarCollapsed, language); err != nil {
+func (s *UserService) UpdateUserPreferences(ctx context.Context, userID, tenantID uuid.UUID, sidebarCollapsed *bool, language *string, actorID uuid.UUID) error {
+	if err := s.userRepo.UpdatePreferences(ctx, userID, tenantID, sidebarCollapsed, language); err != nil {
 		return err
 	}
 
@@ -167,4 +168,56 @@ func (s *UserService) UpdateUserPreferences(ctx context.Context, userID uuid.UUI
 		zap.String("actor_id", actorID.String()),
 	)
 	return nil
+}
+
+// CreateUser handles direct admin-led user creation with a temporary password.
+func (s *UserService) CreateUser(ctx context.Context, tenantID uuid.UUID, req models.CreateUserRequest, actorID uuid.UUID) (*models.User, error) {
+	// Hash the temporary password
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), 12)
+	if err != nil {
+		return nil, err
+	}
+
+	user := &models.User{
+		Email:         req.Email,
+		Name:          req.Name,
+		PasswordHash:  string(hash),
+		Status:        models.UserStatusActive,
+		EmailVerified: true, // Admin created users are trusted
+		MustResetPassword: true,
+	}
+
+	if err := s.userRepo.CreateUser(ctx, user); err != nil {
+		return nil, err
+	}
+
+	// Assign roles
+	for _, roleID := range req.RoleIDs {
+		if err := s.roleRepo.AssignRole(ctx, user.ID, roleID, tenantID, uuid.Nil); err != nil {
+			s.log.Error("failed to assign role during direct user creation",
+				zap.String("role_id", roleID.String()),
+				zap.Error(err),
+			)
+		}
+	}
+
+	// Log audit
+	s.auditRepo.Log(ctx, models.AuditLog{
+		UserID:   actorID,
+		Action:   "user.created_direct",
+		Resource: "user",
+		Data: map[string]interface{}{
+			"target_user_id": user.ID.String(),
+			"email":          user.Email,
+			"tenant_id":      tenantID.String(),
+		},
+	})
+
+	s.log.Info("user_created_direct",
+		zap.String("user_id", user.ID.String()),
+		zap.String("tenant_id", tenantID.String()),
+		zap.String("actor_id", actorID.String()),
+	)
+
+	return user, nil
 }

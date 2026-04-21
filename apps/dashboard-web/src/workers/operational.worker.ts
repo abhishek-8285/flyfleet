@@ -14,8 +14,8 @@ interface SearchableVehicle {
 }
 
 const miniSearch = new MiniSearch({
-  fields: ["id", "type", "org", "status", "gps_enabled"],
-  storeFields: ["id", "type", "org", "status", "lastUpdate", "gps_enabled"],
+  fields: ["id", "type", "tenant_id", "status", "gps_enabled"],
+  storeFields: ["id", "type", "tenant_id", "status", "lastUpdate", "gps_enabled"],
   searchOptions: {
     boost: { id: 2 },
     fuzzy: 0.2,
@@ -93,19 +93,19 @@ self.onmessage = async (event: MessageEvent) => {
       vehicleMap.set(v.id, updated as SearchableVehicle);
       updates.push(updated as SearchableVehicle);
 
-      // Update sharded index if org is present
-      const org = updated.org;
-      if (org) {
-        if (!shardedIndexes.has(org)) {
+      // Update sharded index if tenant_id is present
+      const tenant_id = updated.tenant_id || updated.tenantId || updated.org;
+      if (tenant_id) {
+        if (!shardedIndexes.has(tenant_id)) {
           shardedIndexes.set(
-            org,
+            tenant_id,
             new MiniSearch({
               fields: ["id", "type", "status", "gps_enabled"],
               storeFields: ["id", "type", "status", "lastUpdate", "gps_enabled"],
             }),
           );
         }
-        shardedIndexes.get(org)!.add(updated);
+        shardedIndexes.get(tenant_id)!.add(updated);
       }
     });
 
@@ -130,7 +130,7 @@ self.onmessage = async (event: MessageEvent) => {
     if (filters) {
       searchOptions.filter = (result: any) => {
         return Object.entries(filters).every(([key, value]) => {
-          if (!value || key === 'org') return true; // 'org' is handled by sharding or direct scan
+          if (!value || key === 'tenant_id' || key === 'org') return true; // tenant is handled by sharding or direct scan
           // Handle boolean strings from the UI (e.g. "true")
           if (key === "gps_enabled") {
             return String(result[key]) === String(value);
@@ -146,15 +146,18 @@ self.onmessage = async (event: MessageEvent) => {
     if (!query && filters) {
       results = Array.from(vehicleMap.values())
         .filter((v: any) => {
-          // If org filter is present, check it first
-          if (filters.org && v.org !== filters.org) return false;
+          // If tenant filter is present, check it first
+          const filterTenant = filters.tenant_id || filters.org;
+          const vehicleTenant = v.tenant_id || v.tenantId || v.org;
+          if (filterTenant && vehicleTenant !== filterTenant) return false;
           // Apply other filters
           return searchOptions.filter(v);
         });
-    } else if (filters?.org && shardedIndexes.has(filters.org)) {
-      // Use sharded index if org filter is active
+    } else if ((filters?.tenant_id || filters?.org) && shardedIndexes.has(filters?.tenant_id || filters?.org)) {
+      // Use sharded index if tenant filter is active
+      const activeTenant = filters.tenant_id || filters.org;
       results = shardedIndexes
-        .get(filters.org)!
+        .get(activeTenant)!
         .search(query || "", searchOptions);
     } else {
       results = miniSearch.search(query || "", searchOptions);
@@ -164,16 +167,17 @@ self.onmessage = async (event: MessageEvent) => {
   }
 
   if (type === "GET_FILTER_METADATA") {
-    const orgs = new Set<string>();
+    const tenants = new Set<string>();
     const statuses = new Set<string>();
     vehicleMap.forEach((v: any) => {
-      if (v.org) orgs.add(v.org);
+      const tid = v.tenant_id || v.tenantId || v.org;
+      if (tid) tenants.add(tid);
       if (v.status) statuses.add(v.status);
     });
     self.postMessage({
       type: "FILTER_METADATA",
       payload: {
-        orgs: Array.from(orgs),
+        tenants: Array.from(tenants),
         statuses: Array.from(statuses),
       },
     });

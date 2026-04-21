@@ -19,7 +19,7 @@ func NewAnalyticsService(repo *repository.MaintenanceRepositoryImpl, logger *zap
 }
 
 // GetCostPerVehicle retrieves total maintenance cost per vehicle
-func (s *AnalyticsService) GetCostPerVehicle(ctx context.Context, orgID uuid.UUID) ([]models.CostPerVehicle, error) {
+func (s *AnalyticsService) GetCostPerVehicle(ctx context.Context, tenantID uuid.UUID) ([]models.CostPerVehicle, error) {
 	query := `
 		SELECT vehicle_id, SUM(cost) as total_cost
 		FROM maintenance_logs
@@ -27,7 +27,7 @@ func (s *AnalyticsService) GetCostPerVehicle(ctx context.Context, orgID uuid.UUI
 		GROUP BY vehicle_id
 		ORDER BY total_cost DESC`
 
-	rows, err := s.repo.GetDB().Query(ctx, query, orgID)
+	rows, err := s.repo.GetDB().Query(ctx, query, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (s *AnalyticsService) GetCostPerVehicle(ctx context.Context, orgID uuid.UUI
 }
 
 // GetVendorRepairComparison compares repair costs across vendors
-func (s *AnalyticsService) GetVendorRepairComparison(ctx context.Context, orgID uuid.UUID) ([]models.VendorCostComparison, error) {
+func (s *AnalyticsService) GetVendorRepairComparison(ctx context.Context, tenantID uuid.UUID) ([]models.VendorCostComparison, error) {
 	query := `
 		SELECT v.id, v.name, SUM(l.cost) as total_cost, COUNT(l.id) as job_count, AVG(l.cost) as avg_cost
 		FROM maintenance_logs l
@@ -55,7 +55,7 @@ func (s *AnalyticsService) GetVendorRepairComparison(ctx context.Context, orgID 
 		GROUP BY v.id, v.name
 		ORDER BY avg_cost ASC`
 
-	rows, err := s.repo.GetDB().Query(ctx, query, orgID)
+	rows, err := s.repo.GetDB().Query(ctx, query, tenantID)
 	if err != nil {
 		return nil, err
 	}

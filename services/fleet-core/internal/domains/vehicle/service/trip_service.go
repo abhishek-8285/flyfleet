@@ -26,7 +26,7 @@ func (s *TripService) generateTripID() string {
 	return fmt.Sprintf("TR-%d-%04d", year, seq)
 }
 
-func (s *TripService) CreateTrip(ctx context.Context, orgID uuid.UUID, req *models.CreateTripRequest) (*models.Trip, error) {
+func (s *TripService) CreateTrip(ctx context.Context, tenantID uuid.UUID, req *models.CreateTripRequest) (*models.Trip, error) {
 	trip := &models.Trip{
 		ID:             uuid.New(),
 		TripID:         s.generateTripID(),
@@ -36,7 +36,7 @@ func (s *TripService) CreateTrip(ctx context.Context, orgID uuid.UUID, req *mode
 		EndLocation:    req.EndLocation,
 		StartTime:      req.StartTime,
 		Status:         "scheduled",
-		OrganizationID: orgID,
+		TenantID:       tenantID,
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
 	}
@@ -95,8 +95,8 @@ func (s *TripService) AddTelemetry(ctx context.Context, t *models.Telemetry) err
 }
 
 // Settings
-func (s *TripService) GetSettings(ctx context.Context, orgID uuid.UUID) (*models.TripSettings, error) {
-	return s.repo.GetSettings(ctx, orgID)
+func (s *TripService) GetSettings(ctx context.Context, tenantID uuid.UUID) (*models.TripSettings, error) {
+	return s.repo.GetSettings(ctx, tenantID)
 }
 
 func (s *TripService) UpdateSettings(ctx context.Context, settings *models.TripSettings) error {

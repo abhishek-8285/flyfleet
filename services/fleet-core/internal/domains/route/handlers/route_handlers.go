@@ -47,27 +47,27 @@ func NewRouteOptimizationHandler(svc service.RouteOptimizationService, logger *z
 	}
 }
 
-// getOrgID extracts organization ID from context and returns error if missing
-func (h *RouteOptimizationHandler) getOrgID(r *http.Request) uuid.UUID {
-	orgID := middleware.GetOrgID(r.Context())
-	if orgID == uuid.Nil {
+// getTenantID extracts organization ID from context and returns error if missing
+func (h *RouteOptimizationHandler) getTenantID(r *http.Request) uuid.UUID {
+	tenantID := middleware.GetTenantID(r.Context())
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware",
 			zap.String("path", r.URL.Path))
 	}
-	return orgID
+	return tenantID
 }
 
 // requireResourceOwnership checks that a resource belongs to the user's organization
-func (h *RouteOptimizationHandler) requireResourceOwnership(w http.ResponseWriter, r *http.Request, resourceOrgID uuid.UUID) bool {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+func (h *RouteOptimizationHandler) requireResourceOwnership(w http.ResponseWriter, r *http.Request, resourceTenantID uuid.UUID) bool {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return false
 	}
-	if resourceOrgID != orgID {
+	if resourceTenantID != tenantID {
 		h.logger.Warn("unauthorized cross-org access attempt",
-			zap.String("requested_org", orgID.String()),
-			zap.String("resource_org", resourceOrgID.String()),
+			zap.String("requested_org", tenantID.String()),
+			zap.String("resource_org", resourceTenantID.String()),
 			zap.String("path", r.URL.Path))
 		h.writeErrorResponse(w, http.StatusNotFound, "Resource not found", nil)
 		return false
@@ -274,8 +274,8 @@ func (h *RouteOptimizationHandler) ListOptimizationRequests(w http.ResponseWrite
 	query := r.URL.Query()
 
 	// SECURITY: Always use org from authenticated context, ignore any tenant_id query parameter
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return
 	}
@@ -294,7 +294,7 @@ func (h *RouteOptimizationHandler) ListOptimizationRequests(w http.ResponseWrite
 		}
 	}
 
-	requests, totalCount, err := h.service.ListOptimizationRequests(r.Context(), orgID, limit, offset)
+	requests, totalCount, err := h.service.ListOptimizationRequests(r.Context(), tenantID, limit, offset)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to list optimization requests", err)
 		return

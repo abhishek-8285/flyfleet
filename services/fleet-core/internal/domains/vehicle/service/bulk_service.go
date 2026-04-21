@@ -66,7 +66,7 @@ func (s *BulkService) validateCSVContent(data []byte) error {
 	return nil
 }
 
-func (s *BulkService) CreateJob(ctx context.Context, orgID uuid.UUID, fileName string, fileReader io.Reader) (*models.BulkJob, error) {
+func (s *BulkService) CreateJob(ctx context.Context, tenantID uuid.UUID, fileName string, fileReader io.Reader) (*models.BulkJob, error) {
 	// 1. Validation
 	ext := filepath.Ext(fileName)
 	if ext != ".csv" {
@@ -100,7 +100,7 @@ func (s *BulkService) CreateJob(ctx context.Context, orgID uuid.UUID, fileName s
 
 	job := &models.BulkJob{
 		ID:             jobID,
-		OrganizationID: orgID,
+		TenantID:       tenantID,
 		FileName:       fileName,
 		Status:         "pending", // Initial status
 		TotalRecords:   0,
@@ -134,19 +134,19 @@ func (s *BulkService) CreateJob(ctx context.Context, orgID uuid.UUID, fileName s
 		}()
 
 		reader := bytes.NewReader(data)
-		s.processor.ProcessCSV(job.ID, reader, orgID)
+		s.processor.ProcessCSV(job.ID, reader, tenantID)
 	}()
 
 	return job, nil
 }
 
-func (s *BulkService) RetryJob(ctx context.Context, jobID uuid.UUID, orgID uuid.UUID) (*models.BulkJob, error) {
+func (s *BulkService) RetryJob(ctx context.Context, jobID uuid.UUID, tenantID uuid.UUID) (*models.BulkJob, error) {
 	job, err := s.repo.GetJob(ctx, jobID)
 	if err != nil {
 		return nil, fmt.Errorf("job not found")
 	}
 
-	if job.OrganizationID != orgID {
+	if job.TenantID != tenantID {
 		return nil, fmt.Errorf("unauthorized")
 	}
 
@@ -180,43 +180,43 @@ func (s *BulkService) RetryJob(ctx context.Context, jobID uuid.UUID, orgID uuid.
 		}()
 
 		reader := bytes.NewReader(data)
-		s.processor.ProcessCSV(job.ID, reader, orgID)
+		s.processor.ProcessCSV(job.ID, reader, tenantID)
 	}()
 
 	return job, nil
 }
 
-func (s *BulkService) ListJobs(ctx context.Context, orgID uuid.UUID, status string, page, limit int) ([]models.BulkJob, int, error) {
-	return s.repo.ListJobs(ctx, orgID, status, page, limit)
+func (s *BulkService) ListJobs(ctx context.Context, tenantID uuid.UUID, status string, page, limit int) ([]models.BulkJob, int, error) {
+	return s.repo.ListJobs(ctx, tenantID, status, page, limit)
 }
 
-func (s *BulkService) GetJob(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*models.BulkJob, error) {
+func (s *BulkService) GetJob(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) (*models.BulkJob, error) {
 	job, err := s.repo.GetJob(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 	// SECURITY FIX: Validate job belongs to requesting organization (CWE-639)
-	if job.OrganizationID != orgID {
+	if job.TenantID != tenantID {
 		s.logger.Warn("unauthorized bulk job access attempt",
 			zap.String("job_id", id.String()),
-			zap.String("job_org", job.OrganizationID.String()),
-			zap.String("request_org", orgID.String()))
+			zap.String("job_tenant", job.TenantID.String()),
+			zap.String("request_tenant", tenantID.String()))
 		return nil, fmt.Errorf("job not found") // Opaque error
 	}
 	return job, nil
 }
 
-func (s *BulkService) GetJobRecords(ctx context.Context, jobID uuid.UUID, orgID uuid.UUID, status string) ([]models.BulkJobRecord, error) {
+func (s *BulkService) GetJobRecords(ctx context.Context, jobID uuid.UUID, tenantID uuid.UUID, status string) ([]models.BulkJobRecord, error) {
 	// SECURITY FIX: Verify job belongs to organization before returning records (CWE-639)
 	job, err := s.repo.GetJob(ctx, jobID)
 	if err != nil {
 		return nil, err
 	}
-	if job.OrganizationID != orgID {
+	if job.TenantID != tenantID {
 		s.logger.Warn("unauthorized job records access attempt",
 			zap.String("job_id", jobID.String()),
-			zap.String("job_org", job.OrganizationID.String()),
-			zap.String("request_org", orgID.String()))
+			zap.String("job_tenant", job.TenantID.String()),
+			zap.String("request_tenant", tenantID.String()))
 		return nil, fmt.Errorf("job not found")
 	}
 	return s.repo.GetJobRecords(ctx, jobID, status)

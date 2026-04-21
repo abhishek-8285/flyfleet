@@ -26,7 +26,7 @@ func NewBehaviorScoreService(repo Repository, logger *zap.Logger) *BehaviorScore
 }
 
 // UpdateBehaviorScore updates driver behavior score with validation and audit logging
-func (s *BehaviorScoreService) UpdateBehaviorScore(ctx context.Context, driverID, orgID, userID uuid.UUID, userEmail string, scoreChange int, reason, eventType string) (*models.Driver, error) {
+func (s *BehaviorScoreService) UpdateBehaviorScore(ctx context.Context, driverID, tenantID, userID uuid.UUID, userEmail string, scoreChange int, reason, eventType string) (*models.Driver, error) {
 	// Validate score change range
 	if scoreChange < -20 || scoreChange > 20 {
 		return nil, ErrInvalidScoreChange
@@ -41,7 +41,7 @@ func (s *BehaviorScoreService) UpdateBehaviorScore(ctx context.Context, driverID
 		return nil, ErrDriverNotFound
 	}
 
-	if driver.OrgID != orgID.String() {
+	if driver.TenantID != tenantID.String() {
 		return nil, fmt.Errorf("driver does not belong to organization")
 	}
 
@@ -63,7 +63,7 @@ func (s *BehaviorScoreService) UpdateBehaviorScore(ctx context.Context, driverID
 	}
 
 	// Create audit log
-	if err := s.repo.LogBehaviorScoreChange(ctx, driverID, orgID, oldScore, newScore, reason, eventType, userID, userEmail); err != nil {
+	if err := s.repo.LogBehaviorScoreChange(ctx, driverID, tenantID, oldScore, newScore, reason, eventType, userID, userEmail); err != nil {
 		s.logger.Warn("Failed to create audit log for behavior score change", zap.Error(err))
 	}
 
@@ -313,8 +313,8 @@ func (s *BehaviorScoreService) ProcessBehaviorEvent(ctx context.Context, event *
 		return ErrDriverNotFound
 	}
 
-	orgID, _ := uuid.Parse(driver.OrgID)
+	tenantID, _ := uuid.Parse(driver.TenantID)
 	// Using ActionDriverBehaviorScoreUpdated as a placeholder for event processing
-	_, err = s.UpdateBehaviorScore(ctx, uuid.MustParse(event.DriverID), orgID, uuid.Nil, "system", -penalty, fmt.Sprintf("Automated penalty for %s", event.EventType), event.EventType)
+	_, err = s.UpdateBehaviorScore(ctx, uuid.MustParse(event.DriverID), tenantID, uuid.Nil, "system", -penalty, fmt.Sprintf("Automated penalty for %s", event.EventType), event.EventType)
 	return err
 }

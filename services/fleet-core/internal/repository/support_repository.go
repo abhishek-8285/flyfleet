@@ -62,9 +62,9 @@ type SecurityHistory struct {
 }
 
 type SupportRepository interface {
-	GetTickets(ctx context.Context, orgID uuid.UUID) ([]*SupportTicket, error)
+	GetTickets(ctx context.Context, tenantID uuid.UUID) ([]*SupportTicket, error)
 	GetTicketDetail(ctx context.Context, ticketID uuid.UUID) (*SupportTicket, []*TicketEvent, error)
-	GetDashboardMetrics(ctx context.Context, orgID uuid.UUID) (map[string]interface{}, error)
+	GetDashboardMetrics(ctx context.Context, tenantID uuid.UUID) (map[string]interface{}, error)
 	AddTicketEvent(ctx context.Context, event *TicketEvent) error
 	LogAudit(ctx context.Context, log *AuditLog) error
 
@@ -101,10 +101,10 @@ func NewSupportRepository(db *pgxpool.Pool, logger *zap.Logger) SupportRepositor
 	return &supportRepository{db: db, logger: logger}
 }
 
-func (r *supportRepository) GetTickets(ctx context.Context, orgID uuid.UUID) ([]*SupportTicket, error) {
+func (r *supportRepository) GetTickets(ctx context.Context, tenantID uuid.UUID) ([]*SupportTicket, error) {
 	query := `SELECT id, organization_id, subject, status, priority, reporter_name, created_at, assigned_to 
 	          FROM support_tickets WHERE organization_id = $1 ORDER BY created_at DESC`
-	rows, err := r.db.Query(ctx, query, orgID)
+	rows, err := r.db.Query(ctx, query, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -148,15 +148,15 @@ func (r *supportRepository) GetTicketDetail(ctx context.Context, ticketID uuid.U
 	return t, events, nil
 }
 
-func (r *supportRepository) GetDashboardMetrics(ctx context.Context, orgID uuid.UUID) (map[string]interface{}, error) {
+func (r *supportRepository) GetDashboardMetrics(ctx context.Context, tenantID uuid.UUID) (map[string]interface{}, error) {
 	var total, open, resolvedToday int
 	var err error
 
-	if orgID == uuid.Nil {
+	if tenantID == uuid.Nil {
 		err = r.db.QueryRow(ctx, "SELECT COUNT(*), COUNT(*) FILTER (WHERE status = 'OPEN'), COUNT(*) FILTER (WHERE status = 'RESOLVED' AND resolved_at >= CURRENT_DATE) FROM support_tickets").
 			Scan(&total, &open, &resolvedToday)
 	} else {
-		err = r.db.QueryRow(ctx, "SELECT COUNT(*), COUNT(*) FILTER (WHERE status = 'OPEN'), COUNT(*) FILTER (WHERE status = 'RESOLVED' AND resolved_at >= CURRENT_DATE) FROM support_tickets WHERE organization_id = $1", orgID).
+		err = r.db.QueryRow(ctx, "SELECT COUNT(*), COUNT(*) FILTER (WHERE status = 'OPEN'), COUNT(*) FILTER (WHERE status = 'RESOLVED' AND resolved_at >= CURRENT_DATE) FROM support_tickets WHERE organization_id = $1", tenantID).
 			Scan(&total, &open, &resolvedToday)
 	}
 

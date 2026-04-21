@@ -23,7 +23,7 @@ func NewRBACRepository(db *pgxpool.Pool) *RBACRepository {
 }
 
 // GetRolePermissions retrieves permissions for a role
-func (r *RBACRepository) GetRolePermissions(ctx context.Context, orgID uuid.UUID, roleName string) (*models.InvoicePermission, error) {
+func (r *RBACRepository) GetRolePermissions(ctx context.Context, tenantID uuid.UUID, roleName string) (*models.InvoicePermission, error) {
 	query := `
 		SELECT id, tenant_id, role_name, can_create_invoice, can_edit_invoice, can_delete_invoice,
 		       can_issue_invoice, can_cancel_invoice, can_record_payment, can_refund_payment,
@@ -33,8 +33,8 @@ func (r *RBACRepository) GetRolePermissions(ctx context.Context, orgID uuid.UUID
 		WHERE tenant_id = $1 AND role_name = $2`
 
 	var perms models.InvoicePermission
-	err := r.db.QueryRow(ctx, query, orgID, roleName).Scan(
-		&perms.ID, &perms.OrgID, &perms.RoleName, &perms.CanCreateInvoice, &perms.CanEditInvoice,
+	err := r.db.QueryRow(ctx, query, tenantID, roleName).Scan(
+		&perms.ID, &perms.TenantID, &perms.RoleName, &perms.CanCreateInvoice, &perms.CanEditInvoice,
 		&perms.CanDeleteInvoice, &perms.CanIssueInvoice, &perms.CanCancelInvoice, &perms.CanRecordPayment,
 		&perms.CanRefundPayment, &perms.CanCreateCreditNote, &perms.CanApproveCreditNote,
 		&perms.CanViewInvoices, &perms.CanExportInvoices, &perms.CanApproveInvoices, &perms.ApprovalLimit,
@@ -52,7 +52,7 @@ func (r *RBACRepository) GetRolePermissions(ctx context.Context, orgID uuid.UUID
 }
 
 // GetUserPermissions retrieves effective permissions for a user (role + overrides)
-func (r *RBACRepository) GetUserPermissions(ctx context.Context, orgID, userID uuid.UUID) (*models.InvoicePermission, error) {
+func (r *RBACRepository) GetUserPermissions(ctx context.Context, tenantID, userID uuid.UUID) (*models.InvoicePermission, error) {
 	// First check for user-specific override
 	overrideQuery := `
 		SELECT override_role, can_create_invoice, can_edit_invoice, can_delete_invoice,
@@ -64,7 +64,7 @@ func (r *RBACRepository) GetUserPermissions(ctx context.Context, orgID, userID u
 	var hasOverride bool
 	var overridePerms models.InvoicePermission
 
-	err := r.db.QueryRow(ctx, overrideQuery, userID, orgID).Scan(
+	err := r.db.QueryRow(ctx, overrideQuery, userID, tenantID).Scan(
 		&hasOverride, &overridePerms.CanCreateInvoice, &overridePerms.CanEditInvoice,
 		&overridePerms.CanDeleteInvoice, &overridePerms.CanIssueInvoice, &overridePerms.CanCancelInvoice,
 		&overridePerms.CanRecordPayment, &overridePerms.CanApproveInvoices, &overridePerms.ApprovalLimit,
@@ -78,7 +78,7 @@ func (r *RBACRepository) GetUserPermissions(ctx context.Context, orgID, userID u
 	// Get user's role
 	var roleName string
 	roleQuery := `SELECT role FROM users WHERE id = $1 AND tenant_id = $2`
-	err = r.db.QueryRow(ctx, roleQuery, userID, orgID).Scan(&roleName)
+	err = r.db.QueryRow(ctx, roleQuery, userID, tenantID).Scan(&roleName)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.New("user not found in organization")
@@ -87,12 +87,12 @@ func (r *RBACRepository) GetUserPermissions(ctx context.Context, orgID, userID u
 	}
 
 	// Get role permissions
-	return r.GetRolePermissions(ctx, orgID, roleName)
+	return r.GetRolePermissions(ctx, tenantID, roleName)
 }
 
 // HasPermission checks if a user has a specific permission
-func (r *RBACRepository) HasPermission(ctx context.Context, orgID, userID uuid.UUID, permission models.InvoicePermissionType) (bool, error) {
-	perms, err := r.GetUserPermissions(ctx, orgID, userID)
+func (r *RBACRepository) HasPermission(ctx context.Context, tenantID, userID uuid.UUID, permission models.InvoicePermissionType) (bool, error) {
+	perms, err := r.GetUserPermissions(ctx, tenantID, userID)
 	if err != nil {
 		return false, err
 	}
@@ -123,8 +123,8 @@ func (r *RBACRepository) HasPermission(ctx context.Context, orgID, userID uuid.U
 }
 
 // CanApproveAmount checks if user can approve invoices up to a certain amount
-func (r *RBACRepository) CanApproveAmount(ctx context.Context, orgID, userID uuid.UUID, amount float64) (bool, error) {
-	perms, err := r.GetUserPermissions(ctx, orgID, userID)
+func (r *RBACRepository) CanApproveAmount(ctx context.Context, tenantID, userID uuid.UUID, amount float64) (bool, error) {
+	perms, err := r.GetUserPermissions(ctx, tenantID, userID)
 	if err != nil {
 		return false, err
 	}
@@ -170,7 +170,7 @@ func (r *RBACRepository) CreateOrUpdateRolePermissions(ctx context.Context, perm
 			updated_at = CURRENT_TIMESTAMP`
 
 	_, err := r.db.Exec(ctx, query,
-		perms.OrgID, perms.RoleName, perms.CanCreateInvoice, perms.CanEditInvoice, perms.CanDeleteInvoice,
+		perms.TenantID, perms.RoleName, perms.CanCreateInvoice, perms.CanEditInvoice, perms.CanDeleteInvoice,
 		perms.CanIssueInvoice, perms.CanCancelInvoice, perms.CanRecordPayment, perms.CanRefundPayment,
 		perms.CanCreateCreditNote, perms.CanApproveCreditNote, perms.CanViewInvoices, perms.CanExportInvoices,
 		perms.CanApproveInvoices, perms.ApprovalLimit)
@@ -206,7 +206,7 @@ func (r *RBACRepository) SetUserAccessOverride(ctx context.Context, access *mode
 			deleted_at = NULL`
 
 	_, err := r.db.Exec(ctx, query,
-		access.OrgID, access.UserID, access.OverrideRole, access.CanCreateInvoice, access.CanEditInvoice,
+		access.TenantID, access.UserID, access.OverrideRole, access.CanCreateInvoice, access.CanEditInvoice,
 		access.CanDeleteInvoice, access.CanIssueInvoice, access.CanCancelInvoice, access.CanRecordPayment,
 		access.CanApproveInvoices, access.ApprovalLimit, access.MaxInvoiceAmount, access.RequireApprovalAbove)
 
@@ -294,7 +294,7 @@ func (r *RBACRepository) GetPendingApprovals(ctx context.Context, userID uuid.UU
 }
 
 // GetApprovalMatrix retrieves approval rules for an amount
-func (r *RBACRepository) GetApprovalMatrix(ctx context.Context, orgID uuid.UUID, amount float64) (*models.InvoiceApprovalMatrix, error) {
+func (r *RBACRepository) GetApprovalMatrix(ctx context.Context, tenantID uuid.UUID, amount float64) (*models.InvoiceApprovalMatrix, error) {
 	query := `
 		SELECT id, tenant_id, min_amount, max_amount, required_role, required_approvals, is_active, priority, created_at
 		FROM invoice_approval_matrix
@@ -305,8 +305,8 @@ func (r *RBACRepository) GetApprovalMatrix(ctx context.Context, orgID uuid.UUID,
 		LIMIT 1`
 
 	var matrix models.InvoiceApprovalMatrix
-	err := r.db.QueryRow(ctx, query, orgID, amount).Scan(
-		&matrix.ID, &matrix.OrgID, &matrix.MinAmount, &matrix.MaxAmount, &matrix.RequiredRole,
+	err := r.db.QueryRow(ctx, query, tenantID, amount).Scan(
+		&matrix.ID, &matrix.TenantID, &matrix.MinAmount, &matrix.MaxAmount, &matrix.RequiredRole,
 		&matrix.RequiredApprovals, &matrix.IsActive, &matrix.Priority, &matrix.CreatedAt)
 
 	if err != nil {
@@ -320,20 +320,20 @@ func (r *RBACRepository) GetApprovalMatrix(ctx context.Context, orgID uuid.UUID,
 }
 
 // RequiresApproval checks if an invoice requires approval
-func (r *RBACRepository) RequiresApproval(ctx context.Context, orgID, userID uuid.UUID, amount float64) (bool, *models.InvoiceApprovalMatrix, error) {
+func (r *RBACRepository) RequiresApproval(ctx context.Context, tenantID, userID uuid.UUID, amount float64) (bool, *models.InvoiceApprovalMatrix, error) {
 	// Check user's require_approval_above limit
 	accessQuery := `
 		SELECT require_approval_above FROM user_invoice_access
 		WHERE user_id = $1 AND tenant_id = $2 AND deleted_at IS NULL`
 
 	var requireAbove float64
-	err := r.db.QueryRow(ctx, accessQuery, userID, orgID).Scan(&requireAbove)
+	err := r.db.QueryRow(ctx, accessQuery, userID, tenantID).Scan(&requireAbove)
 	if err == nil && requireAbove > 0 && amount > requireAbove {
 		return true, nil, nil
 	}
 
 	// Check approval matrix
-	matrix, err := r.GetApprovalMatrix(ctx, orgID, amount)
+	matrix, err := r.GetApprovalMatrix(ctx, tenantID, amount)
 	if err != nil {
 		return false, nil, err
 	}

@@ -10,7 +10,7 @@ import (
 type MaintenanceScheduleCreated struct {
 	EventID     string    `json:"event_id"`
 	ScheduleID  string    `json:"schedule_id"`
-	OrgID       uuid.UUID `json:"org_id"`
+	TenantID       uuid.UUID `json:"tenant_id"`
 	VehicleID   uuid.UUID `json:"vehicle_id"`
 	Type        string    `json:"type"`
 	Name        string    `json:"name"`
@@ -24,7 +24,7 @@ type MaintenanceScheduleCreated struct {
 type MaintenanceScheduleUpdated struct {
 	EventID    string                 `json:"event_id"`
 	ScheduleID string                 `json:"schedule_id"`
-	OrgID      uuid.UUID              `json:"org_id"`
+	TenantID      uuid.UUID              `json:"tenant_id"`
 	Updates    map[string]interface{} `json:"updates"`
 	UpdatedBy  uuid.UUID              `json:"updated_by"`
 	UpdatedAt  time.Time              `json:"updated_at"`
@@ -34,7 +34,7 @@ type MaintenanceScheduleUpdated struct {
 type MaintenanceLogCreated struct {
 	EventID   string    `json:"event_id"`
 	LogID     string    `json:"log_id"`
-	OrgID     uuid.UUID `json:"org_id"`
+	TenantID     uuid.UUID `json:"tenant_id"`
 	VehicleID uuid.UUID `json:"vehicle_id"`
 	Type      string    `json:"type"`
 	Name      string    `json:"name"`

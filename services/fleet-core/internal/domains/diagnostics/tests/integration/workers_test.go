@@ -22,7 +22,7 @@ func TestWorkers_Lifecycle(t *testing.T) {
 		
 		device := &models.Device{
 			ID: deviceID,
-			OrgID: uuid.New(),
+			TenantID: uuid.New(),
 			DeviceIMEI: ptr("worker-test-imei"),
 			Status: ptr("ACTIVE"),
 		}

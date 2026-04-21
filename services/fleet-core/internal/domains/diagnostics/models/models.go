@@ -10,7 +10,7 @@ import (
 // Device represents an IoT tracking device assigned to a vehicle
 type Device struct {
 	ID              uuid.UUID  `json:"id" db:"id" validate:"required"`
-	OrgID           uuid.UUID  `json:"tenant_id" db:"tenant_id" validate:"required"`
+	TenantID           uuid.UUID  `json:"tenant_id" db:"tenant_id" validate:"required"`
 	VehicleID       *uuid.UUID `json:"vehicle_id,omitempty" db:"vehicle_id"`
 	DeviceIMEI      *string    `json:"device_imei,omitempty" db:"device_imei" validate:"omitempty"`
 	DeviceSerial    *string    `json:"device_serial,omitempty" db:"device_serial"`
@@ -83,7 +83,7 @@ type FirmwarePackage struct {
 type FirmwareRollout struct {
 	ID                uuid.UUID  `json:"id" db:"id" validate:"required"`
 	FirmwareID        *uuid.UUID `json:"firmware_id,omitempty" db:"firmware_id"`
-	OrgID             *uuid.UUID `json:"tenant_id,omitempty" db:"tenant_id"`
+	TenantID             *uuid.UUID `json:"tenant_id,omitempty" db:"tenant_id"`
 	RolloutStrategy   *string    `json:"rollout_strategy,omitempty" db:"rollout_strategy"`
 	TargetDeviceCount *int       `json:"target_device_count,omitempty" db:"target_device_count"`
 	Status            *string    `json:"status,omitempty" db:"status" validate:"omitempty,oneof=SCHEDULED IN_PROGRESS COMPLETED FAILED CANCELLED"`

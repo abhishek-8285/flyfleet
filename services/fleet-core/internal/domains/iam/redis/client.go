@@ -12,7 +12,7 @@ import (
 // SessionData represents an authenticated session stored in Redis.
 type SessionData struct {
 	UserID     uuid.UUID `json:"user_id"`
-	OrgID      uuid.UUID `json:"tenant_id"`
+	TenantID      uuid.UUID `json:"tenant_id"`
 	Role       string    `json:"role"`
 	Device     string    `json:"device"`
 	IP         string    `json:"ip"`
@@ -34,7 +34,7 @@ func sessionKey(jti string) string        { return "iam:session:" + jti }
 func refreshKey(jti string) string        { return "iam:refresh:" + jti }
 func actionKey(jti string) string         { return "iam:action:" + jti }
 func failKey(userID string) string        { return "iam:fail:" + userID }
-func permKey(userID, orgID string) string { return "iam:perm:" + userID + ":" + orgID }
+func permKey(userID, tenantID string) string { return "iam:perm:" + userID + ":" + tenantID }
 
 // SetSession stores session data in Redis.
 func (c *Client) SetSession(ctx context.Context, jti string, data SessionData, ttl time.Duration) error {
@@ -64,17 +64,22 @@ func (c *Client) DeleteSession(ctx context.Context, jti string) error {
 }
 
 // IsRefreshTokenUsed checks if a refresh token JTI has been consumed.
-func (c *Client) IsRefreshTokenUsed(ctx context.Context, jti string) (bool, error) {
-	val, err := c.rdb.Exists(ctx, refreshKey(jti)).Result()
-	if err != nil {
-		return false, err
+// It returns true (used) and the timestamp (Unix ms) when it was first consumed.
+func (c *Client) IsRefreshTokenUsed(ctx context.Context, jti string) (bool, int64, error) {
+	val, err := c.rdb.Get(ctx, refreshKey(jti)).Int64()
+	if err == redis.Nil {
+		return false, 0, nil
 	}
-	return val > 0, nil
+	if err != nil {
+		return false, 0, err
+	}
+	return true, val, nil
 }
 
-// MarkRefreshTokenUsed marks a refresh token as consumed.
+// MarkRefreshTokenUsed marks a refresh token as consumed with the current timestamp (ms).
 func (c *Client) MarkRefreshTokenUsed(ctx context.Context, jti string, ttl time.Duration) error {
-	return c.rdb.Set(ctx, refreshKey(jti), "1", ttl).Err()
+	nowMs := time.Now().UnixMilli()
+	return c.rdb.Set(ctx, refreshKey(jti), nowMs, ttl).Err()
 }
 
 // MarkActionTokenUsed marks an action token as consumed.
@@ -128,13 +133,13 @@ func (c *Client) IsLocked(ctx context.Context, userID string) (bool, error) {
 }
 
 // CacheUserPermissions caches a user's permission mask in Redis.
-func (c *Client) CacheUserPermissions(ctx context.Context, userID, orgID string, mask int64, ttl time.Duration) error {
-	return c.rdb.Set(ctx, permKey(userID, orgID), mask, ttl).Err()
+func (c *Client) CacheUserPermissions(ctx context.Context, userID, tenantID string, mask int64, ttl time.Duration) error {
+	return c.rdb.Set(ctx, permKey(userID, tenantID), mask, ttl).Err()
 }
 
 // GetUserPermissions retrieves cached permissions from Redis.
-func (c *Client) GetUserPermissions(ctx context.Context, userID, orgID string) (int64, error) {
-	val, err := c.rdb.Get(ctx, permKey(userID, orgID)).Int64()
+func (c *Client) GetUserPermissions(ctx context.Context, userID, tenantID string) (int64, error) {
+	val, err := c.rdb.Get(ctx, permKey(userID, tenantID)).Int64()
 	if err == redis.Nil {
 		return 0, nil
 	}
@@ -142,8 +147,8 @@ func (c *Client) GetUserPermissions(ctx context.Context, userID, orgID string) (
 }
 
 // InvalidateUserPermissions removes cached permissions.
-func (c *Client) InvalidateUserPermissions(ctx context.Context, userID, orgID string) error {
-	return c.rdb.Del(ctx, permKey(userID, orgID)).Err()
+func (c *Client) InvalidateUserPermissions(ctx context.Context, userID, tenantID string) error {
+	return c.rdb.Del(ctx, permKey(userID, tenantID)).Err()
 }
 
 // RDB returns the underlying *redis.Client for direct operations.
@@ -157,4 +162,4 @@ func (c *Client) RDB() *redis.Client {
 // iam:action:{jti}        — action token consumption flag
 // iam:fail:{userID}       — failed login attempt count
 // iam:fail:{userID}:lock  — account lock flag
-// iam:perm:{userID}:{orgID} — cached permission mask
+// iam:perm:{userID}:{tenantID} — cached permission mask

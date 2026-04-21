@@ -36,7 +36,7 @@ func (r *InvoiceRepository) Create(ctx context.Context, inv *invoice.Invoice) (*
 	`
 
 	err = tx.QueryRow(ctx, query,
-		inv.OrgID, inv.InvoiceNumber, inv.CustomerName, inv.CustomerEmail, inv.BillingAddress,
+		inv.TenantID, inv.InvoiceNumber, inv.CustomerName, inv.CustomerEmail, inv.BillingAddress,
 		inv.DueDate, inv.Status, inv.Subtotal, inv.TaxAmount, inv.TotalAmount, inv.Currency, inv.Notes,
 		inv.CreatedBy, inv.UpdatedBy,
 	).Scan(&inv.ID, &inv.CreatedAt, &inv.UpdatedAt)
@@ -57,7 +57,7 @@ func (r *InvoiceRepository) Create(ctx context.Context, inv *invoice.Invoice) (*
 			placeholders = append(placeholders, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)", i*10+1, i*10+2, i*10+3, i*10+4, i*10+5, i*10+6, i*10+7, i*10+8, i*10+9, i*10+10))
 			args = append(args,
 				item.ID,
-				inv.OrgID,
+				inv.TenantID,
 				inv.ID,
 				item.Description,
 				item.Quantity,
@@ -86,7 +86,7 @@ func (r *InvoiceRepository) Create(ctx context.Context, inv *invoice.Invoice) (*
 	return inv, nil
 }
 
-func (r *InvoiceRepository) GetByID(ctx context.Context, orgID, id uuid.UUID) (*invoice.Invoice, error) {
+func (r *InvoiceRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID) (*invoice.Invoice, error) {
 	query := `
 		SELECT id, tenant_id, invoice_number, customer_name, customer_email, billing_address,
 		       due_date, status, subtotal, tax_amount, total_amount, amount_paid, amount_remaining,
@@ -95,8 +95,8 @@ func (r *InvoiceRepository) GetByID(ctx context.Context, orgID, id uuid.UUID) (*
 		WHERE id = $1 AND tenant_id = $2 AND is_deleted = false
 	`
 	inv := &invoice.Invoice{}
-	err := r.pool.QueryRow(ctx, query, id, orgID).Scan(
-		&inv.ID, &inv.OrgID, &inv.InvoiceNumber, &inv.CustomerName, &inv.CustomerEmail, &inv.BillingAddress,
+	err := r.pool.QueryRow(ctx, query, id, tenantID).Scan(
+		&inv.ID, &inv.TenantID, &inv.InvoiceNumber, &inv.CustomerName, &inv.CustomerEmail, &inv.BillingAddress,
 		&inv.DueDate, &inv.Status, &inv.Subtotal, &inv.TaxAmount, &inv.TotalAmount, &inv.AmountPaid, &inv.AmountRemaining,
 		&inv.Currency, &inv.Notes, &inv.CreatedAt, &inv.CreatedBy, &inv.UpdatedAt, &inv.UpdatedBy,
 	)
@@ -110,7 +110,7 @@ func (r *InvoiceRepository) GetByID(ctx context.Context, orgID, id uuid.UUID) (*
 		FROM invoice_items
 		WHERE invoice_id = $1 AND tenant_id = $2 AND is_deleted = false
 	`
-	rows, err := r.pool.Query(ctx, itemQuery, id, orgID)
+	rows, err := r.pool.Query(ctx, itemQuery, id, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -128,10 +128,10 @@ func (r *InvoiceRepository) GetByID(ctx context.Context, orgID, id uuid.UUID) (*
 	return inv, nil
 }
 
-func (r *InvoiceRepository) List(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]invoice.Invoice, int64, error) {
+func (r *InvoiceRepository) List(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]invoice.Invoice, int64, error) {
 	countQuery := `SELECT COUNT(*) FROM invoices WHERE tenant_id = $1 AND is_deleted = false`
 	var total int64
-	err := r.pool.QueryRow(ctx, countQuery, orgID).Scan(&total)
+	err := r.pool.QueryRow(ctx, countQuery, tenantID).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -143,7 +143,7 @@ func (r *InvoiceRepository) List(ctx context.Context, orgID uuid.UUID, limit, of
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3
 	`
-	rows, err := r.pool.Query(ctx, query, orgID, limit, offset)
+	rows, err := r.pool.Query(ctx, query, tenantID, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -152,7 +152,7 @@ func (r *InvoiceRepository) List(ctx context.Context, orgID uuid.UUID, limit, of
 	var invoices []invoice.Invoice
 	for rows.Next() {
 		var inv invoice.Invoice
-		err := rows.Scan(&inv.ID, &inv.OrgID, &inv.InvoiceNumber, &inv.CustomerName, &inv.Status, &inv.TotalAmount, &inv.DueDate, &inv.CreatedAt, &inv.CreatedBy, &inv.UpdatedAt, &inv.UpdatedBy)
+		err := rows.Scan(&inv.ID, &inv.TenantID, &inv.InvoiceNumber, &inv.CustomerName, &inv.Status, &inv.TotalAmount, &inv.DueDate, &inv.CreatedAt, &inv.CreatedBy, &inv.UpdatedAt, &inv.UpdatedBy)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -162,14 +162,14 @@ func (r *InvoiceRepository) List(ctx context.Context, orgID uuid.UUID, limit, of
 	return invoices, total, nil
 }
 
-func (r *InvoiceRepository) UpdateStatus(ctx context.Context, orgID, id uuid.UUID, status invoice.InvoiceStatus, updatedBy uuid.UUID) error {
+func (r *InvoiceRepository) UpdateStatus(ctx context.Context, tenantID, id uuid.UUID, status invoice.InvoiceStatus, updatedBy uuid.UUID) error {
 	query := `UPDATE invoices SET status = $1, updated_at = CURRENT_TIMESTAMP, updated_by = $2 WHERE id = $3 AND tenant_id = $4 AND is_deleted = false`
-	_, err := r.pool.Exec(ctx, query, status, updatedBy, id, orgID)
+	_, err := r.pool.Exec(ctx, query, status, updatedBy, id, tenantID)
 	return err
 }
 
-func (r *InvoiceRepository) Delete(ctx context.Context, orgID, id uuid.UUID) error {
+func (r *InvoiceRepository) Delete(ctx context.Context, tenantID, id uuid.UUID) error {
 	query := `UPDATE invoices SET is_deleted = true, deleted_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2`
-	_, err := r.pool.Exec(ctx, query, id, orgID)
+	_, err := r.pool.Exec(ctx, query, id, tenantID)
 	return err
 }

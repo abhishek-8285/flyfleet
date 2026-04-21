@@ -28,7 +28,7 @@ func (h *InvoicePDFHandler) GetInvoicePDF(c *gin.Context) {
 	}
 
 	// RBAC Check (Mock: In real system, verify user belongs to Org)
-	// orgID := c.MustGet("tenant_id").(uuid.UUID)
+	// tenantID := c.MustGet("tenant_id").(uuid.UUID)
 
 	ctx := c.Request.Context()
 

@@ -116,8 +116,8 @@ func (h *FinanceHandlers) RejectReport(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *FinanceHandlers) ListReports(w http.ResponseWriter, r *http.Request) {
-	orgID := getOrgID(r)
-	if orgID == "" {
+	tenantID := getTenantID(r)
+	if tenantID == "" {
 		http.Error(w, "missing organization id", http.StatusBadRequest)
 		return
 	}
@@ -125,7 +125,7 @@ func (h *FinanceHandlers) ListReports(w http.ResponseWriter, r *http.Request) {
 	offset := parseIntDefault(r.URL.Query().Get("offset"), 0)
 	status := r.URL.Query().Get("status")
 
-	payload, err := h.service.ListExpenseReports(r.Context(), orgID, status, limit, offset)
+	payload, err := h.service.ListExpenseReports(r.Context(), tenantID, status, limit, offset)
 	if err != nil {
 		h.logger.Error("failed to list expense reports", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -136,12 +136,12 @@ func (h *FinanceHandlers) ListReports(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *FinanceHandlers) ListPolicies(w http.ResponseWriter, r *http.Request) {
-	orgID := getOrgID(r)
-	if orgID == "" {
+	tenantID := getTenantID(r)
+	if tenantID == "" {
 		http.Error(w, "missing organization id", http.StatusBadRequest)
 		return
 	}
-	policies, err := h.service.ListExpensePolicies(r.Context(), orgID)
+	policies, err := h.service.ListExpensePolicies(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("failed to list expense policies", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -152,8 +152,8 @@ func (h *FinanceHandlers) ListPolicies(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *FinanceHandlers) UpsertPolicy(w http.ResponseWriter, r *http.Request) {
-	orgID := getOrgID(r)
-	if orgID == "" {
+	tenantID := getTenantID(r)
+	if tenantID == "" {
 		http.Error(w, "missing organization id", http.StatusBadRequest)
 		return
 	}
@@ -162,7 +162,7 @@ func (h *FinanceHandlers) UpsertPolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
-	policy.OrgID = orgID
+	policy.TenantID = tenantID
 	if err := h.service.UpsertExpensePolicy(r.Context(), &policy); err != nil {
 		h.logger.Error("failed to upsert expense policy", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -200,9 +200,9 @@ func (h *FinanceHandlers) ListRevenueExperiments(w http.ResponseWriter, r *http.
 	_ = json.NewEncoder(w).Encode(map[string]any{"experiments": experiments})
 }
 
-func getOrgID(r *http.Request) string {
+func getTenantID(r *http.Request) string {
 	// SECURITY FIX: Get org ID from context only, not from client-supplied headers
-	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
+	if val := r.Context().Value(middleware.TenantIDKey); val != nil {
 		switch v := val.(type) {
 		case string:
 			return strings.TrimSpace(v)

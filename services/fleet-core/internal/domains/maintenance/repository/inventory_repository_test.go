@@ -54,13 +54,13 @@ func TestInventoryPart_LowStockLogic(t *testing.T) {
 
 func TestInventoryFilter(t *testing.T) {
 	filter := models.InventoryFilter{
-		OrgID:         uuid.New(),
+		TenantID:         uuid.New(),
 		Search:        "oil",
 		LowStockOnly:  true,
 		AvailableOnly: true,
 	}
 
-	assert.NotEqual(t, uuid.Nil, filter.OrgID)
+	assert.NotEqual(t, uuid.Nil, filter.TenantID)
 	assert.Equal(t, "oil", filter.Search)
 	assert.True(t, filter.LowStockOnly)
 	assert.True(t, filter.AvailableOnly)
@@ -260,12 +260,12 @@ func TestWorkOrderStats(t *testing.T) {
 
 func TestMaintenanceSettings(t *testing.T) {
 	settings := &models.MaintenanceSettings{
-		OrgID:             uuid.New(),
+		TenantID:             uuid.New(),
 		SLAP2Hours:        24,
 		AutoAssignEnabled: true,
 	}
 
-	assert.NotEqual(t, uuid.Nil, settings.OrgID)
+	assert.NotEqual(t, uuid.Nil, settings.TenantID)
 	assert.Equal(t, 24, settings.SLAP2Hours)
 	assert.True(t, settings.AutoAssignEnabled)
 }

@@ -36,6 +36,7 @@ type createDriverRequestDTO struct {
 	Address          models.Address          `json:"address" validate:"required"`
 	EmergencyContact models.EmergencyContact `json:"emergency_contact" validate:"required"`
 	ExperienceYears  int                     `json:"experience_years" validate:"gte=0,lte=50"`
+	JoiningDate      time.Time               `json:"joining_date" validate:"omitempty"`
 	Metadata         map[string]interface{}  `json:"metadata"`
 }
 
@@ -252,13 +253,13 @@ func (h *DriverHandler) CreateDriver(w http.ResponseWriter, r *http.Request) {
 		Metadata:         dto.Metadata,
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found", nil)
 		return
 	}
 
-	driver, err := h.service.Create(r.Context(), orgID.String(), req)
+	driver, err := h.service.Create(r.Context(), tenantID.String(), req)
 	if err != nil {
 		h.logger.Error("failed to create driver", zap.Error(err))
 		statusCode := http.StatusInternalServerError
@@ -304,8 +305,8 @@ func (h *DriverHandler) ListDrivers(w http.ResponseWriter, r *http.Request) {
 	filter.OrderBy = query.Get("order_by")
 	filter.OrderDir = query.Get("order_dir")
 
-	orgID := h.getOrgID(r)
-	filter.OrgID = orgID.String()
+	tenantID := h.getTenantID(r)
+	filter.TenantID = tenantID.String()
 
 	drivers, totalCount, err := h.service.List(r.Context(), filter)
 	if err != nil {
@@ -802,8 +803,8 @@ func (h *DriverHandler) MarkAttendance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
 		return
 	}
@@ -835,7 +836,7 @@ func (h *DriverHandler) MarkAttendance(w http.ResponseWriter, r *http.Request) {
 		checkOut = dto.CheckOutTime
 	}
 
-	if err := h.service.MarkAttendance(r.Context(), driverID, orgID, dto.Date, dto.Status, checkIn, checkOut, dto.Remarks); err != nil {
+	if err := h.service.MarkAttendance(r.Context(), driverID, tenantID, dto.Date, dto.Status, checkIn, checkOut, dto.Remarks); err != nil {
 		h.logger.Error("failed to mark attendance", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -858,8 +859,8 @@ func (h *DriverHandler) GetAttendance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
 		return
 	}
@@ -896,7 +897,7 @@ func (h *DriverHandler) GetAttendance(w http.ResponseWriter, r *http.Request) {
 		endDate = time.Now()
 	}
 
-	attendance, err := h.service.GetAttendance(r.Context(), driverID, orgID, startDate, endDate)
+	attendance, err := h.service.GetAttendance(r.Context(), driverID, tenantID, startDate, endDate)
 	if err != nil {
 		h.logger.Error("failed to get attendance", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -1202,11 +1203,11 @@ func (h *DriverHandler) writeErrorResponse(w http.ResponseWriter, statusCode int
 	}
 }
 
-func (h *DriverHandler) getOrgID(r *http.Request) uuid.UUID {
+func (h *DriverHandler) getTenantID(r *http.Request) uuid.UUID {
 	ctx := r.Context()
 	
-	// Check standardized OrgIDKey first
-	if val := ctx.Value(ctxkeys.OrgIDKey); val != nil {
+	// Check standardized TenantIDKey first
+	if val := ctx.Value(ctxkeys.TenantIDKey); val != nil {
 		switch v := val.(type) {
 		case uuid.UUID:
 			return v
@@ -1218,7 +1219,7 @@ func (h *DriverHandler) getOrgID(r *http.Request) uuid.UUID {
 	}
 
 	// Check legacy/string literal fallbacks
-	for _, key := range []interface{}{"orgID", "tenant_id", ctxkeys.TenantIDKey} {
+	for _, key := range []interface{}{"tenantID", "tenant_id", ctxkeys.TenantIDKey} {
 		if val := ctx.Value(key); val != nil {
 			switch v := val.(type) {
 			case uuid.UUID:
@@ -1235,8 +1236,8 @@ func (h *DriverHandler) getOrgID(r *http.Request) uuid.UUID {
 }
 
 func (h *DriverHandler) verifyDriverOwnership(w http.ResponseWriter, r *http.Request, driverID string) (*models.Driver, bool) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
 		return nil, false
 	}
@@ -1252,11 +1253,11 @@ func (h *DriverHandler) verifyDriverOwnership(w http.ResponseWriter, r *http.Req
 		return nil, false
 	}
 
-	if driver.OrgID != orgID.String() {
+	if driver.TenantID != tenantID.String() {
 		h.logger.Warn("unauthorized access attempt to driver",
 			zap.String("driver_id", driverID),
-			zap.String("requester_org_id", orgID.String()),
-			zap.String("driver_org_id", driver.OrgID))
+			zap.String("requester_tenant_id", tenantID.String()),
+			zap.String("driver_tenant_id", driver.TenantID))
 		h.writeErrorResponse(w, http.StatusForbidden, "Access denied", nil)
 		return nil, false
 	}

@@ -29,16 +29,16 @@ func NewDocumentsService(
 }
 
 // Upload validates and inserts an immutable document record.
-func (s *DocumentsService) Upload(ctx context.Context, vehicleID uuid.UUID, orgID uuid.UUID, req *models.UploadDocumentRequest, uploadedBy *uuid.UUID) (*models.VehicleDocument, error) {
+func (s *DocumentsService) Upload(ctx context.Context, vehicleID uuid.UUID, tenantID uuid.UUID, req *models.UploadDocumentRequest, uploadedBy *uuid.UUID) (*models.VehicleDocument, error) {
 	// Ensure vehicle exists and belongs to the organization
 	vehicle, err := s.vRepo.GetByID(ctx, vehicleID)
 	if err != nil {
 		return nil, err
 	}
-	if vehicle.TenantID != orgID {
+	if vehicle.TenantID != tenantID {
 		s.logger.Warn("unauthorized document upload attempt",
 			zap.String("vehicle_id", vehicleID.String()),
-			zap.String("tenant_id", orgID.String()),
+			zap.String("tenant_id", tenantID.String()),
 			zap.String("vehicle_tenant", vehicle.TenantID.String()))
 		return nil, fmt.Errorf("vehicle not found")
 	}
@@ -83,23 +83,23 @@ func (s *DocumentsService) Upload(ctx context.Context, vehicleID uuid.UUID, orgI
 }
 
 // ListDocuments returns all documents for a vehicle.
-func (s *DocumentsService) ListDocuments(ctx context.Context, vehicleID uuid.UUID, orgID uuid.UUID) ([]models.VehicleDocument, error) {
+func (s *DocumentsService) ListDocuments(ctx context.Context, vehicleID uuid.UUID, tenantID uuid.UUID) ([]models.VehicleDocument, error) {
 	// Verify vehicle belongs to org
 	vehicle, err := s.vRepo.GetByID(ctx, vehicleID)
 	if err != nil {
 		return nil, err
 	}
-	if vehicle.TenantID != orgID {
+	if vehicle.TenantID != tenantID {
 		s.logger.Warn("unauthorized document list attempt",
 			zap.String("vehicle_id", vehicleID.String()),
-			zap.String("tenant_id", orgID.String()))
+			zap.String("tenant_id", tenantID.String()))
 		return nil, fmt.Errorf("vehicle not found")
 	}
 	return s.docsRepo.List(ctx, vehicleID)
 }
 
 // GetDocument returns a single document by ID.
-func (s *DocumentsService) GetDocument(ctx context.Context, docID uuid.UUID, orgID uuid.UUID) (*models.VehicleDocument, error) {
+func (s *DocumentsService) GetDocument(ctx context.Context, docID uuid.UUID, tenantID uuid.UUID) (*models.VehicleDocument, error) {
 	doc, err := s.docsRepo.Get(ctx, docID)
 	if err != nil {
 		return nil, err
@@ -112,11 +112,11 @@ func (s *DocumentsService) GetDocument(ctx context.Context, docID uuid.UUID, org
 	if err != nil {
 		return nil, err
 	}
-	if vehicle.TenantID != orgID {
+	if vehicle.TenantID != tenantID {
 		s.logger.Warn("unauthorized document access attempt",
 			zap.String("doc_id", docID.String()),
 			zap.String("vehicle_id", doc.VehicleID.String()),
-			zap.String("tenant_id", orgID.String()))
+			zap.String("tenant_id", tenantID.String()))
 		return nil, nil
 	}
 	return doc, nil

@@ -68,61 +68,61 @@ type AnomalyResult struct {
 	Recommendation string  `json:"recommendation"`
 }
 
-func (ta *TelemetryAnalytics) ProcessAdvancedAnalytics(ctx context.Context, orgID string, vehicleID uuid.UUID, startTime, endTime time.Time) error {
-	return ta.db.WithTenant(ctx, orgID, func(ctx context.Context, tx database.Transaction) error {
+func (ta *TelemetryAnalytics) ProcessAdvancedAnalytics(ctx context.Context, tenantID string, vehicleID uuid.UUID, startTime, endTime time.Time) error {
+	return ta.db.WithTenant(ctx, tenantID, func(ctx context.Context, tx database.Transaction) error {
 		// Process speed analysis
 		speedAnalysis, err := ta.analyzeSpeed(ctx, tx, vehicleID, startTime, endTime)
 		if err != nil {
-			ta.logger.Error("Failed to analyze speed", zap.String("tenant_id", orgID), zap.Error(err))
+			ta.logger.Error("Failed to analyze speed", zap.String("tenant_id", tenantID), zap.Error(err))
 		} else if speedAnalysis != nil {
 			err = ta.saveAnalyticsResult(ctx, tx, vehicleID, "speed_analysis", speedAnalysis, 0.95)
 			if err != nil {
-				ta.logger.Error("Failed to save speed analysis", zap.String("tenant_id", orgID), zap.Error(err))
+				ta.logger.Error("Failed to save speed analysis", zap.String("tenant_id", tenantID), zap.Error(err))
 			}
 		}
 
 		// Process harsh event analysis
 		harshEventAnalysis, err := ta.analyzeHarshEvents(ctx, tx, vehicleID, startTime, endTime)
 		if err != nil {
-			ta.logger.Error("Failed to analyze harsh events", zap.String("tenant_id", orgID), zap.Error(err))
+			ta.logger.Error("Failed to analyze harsh events", zap.String("tenant_id", tenantID), zap.Error(err))
 		} else if harshEventAnalysis != nil {
 			err = ta.saveAnalyticsResult(ctx, tx, vehicleID, "harsh_event_analysis", harshEventAnalysis, 0.90)
 			if err != nil {
-				ta.logger.Error("Failed to save harsh event analysis", zap.String("tenant_id", orgID), zap.Error(err))
+				ta.logger.Error("Failed to save harsh event analysis", zap.String("tenant_id", tenantID), zap.Error(err))
 			}
 		}
 
 		// Process fuel efficiency analysis
 		fuelEfficiencyAnalysis, err := ta.analyzeFuelEfficiency(ctx, tx, vehicleID, startTime, endTime)
 		if err != nil {
-			ta.logger.Error("Failed to analyze fuel efficiency", zap.String("tenant_id", orgID), zap.Error(err))
+			ta.logger.Error("Failed to analyze fuel efficiency", zap.String("tenant_id", tenantID), zap.Error(err))
 		} else if fuelEfficiencyAnalysis != nil {
 			err = ta.saveAnalyticsResult(ctx, tx, vehicleID, "fuel_efficiency_analysis", fuelEfficiencyAnalysis, 0.85)
 			if err != nil {
-				ta.logger.Error("Failed to save fuel efficiency analysis", zap.String("tenant_id", orgID), zap.Error(err))
+				ta.logger.Error("Failed to save fuel efficiency analysis", zap.String("tenant_id", tenantID), zap.Error(err))
 			}
 		}
 
 		// Process distance and route analysis
 		distanceAnalysis, err := ta.analyzeDistanceAndRoute(ctx, tx, vehicleID, startTime, endTime)
 		if err != nil {
-			ta.logger.Error("Failed to analyze distance and route", zap.String("tenant_id", orgID), zap.Error(err))
+			ta.logger.Error("Failed to analyze distance and route", zap.String("tenant_id", tenantID), zap.Error(err))
 		} else if distanceAnalysis != nil {
 			err = ta.saveAnalyticsResult(ctx, tx, vehicleID, "distance_analysis", distanceAnalysis, 0.92)
 			if err != nil {
-				ta.logger.Error("Failed to save distance analysis", zap.String("tenant_id", orgID), zap.Error(err))
+				ta.logger.Error("Failed to save distance analysis", zap.String("tenant_id", tenantID), zap.Error(err))
 			}
 		}
 
 		// Process anomaly detection
 		anomalyResults, err := ta.detectAnomalies(ctx, tx, vehicleID, startTime, endTime)
 		if err != nil {
-			ta.logger.Error("Failed to detect anomalies", zap.String("tenant_id", orgID), zap.Error(err))
+			ta.logger.Error("Failed to detect anomalies", zap.String("tenant_id", tenantID), zap.Error(err))
 		} else {
 			for _, anomaly := range anomalyResults {
 				err = ta.saveAnomalyResult(ctx, tx, vehicleID, anomaly.Type, anomaly.Data, anomaly.Confidence, anomaly.Score, &anomaly.Recommendation)
 				if err != nil {
-					ta.logger.Error("Failed to save anomaly result", zap.String("tenant_id", orgID), zap.Error(err))
+					ta.logger.Error("Failed to save anomaly result", zap.String("tenant_id", tenantID), zap.Error(err))
 				}
 			}
 		}

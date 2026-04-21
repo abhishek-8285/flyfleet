@@ -27,7 +27,7 @@ func (r *MeteringRepository) RecordConsumption(ctx context.Context, event *model
 	query := `INSERT INTO consumption_events (time, tenant_id, vehicle_id, meter_code, amount, metadata) 
 	          VALUES ($1, $2, $3, $4, $5, $6)`
 
-	_, err := r.db.Exec(ctx, query, event.Time, event.OrgID, event.VehicleID, event.MeterCode, event.Amount, event.Metadata)
+	_, err := r.db.Exec(ctx, query, event.Time, event.TenantID, event.VehicleID, event.MeterCode, event.Amount, event.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to record consumption: %w", err)
 	}
@@ -35,14 +35,14 @@ func (r *MeteringRepository) RecordConsumption(ctx context.Context, event *model
 }
 
 // GetUnbilledUsage aggregates usage events that haven't been invoiced yet
-func (r *MeteringRepository) GetUnbilledUsage(ctx context.Context, orgID uuid.UUID) ([]models.UsageSummary, error) {
+func (r *MeteringRepository) GetUnbilledUsage(ctx context.Context, tenantID uuid.UUID) ([]models.UsageSummary, error) {
 	query := `SELECT ce.meter_code, um.name, um.unit, SUM(ce.amount) as total, SUM(ce.amount * um.unit_price) as amount
 	          FROM consumption_events ce
 	          JOIN usage_meters um ON ce.meter_code = um.code
 	          WHERE ce.tenant_id = $1 AND ce.processed_invoice_id IS NULL
 	          GROUP BY ce.meter_code, um.name, um.unit`
 
-	rows, err := r.db.Query(ctx, query, orgID)
+	rows, err := r.db.Query(ctx, query, tenantID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query unbilled usage: %w", err)
 	}
@@ -61,11 +61,11 @@ func (r *MeteringRepository) GetUnbilledUsage(ctx context.Context, orgID uuid.UU
 }
 
 // MarkUsageAsBilled links consumption events to a generated invoice
-func (r *MeteringRepository) MarkUsageAsBilled(ctx context.Context, orgID uuid.UUID, invoiceID uuid.UUID) error {
+func (r *MeteringRepository) MarkUsageAsBilled(ctx context.Context, tenantID uuid.UUID, invoiceID uuid.UUID) error {
 	query := `UPDATE consumption_events SET processed_invoice_id = $1 
 	          WHERE tenant_id = $2 AND processed_invoice_id IS NULL`
 
-	_, err := r.db.Exec(ctx, query, invoiceID, orgID)
+	_, err := r.db.Exec(ctx, query, invoiceID, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to mark usage as billed: %w", err)
 	}

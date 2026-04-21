@@ -8,7 +8,7 @@ import (
 
 type ComponentWarranty struct {
 	ID               uuid.UUID `json:"id" db:"id"`
-	OrgID            uuid.UUID `json:"tenant_id" db:"tenant_id"`
+	TenantID            uuid.UUID `json:"tenant_id" db:"tenant_id"`
 	VehicleID        uuid.UUID `json:"vehicle_id" db:"vehicle_id"`
 	PartNumber       string    `json:"part_number" db:"part_number"`
 	WarrantyProvider string    `json:"warranty_provider" db:"warranty_provider"`

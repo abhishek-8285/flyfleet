@@ -101,9 +101,9 @@ func (w *GeofenceChecker) checkAllOrgs(ctx context.Context) {
 
 // CheckVehicle checks a single vehicle's position against all active
 // geofences, logging events on state changes.
-func (w *GeofenceChecker) CheckVehicle(ctx context.Context, vehicleID uuid.UUID, orgID uuid.UUID, lat, lng float64) error {
+func (w *GeofenceChecker) CheckVehicle(ctx context.Context, vehicleID uuid.UUID, tenantID uuid.UUID, lat, lng float64) error {
 	// 1. Get all active geofences for this org
-	geofences, err := w.geoRepo.GetOrgGeofences(ctx, orgID)
+	geofences, err := w.geoRepo.GetOrgGeofences(ctx, tenantID)
 	if err != nil {
 		return fmt.Errorf("get org geofences: %w", err)
 	}
@@ -113,7 +113,7 @@ func (w *GeofenceChecker) CheckVehicle(ctx context.Context, vehicleID uuid.UUID,
 	}
 
 	// 2. Check if point is inside any geofence (PostGIS)
-	insideGeofences, err := w.geoRepo.CheckPointInGeofences(ctx, orgID, lat, lng)
+	insideGeofences, err := w.geoRepo.CheckPointInGeofences(ctx, tenantID, lat, lng)
 	if err != nil {
 		return fmt.Errorf("spatial check: %w", err)
 	}
@@ -172,7 +172,7 @@ func (w *GeofenceChecker) CheckVehicle(ctx context.Context, vehicleID uuid.UUID,
 			}
 
 			// Publish alert to Redis pub/sub for dashboard notification
-			w.publishGeofenceAlert(ctx, orgID, event, g.Name)
+			w.publishGeofenceAlert(ctx, tenantID, event, g.Name)
 
 			w.logger.Info("geofence event detected",
 				zap.String("vehicle_id", vehicleID.String()),
@@ -186,7 +186,7 @@ func (w *GeofenceChecker) CheckVehicle(ctx context.Context, vehicleID uuid.UUID,
 
 func (w *GeofenceChecker) publishGeofenceAlert(
 	ctx context.Context,
-	orgID uuid.UUID,
+	tenantID uuid.UUID,
 	event *models.GeofenceEvent,
 	geofenceName string,
 ) {
@@ -209,7 +209,7 @@ func (w *GeofenceChecker) publishGeofenceAlert(
 		return
 	}
 
-	channel := database.RedisChannelForOrg(orgID.String())
+	channel := database.RedisChannelForOrg(tenantID.String())
 	if err := w.redis.Publish(ctx, channel, msg).Err(); err != nil {
 		w.logger.Warn("failed to publish geofence alert", zap.Error(err))
 	}

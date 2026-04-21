@@ -6,7 +6,7 @@ import apiClient from '../../services/apiClient';
 // Types
 interface Vehicle {
   id: string;
-  org_id: string;
+  tenant_id: string;
   registration_number: string;
   type: string;
   make: string;
@@ -57,7 +57,7 @@ export const VehicleList: React.FC = () => {
     vehicleType: '',
     fuelType: '',
     driverId: '',
-    organizationId: '',
+    tenantId: '',
     make: '',
     search: '',
     orderBy: 'created_at',
@@ -81,7 +81,7 @@ export const VehicleList: React.FC = () => {
       if (filters.vehicleType) params.append('type', filters.vehicleType);
       if (filters.fuelType) params.append('fuel_type', filters.fuelType);
       if (filters.driverId) params.append('driver_id', filters.driverId);
-      if (filters.organizationId) params.append('org_id', filters.organizationId);
+      if (filters.tenantId) params.append('tenant_id', filters.tenantId);
       if (filters.make) params.append('make', filters.make);
 
       const data = (await apiClient.get(
@@ -125,7 +125,7 @@ export const VehicleList: React.FC = () => {
       vehicleType: '',
       fuelType: '',
       driverId: '',
-      organizationId: '',
+      tenantId: '',
       make: '',
       search: '',
       orderBy: 'created_at',
@@ -224,7 +224,7 @@ export const VehicleList: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col h-full w-full bg-surface-dim">
+    <div className="flex flex-col h-full w-full bg-surface-dim p-6 overflow-y-auto space-y-6">
       {/* Filter Bar */}
       <VehicleFilters
         filters={filters}

@@ -50,6 +50,13 @@ export const GlobalAdminSidebar: React.FC = () => {
       { title: 'Drivers', path: '/admin/drivers', icon: 'group', roles: ['*'], items: [] },
       { title: 'Trips', path: '/admin/trips', icon: 'route', roles: ['*'], items: [] },
       {
+        title: 'Customers',
+        path: '/admin/customers',
+        icon: 'account_balance',
+        roles: ['admin', 'super_admin'],
+        items: [],
+      },
+      {
         title: 'Maintenance',
         path: '/admin/maintenance/work-orders',
         icon: 'build',

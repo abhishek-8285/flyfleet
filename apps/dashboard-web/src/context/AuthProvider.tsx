@@ -11,7 +11,7 @@ import type { User } from "../types/index";
 interface AuthContextType {
   login: (token: string, refreshToken: string, userData: User) => void;
   logout: () => void;
-  setOrganization: (orgId: string) => void;
+  setTenant: (tenantId: string) => void;
   toggleTheme: () => Promise<void>;
   setLanguage: (lang: string) => Promise<void>;
   toggleSidebar: () => Promise<void>;
@@ -38,15 +38,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const userPayload = data.user || data;
     const userWithPermissions: User = {
       ...userPayload,
-      org_id: userPayload.org_id || userPayload.tenant_id || data.organization?.id,
+      tenant_id: userPayload.tenant_id || userPayload.org_id || data.organization?.id,
       permissions: userPayload.permissions || (data.permissions?.map((p: any) =>
         typeof p === "string" ? p : `${p.module}:${p.action}`
       ) || []),
     } as User;
     store.dispatch(setReduxUser(userWithPermissions));
     localStorage.setItem('user_data', JSON.stringify(userWithPermissions));
-    if (userWithPermissions.org_id) {
-      localStorage.setItem('org_id', userWithPermissions.org_id);
+    if (userWithPermissions.tenant_id) {
+      localStorage.setItem('tenant_id', userWithPermissions.tenant_id);
     }
     return userWithPermissions;
   };
@@ -68,13 +68,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         throw new Error("Profile synchronization failed: Missing identity payload");
       }
 
-      const profileOrgId = userPayload.org_id || 
-                           userPayload.tenant_id || 
+      const profileTenantId = userPayload.tenant_id || 
+                           userPayload.org_id || 
                            userPayload.current_org?.id || 
                            profileData.organization?.id;
 
-      if (profileOrgId) {
-        localStorage.setItem("org_id", profileOrgId);
+      if (profileTenantId) {
+        localStorage.setItem("tenant_id", profileTenantId);
       }
 
       const backendTheme = userPayload.theme;
@@ -94,7 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const userData: User = {
         ...userPayload,
-        org_id: profileOrgId,
+        tenant_id: profileTenantId,
         permissions: permissionsPayload.map((p: any) =>
           typeof p === "string" ? p : `${p.module}:${p.action}`,
         ),
@@ -170,7 +170,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             const devEmail = import.meta.env.VITE_DEV_LOGIN_EMAIL || "admin@delta.io";
             const devResponse = await axios.post(
               "/api/v1/auth/login",
-              { email: devEmail, password: "Fleet_password123", org_id: "550e8400-e29b-41d4-a716-446655440000" },
+              { email: devEmail, password: "Fleet_password123", tenant_id: "550e8400-e29b-41d4-a716-446655440000" },
               { withCredentials: false }
             ) as any;
             const devToken = devResponse.data?.token || devResponse.data?.access_token;
@@ -182,8 +182,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
               }
               if (devResponse.data?.user) {
                 const hydrated = hydrateUser(devResponse.data);
-                if (hydrated.org_id) {
-                  localStorage.setItem('org_id', hydrated.org_id);
+                if (hydrated.tenant_id) {
+                  localStorage.setItem('tenant_id', hydrated.tenant_id);
                 }
               }
               await fetchProfile();
@@ -210,17 +210,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const login = (token: string, refreshToken: string, userData: User) => {
-    // Normalization: backend models use tenant_id, frontend uses org_id
+    // Normalization: frontend and backend models now use tenant_id
     const normalizedUser = {
       ...userData,
-      org_id: userData.org_id || (userData as any).tenant_id,
+      tenant_id: userData.tenant_id || (userData as any).org_id,
     };
 
     store.dispatch(setToken(token));
     store.dispatch(setReduxUser(normalizedUser));
     
-    if (normalizedUser.org_id) {
-      localStorage.setItem('org_id', normalizedUser.org_id);
+    if (normalizedUser.tenant_id) {
+      localStorage.setItem('tenant_id', normalizedUser.tenant_id);
     }
     
     localStorage.setItem('access_token', token);
@@ -244,12 +244,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user_data');
-    localStorage.removeItem('org_id');
+    localStorage.removeItem('tenant_id');
     window.location.href = "/login";
   };
 
-  const setOrganization = async (orgId: string) => {
-    localStorage.setItem("org_id", orgId);
+  const setTenant = async (tenantId: string) => {
+    localStorage.setItem("tenant_id", tenantId);
     try {
       const refreshToken = localStorage.getItem('refresh_token');
       const refreshResponse = await axios.post('/api/v1/auth/refresh', { refresh_token: refreshToken });
@@ -266,8 +266,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       await fetchProfile();
     } catch (err: any) {
-      console.warn("setOrganization: org switch failed, clearing org_id and falling back:", err);
-      localStorage.removeItem("org_id");
+      console.warn("setTenant: tenant switch failed, clearing tenant_id and falling back:", err);
+      localStorage.removeItem("tenant_id");
       if (err.response?.status === 403 || err.response?.status === 401) {
         window.location.href = "/";
       } else {
@@ -310,7 +310,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       value={{
         login,
         logout,
-        setOrganization,
+        setTenant,
         toggleTheme,
         setLanguage,
         toggleSidebar,

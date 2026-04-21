@@ -28,12 +28,13 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.
 		       COALESCE(failed_logins, 0), locked_until, last_login_at,
 		       COALESCE(last_login_ip, '')::text, COALESCE(permission_mask, 0),
 		       COALESCE(sidebar_collapsed, false), COALESCE(language, 'en'),
+		       COALESCE(must_reset_password, false),
 		       created_at, updated_at
 		FROM users WHERE email = $1`, email).Scan(
 		&u.ID, &u.Email, &u.PasswordHash, &u.Name, &u.Phone, &u.AvatarURL,
 		&u.MFAEnabled, &u.MFASecret, &u.MFABackupCodes, &u.Status, &u.EmailVerified,
 		&u.FailedLogins, &u.LockedUntil, &u.LastLoginAt, &u.LastLoginIP,
-		&u.PermissionMask, &u.SidebarCollapsed, &u.Language, &u.CreatedAt, &u.UpdatedAt,
+		&u.PermissionMask, &u.SidebarCollapsed, &u.Language, &u.MustResetPassword, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -52,12 +53,13 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Use
 		       COALESCE(failed_logins, 0), locked_until, last_login_at,
 		       COALESCE(last_login_ip, '')::text, COALESCE(permission_mask, 0),
 		       COALESCE(sidebar_collapsed, false), COALESCE(language, 'en'),
+		       COALESCE(must_reset_password, false),
 		       created_at, updated_at
 		FROM users WHERE id = $1`, id).Scan(
 		&u.ID, &u.Email, &u.PasswordHash, &u.Name, &u.Phone, &u.AvatarURL,
 		&u.MFAEnabled, &u.MFASecret, &u.MFABackupCodes, &u.Status, &u.EmailVerified,
 		&u.FailedLogins, &u.LockedUntil, &u.LastLoginAt, &u.LastLoginIP,
-		&u.PermissionMask, &u.SidebarCollapsed, &u.Language, &u.CreatedAt, &u.UpdatedAt,
+		&u.PermissionMask, &u.SidebarCollapsed, &u.Language, &u.MustResetPassword, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -132,56 +134,96 @@ func (r *UserRepository) UpdateProfile(ctx context.Context, id uuid.UUID, name, 
 	return err
 }
 
-func (r *UserRepository) UpdatePreferences(ctx context.Context, id uuid.UUID, sidebarCollapsed *bool, language *string) error {
-	_, err := r.pool.Exec(ctx,
-		`UPDATE users SET
-			sidebar_collapsed = COALESCE($1, sidebar_collapsed),
-			language = COALESCE($2, language),
-			updated_at = NOW()
-		WHERE id = $3`,
-		sidebarCollapsed, language, id,
-	)
+func (r *UserRepository) UpdatePreferences(ctx context.Context, id, tenantID uuid.UUID, sidebarCollapsed *bool, language *string) error {
+	var err error
+	if tenantID != uuid.Nil {
+		_, err = r.pool.Exec(ctx,
+			`UPDATE users SET
+				sidebar_collapsed = COALESCE($1, sidebar_collapsed),
+				language = COALESCE($2, language),
+				updated_at = NOW()
+			WHERE id = $3 AND id IN (SELECT user_id FROM user_organizations WHERE organization_id = $4)`,
+			sidebarCollapsed, language, id, tenantID,
+		)
+	} else {
+		_, err = r.pool.Exec(ctx,
+			`UPDATE users SET
+				sidebar_collapsed = COALESCE($1, sidebar_collapsed),
+				language = COALESCE($2, language),
+				updated_at = NOW()
+			WHERE id = $3`,
+			sidebarCollapsed, language, id,
+		)
+	}
 	return err
 }
 
-func (r *UserRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status models.UserStatus) error {
-	_, err := r.pool.Exec(ctx,
-		"UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2",
-		status, id,
-	)
+func (r *UserRepository) UpdateStatus(ctx context.Context, id, tenantID uuid.UUID, status models.UserStatus) error {
+	var err error
+	if tenantID != uuid.Nil {
+		_, err = r.pool.Exec(ctx, `
+			UPDATE users SET status = $1, updated_at = NOW() 
+			WHERE id = $2 AND id IN (SELECT user_id FROM user_organizations WHERE organization_id = $3)`,
+			status, id, tenantID,
+		)
+	} else {
+		_, err = r.pool.Exec(ctx,
+			"UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2",
+			status, id,
+		)
+	}
 	return err
 }
 
 func (r *UserRepository) CreateUser(ctx context.Context, u *models.User) error {
 	return r.pool.QueryRow(ctx, `
-		INSERT INTO users (email, password_hash, name, phone, avatar_url, status, email_verified, role_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, (SELECT id FROM roles WHERE name = 'super_admin' LIMIT 1))
+		INSERT INTO users (email, password_hash, name, phone, avatar_url, status, email_verified, must_reset_password, role_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, (SELECT id FROM roles WHERE name = 'super_admin' LIMIT 1))
 		RETURNING id, created_at, updated_at`,
-		u.Email, u.PasswordHash, u.Name, u.Phone, u.AvatarURL, u.Status, u.EmailVerified,
+		u.Email, u.PasswordHash, u.Name, u.Phone, u.AvatarURL, u.Status, u.EmailVerified, u.MustResetPassword,
 	).Scan(&u.ID, &u.CreatedAt, &u.UpdatedAt)
+}
+
+func (r *UserRepository) UpdatePasswordAndClearResetFlag(ctx context.Context, id uuid.UUID, hash string) error {
+	_, err := r.pool.Exec(ctx,
+		"UPDATE users SET password_hash = $1, must_reset_password = false, failed_logins = 0, locked_until = NULL, updated_at = NOW() WHERE id = $2",
+		hash, id,
+	)
+	return err
 }
 
 func (r *UserRepository) ListUsers(ctx context.Context, params models.ListUsersParams) (*models.ListUsersResponse, error) {
 	query := `
 		SELECT u.id, u.email, u.name, u.status, u.last_login_at, u.created_at
-		FROM users u
-		WHERE 1=1`
-	countQuery := `SELECT COUNT(*) FROM users u WHERE 1=1`
+		FROM users u`
+	
+	countQuery := `SELECT COUNT(*) FROM users u`
+	
+	whereClause := " WHERE 1=1"
 	args := []interface{}{}
 	argCount := 1
 
+	if params.TenantID != uuid.Nil {
+		query += " JOIN user_organizations uo ON u.id = uo.user_id"
+		countQuery += " JOIN user_organizations uo ON u.id = uo.user_id"
+			whereClause += " AND uo.tenant_id = $" + strconv.Itoa(argCount)
+		args = append(args, params.TenantID)
+		argCount++
+	}
+
 	if params.Search != "" {
-		query += " AND (u.email ILIKE $" + strconv.Itoa(argCount) + " OR u.name ILIKE $" + strconv.Itoa(argCount) + ")"
-		countQuery += " AND (u.email ILIKE $" + strconv.Itoa(argCount) + " OR u.name ILIKE $" + strconv.Itoa(argCount) + ")"
+		whereClause += " AND (u.email ILIKE $" + strconv.Itoa(argCount) + " OR u.name ILIKE $" + strconv.Itoa(argCount) + ")"
 		args = append(args, "%"+params.Search+"%")
 		argCount++
 	}
 	if params.Status != "" {
-		query += " AND u.status = $" + strconv.Itoa(argCount)
-		countQuery += " AND u.status = $" + strconv.Itoa(argCount)
+		whereClause += " AND u.status = $" + strconv.Itoa(argCount)
 		args = append(args, params.Status)
 		argCount++
 	}
+
+	query += whereClause
+	countQuery += whereClause
 
 	// Count
 	var total int
@@ -203,7 +245,8 @@ func (r *UserRepository) ListUsers(ctx context.Context, params models.ListUsersP
 	for rows.Next() {
 		var u models.UserListItem
 		var lastLoginAt *time.Time
-		err := rows.Scan(&u.ID, &u.Email, &u.Name, &u.Status, &lastLoginAt, &u.CreatedAt)
+		var createdAt time.Time
+		err := rows.Scan(&u.ID, &u.Email, &u.Name, &u.Status, &lastLoginAt, &createdAt)
 		if err != nil {
 			return nil, err
 		}
@@ -211,6 +254,7 @@ func (r *UserRepository) ListUsers(ctx context.Context, params models.ListUsersP
 			s := lastLoginAt.Format(time.RFC3339)
 			u.LastLoginAt = &s
 		}
+		u.CreatedAt = createdAt.Format(time.RFC3339)
 		users = append(users, u)
 	}
 
@@ -222,10 +266,20 @@ func (r *UserRepository) ListUsers(ctx context.Context, params models.ListUsersP
 	}, nil
 }
 
-func (r *UserRepository) SoftDelete(ctx context.Context, id uuid.UUID) error {
-	_, err := r.pool.Exec(ctx,
-		"UPDATE users SET status = 'disabled', updated_at = NOW() WHERE id = $1", id,
-	)
+func (r *UserRepository) SoftDelete(ctx context.Context, id, tenantID uuid.UUID) error {
+	var err error
+	if tenantID != uuid.Nil {
+		_, err = r.pool.Exec(ctx, `
+			UPDATE users SET status = 'disabled', updated_at = NOW() 
+			WHERE id = $1 AND id IN (SELECT user_id FROM user_organizations WHERE organization_id = $2)`,
+			id, tenantID,
+		)
+	} else {
+		_, err = r.pool.Exec(ctx,
+			"UPDATE users SET status = 'disabled', updated_at = NOW() WHERE id = $1",
+			id,
+		)
+	}
 	return err
 }
 

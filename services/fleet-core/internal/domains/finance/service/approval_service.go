@@ -21,9 +21,9 @@ func NewApprovalService(repo *repository.FinanceRepository, logger *zap.Logger) 
 }
 
 // InitiateApproval starts a new approval process for an entity
-func (s *ApprovalService) InitiateApproval(ctx context.Context, entityID, entityType string, orgID string, amount float64) error {
+func (s *ApprovalService) InitiateApproval(ctx context.Context, entityID, entityType string, tenantID string, amount float64) error {
 	// 1. Find matching config
-	config, err := s.repo.GetMatchingApprovalConfig(ctx, orgID, entityType, amount)
+	config, err := s.repo.GetMatchingApprovalConfig(ctx, tenantID, entityType, amount)
 	if err != nil {
 		return fmt.Errorf("failed to find approval config: %w", err)
 	}

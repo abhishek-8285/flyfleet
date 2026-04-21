@@ -23,7 +23,7 @@ service MaintenanceService {
 
 message WorkOrder {
   string id = 1;
-  string org_id = 2;
+  string tenant_id = 2;
   string vehicle_id = 3;
   string title = 4;
   string status = 5;
@@ -33,7 +33,7 @@ message WorkOrder {
 }
 
 message ListWorkOrdersRequest {
-  string org_id = 1;
+  string tenant_id = 1;
   int32 limit = 2;
   int32 offset = 3;
 }
@@ -63,7 +63,7 @@ message CreateWorkOrderResponse {
 }
 
 message GetWorkOrderStatsRequest {
-  string org_id = 1;
+  string tenant_id = 1;
 }
 
 message GetWorkOrderStatsResponse {
@@ -73,7 +73,7 @@ message GetWorkOrderStatsResponse {
 }
 
 message GetMaintenanceSummaryRequest {
-  string org_id = 1;
+  string tenant_id = 1;
 }
 
 message GetMaintenanceSummaryResponse {
@@ -83,7 +83,7 @@ message GetMaintenanceSummaryResponse {
 }
 
 message ListSchedulesRequest {
-  string org_id = 1;
+  string tenant_id = 1;
 }
 
 message ListSchedulesResponse {
@@ -92,7 +92,7 @@ message ListSchedulesResponse {
 }
 
 message ListInventoryRequest {
-  string org_id = 1;
+  string tenant_id = 1;
 }
 
 message ListInventoryResponse {

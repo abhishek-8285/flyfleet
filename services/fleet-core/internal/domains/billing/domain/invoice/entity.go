@@ -19,7 +19,7 @@ const (
 
 type Invoice struct {
 	ID              uuid.UUID     `json:"id"`
-	OrgID           uuid.UUID     `json:"tenant_id"`
+	TenantID           uuid.UUID     `json:"tenant_id"`
 	InvoiceNumber   string        `json:"invoice_number"`
 	CustomerName    string        `json:"customer_name" validate:"required"`
 	CustomerEmail   string        `json:"customer_email" validate:"email"`
@@ -44,7 +44,7 @@ type Invoice struct {
 
 type InvoiceItem struct {
 	ID          uuid.UUID `json:"id"`
-	OrgID       uuid.UUID `json:"tenant_id"`
+	TenantID       uuid.UUID `json:"tenant_id"`
 	InvoiceID   uuid.UUID `json:"invoice_id"`
 	Description string    `json:"description" validate:"required"`
 	Quantity    int       `json:"quantity" validate:"required,gt=0"`
@@ -58,15 +58,15 @@ type InvoiceItem struct {
 
 type Repository interface {
 	Create(ctx context.Context, inv *Invoice) (*Invoice, error)
-	GetByID(ctx context.Context, orgID, id uuid.UUID) (*Invoice, error)
-	List(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]Invoice, int64, error)
-	UpdateStatus(ctx context.Context, orgID, id uuid.UUID, status InvoiceStatus, updatedBy uuid.UUID) error
-	Delete(ctx context.Context, orgID, id uuid.UUID) error
+	GetByID(ctx context.Context, tenantID, id uuid.UUID) (*Invoice, error)
+	List(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]Invoice, int64, error)
+	UpdateStatus(ctx context.Context, tenantID, id uuid.UUID, status InvoiceStatus, updatedBy uuid.UUID) error
+	Delete(ctx context.Context, tenantID, id uuid.UUID) error
 }
 
 type Service interface {
-	CreateInvoice(ctx context.Context, orgID uuid.UUID, inv *Invoice) (*Invoice, error)
-	GetInvoice(ctx context.Context, orgID, id uuid.UUID) (*Invoice, error)
-	ListInvoices(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]Invoice, int64, error)
-	VoidInvoice(ctx context.Context, orgID, id uuid.UUID) error
+	CreateInvoice(ctx context.Context, tenantID uuid.UUID, inv *Invoice) (*Invoice, error)
+	GetInvoice(ctx context.Context, tenantID, id uuid.UUID) (*Invoice, error)
+	ListInvoices(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]Invoice, int64, error)
+	VoidInvoice(ctx context.Context, tenantID, id uuid.UUID) error
 }

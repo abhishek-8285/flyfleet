@@ -81,7 +81,7 @@ func (r *CreditNoteRepository) Create(ctx context.Context, cn *models.CreditNote
 		RETURNING created_at, updated_at`
 
 	err = tx.QueryRow(ctx, query,
-		cn.ID, cn.CreditNoteNo, cn.OrgID, cn.OriginalInvoiceID, cn.CustomerID, cn.CustomerName,
+		cn.ID, cn.CreditNoteNo, cn.TenantID, cn.OriginalInvoiceID, cn.CustomerID, cn.CustomerName,
 		cn.CustomerGSTIN, cn.CustomerPAN, cn.TaxableValue, cn.CGST, cn.SGST, cn.IGST, cn.TotalAmount,
 		cn.Status, cn.Reason, cn.Remarks, cn.IssueDate, cn.CreatedBy, cn.UpdatedBy).Scan(&cn.CreatedAt, &cn.UpdatedAt)
 	if err != nil {
@@ -132,7 +132,7 @@ func (r *CreditNoteRepository) GetByID(ctx context.Context, id uuid.UUID) (*mode
 
 	var cn models.CreditNote
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&cn.ID, &cn.CreditNoteNo, &cn.OrgID, &cn.OriginalInvoiceID, &cn.CustomerID, &cn.CustomerName,
+		&cn.ID, &cn.CreditNoteNo, &cn.TenantID, &cn.OriginalInvoiceID, &cn.CustomerID, &cn.CustomerName,
 		&cn.CustomerGSTIN, &cn.CustomerPAN, &cn.TaxableValue, &cn.CGST, &cn.SGST, &cn.IGST, &cn.TotalAmount,
 		&cn.Status, &cn.Reason, &cn.Remarks, &cn.AppliedToInvoiceID, &cn.AppliedAmount, &cn.AppliedAt,
 		&cn.IssueDate, &cn.CreatedAt, &cn.CreatedBy, &cn.UpdatedAt, &cn.UpdatedBy)
@@ -303,12 +303,12 @@ func (r *CreditNoteRepository) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 // ListByOrg lists credit notes for an organization
-func (r *CreditNoteRepository) ListByOrg(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.CreditNote, int, error) {
+func (r *CreditNoteRepository) ListByOrg(ctx context.Context, tenantID uuid.UUID, page, size int) ([]models.CreditNote, int, error) {
 	offset := (page - 1) * size
 
 	countQuery := `SELECT COUNT(*) FROM credit_notes WHERE tenant_id = $1 AND deleted_at IS NULL`
 	var total int
-	err := r.db.QueryRow(ctx, countQuery, orgID).Scan(&total)
+	err := r.db.QueryRow(ctx, countQuery, tenantID).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -323,7 +323,7 @@ func (r *CreditNoteRepository) ListByOrg(ctx context.Context, orgID uuid.UUID, p
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3`
 
-	rows, err := r.db.Query(ctx, query, orgID, size, offset)
+	rows, err := r.db.Query(ctx, query, tenantID, size, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -333,7 +333,7 @@ func (r *CreditNoteRepository) ListByOrg(ctx context.Context, orgID uuid.UUID, p
 	for rows.Next() {
 		var cn models.CreditNote
 		err := rows.Scan(
-			&cn.ID, &cn.CreditNoteNo, &cn.OrgID, &cn.OriginalInvoiceID, &cn.CustomerID, &cn.CustomerName,
+			&cn.ID, &cn.CreditNoteNo, &cn.TenantID, &cn.OriginalInvoiceID, &cn.CustomerID, &cn.CustomerName,
 			&cn.CustomerGSTIN, &cn.CustomerPAN, &cn.TaxableValue, &cn.CGST, &cn.SGST, &cn.IGST, &cn.TotalAmount,
 			&cn.Status, &cn.Reason, &cn.Remarks, &cn.AppliedToInvoiceID, &cn.AppliedAmount, &cn.AppliedAt,
 			&cn.IssueDate, &cn.CreatedAt, &cn.CreatedBy, &cn.UpdatedAt, &cn.UpdatedBy)
@@ -367,7 +367,7 @@ func (r *CreditNoteRepository) ListByInvoice(ctx context.Context, invoiceID uuid
 	for rows.Next() {
 		var cn models.CreditNote
 		err := rows.Scan(
-			&cn.ID, &cn.CreditNoteNo, &cn.OrgID, &cn.OriginalInvoiceID, &cn.CustomerID, &cn.CustomerName,
+			&cn.ID, &cn.CreditNoteNo, &cn.TenantID, &cn.OriginalInvoiceID, &cn.CustomerID, &cn.CustomerName,
 			&cn.CustomerGSTIN, &cn.CustomerPAN, &cn.TaxableValue, &cn.CGST, &cn.SGST, &cn.IGST, &cn.TotalAmount,
 			&cn.Status, &cn.Reason, &cn.Remarks, &cn.AppliedToInvoiceID, &cn.AppliedAmount, &cn.AppliedAt,
 			&cn.IssueDate, &cn.CreatedAt, &cn.CreatedBy, &cn.UpdatedAt, &cn.UpdatedBy)

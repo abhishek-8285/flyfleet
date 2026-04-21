@@ -29,20 +29,20 @@ func (r *SessionRepository) StoreToken(ctx context.Context, token *models.AuthTo
 		INSERT INTO auth_tokens (user_id, tenant_id, token_hash, token_type, device_id, device_info,
 		                         ip_address, user_agent, expires_at, last_active_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-		token.UserID, token.OrgID, hashToken(token.TokenHash), token.TokenType,
+		token.UserID, token.TenantID, hashToken(token.TokenHash), token.TokenType,
 		token.DeviceID, token.DeviceInfo, token.IPAddress, token.UserAgent,
 		token.ExpiresAt, token.LastActiveAt,
 	)
 	return err
 }
 
-func (r *SessionRepository) GetActiveTokens(ctx context.Context, userID, orgID uuid.UUID) ([]models.AuthToken, error) {
+func (r *SessionRepository) GetActiveTokens(ctx context.Context, userID, tenantID uuid.UUID) ([]models.AuthToken, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, user_id, tenant_id, device_id, device_info, ip_address, user_agent,
 		       expires_at, last_active_at, created_at
 		FROM auth_tokens
 		WHERE user_id = $1 AND tenant_id = $2 AND revoked_at IS NULL AND expires_at > NOW()
-		ORDER BY last_active_at DESC`, userID, orgID)
+		ORDER BY last_active_at DESC`, userID, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (r *SessionRepository) GetActiveTokens(ctx context.Context, userID, orgID u
 	var tokens []models.AuthToken
 	for rows.Next() {
 		var t models.AuthToken
-		if err := rows.Scan(&t.ID, &t.UserID, &t.OrgID, &t.DeviceID, &t.DeviceInfo,
+		if err := rows.Scan(&t.ID, &t.UserID, &t.TenantID, &t.DeviceID, &t.DeviceInfo,
 			&t.IPAddress, &t.UserAgent, &t.ExpiresAt, &t.LastActiveAt, &t.CreatedAt); err != nil {
 			return nil, err
 		}
@@ -66,11 +66,11 @@ func (r *SessionRepository) RevokeToken(ctx context.Context, id uuid.UUID) error
 	return err
 }
 
-func (r *SessionRepository) RevokeAllUserTokens(ctx context.Context, userID, orgID uuid.UUID) error {
+func (r *SessionRepository) RevokeAllUserTokens(ctx context.Context, userID, tenantID uuid.UUID) error {
 	now := time.Now()
 	_, err := r.pool.Exec(ctx,
 		"UPDATE auth_tokens SET revoked_at = $1 WHERE user_id = $2 AND tenant_id = $3",
-		now, userID, orgID,
+		now, userID, tenantID,
 	)
 	return err
 }

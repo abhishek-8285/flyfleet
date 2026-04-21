@@ -24,10 +24,10 @@ func NewTripProfitService(repo *repository.FinanceRepository, logger *zap.Logger
 }
 
 // CalculateTripProfit gathers all costs for a trip and persists profitability metrics.
-func (s *TripProfitService) CalculateTripProfit(ctx context.Context, tripID uuid.UUID, orgID uuid.UUID) (*models.TripProfitability, error) {
+func (s *TripProfitService) CalculateTripProfit(ctx context.Context, tripID uuid.UUID, tenantID uuid.UUID) (*models.TripProfitability, error) {
 	ctx, span := finTracing.StartSpan(ctx, "finance.calculate_trip_profit",
 		attribute.String("trip_id", tripID.String()),
-		attribute.String("tenant_id", orgID.String()),
+		attribute.String("tenant_id", tenantID.String()),
 	)
 	defer span.End()
 
@@ -67,7 +67,7 @@ func (s *TripProfitService) CalculateTripProfit(ctx context.Context, tripID uuid
 	tp := &models.TripProfitability{
 		ID:           uuid.New(),
 		TripID:       tripID,
-		OrgID:        orgID,
+		TenantID:        tenantID,
 		TripRevenue:  tripRevenue,
 		FuelCost:     fuelCost,
 		TollCost:     tollCost,
@@ -93,6 +93,6 @@ func (s *TripProfitService) GetTripProfitability(ctx context.Context, tripID uui
 }
 
 // GetDashboardMetrics retrieves the materialized finance dashboard metrics for an org.
-func (s *TripProfitService) GetDashboardMetrics(ctx context.Context, orgID uuid.UUID) (*models.FinanceDashboardMetrics, error) {
-	return s.repo.GetFinanceDashboardMetrics(ctx, orgID)
+func (s *TripProfitService) GetDashboardMetrics(ctx context.Context, tenantID uuid.UUID) (*models.FinanceDashboardMetrics, error) {
+	return s.repo.GetFinanceDashboardMetrics(ctx, tenantID)
 }

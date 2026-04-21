@@ -30,7 +30,7 @@ func NewBulkProcessor(bulkRepo *repository.BulkRepository, vehicleRepo *reposito
 	}
 }
 
-func (p *BulkProcessor) ProcessCSV(jobID uuid.UUID, reader io.Reader, orgID uuid.UUID) {
+func (p *BulkProcessor) ProcessCSV(jobID uuid.UUID, reader io.Reader, tenantID uuid.UUID) {
 	// Update status to processing
 	ctx := context.Background()
 	p.bulkRepo.UpdateJobStatus(ctx, jobID, "processing", 0, 0)
@@ -151,7 +151,7 @@ func (p *BulkProcessor) ProcessCSV(jobID uuid.UUID, reader io.Reader, orgID uuid
 			// Build enterprise vehicle aggregate
 			vehicle := &models.Vehicle{
 				ID:                 uuid.New(),
-				TenantID:           orgID,
+				TenantID:           tenantID,
 				RegistrationNumber: vehicleReq.RegistrationNumber,
 				VINNumber:          vinPtr,
 				VehicleType:        vehicleReq.VehicleType,

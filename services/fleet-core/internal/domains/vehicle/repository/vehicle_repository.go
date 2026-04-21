@@ -84,11 +84,12 @@ func (r *VehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.
 	return v, nil
 }
 
-func (r *VehicleRepository) GetByOrgID(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.Vehicle, int64, error) {
+func (r *VehicleRepository) GetByTenantID(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.Vehicle, int64, error) {
 	var total int64
 	start := time.Now()
-	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM vehicles WHERE tenant_id = $1 AND deleted_at IS NULL`, orgID).Scan(&total); err != nil {
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM vehicles WHERE tenant_id = $1 AND deleted_at IS NULL`, tenantID).Scan(&total); err != nil {
 		metrics.RecordDBQuery("SELECT COUNT(*) FROM vehicles WHERE tenant_id = $1 AND deleted_at IS NULL", time.Since(start))
+		r.logger.Error("failed to count vehicles by tenant", zap.Error(err), zap.String("tenant_id", tenantID.String()))
 		return nil, 0, fmt.Errorf("database error: %w", err)
 	}
 	metrics.RecordDBQuery("SELECT COUNT(*) FROM vehicles WHERE tenant_id = $1 AND deleted_at IS NULL", time.Since(start))
@@ -104,7 +105,7 @@ func (r *VehicleRepository) GetByOrgID(ctx context.Context, orgID uuid.UUID, lim
 		ORDER BY created_at DESC LIMIT $2 OFFSET $3`
 
 	queryStart := time.Now()
-	rows, err := r.db.Query(ctx, query, orgID, limit, offset)
+	rows, err := r.db.Query(ctx, query, tenantID, limit, offset)
 	metrics.RecordDBQuery(query, time.Since(queryStart))
 	if err != nil {
 		return nil, 0, fmt.Errorf("database error: %w", err)
@@ -185,10 +186,10 @@ func (r *VehicleRepository) Update(ctx context.Context, vehicle *models.Vehicle)
 }
 
 // Delete performs a soft delete.
-func (r *VehicleRepository) Delete(ctx context.Context, id, orgID uuid.UUID) error {
+func (r *VehicleRepository) Delete(ctx context.Context, id, tenantID uuid.UUID) error {
 	query := `UPDATE vehicles SET deleted_at = NOW(), updated_at = NOW() WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`
 	start := time.Now()
-	result, err := r.db.Exec(ctx, query, id, orgID)
+	result, err := r.db.Exec(ctx, query, id, tenantID)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("database error: %w", err)
@@ -199,10 +200,10 @@ func (r *VehicleRepository) Delete(ctx context.Context, id, orgID uuid.UUID) err
 	return nil
 }
 
-func (r *VehicleRepository) AssignDriver(ctx context.Context, vehicleID, orgID, driverID uuid.UUID) error {
+func (r *VehicleRepository) AssignDriver(ctx context.Context, vehicleID, tenantID, driverID uuid.UUID) error {
 	query := `UPDATE vehicles SET updated_at = NOW() WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`
 	start := time.Now()
-	result, err := r.db.Exec(ctx, query, vehicleID, orgID)
+	result, err := r.db.Exec(ctx, query, vehicleID, tenantID)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("database error: %w", err)
@@ -333,6 +334,7 @@ func (r *VehicleRepository) Search(ctx context.Context, params models.VehicleSea
 	rows, err := r.db.Query(ctx, query, args...)
 	metrics.RecordDBQuery(query, time.Since(queryStart))
 	if err != nil {
+		r.logger.Error("failed to query search results", zap.Error(err))
 		return nil, 0, fmt.Errorf("database error: %w", err)
 	}
 	defer rows.Close()
@@ -354,10 +356,10 @@ func (r *VehicleRepository) Search(ctx context.Context, params models.VehicleSea
 	}
 	return vehicles, total, nil
 }
-func (r *VehicleRepository) IsGPSAvailable(ctx context.Context, orgID uuid.UUID, deviceID string, excludingVehicleID *uuid.UUID) (bool, string, error) {
+func (r *VehicleRepository) IsGPSAvailable(ctx context.Context, tenantID uuid.UUID, deviceID string, excludingVehicleID *uuid.UUID) (bool, string, error) {
 	// 1. Check if device exists in inventory for this org
 	var existsInInventory bool
-	err := r.db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM billing_device_assignments WHERE device_id = $1 AND tenant_id = $2)`, deviceID, orgID).Scan(&existsInInventory)
+	err := r.db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM billing_device_assignments WHERE device_id = $1 AND tenant_id = $2)`, deviceID, tenantID).Scan(&existsInInventory)
 	if err != nil {
 		return false, "", fmt.Errorf("failed to check billing inventory: %w", err)
 	}

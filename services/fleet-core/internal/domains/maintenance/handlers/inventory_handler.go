@@ -40,15 +40,15 @@ func (h *InventoryHandler) RegisterRoutes(r chi.Router) {
 
 // ListInventory godoc
 func (h *InventoryHandler) ListInventory(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
 		return
 	}
 
 	query := r.URL.Query()
 	filter := models.InventoryFilter{
-		OrgID:         orgID,
+		TenantID:         tenantID,
 		Search:        query.Get("search"),
 		StockLocation: query.Get("stock_location"),
 	}
@@ -91,8 +91,8 @@ func (h *InventoryHandler) ListInventory(w http.ResponseWriter, r *http.Request)
 
 // CreatePart godoc
 func (h *InventoryHandler) CreatePart(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
 		return
 	}
@@ -104,7 +104,7 @@ func (h *InventoryHandler) CreatePart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	part := &models.InventoryPart{
-		OrgID:             orgID,
+		TenantID:             tenantID,
 		PartNumber:        req.PartNumber,
 		Name:              req.Name,
 		Description:       &req.Description,
@@ -131,8 +131,8 @@ func (h *InventoryHandler) GetPart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
 		return
 	}
@@ -159,8 +159,8 @@ func (h *InventoryHandler) UpdatePart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
 		return
 	}
@@ -221,8 +221,8 @@ func (h *InventoryHandler) DeletePart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
 		return
 	}
@@ -256,10 +256,10 @@ func (h *InventoryHandler) writeErrorResponse(w http.ResponseWriter, statusCode 
 	h.writeJSONResponse(w, statusCode, resp)
 }
 
-func (h *InventoryHandler) getOrgID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
-		if orgIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(orgIDStr); err == nil {
+func (h *InventoryHandler) getTenantID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.TenantIDKey); val != nil {
+		if tenantIDStr, ok := val.(string); ok {
+			if id, err := uuid.Parse(tenantIDStr); err == nil {
 				return id
 			}
 		}

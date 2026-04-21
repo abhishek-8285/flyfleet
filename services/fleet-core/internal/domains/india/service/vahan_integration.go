@@ -16,8 +16,8 @@ import (
 
 // VahanIntegrationService defines the interface for VAHAN vehicle verification integration
 type VahanIntegrationService interface {
-	VerifyVehicle(ctx context.Context, orgID uuid.UUID, vehicleID uuid.UUID, regNumber string) (*models.VehicleVerification, error)
-	BulkVerifyVehicle(ctx context.Context, orgID uuid.UUID, requests []models.VerifyVehicleRequest) ([]*models.VehicleVerification, error)
+	VerifyVehicle(ctx context.Context, tenantID uuid.UUID, vehicleID uuid.UUID, regNumber string) (*models.VehicleVerification, error)
+	BulkVerifyVehicle(ctx context.Context, tenantID uuid.UUID, requests []models.VerifyVehicleRequest) ([]*models.VehicleVerification, error)
 }
 
 type VahanIntegrationServiceImpl struct {
@@ -36,16 +36,16 @@ func NewVahanIntegrationService(repo repository.IndiaIntegrationRepository, redi
 	}
 }
 
-func (s *VahanIntegrationServiceImpl) VerifyVehicle(ctx context.Context, orgID uuid.UUID, vehicleID uuid.UUID, regNumber string) (*models.VehicleVerification, error) {
+func (s *VahanIntegrationServiceImpl) VerifyVehicle(ctx context.Context, tenantID uuid.UUID, vehicleID uuid.UUID, regNumber string) (*models.VehicleVerification, error) {
 	// Try Redis cache first
 	if s.redis != nil {
-		// SECURITY FIX: Include orgID in cache key to prevent cross-tenant cache collision
-		cacheKey := fmt.Sprintf("vahan:verify:%s:%s", orgID.String(), regNumber)
+		// SECURITY FIX: Include tenantID in cache key to prevent cross-tenant cache collision
+		cacheKey := fmt.Sprintf("vahan:verify:%s:%s", tenantID.String(), regNumber)
 		val, err := s.redis.Get(ctx, cacheKey).Result()
 		if err == nil {
 			var cached models.VehicleVerification
 			if err := json.Unmarshal([]byte(val), &cached); err == nil {
-				s.logger.Info("vahan cache hit", zap.String("reg_number", regNumber), zap.String("tenant_id", orgID.String()))
+				s.logger.Info("vahan cache hit", zap.String("reg_number", regNumber), zap.String("tenant_id", tenantID.String()))
 				// SECURITY FIX: Remove PII fields from cached response to avoid exposure in Redis
 				cached.OwnerName = ""
 				cached.RCStatus = ""
@@ -63,7 +63,7 @@ func (s *VahanIntegrationServiceImpl) VerifyVehicle(ctx context.Context, orgID u
 	verification := &models.VehicleVerification{
 		ID:                 uuid.New().String(),
 		VehicleID:          vehicleID,
-		OrganizationID:     orgID,
+		OrganizationID:     tenantID,
 		RegistrationNumber: regNumber,
 		Status:             "verified",
 		VerificationDate:   time.Now(),
@@ -79,7 +79,7 @@ func (s *VahanIntegrationServiceImpl) VerifyVehicle(ctx context.Context, orgID u
 		RequestPayload:  map[string]string{"reg_number": regNumber},
 		ResponsePayload: verification,
 		Status:          200,
-		OrganizationID:  &orgID,
+		OrganizationID:  &tenantID,
 	}
 	_ = s.repo.CreateIntegrationLog(ctx, log)
 
@@ -89,8 +89,8 @@ func (s *VahanIntegrationServiceImpl) VerifyVehicle(ctx context.Context, orgID u
 
 	// Store in Redis cache with 24h TTL
 	if s.redis != nil {
-		// SECURITY FIX: Include orgID in cache key to prevent cross-tenant cache collision
-		cacheKey := fmt.Sprintf("vahan:verify:%s:%s", orgID.String(), regNumber)
+		// SECURITY FIX: Include tenantID in cache key to prevent cross-tenant cache collision
+		cacheKey := fmt.Sprintf("vahan:verify:%s:%s", tenantID.String(), regNumber)
 		// SECURITY FIX: Remove PII before caching to prevent exposure if Redis is compromised
 		verification.OwnerName = ""
 		verification.RCStatus = ""
@@ -112,7 +112,7 @@ func (s *VahanIntegrationServiceImpl) VerifyVehicle(ctx context.Context, orgID u
 	return verification, nil
 }
 
-func (s *VahanIntegrationServiceImpl) BulkVerifyVehicle(ctx context.Context, orgID uuid.UUID, requests []models.VerifyVehicleRequest) ([]*models.VehicleVerification, error) {
+func (s *VahanIntegrationServiceImpl) BulkVerifyVehicle(ctx context.Context, tenantID uuid.UUID, requests []models.VerifyVehicleRequest) ([]*models.VehicleVerification, error) {
 	if len(requests) > 100 {
 		return nil, fmt.Errorf("batch size exceeds maximum of 100")
 	}
@@ -121,7 +121,7 @@ func (s *VahanIntegrationServiceImpl) BulkVerifyVehicle(ctx context.Context, org
 	for _, req := range requests {
 		// In a real scenario, we might want to do this in parallel or use a bulk API if available.
 		// For now, we'll iterate and collect results, then bulk save.
-		v, err := s.VerifyVehicle(ctx, orgID, req.VehicleID, req.RegistrationNumber)
+		v, err := s.VerifyVehicle(ctx, tenantID, req.VehicleID, req.RegistrationNumber)
 		if err != nil {
 			s.logger.Error("failed to verify vehicle in bulk", zap.String("reg_number", req.RegistrationNumber), zap.Error(err))
 			continue

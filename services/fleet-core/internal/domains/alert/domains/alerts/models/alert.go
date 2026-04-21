@@ -9,7 +9,7 @@ import (
 // AlertRule represents a rule for generating alerts
 type AlertRule struct {
 	ID          string                 `json:"id" db:"id"`
-	OrgID       uuid.UUID              `json:"tenant_id" db:"tenant_id"`
+	TenantID       uuid.UUID              `json:"tenant_id" db:"tenant_id"`
 	Name        string                 `json:"name" db:"name"`
 	Type        string                 `json:"type" db:"type"` // overspeed, geofence_entry, geofence_exit, harsh_acceleration, etc.
 	Description string                 `json:"description" db:"description"`
@@ -36,7 +36,7 @@ type AlertAction struct {
 // Alert represents an individual alert instance
 type Alert struct {
 	ID              string                 `json:"id" db:"id"`
-	OrgID           uuid.UUID              `json:"tenant_id" db:"tenant_id"`
+	TenantID           uuid.UUID              `json:"tenant_id" db:"tenant_id"`
 	RuleID          string                 `json:"rule_id" db:"rule_id"`
 	Type            string                 `json:"type" db:"type"`
 	Severity        string                 `json:"severity" db:"severity"`
@@ -74,7 +74,7 @@ type Location struct {
 // Geofence represents a geographic boundary for monitoring
 type Geofence struct {
 	ID            string      `json:"id" db:"id"`
-	OrgID         uuid.UUID   `json:"tenant_id" db:"tenant_id"`
+	TenantID         uuid.UUID   `json:"tenant_id" db:"tenant_id"`
 	Name          string      `json:"name" db:"name"`
 	Type          string      `json:"type" db:"type"`                     // circle, polygon, route_corridor
 	Center        *Location   `json:"center" db:"center"`                 // For circle geofences
@@ -96,7 +96,7 @@ type Geofence struct {
 // NotificationTemplate represents a template for alert notifications
 type NotificationTemplate struct {
 	ID        string    `json:"id" db:"id"`
-	OrgID     uuid.UUID `json:"tenant_id" db:"tenant_id"`
+	TenantID     uuid.UUID `json:"tenant_id" db:"tenant_id"`
 	Name      string    `json:"name" db:"name"`
 	Type      string    `json:"type" db:"type"`       // sms, email, push
 	Subject   string    `json:"subject" db:"subject"` // For email
@@ -187,7 +187,7 @@ type UpdateRuleRequest struct {
 
 // AlertListFilter represents filter criteria for listing alerts
 type AlertListFilter struct {
-	OrgID     uuid.UUID  `json:"-"`
+	TenantID     uuid.UUID  `json:"-"`
 	VehicleID *uuid.UUID `json:"vehicle_id,omitempty"`
 	DriverID  *uuid.UUID `json:"driver_id,omitempty"`
 	Type      []string   `json:"type,omitempty"`
@@ -230,7 +230,7 @@ type AlertTrend struct {
 // Template represents a notification template for alerts
 type Template struct {
 	ID        uuid.UUID `json:"id" db:"id"`
-	OrgID     uuid.UUID `json:"tenant_id" db:"tenant_id"`
+	TenantID     uuid.UUID `json:"tenant_id" db:"tenant_id"`
 	AlertType string    `json:"alert_type" db:"alert_type"`
 	Channel   string    `json:"channel" db:"channel"` // email, sms, push, etc.
 	Language  string    `json:"language" db:"language"`

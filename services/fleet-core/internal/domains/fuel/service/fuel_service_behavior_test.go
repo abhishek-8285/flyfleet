@@ -37,9 +37,9 @@ func (f *fakeFuelRepo) Create(_ context.Context, log *models.FuelLog) error {
 	return nil
 }
 
-func (f *fakeFuelRepo) GetByID(_ context.Context, id uuid.UUID, orgID uuid.UUID) (*models.FuelLog, error) {
+func (f *fakeFuelRepo) GetByID(_ context.Context, id uuid.UUID, tenantID uuid.UUID) (*models.FuelLog, error) {
 	log, ok := f.logs[id]
-	if !ok || log.OrganizationID != orgID {
+	if !ok || log.OrganizationID != tenantID {
 		return nil, nil
 	}
 	cpy := *log
@@ -78,8 +78,8 @@ func (f *fakeFuelRepo) GetStats(_ context.Context, _ uuid.UUID, _ models.FuelLog
 	return &models.FuelLogStats{AvgCostPerKm: 3.4, AvgConsumption: 4.5}, nil
 }
 
-func (f *fakeFuelRepo) GetLastOdometer(_ context.Context, vehicleID uuid.UUID, orgID uuid.UUID) (float64, error) {
-	return f.lastOdometers[vehicleID.String()+":"+orgID.String()], nil
+func (f *fakeFuelRepo) GetLastOdometer(_ context.Context, vehicleID uuid.UUID, tenantID uuid.UUID) (float64, error) {
+	return f.lastOdometers[vehicleID.String()+":"+tenantID.String()], nil
 }
 
 func (f *fakeFuelRepo) CheckDuplicate(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ time.Time, _ int) (bool, error) {
@@ -142,9 +142,9 @@ func (f *fakeSettingsRepo) Upsert(_ context.Context, _ *models.FuelSettings) err
 	return nil
 }
 
-func (f *fakeSettingsRepo) GetOrDefault(_ context.Context, orgID uuid.UUID) (*models.FuelSettings, error) {
+func (f *fakeSettingsRepo) GetOrDefault(_ context.Context, tenantID uuid.UUID) (*models.FuelSettings, error) {
 	return &models.FuelSettings{
-		OrganizationID:   orgID,
+		OrganizationID:   tenantID,
 		DefaultCurrency:  "USD",
 		AllowedFuelTypes: json.RawMessage(`["diesel"]`),
 		ValidationRules:  json.RawMessage(`{"odometer_check":true}`),
@@ -180,25 +180,25 @@ func validCreateRequest(vehicleID, driverID uuid.UUID) models.CreateFuelLogReque
 func TestCreateLogRejectsCostMismatch(t *testing.T) {
 	repo := newFakeFuelRepo()
 	svc := newTestFuelService(repo)
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	req := validCreateRequest(uuid.New(), uuid.New())
 	req.TotalCost = 81
 
-	_, err := svc.CreateLog(context.Background(), orgID, uuid.New(), req)
+	_, err := svc.CreateLog(context.Background(), tenantID, uuid.New(), req)
 	require.ErrorIs(t, err, ErrInvalidCost)
 }
 
 func TestCreateLogRejectsOdometerRollback(t *testing.T) {
 	repo := newFakeFuelRepo()
 	svc := newTestFuelService(repo)
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	vehicleID := uuid.New()
-	repo.lastOdometers[vehicleID.String()+":"+orgID.String()] = 2000
+	repo.lastOdometers[vehicleID.String()+":"+tenantID.String()] = 2000
 
 	req := validCreateRequest(vehicleID, uuid.New())
 	req.Odometer = 1999
 
-	_, err := svc.CreateLog(context.Background(), orgID, uuid.New(), req)
+	_, err := svc.CreateLog(context.Background(), tenantID, uuid.New(), req)
 	require.ErrorIs(t, err, ErrInvalidOdometer)
 }
 
@@ -214,45 +214,45 @@ func TestCreateLogRejectsDuplicate(t *testing.T) {
 func TestRejectedLogsAreImmutable(t *testing.T) {
 	repo := newFakeFuelRepo()
 	svc := newTestFuelService(repo)
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	logID := uuid.New()
 	repo.logs[logID] = &models.FuelLog{
 		ID:             logID,
-		OrganizationID: orgID,
+		OrganizationID: tenantID,
 		Status:         models.FuelLogStatusRejected,
 		CreatedBy:      uuid.New(),
 	}
 
-	_, err := svc.UpdateLog(context.Background(), logID, orgID, models.UpdateFuelLogRequest{Notes: strPtr("x")})
+	_, err := svc.UpdateLog(context.Background(), logID, tenantID, models.UpdateFuelLogRequest{Notes: strPtr("x")})
 	require.ErrorIs(t, err, ErrLogImmutable)
 
-	err = svc.DeleteLog(context.Background(), logID, orgID)
+	err = svc.DeleteLog(context.Background(), logID, tenantID)
 	require.ErrorIs(t, err, ErrLogImmutable)
 }
 
 func TestStatusWorkflowOnlyPendingAllowed(t *testing.T) {
 	repo := newFakeFuelRepo()
 	svc := newTestFuelService(repo)
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	logID := uuid.New()
-	repo.logs[logID] = &models.FuelLog{ID: logID, OrganizationID: orgID, Status: models.FuelLogStatusPending, CreatedBy: uuid.New()}
+	repo.logs[logID] = &models.FuelLog{ID: logID, OrganizationID: tenantID, Status: models.FuelLogStatusPending, CreatedBy: uuid.New()}
 
-	err := svc.ChangeStatus(context.Background(), logID, orgID, models.ChangeFuelLogStatusRequest{Status: models.FuelLogStatusApproved})
+	err := svc.ChangeStatus(context.Background(), logID, tenantID, models.ChangeFuelLogStatusRequest{Status: models.FuelLogStatusApproved})
 	require.NoError(t, err)
 
-	err = svc.ChangeStatus(context.Background(), logID, orgID, models.ChangeFuelLogStatusRequest{Status: models.FuelLogStatusRejected})
+	err = svc.ChangeStatus(context.Background(), logID, tenantID, models.ChangeFuelLogStatusRequest{Status: models.FuelLogStatusRejected})
 	require.ErrorIs(t, err, ErrStatusNotPending)
 }
 
 func TestCreateLogFlagsAnomaly(t *testing.T) {
 	repo := newFakeFuelRepo()
 	svc := newTestFuelService(repo)
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	req := validCreateRequest(uuid.New(), uuid.New())
 	req.Quantity = 301
 	req.TotalCost = 602
 
-	log, err := svc.CreateLog(context.Background(), orgID, uuid.New(), req)
+	log, err := svc.CreateLog(context.Background(), tenantID, uuid.New(), req)
 	require.NoError(t, err)
 	require.True(t, log.AnomalyFlag)
 	require.NotNil(t, log.AnomalyReason)
@@ -261,9 +261,9 @@ func TestCreateLogFlagsAnomaly(t *testing.T) {
 func TestGetSettingsReturnsDefaults(t *testing.T) {
 	repo := newFakeFuelRepo()
 	svc := newTestFuelService(repo)
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
-	settings, err := svc.GetSettings(context.Background(), orgID)
+	settings, err := svc.GetSettings(context.Background(), tenantID)
 	require.NoError(t, err)
 	require.Equal(t, "USD", settings.DefaultCurrency)
 }

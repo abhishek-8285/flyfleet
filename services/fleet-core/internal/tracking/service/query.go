@@ -257,6 +257,6 @@ func cos(x float64) float64 {
 
 // VehicleBelongsToOrg checks if a vehicle belongs to the given org
 // for tenant isolation enforcement.
-func (s *TelemetryQueryService) VehicleBelongsToOrg(ctx context.Context, orgID, vehicleID uuid.UUID) (bool, error) {
-	return s.tenantChk.VehicleBelongsToOrg(ctx, orgID, vehicleID)
+func (s *TelemetryQueryService) VehicleBelongsToOrg(ctx context.Context, tenantID, vehicleID uuid.UUID) (bool, error) {
+	return s.tenantChk.VehicleBelongsToOrg(ctx, tenantID, vehicleID)
 }

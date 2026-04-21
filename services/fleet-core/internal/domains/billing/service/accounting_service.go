@@ -44,7 +44,7 @@ func NewAccountingService(
 	}
 }
 
-func (s *AccountingService) ExportLedger(ctx context.Context, orgID uuid.UUID, system models.ExternalSystem, userID uuid.UUID) (*models.AccountingExport, error) {
+func (s *AccountingService) ExportLedger(ctx context.Context, tenantID uuid.UUID, system models.ExternalSystem, userID uuid.UUID) (*models.AccountingExport, error) {
 	exporter, ok := s.exporters[system]
 	if !ok {
 		return nil, fmt.Errorf("exporter not found for system: %s", system)
@@ -53,7 +53,7 @@ func (s *AccountingService) ExportLedger(ctx context.Context, orgID uuid.UUID, s
 	// 1. Create pending export record
 	export := &models.AccountingExport{
 		ID:             uuid.New(),
-		OrgID:          orgID,
+		TenantID:          tenantID,
 		ExternalSystem: system,
 		ExportType:     models.ExportLedger,
 		Status:         models.ExportStatusPending,
@@ -66,14 +66,14 @@ func (s *AccountingService) ExportLedger(ctx context.Context, orgID uuid.UUID, s
 
 	// 2. Fetch data (simplified - get recent 1000 entries)
 	// TODO: Add date range filtering to ledger repo
-	entries, err := s.fetchLedgerEntries(ctx, orgID)
+	entries, err := s.fetchLedgerEntries(ctx, tenantID)
 	if err != nil {
 		s.repo.UpdateExportStatus(ctx, export.ID, models.ExportStatusFailed, "", 0, err.Error())
 		return nil, err
 	}
 
 	// 3. Transform
-	data, fileName, err := exporter.ExportLedger(orgID, entries)
+	data, fileName, err := exporter.ExportLedger(tenantID, entries)
 	if err != nil {
 		s.repo.UpdateExportStatus(ctx, export.ID, models.ExportStatusFailed, "", 0, err.Error())
 		return nil, err
@@ -81,8 +81,8 @@ func (s *AccountingService) ExportLedger(ctx context.Context, orgID uuid.UUID, s
 
 	// 4. Store
 	// For now we just log the size and file name
-	s.logger.Info("Ledger exported successfully", zap.String("tenant_id", orgID.String()), zap.String("file", fileName), zap.Int("data_size", len(data)))
-	fileKey := fmt.Sprintf("exports/%s/%s", orgID, fileName)
+	s.logger.Info("Ledger exported successfully", zap.String("tenant_id", tenantID.String()), zap.String("file", fileName), zap.Int("data_size", len(data)))
+	fileKey := fmt.Sprintf("exports/%s/%s", tenantID, fileName)
 	// We'll reuse Invoice model for Save method context or update interface
 	// For now, let's assume Save can take a string key too or we use a temporary hack
 	// Actually, let's update ObjectStorage to support generic file saving
@@ -92,7 +92,7 @@ func (s *AccountingService) ExportLedger(ctx context.Context, orgID uuid.UUID, s
 	return export, err
 }
 
-func (s *AccountingService) ExportInvoices(ctx context.Context, orgID uuid.UUID, system models.ExternalSystem, userID uuid.UUID) (*models.AccountingExport, error) {
+func (s *AccountingService) ExportInvoices(ctx context.Context, tenantID uuid.UUID, system models.ExternalSystem, userID uuid.UUID) (*models.AccountingExport, error) {
 	exporter, ok := s.exporters[system]
 	if !ok {
 		return nil, fmt.Errorf("exporter not found for system: %s", system)
@@ -101,7 +101,7 @@ func (s *AccountingService) ExportInvoices(ctx context.Context, orgID uuid.UUID,
 	// 1. Create pending record
 	export := &models.AccountingExport{
 		ID:             uuid.New(),
-		OrgID:          orgID,
+		TenantID:          tenantID,
 		ExternalSystem: system,
 		ExportType:     models.ExportInvoices,
 		Status:         models.ExportStatusPending,
@@ -113,30 +113,30 @@ func (s *AccountingService) ExportInvoices(ctx context.Context, orgID uuid.UUID,
 	}
 
 	// 2. Fetch data
-	invoices, _, err := s.invoiceRepo.ListInvoices(ctx, orgID, 1, 1000)
+	invoices, _, err := s.invoiceRepo.ListInvoices(ctx, tenantID, 1, 1000)
 	if err != nil {
 		s.repo.UpdateExportStatus(ctx, export.ID, models.ExportStatusFailed, "", 0, err.Error())
 		return nil, err
 	}
 
 	// 3. Transform
-	data, fileName, err := exporter.ExportInvoices(orgID, invoices)
+	data, fileName, err := exporter.ExportInvoices(tenantID, invoices)
 	if err != nil {
 		s.repo.UpdateExportStatus(ctx, export.ID, models.ExportStatusFailed, "", 0, err.Error())
 		return nil, err
 	}
 
 	// 4. Update status
-	s.logger.Info("Invoices exported successfully", zap.String("tenant_id", orgID.String()), zap.String("file", fileName), zap.Int("data_size", len(data)))
-	fileKey := fmt.Sprintf("exports/%s/%s", orgID, fileName)
+	s.logger.Info("Invoices exported successfully", zap.String("tenant_id", tenantID.String()), zap.String("file", fileName), zap.Int("data_size", len(data)))
+	fileKey := fmt.Sprintf("exports/%s/%s", tenantID, fileName)
 	err = s.repo.UpdateExportStatus(ctx, export.ID, models.ExportStatusCompleted, fileKey, len(invoices), "")
 	return export, err
 }
 
-func (s *AccountingService) GetExportHistory(ctx context.Context, orgID uuid.UUID) ([]models.AccountingExport, error) {
-	return s.repo.GetExportHistory(ctx, orgID, 50)
+func (s *AccountingService) GetExportHistory(ctx context.Context, tenantID uuid.UUID) ([]models.AccountingExport, error) {
+	return s.repo.GetExportHistory(ctx, tenantID, 50)
 }
 
-func (s *AccountingService) fetchLedgerEntries(ctx context.Context, orgID uuid.UUID) ([]models.LedgerEntry, error) {
-	return s.ledgerRepo.GetEntriesByOrg(ctx, orgID, 1000)
+func (s *AccountingService) fetchLedgerEntries(ctx context.Context, tenantID uuid.UUID) ([]models.LedgerEntry, error) {
+	return s.ledgerRepo.GetEntriesByOrg(ctx, tenantID, 1000)
 }

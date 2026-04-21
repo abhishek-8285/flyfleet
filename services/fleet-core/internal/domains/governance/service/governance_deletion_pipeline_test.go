@@ -26,12 +26,12 @@ func TestDeletionService_ProcessDeletionRequest_LegalHold(t *testing.T) {
 	}
 
 	requestID := uuid.New()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	userID := uuid.New()
 
 	req := &models.GovernanceRequest{
 		ID:             requestID,
-		OrganizationID: orgID,
+		OrganizationID: tenantID,
 		RequesterID:    userID,
 		RequestType:    models.RequestTypeDeletion,
 		Status:         models.RequestStatusApproved,
@@ -39,7 +39,7 @@ func TestDeletionService_ProcessDeletionRequest_LegalHold(t *testing.T) {
 
 	mockRepo.On("GetRequestByIDInternal", mock.Anything, requestID).Return(req, nil)
 	mockRepo.On("CheckLegalHold", mock.Anything, userID).Return(true, nil)
-	mockRepo.On("UpdateRequestStatus", mock.Anything, requestID, orgID, models.RequestStatusFailed, mock.Anything, mock.Anything).Return(nil)
+	mockRepo.On("UpdateRequestStatus", mock.Anything, requestID, tenantID, models.RequestStatusFailed, mock.Anything, mock.Anything).Return(nil)
 
 	err := svc.ProcessDeletionRequest(context.Background(), requestID)
 

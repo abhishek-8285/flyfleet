@@ -14,8 +14,8 @@ import (
 // EWayBillIntegrationService defines the interface for NIC E-Way Bill integration
 type EWayBillIntegrationService interface {
 	GenerateEWayBill(ctx context.Context, bill *models.EWayBill) (*models.EWayBill, error)
-	CancelEWayBill(ctx context.Context, orgID uuid.UUID, number string, reason string) error
-	FetchEWayBillStatus(ctx context.Context, orgID uuid.UUID, number string) (*models.EWayBill, error)
+	CancelEWayBill(ctx context.Context, tenantID uuid.UUID, number string, reason string) error
+	FetchEWayBillStatus(ctx context.Context, tenantID uuid.UUID, number string) (*models.EWayBill, error)
 	SyncEWayBills(ctx context.Context) error
 }
 
@@ -56,7 +56,7 @@ func (s *EWayBillIntegrationServiceImpl) GenerateEWayBill(ctx context.Context, b
 	return bill, nil
 }
 
-func (s *EWayBillIntegrationServiceImpl) CancelEWayBill(ctx context.Context, orgID uuid.UUID, number string, reason string) error {
+func (s *EWayBillIntegrationServiceImpl) CancelEWayBill(ctx context.Context, tenantID uuid.UUID, number string, reason string) error {
 	s.logger.Info("cancelling e-way bill", zap.String("number", number), zap.String("reason", reason))
 
 	log := &models.IntegrationLog{
@@ -68,7 +68,7 @@ func (s *EWayBillIntegrationServiceImpl) CancelEWayBill(ctx context.Context, org
 		},
 		ResponsePayload: map[string]string{"status": "cancelled"},
 		Status:          200,
-		OrganizationID:  &orgID,
+		OrganizationID:  &tenantID,
 	}
 	_ = s.repo.CreateIntegrationLog(ctx, log)
 
@@ -80,7 +80,7 @@ func (s *EWayBillIntegrationServiceImpl) CancelEWayBill(ctx context.Context, org
 	})
 }
 
-func (s *EWayBillIntegrationServiceImpl) FetchEWayBillStatus(ctx context.Context, orgID uuid.UUID, number string) (*models.EWayBill, error) {
+func (s *EWayBillIntegrationServiceImpl) FetchEWayBillStatus(ctx context.Context, tenantID uuid.UUID, number string) (*models.EWayBill, error) {
 	s.logger.Info("fetching e-way bill status", zap.String("number", number))
 
 	// Mock status fetch
@@ -94,7 +94,7 @@ func (s *EWayBillIntegrationServiceImpl) FetchEWayBillStatus(ctx context.Context
 		RequestPayload:  map[string]string{"action": "get_status", "number": number},
 		ResponsePayload: bill,
 		Status:          200,
-		OrganizationID:  &orgID,
+		OrganizationID:  &tenantID,
 	}
 	_ = s.repo.CreateIntegrationLog(ctx, log)
 

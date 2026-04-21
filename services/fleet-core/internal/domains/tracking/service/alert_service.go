@@ -48,7 +48,7 @@ func (s *AlertService) ProcessTelemetryAlert(ctx context.Context, alert *models.
 
 	// Publish to MQTT for real-time notifications
 	if s.mqttClient != nil {
-		topic := fmt.Sprintf("fleet/%s/alerts/%s", alert.OrgID, alert.VehicleID)
+		topic := fmt.Sprintf("fleet/%s/alerts/%s", alert.TenantID, alert.VehicleID)
 		if err := s.mqttClient.PublishJSON(topic, alert); err != nil {
 			s.logger.Warn("failed to publish alert to MQTT", zap.Error(err))
 		}

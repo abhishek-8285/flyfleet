@@ -31,9 +31,9 @@ func NewAdvancedSubService(repo *repository.AdvancedSubRepository, ledgerServ *L
 }
 
 // UpgradePlan applies a mid-cycle plan change, calculating proration credits and debits.
-func (s *AdvancedSubService) UpgradePlan(ctx context.Context, orgID uuid.UUID, newPlanID uuid.UUID) error {
+func (s *AdvancedSubService) UpgradePlan(ctx context.Context, tenantID uuid.UUID, newPlanID uuid.UUID) error {
 	// 1. Get current subscription
-	sub, err := s.subServ.GetSubscription(ctx, orgID)
+	sub, err := s.subServ.GetSubscription(ctx, tenantID)
 	if err != nil || sub == nil {
 		return errors.New("active subscription not found")
 	}
@@ -111,7 +111,7 @@ func (s *AdvancedSubService) UpgradePlan(ctx context.Context, orgID uuid.UUID, n
 
 	// 5. Issue Wallet Credit for the unused Old Plan
 	desc := fmt.Sprintf("Proration Credit for %s to %s", oldPlan.Name, newPlan.Name)
-	err = s.ledgerServ.ApplyCredit(ctx, orgID, unusedCredit, oldPlanCurrency, models.TxTypeRefund, &sub.ID, &desc)
+	err = s.ledgerServ.ApplyCredit(ctx, tenantID, unusedCredit, oldPlanCurrency, models.TxTypeRefund, &sub.ID, &desc)
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,7 @@ func (s *AdvancedSubService) UpgradePlan(ctx context.Context, orgID uuid.UUID, n
 
 	inv := &models.Invoice{
 		ID:            uuid.New(),
-		OrgID:         orgID,
+		TenantID:         tenantID,
 		InvoiceNumber: fmt.Sprintf("PRORATE-%d", time.Now().UnixNano()),
 		CustomerName:  "Customer", // Placeholder, would fetch real org name normally
 		InvoiceDate:   now,
@@ -153,7 +153,7 @@ func (s *AdvancedSubService) UpgradePlan(ctx context.Context, orgID uuid.UUID, n
 }
 
 // RedeemCoupon validates and associates a discount tracking object
-func (s *AdvancedSubService) RedeemCoupon(ctx context.Context, orgID uuid.UUID, code string, subID, invID *uuid.UUID) error {
+func (s *AdvancedSubService) RedeemCoupon(ctx context.Context, tenantID uuid.UUID, code string, subID, invID *uuid.UUID) error {
 	coupon, err := s.repo.GetCouponByCode(ctx, code)
 	if err != nil || coupon == nil {
 		return errors.New("invalid or non-existent coupon")
@@ -161,7 +161,7 @@ func (s *AdvancedSubService) RedeemCoupon(ctx context.Context, orgID uuid.UUID, 
 
 	redemption := &models.CouponRedemption{
 		CouponID:       coupon.ID,
-		OrgID:          orgID,
+		TenantID:          tenantID,
 		SubscriptionID: subID,
 		InvoiceID:      invID,
 	}

@@ -78,6 +78,9 @@ func main() {
 	}
 	defer pool.Close()
 
+	// --- SYSTEM RESTORATION (Unified Schema Sync) ---
+	syncAllSchemas(ctx, pool, logger)
+
 	// --- Redis ---
 	rdb, err := database.NewRedis(ctx, cfg.RedisURL)
 	if err != nil {
@@ -235,7 +238,7 @@ func main() {
 	// Health check (no auth)
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"ok","service":"fleet-core"}`))
+		w.Write([]byte(`{"status":"healthy","service":"fleet-core"}`))
 	})
 
 	// --- API Routes ---
@@ -307,34 +310,35 @@ func main() {
 			r.Get("/geofences", geofenceHandler.ServeHTTP)
 			r.Post("/geofences", geofenceHandler.ServeHTTP)
 
-			// Vehicle CRUD
-			r.Route("/admin/vehicles", func(r chi.Router) {
-				vehicleHandlers.RegisterRoutes(r)
-			})
-
-			// Driver CRUD
-			r.Route("/admin/drivers", func(r chi.Router) {
-				driverHandler.RegisterRoutes(r)
-			})
-
-			// Organization CRUD
+			// Administrative Unified Router
 			r.Route("/admin", func(r chi.Router) {
+				// Vehicle CRUD
+				r.Route("/vehicles", func(r chi.Router) {
+					vehicleHandlers.RegisterRoutes(r)
+				})
+
+				// Driver CRUD
+				r.Route("/drivers", func(r chi.Router) {
+					driverHandler.RegisterRoutes(r)
+				})
+
+				// Trip CRUD
+				r.Route("/trips", func(r chi.Router) {
+					tHandler.RegisterRoutes(r)
+				})
+
+				// Customer Module
+				r.Route("/customers", func(r chi.Router) {
+					custV2Handler.RegisterRoutes(r)
+				})
+
+				// Invoicing Domain
+				r.Route("/invoicing", func(r chi.Router) {
+					invoicingHandler.RegisterRoutes(r)
+				})
+
+				// Organization & Dashboard Intelligence (Registers /organizations, /branches, etc.)
 				organizationHandler.RegisterRoutes(r)
-			})
-
-			// Trip CRUD
-			r.Route("/admin/trips", func(r chi.Router) {
-				tHandler.RegisterRoutes(r)
-			})
-
-			// Customer Lookups for Invoicing
-			r.Route("/admin/customers", func(r chi.Router) {
-				custV2Handler.RegisterRoutes(r)
-			})
-
-			// New Invoicing Domain (Isolated)
-			r.Route("/admin/invoicing", func(r chi.Router) {
-				invoicingHandler.RegisterRoutes(r)
 			})
 
 			// Billing Module
@@ -392,11 +396,11 @@ func main() {
 // pgTenantChecker implements repository.TenantChecker using the live DB.
 type pgTenantChecker struct{ pool *pgxpool.Pool }
 
-func (t *pgTenantChecker) VehicleBelongsToOrg(ctx context.Context, orgID, vehicleID uuid.UUID) (bool, error) {
+func (t *pgTenantChecker) VehicleBelongsToOrg(ctx context.Context, tenantID, vehicleID uuid.UUID) (bool, error) {
 	var exists bool
 	err := t.pool.QueryRow(ctx,
 		`SELECT EXISTS(SELECT 1 FROM vehicles WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL)`,
-		vehicleID, orgID).Scan(&exists)
+		vehicleID, tenantID).Scan(&exists)
 	return exists, err
 }
 
@@ -412,5 +416,215 @@ func requestLogger(logger *zap.Logger) func(http.Handler) http.Handler {
 				zap.Duration("elapsed", time.Since(start)),
 			)
 		})
+	}
+}
+
+func syncAllSchemas(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
+	logger.Info("Starting Total System Schema Restoration...")
+	
+	ensureIAMSchema(ctx, pool, logger)
+	ensureVehicleSchema(ctx, pool, logger)
+	ensureTripSchema(ctx, pool, logger)
+	ensureDriverSchema(ctx, pool, logger)
+	ensureCustomerSchema(ctx, pool, logger)
+	ensureInvoicingSchema(ctx, pool, logger)
+	ensureBillingSchema(ctx, pool, logger)
+	ensureAnalyticsSchema(ctx, pool, logger)
+	ensureTrackingSchema(ctx, pool, logger)
+
+	logger.Info("Total System Restoration Complete.")
+}
+
+func ensureIAMSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
+	logger.Info("Syncing IAM Schema...")
+	statements := []string{
+		"ALTER TABLE roles ADD COLUMN IF NOT EXISTS tenant_id UUID",
+		"ALTER TABLE roles ADD COLUMN IF NOT EXISTS permission_mask BIGINT DEFAULT 0",
+		"ALTER TABLE roles ADD COLUMN IF NOT EXISTS is_system BOOLEAN DEFAULT FALSE",
+		"ALTER TABLE user_roles ADD COLUMN IF NOT EXISTS tenant_id UUID",
+		"ALTER TABLE organizations ADD COLUMN IF NOT EXISTS tenant_id UUID",
+		"ALTER TABLE users ADD COLUMN IF NOT EXISTS must_reset_password BOOLEAN DEFAULT FALSE",
+	}
+	for _, stmt := range statements {
+		pool.Exec(ctx, stmt)
+	}
+
+	// Backfill tenant_id from org_id for IAM tables
+	backfills := []string{
+		"UPDATE roles SET tenant_id = org_id WHERE tenant_id IS NULL AND org_id IS NOT NULL",
+		"UPDATE user_roles SET tenant_id = org_id WHERE tenant_id IS NULL AND org_id IS NOT NULL",
+		"UPDATE organizations SET tenant_id = id WHERE tenant_id IS NULL",
+	}
+	for _, bf := range backfills {
+		pool.Exec(ctx, bf)
+	}
+}
+
+func ensureVehicleSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
+	logger.Info("Syncing Vehicle Schema...")
+	statements := []string{
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS tenant_id UUID",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS registration_number VARCHAR(50)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS vin_number VARCHAR(100)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS chassis_number VARCHAR(100)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS engine_number VARCHAR(100)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS make VARCHAR(100)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS model VARCHAR(100)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS year INTEGER",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS color VARCHAR(50)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active'",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS current_odometer FLOAT8 DEFAULT 0",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS last_service_date TIMESTAMP",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS last_service_odometer FLOAT8 DEFAULT 0",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS next_service_date TIMESTAMP",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS next_service_odometer FLOAT8 DEFAULT 0",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS insurance_expiry TIMESTAMP",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS permit_expiry TIMESTAMP",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS fitness_expiry TIMESTAMP",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS pollution_expiry TIMESTAMP",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS gps_enabled BOOLEAN DEFAULT FALSE",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS gps_device_id VARCHAR(100)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS last_gps_update TIMESTAMP",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS current_latitude FLOAT8",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS current_longitude FLOAT8",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS current_speed FLOAT8 DEFAULT 0",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS fuel_level FLOAT8 DEFAULT 0",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS version INTEGER DEFAULT 1",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE",
+	}
+	for _, stmt := range statements {
+		pool.Exec(ctx, stmt)
+	}
+	// Safely backfill tenant_id from org_id
+	pool.Exec(ctx, "DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicles' AND column_name = 'org_id') THEN UPDATE vehicles SET tenant_id = org_id WHERE tenant_id IS NULL; END IF; END $$;")
+}
+
+func ensureTripSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
+	logger.Info("Syncing Trip Schema...")
+	statements := []string{
+		"ALTER TABLE trips ADD COLUMN IF NOT EXISTS tenant_id UUID",
+		"ALTER TABLE trips ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE",
+		"ALTER TABLE trips ADD COLUMN IF NOT EXISTS planned_distance FLOAT8 DEFAULT 0",
+		"ALTER TABLE trips ADD COLUMN IF NOT EXISTS total_distance FLOAT8 DEFAULT 0",
+		"ALTER TABLE trips ADD COLUMN IF NOT EXISTS actual_duration_min INTEGER DEFAULT 0",
+		"ALTER TABLE trips ADD COLUMN IF NOT EXISTS fuel_used FLOAT8 DEFAULT 0",
+		"ALTER TABLE trips ADD COLUMN IF NOT EXISTS idling_time_minutes INTEGER DEFAULT 0",
+		"ALTER TABLE trips ADD COLUMN IF NOT EXISTS eway_bill_no VARCHAR(100)",
+		"ALTER TABLE trips ADD COLUMN IF NOT EXISTS gst_classification VARCHAR(100)",
+		"ALTER TABLE trips ADD COLUMN IF NOT EXISTS customer_name VARCHAR(200)",
+		"ALTER TABLE trips ADD COLUMN IF NOT EXISTS version INTEGER DEFAULT 1",
+	}
+	for _, stmt := range statements {
+		pool.Exec(ctx, stmt)
+	}
+	pool.Exec(ctx, "DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'trips' AND column_name = 'org_id') THEN UPDATE trips SET tenant_id = org_id WHERE tenant_id IS NULL; END IF; END $$;")
+}
+
+func ensureDriverSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
+	logger.Info("Syncing Driver Schema...")
+	statements := []string{
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS tenant_id UUID",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS license_number VARCHAR(100)",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active'",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE",
+	}
+	for _, stmt := range statements {
+		pool.Exec(ctx, stmt)
+	}
+	pool.Exec(ctx, "DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'drivers' AND column_name = 'org_id') THEN UPDATE drivers SET tenant_id = org_id WHERE tenant_id IS NULL; END IF; END $$;")
+}
+
+func ensureCustomerSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
+	logger.Info("Syncing Customer Schema...")
+	statements := []string{
+		"ALTER TABLE customers ADD COLUMN IF NOT EXISTS tenant_id UUID",
+		"ALTER TABLE customers ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'ACTIVE'",
+		"ALTER TABLE customers ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE",
+	}
+	for _, stmt := range statements {
+		pool.Exec(ctx, stmt)
+	}
+	pool.Exec(ctx, "DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'customers' AND column_name = 'org_id') THEN UPDATE customers SET tenant_id = org_id WHERE tenant_id IS NULL; END IF; END $$;")
+}
+
+func ensureInvoicingSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
+	logger.Info("Syncing Invoicing Schema...")
+	statements := []string{
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS tenant_id UUID",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS template_type TEXT",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS trip_id UUID",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS vehicle_no TEXT",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS driver_name TEXT",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS driver_mobile TEXT",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS pickup_location TEXT",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS drop_location TEXT",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS pickup_time TIMESTAMP WITH TIME ZONE",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS drop_time TIMESTAMP WITH TIME ZONE",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS map_url TEXT",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS billed_distance DECIMAL",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS place_of_supply TEXT",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS reverse_charge BOOLEAN DEFAULT FALSE",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS gstin_seller TEXT",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS pan_seller TEXT",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS eway_bill_no TEXT",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS eway_bill_date TIMESTAMP WITH TIME ZONE",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS irn TEXT",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS ack_no TEXT",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS ack_date TIMESTAMP WITH TIME ZONE",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS bank_name TEXT",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS account_no TEXT",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS ifsc_code TEXT",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS branch_name TEXT",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS beneficiary_name TEXT",
+		"ALTER TABLE invoices ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'INR'",
+		"ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS tenant_id UUID",
+		"ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE",
+		"ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS hsn_sac TEXT",
+		"ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS unit TEXT",
+		"ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS list_price DECIMAL",
+		"ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS discount_amount DECIMAL",
+	}
+	for _, stmt := range statements {
+		pool.Exec(ctx, stmt)
+	}
+	pool.Exec(ctx, "DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'invoices' AND column_name = 'org_id') THEN UPDATE invoices SET tenant_id = org_id WHERE tenant_id IS NULL; END IF; END $$;")
+}
+
+func ensureBillingSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
+	logger.Info("Syncing Billing Schema...")
+	statements := []string{
+		"ALTER TABLE billing_settings ADD COLUMN IF NOT EXISTS tenant_id UUID",
+		"ALTER TABLE billing_settings ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE",
+		"ALTER TABLE payment_records ADD COLUMN IF NOT EXISTS tenant_id UUID",
+	}
+	for _, stmt := range statements {
+		pool.Exec(ctx, stmt)
+	}
+}
+
+func ensureAnalyticsSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
+	logger.Info("Syncing Analytics Schema...")
+	statements := []string{
+		"ALTER TABLE predictive_models ADD COLUMN IF NOT EXISTS tenant_id UUID",
+		"ALTER TABLE prediction_results ADD COLUMN IF NOT EXISTS tenant_id UUID",
+		"ALTER TABLE analytics_jobs ADD COLUMN IF NOT EXISTS tenant_id UUID",
+		"ALTER TABLE fleet_analytics ADD COLUMN IF NOT EXISTS tenant_id UUID",
+	}
+	for _, stmt := range statements {
+		pool.Exec(ctx, stmt)
+	}
+}
+
+func ensureTrackingSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
+	logger.Info("Syncing Tracking Schema...")
+	statements := []string{
+		"ALTER TABLE geofences ADD COLUMN IF NOT EXISTS tenant_id UUID",
+		"ALTER TABLE geofences ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE",
+		"ALTER TABLE telemetry_points ADD COLUMN IF NOT EXISTS tenant_id UUID",
+	}
+	for _, stmt := range statements {
+		pool.Exec(ctx, stmt)
 	}
 }

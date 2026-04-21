@@ -20,7 +20,7 @@ func main() {
 	// Create mock invoice with 25 line items
 	invoice := &models.Invoice{
 		ID:            uuid.New(),
-		OrgID:         uuid.New(),
+		TenantID:         uuid.New(),
 		InvoiceNumber: "INV-2026-STRESS-001",
 		CustomerName:  "Stress Test Customer Pvt Ltd",
 		CustomerEmail: "billing@stresstest.com",

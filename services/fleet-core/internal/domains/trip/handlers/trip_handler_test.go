@@ -23,8 +23,8 @@ type MockTripService struct {
 	mock.Mock
 }
 
-func (m *MockTripService) Create(ctx context.Context, orgID string, req *models.CreateTripRequest) (*models.Trip, error) {
-	args := m.Called(ctx, orgID, req)
+func (m *MockTripService) Create(ctx context.Context, tenantID string, req *models.CreateTripRequest) (*models.Trip, error) {
+	args := m.Called(ctx, tenantID, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -146,24 +146,24 @@ func (m *MockTripService) GetActiveTripsForVehicle(ctx context.Context, vehicleI
 	return args.Get(0).([]*models.Trip), args.Error(1)
 }
 
-func (m *MockTripService) GetTripSummary(ctx context.Context, orgID string, startDate, endDate time.Time) (*models.TripSummary, error) {
-	args := m.Called(ctx, orgID, startDate, endDate)
+func (m *MockTripService) GetTripSummary(ctx context.Context, tenantID string, startDate, endDate time.Time) (*models.TripSummary, error) {
+	args := m.Called(ctx, tenantID, startDate, endDate)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*models.TripSummary), args.Error(1)
 }
 
-func (m *MockTripService) GetDriverStats(ctx context.Context, orgID string) ([]models.DriverPerformance, error) {
-	args := m.Called(ctx, orgID)
+func (m *MockTripService) GetDriverStats(ctx context.Context, tenantID string) ([]models.DriverPerformance, error) {
+	args := m.Called(ctx, tenantID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).([]models.DriverPerformance), args.Error(1)
 }
 
-func (m *MockTripService) GetTripStats(ctx context.Context, orgID string) ([]models.DailyTripTrend, error) {
-	args := m.Called(ctx, orgID)
+func (m *MockTripService) GetTripStats(ctx context.Context, tenantID string) ([]models.DailyTripTrend, error) {
+	args := m.Called(ctx, tenantID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -194,8 +194,8 @@ func (m *MockTripService) OptimizeRoute(ctx context.Context, tripID string) (*mo
 	return args.Get(0).(*models.RouteOptimization), args.Error(1)
 }
 
-func (m *MockTripService) GetTripCustomers(ctx context.Context, orgID string) ([]string, error) {
-	args := m.Called(ctx, orgID)
+func (m *MockTripService) GetTripCustomers(ctx context.Context, tenantID string) ([]string, error) {
+	args := m.Called(ctx, tenantID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -238,7 +238,7 @@ func TestTripHandler_CreateTrip_Success(t *testing.T) {
 
 	body, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest(http.MethodPost, "/trips", bytes.NewReader(body))
-	req = req.WithContext(context.WithValue(req.Context(), ctxkeys.OrgIDKey, "tenant-123"))
+	req = req.WithContext(context.WithValue(req.Context(), ctxkeys.TenantIDKey, "tenant-123"))
 	rr := httptest.NewRecorder()
 
 	handler.CreateTrip(rr, req)
@@ -253,7 +253,7 @@ func TestTripHandler_CreateTrip_InvalidJSON(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/trips", bytes.NewReader([]byte("invalid-json")))
 	// Inject tenant context so handler can proceed past auth check to body decode
-	req = req.WithContext(context.WithValue(req.Context(), ctxkeys.OrgIDKey, "tenant-123"))
+	req = req.WithContext(context.WithValue(req.Context(), ctxkeys.TenantIDKey, "tenant-123"))
 	rr := httptest.NewRecorder()
 
 	handler.CreateTrip(rr, req)
@@ -340,7 +340,7 @@ func TestTripHandler_ListTrips_Success(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/trips?status=SCHEDULED&page=1&page_size=20", nil)
 	// Inject tenant context required by handler
-	req = req.WithContext(context.WithValue(req.Context(), ctxkeys.OrgIDKey, "tenant-123"))
+	req = req.WithContext(context.WithValue(req.Context(), ctxkeys.TenantIDKey, "tenant-123"))
 	rr := httptest.NewRecorder()
 
 	handler.ListTrips(rr, req)
@@ -558,7 +558,7 @@ func TestTripHandler_GetDriverStats_Success(t *testing.T) {
 	mockService.On("GetDriverStats", mock.Anything, "tenant-123").Return(expectedStats, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/trips/stats/drivers", nil)
-	req = req.WithContext(context.WithValue(req.Context(), ctxkeys.OrgIDKey, "tenant-123"))
+	req = req.WithContext(context.WithValue(req.Context(), ctxkeys.TenantIDKey, "tenant-123"))
 	rr := httptest.NewRecorder()
 
 	handler.GetDriverStats(rr, req)
@@ -578,7 +578,7 @@ func TestTripHandler_GetTripStats_Success(t *testing.T) {
 	mockService.On("GetTripStats", mock.Anything, "tenant-123").Return(expectedStats, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/trips/stats/trips", nil)
-	req = req.WithContext(context.WithValue(req.Context(), ctxkeys.OrgIDKey, "tenant-123"))
+	req = req.WithContext(context.WithValue(req.Context(), ctxkeys.TenantIDKey, "tenant-123"))
 	rr := httptest.NewRecorder()
 
 	handler.GetTripStats(rr, req)

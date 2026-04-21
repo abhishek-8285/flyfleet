@@ -19,11 +19,11 @@ func TestBehaviorScoreService_ProcessBehaviorEvent(t *testing.T) {
 
 	ctx := context.Background()
 	driverID := uuid.New().String()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
 	driver := &models.Driver{
 		ID:            driverID,
-		OrgID:         orgID.String(),
+		TenantID:         tenantID.String(),
 		BehaviorScore: 85,
 	}
 
@@ -44,7 +44,7 @@ func TestBehaviorScoreService_ProcessBehaviorEvent(t *testing.T) {
 		mockRepo.On("UpdateBehaviorScore", ctx, driverID, -models.PenaltySpeeding).Return(nil).Once()
 		mockRepo.On("LogBehaviorScoreChange", ctx,
 			uuid.MustParse(driverID),
-			orgID,
+			tenantID,
 			85,
 			85-models.PenaltySpeeding,
 			fmt.Sprintf("Automated penalty for %s", event.EventType),
@@ -78,7 +78,7 @@ func TestBehaviorScoreService_ProcessBehaviorEvent(t *testing.T) {
 		mockRepo.On("UpdateBehaviorScore", ctx, driverID, -models.PenaltyHarshBrake).Return(nil).Once()
 		mockRepo.On("LogBehaviorScoreChange", ctx,
 			uuid.MustParse(driverID),
-			orgID,
+			tenantID,
 			85,
 			85-models.PenaltyHarshBrake,
 			fmt.Sprintf("Automated penalty for %s", event.EventType),

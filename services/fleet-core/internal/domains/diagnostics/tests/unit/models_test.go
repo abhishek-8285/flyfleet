@@ -15,13 +15,13 @@ func ptr[T any](v T) *T {
 
 func TestDeviceStatusValidation(t *testing.T) {
 	validate := validator.New()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	deviceID := uuid.New()
 
 	t.Run("Valid Active Device", func(t *testing.T) {
 		device := models.Device{
 			ID:         deviceID,
-			OrgID:      orgID,
+			TenantID:      tenantID,
 			DeviceIMEI: ptr("123456789012345"),
 			Status:     ptr("ACTIVE"),
 		}
@@ -33,7 +33,7 @@ func TestDeviceStatusValidation(t *testing.T) {
 	t.Run("Invalid Device Status", func(t *testing.T) {
 		device := models.Device{
 			ID:         deviceID,
-			OrgID:      orgID,
+			TenantID:      tenantID,
 			DeviceIMEI: ptr("123456789012345"),
 			Status:     ptr("INVALID_STATUS"),
 		}

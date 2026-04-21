@@ -30,10 +30,10 @@ func TestInvoiceWorker_Integration(t *testing.T) {
 
 	// Task data
 	invoiceID := uuid.New()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	payload := map[string]interface{}{
 		"invoice_id": invoiceID.String(),
-		"tenant_id":     orgID.String(),
+		"tenant_id":     tenantID.String(),
 	}
 	payloadJSON, _ := json.Marshal(payload)
 	task := asynq.NewTask(queue.TaskInvoiceRender, payloadJSON)

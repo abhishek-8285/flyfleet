@@ -35,7 +35,7 @@ export interface TripEvent {
 
 export interface Trip {
   id: string;
-  org_id: string;
+  tenant_id: string;
   vehicle_id: string;
   driver_id?: string;
   status: TripStatus;

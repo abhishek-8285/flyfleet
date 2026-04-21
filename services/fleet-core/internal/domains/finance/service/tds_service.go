@@ -51,7 +51,7 @@ func (s *TDSTaxService) DeductTDS(ctx context.Context, req models.DeductTDSReque
 		EntityType:    req.EntityType,
 		EntityID:      req.EntityID,
 		VendorID:      req.VendorID,
-		OrgID:         req.OrgID,
+		TenantID:         req.TenantID,
 		TDSSection:    req.TDSSection,
 		GrossAmount:   req.GrossAmount,
 		TDSRate:       rate,
@@ -75,8 +75,8 @@ func (s *TDSTaxService) DeductTDS(ctx context.Context, req models.DeductTDSReque
 }
 
 // GetTDSReport returns TDS records for an org in a financial year/quarter.
-func (s *TDSTaxService) GetTDSReport(ctx context.Context, orgID uuid.UUID, fy, quarter string) ([]models.TDSRecord, error) {
-	return s.repo.GetTDSRecords(ctx, orgID, fy, quarter)
+func (s *TDSTaxService) GetTDSReport(ctx context.Context, tenantID uuid.UUID, fy, quarter string) ([]models.TDSRecord, error) {
+	return s.repo.GetTDSRecords(ctx, tenantID, fy, quarter)
 }
 
 // financialYear returns the Indian FY string (e.g. "2024-25").

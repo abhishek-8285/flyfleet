@@ -73,7 +73,7 @@ func (s *DowntimeService) RecordDowntime(ctx context.Context, downtime *models.V
 	}
 
 	_, err := s.repo.GetDB().Exec(ctx, query,
-		downtime.ID, downtime.OrgID, downtime.VehicleID,
+		downtime.ID, downtime.TenantID, downtime.VehicleID,
 		downtime.DowntimeStart, downtime.DowntimeEnd, downtime.DowntimeMinutes,
 		downtime.Reason)
 	return err

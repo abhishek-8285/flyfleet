@@ -28,15 +28,15 @@ func NewApprovalService(repo *repository.RBACRepository, auditRepo *repository.A
 }
 
 // CheckApprovalRequired checks if an invoice requires approval
-func (s *ApprovalService) CheckApprovalRequired(ctx context.Context, orgID, userID uuid.UUID, amount float64) (bool, error) {
-	required, _, err := s.repo.RequiresApproval(ctx, orgID, userID, amount)
+func (s *ApprovalService) CheckApprovalRequired(ctx context.Context, tenantID, userID uuid.UUID, amount float64) (bool, error) {
+	required, _, err := s.repo.RequiresApproval(ctx, tenantID, userID, amount)
 	return required, err
 }
 
 // RequestApproval creates approval requests for an invoice
-func (s *ApprovalService) RequestApproval(ctx context.Context, invoiceID, orgID, userID uuid.UUID, amount float64, ipAddress, userAgent string) error {
+func (s *ApprovalService) RequestApproval(ctx context.Context, invoiceID, tenantID, userID uuid.UUID, amount float64, ipAddress, userAgent string) error {
 	// Check if approval is required
-	requires, matrix, err := s.repo.RequiresApproval(ctx, orgID, userID, amount)
+	requires, matrix, err := s.repo.RequiresApproval(ctx, tenantID, userID, amount)
 	if err != nil {
 		return fmt.Errorf("failed to check approval requirement: %w", err)
 	}

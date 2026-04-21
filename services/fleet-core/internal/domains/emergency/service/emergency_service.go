@@ -211,7 +211,7 @@ func (s *EmergencyService) TriggerSOS(ctx context.Context, req models.CreateSOSR
 	incident := &models.SOSIncident{
 		ID:              uuid.New(),
 		VehicleID:       vehicleID,
-		OrgID:           req.OrgID,
+		TenantID:           req.TenantID,
 		Status:          models.StatusTriggered,
 		Severity:        severity,
 		IncidentType:    req.IncidentType,
@@ -295,8 +295,8 @@ func (s *EmergencyService) TriggerSOS(ctx context.Context, req models.CreateSOSR
 	})
 
 	// 4. Metrics
-	emergency.IncidentsTotal.WithLabelValues(incident.OrgID.String(), string(incident.IncidentType), string(incident.Severity)).Inc()
-	emergency.ActiveIncidents.WithLabelValues(incident.OrgID.String()).Inc()
+	emergency.IncidentsTotal.WithLabelValues(incident.TenantID.String(), string(incident.IncidentType), string(incident.Severity)).Inc()
+	emergency.ActiveIncidents.WithLabelValues(incident.TenantID.String()).Inc()
 
 	// 4.5 Capture vehicle snapshot (best effort)
 	if s.trackingRepo != nil {
@@ -334,14 +334,14 @@ func (s *EmergencyService) startEscalationChain(ctx context.Context, incident *m
 		"timeout": EscalationTimeout.Seconds(),
 	})
 
-	contacts, err := s.repo.GetEmergencyContacts(ctx, incident.OrgID)
+	contacts, err := s.repo.GetEmergencyContacts(ctx, incident.TenantID)
 	if err != nil {
 		s.log.Error("Failed to get emergency contacts for escalation", zap.Error(err))
 		return
 	}
 
 	if len(contacts) == 0 {
-		s.log.Warn("No emergency contacts found for organization", zap.String("tenant_id", incident.OrgID.String()))
+		s.log.Warn("No emergency contacts found for organization", zap.String("tenant_id", incident.TenantID.String()))
 		s.logTimelineEvent(ctx, incident.ID, "ESCALATION_FAILED", "SYSTEM", map[string]string{"reason": "no_contacts"})
 
 		// Fallback for critical
@@ -375,7 +375,7 @@ func (s *EmergencyService) startEscalationChain(ctx context.Context, incident *m
 		if s.retry != nil {
 			s.retry.SendWithRetry(ctx, NotificationRequest{
 				IncidentID: incident.ID,
-				OrgID:      incident.OrgID,
+				TenantID:      incident.TenantID,
 				ContactID:  contact.ID,
 				Type:       "SMS",
 				Target:     contact.Phone,
@@ -384,7 +384,7 @@ func (s *EmergencyService) startEscalationChain(ctx context.Context, incident *m
 		}
 
 		// Cost Monitoring
-		emergency.SMSSentTotal.WithLabelValues(incident.OrgID.String()).Inc()
+		emergency.SMSSentTotal.WithLabelValues(incident.TenantID.String()).Inc()
 
 		s.logTimelineEvent(ctx, incident.ID, "CONTACT_NOTIFIED", "SYSTEM", map[string]interface{}{
 			"contact_name": contact.Name,
@@ -434,7 +434,7 @@ func (s *EmergencyService) startEscalationChain(ctx context.Context, incident *m
 func (s *EmergencyService) routeToAuthorities(ctx context.Context, incident *models.SOSIncident) {
 	s.log.Warn("Escalating to Indian Emergency Response Units", zap.String("incident", incident.ID.String()))
 
-	units, err := s.repo.ListResponseUnits(ctx, incident.OrgID)
+	units, err := s.repo.ListResponseUnits(ctx, incident.TenantID)
 	if err != nil {
 		s.log.Error("Failed to list response units", zap.Error(err))
 		return
@@ -501,7 +501,7 @@ func (s *EmergencyService) notifyEmergencyContacts(ctx context.Context, vehicleI
 	// 4. Log notification attempts
 }
 
-func (s *EmergencyService) GetIncident(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*models.SOSIncident, error) {
+func (s *EmergencyService) GetIncident(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) (*models.SOSIncident, error) {
 	incident, err := s.repo.GetIncidentByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -509,18 +509,18 @@ func (s *EmergencyService) GetIncident(ctx context.Context, id uuid.UUID, orgID 
 	if incident == nil {
 		return nil, ErrIncidentNotFound
 	}
-	if incident.OrgID != orgID {
+	if incident.TenantID != tenantID {
 		return nil, ErrUnauthorized
 	}
 	return incident, nil
 }
 
-func (s *EmergencyService) ListActiveIncidents(ctx context.Context, orgID uuid.UUID) ([]models.SOSIncident, error) {
-	return s.repo.GetActiveIncidentsByOrg(ctx, orgID)
+func (s *EmergencyService) ListActiveIncidents(ctx context.Context, tenantID uuid.UUID) ([]models.SOSIncident, error) {
+	return s.repo.GetActiveIncidentsByOrg(ctx, tenantID)
 }
 
-func (s *EmergencyService) GetEmergencyContacts(ctx context.Context, orgID uuid.UUID) ([]models.EmergencyContact, error) {
-	return s.repo.GetEmergencyContacts(ctx, orgID)
+func (s *EmergencyService) GetEmergencyContacts(ctx context.Context, tenantID uuid.UUID) ([]models.EmergencyContact, error) {
+	return s.repo.GetEmergencyContacts(ctx, tenantID)
 }
 
 // CreateContact adds a new emergency contact for the organization
@@ -544,9 +544,9 @@ type IncidentSearchParams struct {
 }
 
 // SearchIncidents searches for incidents with optional filters
-func (s *EmergencyService) SearchIncidents(ctx context.Context, orgID uuid.UUID, params IncidentSearchParams) ([]models.SOSIncident, error) {
+func (s *EmergencyService) SearchIncidents(ctx context.Context, tenantID uuid.UUID, params IncidentSearchParams) ([]models.SOSIncident, error) {
 	// Get all active incidents for the org (could be optimized with proper repo search later)
-	incidents, err := s.repo.GetActiveIncidentsByOrg(ctx, orgID)
+	incidents, err := s.repo.GetActiveIncidentsByOrg(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -611,7 +611,7 @@ func (s *EmergencyService) logTimelineEvent(ctx context.Context, incidentID uuid
 	}
 }
 
-func (s *EmergencyService) AcknowledgeIncident(ctx context.Context, id uuid.UUID, orgID uuid.UUID, userID uuid.UUID, notes string) error {
+func (s *EmergencyService) AcknowledgeIncident(ctx context.Context, id uuid.UUID, tenantID uuid.UUID, userID uuid.UUID, notes string) error {
 	incident, err := s.repo.GetIncidentByID(ctx, id)
 	if err != nil {
 		return err
@@ -619,7 +619,7 @@ func (s *EmergencyService) AcknowledgeIncident(ctx context.Context, id uuid.UUID
 	if incident == nil {
 		return ErrIncidentNotFound
 	}
-	if incident.OrgID != orgID {
+	if incident.TenantID != tenantID {
 		return ErrUnauthorized
 	}
 
@@ -648,7 +648,7 @@ func (s *EmergencyService) AcknowledgeIncident(ctx context.Context, id uuid.UUID
 	return nil
 }
 
-func (s *EmergencyService) ResolveIncident(ctx context.Context, id uuid.UUID, orgID uuid.UUID, userID uuid.UUID, notes string, status models.SOSStatus) error {
+func (s *EmergencyService) ResolveIncident(ctx context.Context, id uuid.UUID, tenantID uuid.UUID, userID uuid.UUID, notes string, status models.SOSStatus) error {
 	if status != models.StatusResolved && status != models.StatusFalseAlarm {
 		return ErrInvalidStatusTransition
 	}
@@ -660,7 +660,7 @@ func (s *EmergencyService) ResolveIncident(ctx context.Context, id uuid.UUID, or
 	if incident == nil {
 		return ErrIncidentNotFound
 	}
-	if incident.OrgID != orgID {
+	if incident.TenantID != tenantID {
 		return ErrUnauthorized
 	}
 
@@ -689,11 +689,11 @@ func (s *EmergencyService) ResolveIncident(ctx context.Context, id uuid.UUID, or
 	return nil
 }
 
-func (s *EmergencyService) FleetHalt(ctx context.Context, orgID uuid.UUID, reason string, userName string) error {
+func (s *EmergencyService) FleetHalt(ctx context.Context, tenantID uuid.UUID, reason string, userName string) error {
 	// 1. Get all active vehicles for org (Simplified: we'd usually use a vehicle service)
 	// For production, we publish a global NATS command that all edge devices/gateways listen to
 	cmd := map[string]interface{}{
-		"tenant_id":    orgID,
+		"tenant_id":    tenantID,
 		"command":   "HALT",
 		"reason":    reason,
 		"issued_by": userName,
@@ -704,9 +704,9 @@ func (s *EmergencyService) FleetHalt(ctx context.Context, orgID uuid.UUID, reaso
 	return nil
 }
 
-func (s *EmergencyService) FleetResume(ctx context.Context, orgID uuid.UUID, userName string) error {
+func (s *EmergencyService) FleetResume(ctx context.Context, tenantID uuid.UUID, userName string) error {
 	cmd := map[string]interface{}{
-		"tenant_id":    orgID,
+		"tenant_id":    tenantID,
 		"command":   "RESUME",
 		"issued_by": userName,
 		"timestamp": time.Now(),
@@ -716,8 +716,8 @@ func (s *EmergencyService) FleetResume(ctx context.Context, orgID uuid.UUID, use
 	return nil
 }
 
-func (s *EmergencyService) GetIncidentMetrics(ctx context.Context, orgID uuid.UUID, startDate, endDate time.Time) (*repository.IncidentMetrics, error) {
-	return s.repo.GetIncidentMetrics(ctx, orgID, startDate, endDate)
+func (s *EmergencyService) GetIncidentMetrics(ctx context.Context, tenantID uuid.UUID, startDate, endDate time.Time) (*repository.IncidentMetrics, error) {
+	return s.repo.GetIncidentMetrics(ctx, tenantID, startDate, endDate)
 }
 
 func (s *EmergencyService) logAction(ctx context.Context, incidentID uuid.UUID, userID *uuid.UUID, action, notes string) {
@@ -769,13 +769,13 @@ func (s *EmergencyService) isRateLimited(ctx context.Context, vehicleID uuid.UUI
 	return count > 5, nil
 }
 
-func (s *EmergencyService) AddMedia(ctx context.Context, media models.IncidentMedia, orgID uuid.UUID) error {
+func (s *EmergencyService) AddMedia(ctx context.Context, media models.IncidentMedia, tenantID uuid.UUID) error {
 	// Security check: ensure incident belongs to org
 	incident, err := s.repo.GetIncidentByID(ctx, media.IncidentID)
 	if err != nil || incident == nil {
 		return ErrIncidentNotFound
 	}
-	if incident.OrgID != orgID {
+	if incident.TenantID != tenantID {
 		return ErrUnauthorized
 	}
 
@@ -821,22 +821,22 @@ func (s *EmergencyService) TriggerDrill(ctx context.Context, req models.CreateSO
 	}
 
 	// Phase 8: Record drill metric
-	emergency.DrillEventsTotal.WithLabelValues(incident.OrgID.String()).Inc()
+	emergency.DrillEventsTotal.WithLabelValues(incident.TenantID.String()).Inc()
 
 	s.log.Info("Emergency drill completed",
 		zap.String("incident_id", incident.ID.String()),
-		zap.String("tenant_id", incident.OrgID.String()),
+		zap.String("tenant_id", incident.TenantID.String()),
 	)
 	return incident, nil
 }
 
-func (s *EmergencyService) UpdateDriverFeedback(ctx context.Context, incidentID uuid.UUID, orgID uuid.UUID, feedback string, notes string) error {
+func (s *EmergencyService) UpdateDriverFeedback(ctx context.Context, incidentID uuid.UUID, tenantID uuid.UUID, feedback string, notes string) error {
 	// Security check: ensure incident belongs to org
 	incident, err := s.repo.GetIncidentByID(ctx, incidentID)
 	if err != nil || incident == nil {
 		return ErrIncidentNotFound
 	}
-	if incident.OrgID != orgID {
+	if incident.TenantID != tenantID {
 		return ErrUnauthorized
 	}
 
@@ -873,17 +873,17 @@ func (s *EmergencyService) notifyDriverApp(ctx context.Context, driverID, vehicl
 	s.publishEvent("mobile.push.emergency_update", payload)
 }
 
-func (s *EmergencyService) ExportIncidents(ctx context.Context, orgID uuid.UUID, start, end time.Time) ([]models.SOSIncident, error) {
-	return s.repo.ExportIncidents(ctx, orgID, start, end)
+func (s *EmergencyService) ExportIncidents(ctx context.Context, tenantID uuid.UUID, start, end time.Time) ([]models.SOSIncident, error) {
+	return s.repo.ExportIncidents(ctx, tenantID, start, end)
 }
 
-func (s *EmergencyService) GetIncidentTimeline(ctx context.Context, incidentID, orgID uuid.UUID) ([]models.TimelineEvent, error) {
+func (s *EmergencyService) GetIncidentTimeline(ctx context.Context, incidentID, tenantID uuid.UUID) ([]models.TimelineEvent, error) {
 	// Security check
 	incident, err := s.repo.GetIncidentByID(ctx, incidentID)
 	if err != nil || incident == nil {
 		return nil, ErrIncidentNotFound
 	}
-	if incident.OrgID != orgID {
+	if incident.TenantID != tenantID {
 		return nil, ErrUnauthorized
 	}
 

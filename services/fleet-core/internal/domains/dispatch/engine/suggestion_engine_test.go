@@ -17,17 +17,17 @@ type mockVehicleRepo struct {
 
 type mockVehicle struct {
 	ID              uuid.UUID
-	OrgID           uuid.UUID
+	TenantID           uuid.UUID
 	Status          string
 	Registration    string
 	CapacityTonnage float64
 	Type            string
 }
 
-func (m *mockVehicleRepo) GetByOrgID(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]mockVehicle, int64, error) {
+func (m *mockVehicleRepo) GetByTenantID(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]mockVehicle, int64, error) {
 	var filtered []mockVehicle
 	for _, v := range m.vehicles {
-		if v.OrgID == orgID {
+		if v.TenantID == tenantID {
 			filtered = append(filtered, v)
 		}
 	}
@@ -40,7 +40,7 @@ type mockDriverRepo struct {
 
 type mockDriver struct {
 	ID            uuid.UUID
-	OrgID         uuid.UUID
+	TenantID         uuid.UUID
 	Name          string
 	Rating        float64
 	CurrentTripID *string
@@ -49,7 +49,7 @@ type mockDriver struct {
 
 func (m *mockDriverRepo) GetByVehicleAssignment(ctx context.Context, vehicleID uuid.UUID) (*mockDriver, error) {
 	for _, d := range m.drivers {
-		if d.OrgID.String() == vehicleID.String()[:36] {
+		if d.TenantID.String() == vehicleID.String()[:36] {
 			return &d, nil
 		}
 	}
@@ -93,18 +93,18 @@ func TestSuggestionEngine_FiltersByOrg(t *testing.T) {
 
 	vehicleRepo := &mockVehicleRepo{
 		vehicles: []mockVehicle{
-			{ID: uuid.New(), OrgID: orgA, Status: "ACTIVE", Registration: "DL-AAA"},
-			{ID: uuid.New(), OrgID: orgA, Status: "ACTIVE", Registration: "DL-BBB"},
-			{ID: uuid.New(), OrgID: orgB, Status: "ACTIVE", Registration: "MH-CCC"}, // Wrong org
+			{ID: uuid.New(), TenantID: orgA, Status: "ACTIVE", Registration: "DL-AAA"},
+			{ID: uuid.New(), TenantID: orgA, Status: "ACTIVE", Registration: "DL-BBB"},
+			{ID: uuid.New(), TenantID: orgB, Status: "ACTIVE", Registration: "MH-CCC"}, // Wrong org
 		},
 	}
 
-	vehicles, _, err := vehicleRepo.GetByOrgID(context.Background(), orgA, 500, 0)
+	vehicles, _, err := vehicleRepo.GetByTenantID(context.Background(), orgA, 500, 0)
 	require.NoError(t, err)
 
 	assert.Len(t, vehicles, 2, "Only Org A vehicles returned")
 	for _, v := range vehicles {
-		assert.Equal(t, orgA, v.OrgID, "All vehicles must belong to Org A")
+		assert.Equal(t, orgA, v.TenantID, "All vehicles must belong to Org A")
 	}
 }
 
@@ -195,7 +195,7 @@ func TestSuggestionEngine_EmptyOrgReturnsEmpty(t *testing.T) {
 		vehicles: []mockVehicle{},
 	}
 
-	vehicles, count, err := vehicleRepo.GetByOrgID(context.Background(), uuid.New(), 500, 0)
+	vehicles, count, err := vehicleRepo.GetByTenantID(context.Background(), uuid.New(), 500, 0)
 	require.NoError(t, err)
 	assert.Empty(t, vehicles)
 	assert.Equal(t, int64(0), count)

@@ -15,6 +15,7 @@ import (
 	"github.com/flyfleet/fleet-core/internal/domains/governance/metrics"
 	"github.com/flyfleet/fleet-core/internal/domains/governance/models"
 	"github.com/flyfleet/fleet-core/internal/domains/governance/repository"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 )
 
 var (
@@ -23,15 +24,15 @@ var (
 )
 
 type GovernanceService interface {
-	CreateRequest(ctx context.Context, orgID, userID uuid.UUID, req models.CreateGovernanceRequest) (*models.GovernanceRequest, error)
-	GetRequest(ctx context.Context, id, orgID uuid.UUID) (*models.GovernanceRequest, error)
+	CreateRequest(ctx context.Context, tenantID, userID uuid.UUID, req models.CreateGovernanceRequest) (*models.GovernanceRequest, error)
+	GetRequest(ctx context.Context, id, tenantID uuid.UUID) (*models.GovernanceRequest, error)
 	ListRequests(ctx context.Context, filter models.GovernanceRequestFilter) (*models.GovernanceRequestListResponse, error)
-	ApproveRequest(ctx context.Context, id, orgID uuid.UUID, notes string) error
-	VerifyRequest(ctx context.Context, id, orgID, userID uuid.UUID, status string) error
-	RejectRequest(ctx context.Context, id, orgID uuid.UUID, notes string) error
+	ApproveRequest(ctx context.Context, id, tenantID uuid.UUID, notes string) error
+	VerifyRequest(ctx context.Context, id, tenantID, userID uuid.UUID, status string) error
+	RejectRequest(ctx context.Context, id, tenantID uuid.UUID, notes string) error
 
-	GetSettings(ctx context.Context, orgID uuid.UUID) (*models.GovernanceSettings, error)
-	UpdateSettings(ctx context.Context, orgID, userID uuid.UUID, settings *models.GovernanceSettings) error
+	GetSettings(ctx context.Context, tenantID uuid.UUID) (*models.GovernanceSettings, error)
+	UpdateSettings(ctx context.Context, tenantID, userID uuid.UUID, settings *models.GovernanceSettings) error
 
 	ExpireRequests(ctx context.Context) (int, error)
 	EnforceRetention(ctx context.Context) error
@@ -47,7 +48,7 @@ func NewGovernanceService(repo repository.GovernanceRepository, nats *nats.Conn,
 	return &governanceService{repo: repo, nats: nats, logger: logger}
 }
 
-func (s *governanceService) CreateRequest(ctx context.Context, orgID, userID uuid.UUID, req models.CreateGovernanceRequest) (*models.GovernanceRequest, error) {
+func (s *governanceService) CreateRequest(ctx context.Context, tenantID, userID uuid.UUID, req models.CreateGovernanceRequest) (*models.GovernanceRequest, error) {
 	_, span := otel.Tracer("governance").Start(ctx, "create_governance_request")
 	defer span.End()
 
@@ -58,7 +59,7 @@ func (s *governanceService) CreateRequest(ctx context.Context, orgID, userID uui
 
 	gReq := &models.GovernanceRequest{
 		ID:             uuid.New(),
-		OrganizationID: orgID,
+		OrganizationID: tenantID,
 		RequesterID:    userID,
 		RequestType:    req.RequestType,
 		DataScope:      req.DataScope,
@@ -80,7 +81,7 @@ func (s *governanceService) CreateRequest(ctx context.Context, orgID, userID uui
 	// Audit Log
 	s.repo.CreateAuditLog(ctx, &models.GovernanceAuditLog{
 		ID:             uuid.New(),
-		OrganizationID: orgID,
+		OrganizationID: tenantID,
 		UserID:         userID,
 		Action:         "CREATE_REQUEST",
 		Module:         "DATA_REQUESTS",
@@ -94,10 +95,10 @@ func (s *governanceService) CreateRequest(ctx context.Context, orgID, userID uui
 	return gReq, nil
 }
 
-func (s *governanceService) GetRequest(ctx context.Context, id, orgID uuid.UUID) (*models.GovernanceRequest, error) {
+func (s *governanceService) GetRequest(ctx context.Context, id, tenantID uuid.UUID) (*models.GovernanceRequest, error) {
 	_, span := otel.Tracer("governance").Start(ctx, "get_governance_request")
 	defer span.End()
-	req, err := s.repo.GetRequestByID(ctx, id, orgID)
+	req, err := s.repo.GetRequestByID(ctx, id, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -117,11 +118,11 @@ func (s *governanceService) ListRequests(ctx context.Context, filter models.Gove
 	return s.repo.ListRequests(ctx, filter)
 }
 
-func (s *governanceService) ApproveRequest(ctx context.Context, id, orgID uuid.UUID, notes string) error {
+func (s *governanceService) ApproveRequest(ctx context.Context, id, tenantID uuid.UUID, notes string) error {
 	ctx, span := otel.Tracer("governance").Start(ctx, "approve_governance_request")
 	defer span.End()
 
-	req, err := s.GetRequest(ctx, id, orgID)
+	req, err := s.GetRequest(ctx, id, tenantID)
 	if err != nil {
 		return err
 	}
@@ -135,7 +136,7 @@ func (s *governanceService) ApproveRequest(ctx context.Context, id, orgID uuid.U
 	}
 
 	// Set expiry date based on settings (default 48h)
-	settings, err := s.repo.GetSettings(ctx, orgID)
+	settings, err := s.repo.GetSettings(ctx, tenantID)
 	if err != nil {
 		s.logger.Warn("failed to get governance settings, using default TTL", zap.Error(err))
 	}
@@ -148,7 +149,7 @@ func (s *governanceService) ApproveRequest(ctx context.Context, id, orgID uuid.U
 	s.logger.Info("approving request", zap.String("id", id.String()), zap.Time("expiry", expiry))
 
 	// Update status with expiry date
-	if err := s.repo.UpdateRequestStatus(ctx, id, orgID, models.RequestStatusApproved, &notes, &expiry); err != nil {
+	if err := s.repo.UpdateRequestStatus(ctx, id, tenantID, models.RequestStatusApproved, &notes, &expiry); err != nil {
 		return err
 	}
 
@@ -156,7 +157,7 @@ func (s *governanceService) ApproveRequest(ctx context.Context, id, orgID uuid.U
 	userID := s.getUserID(ctx)
 	s.repo.CreateAuditLog(ctx, &models.GovernanceAuditLog{
 		ID:             uuid.New(),
-		OrganizationID: orgID,
+		OrganizationID: tenantID,
 		UserID:         userID,
 		Action:         "APPROVE_REQUEST",
 		Module:         "DATA_REQUESTS",
@@ -171,11 +172,11 @@ func (s *governanceService) ApproveRequest(ctx context.Context, id, orgID uuid.U
 	return nil
 }
 
-func (s *governanceService) VerifyRequest(ctx context.Context, id, orgID, userID uuid.UUID, status string) error {
+func (s *governanceService) VerifyRequest(ctx context.Context, id, tenantID, userID uuid.UUID, status string) error {
 	ctx, span := otel.Tracer("governance").Start(ctx, "verify_governance_request")
 	defer span.End()
 
-	req, err := s.GetRequest(ctx, id, orgID)
+	req, err := s.GetRequest(ctx, id, tenantID)
 	if err != nil {
 		return err
 	}
@@ -184,14 +185,14 @@ func (s *governanceService) VerifyRequest(ctx context.Context, id, orgID, userID
 		return ErrInvalidStatus
 	}
 
-	if err := s.repo.UpdateVerificationStatus(ctx, id, orgID, status, userID); err != nil {
+	if err := s.repo.UpdateVerificationStatus(ctx, id, tenantID, status, userID); err != nil {
 		return err
 	}
 
 	// Audit Log
 	s.repo.CreateAuditLog(ctx, &models.GovernanceAuditLog{
 		ID:             uuid.New(),
-		OrganizationID: orgID,
+		OrganizationID: tenantID,
 		UserID:         userID,
 		Action:         "VERIFY_REQUEST",
 		Module:         "DATA_REQUESTS",
@@ -205,11 +206,11 @@ func (s *governanceService) VerifyRequest(ctx context.Context, id, orgID, userID
 	return nil
 }
 
-func (s *governanceService) RejectRequest(ctx context.Context, id, orgID uuid.UUID, notes string) error {
+func (s *governanceService) RejectRequest(ctx context.Context, id, tenantID uuid.UUID, notes string) error {
 	ctx, span := otel.Tracer("governance").Start(ctx, "reject_governance_request")
 	defer span.End()
 
-	req, err := s.GetRequest(ctx, id, orgID)
+	req, err := s.GetRequest(ctx, id, tenantID)
 	if err != nil {
 		return err
 	}
@@ -219,7 +220,7 @@ func (s *governanceService) RejectRequest(ctx context.Context, id, orgID uuid.UU
 	}
 
 	// Update status (no expiry needed for rejected requests)
-	if err := s.repo.UpdateRequestStatus(ctx, id, orgID, models.RequestStatusRejected, &notes, nil); err != nil {
+	if err := s.repo.UpdateRequestStatus(ctx, id, tenantID, models.RequestStatusRejected, &notes, nil); err != nil {
 		return err
 	}
 
@@ -227,7 +228,7 @@ func (s *governanceService) RejectRequest(ctx context.Context, id, orgID uuid.UU
 	userID := s.getUserID(ctx)
 	s.repo.CreateAuditLog(ctx, &models.GovernanceAuditLog{
 		ID:             uuid.New(),
-		OrganizationID: orgID,
+		OrganizationID: tenantID,
 		UserID:         userID,
 		Action:         "REJECT_REQUEST",
 		Module:         "DATA_REQUESTS",
@@ -241,12 +242,12 @@ func (s *governanceService) RejectRequest(ctx context.Context, id, orgID uuid.UU
 	return nil
 }
 
-func (s *governanceService) GetSettings(ctx context.Context, orgID uuid.UUID) (*models.GovernanceSettings, error) {
-	return s.repo.GetSettings(ctx, orgID)
+func (s *governanceService) GetSettings(ctx context.Context, tenantID uuid.UUID) (*models.GovernanceSettings, error) {
+	return s.repo.GetSettings(ctx, tenantID)
 }
 
-func (s *governanceService) UpdateSettings(ctx context.Context, orgID, userID uuid.UUID, settings *models.GovernanceSettings) error {
-	settings.OrganizationID = orgID
+func (s *governanceService) UpdateSettings(ctx context.Context, tenantID, userID uuid.UUID, settings *models.GovernanceSettings) error {
+	settings.OrganizationID = tenantID
 	settings.CreatedBy = userID // Fallback if record is new
 	settings.UpdatedBy = userID
 
@@ -257,7 +258,7 @@ func (s *governanceService) UpdateSettings(ctx context.Context, orgID, userID uu
 	// Audit Log
 	s.repo.CreateAuditLog(ctx, &models.GovernanceAuditLog{
 		ID:             uuid.New(),
-		OrganizationID: orgID,
+		OrganizationID: tenantID,
 		UserID:         userID,
 		Action:         "UPDATE_SETTINGS",
 		Module:         "GOVERNANCE_SETTINGS",
@@ -295,16 +296,10 @@ func (s *governanceService) ExpireRequests(ctx context.Context) (int, error) {
 }
 
 func (s *governanceService) getUserID(ctx context.Context) uuid.UUID {
-	val := ctx.Value("user_id")
-	if val == nil {
-		return uuid.Nil
+	if id, ok := ctxkeys.GetUserID(ctx); ok {
+		return id
 	}
-	uidStr, ok := val.(string)
-	if !ok {
-		return uuid.Nil
-	}
-	uid, _ := uuid.Parse(uidStr)
-	return uid
+	return uuid.Nil
 }
 
 func (s *governanceService) publishEvent(subject string, data interface{}) {
@@ -330,7 +325,7 @@ func (s *governanceService) EnforceRetention(ctx context.Context) error {
 	for _, setting := range settings {
 		var policies map[string]int
 		if err := json.Unmarshal(setting.RetentionPolicies, &policies); err != nil {
-			s.logger.Error("failed to unmarshal retention policies", zap.String("orgID", setting.OrganizationID.String()), zap.Error(err))
+			s.logger.Error("failed to unmarshal retention policies", zap.String("tenantID", setting.OrganizationID.String()), zap.Error(err))
 			continue
 		}
 
@@ -338,14 +333,14 @@ func (s *governanceService) EnforceRetention(ctx context.Context) error {
 			count, err := s.repo.EnforceRetentionPolicy(ctx, setting.OrganizationID, table, days)
 			if err != nil {
 				s.logger.Error("failed to enforce retention policy",
-					zap.String("orgID", setting.OrganizationID.String()),
+					zap.String("tenantID", setting.OrganizationID.String()),
 					zap.String("table", table),
 					zap.Error(err))
 				continue
 			}
 			if count > 0 {
 				s.logger.Info("enforced retention policy",
-					zap.String("orgID", setting.OrganizationID.String()),
+					zap.String("tenantID", setting.OrganizationID.String()),
 					zap.String("table", table),
 					zap.Int64("deleted_rows", count))
 				metrics.GovernanceDeletionsTotal.Add(float64(count))

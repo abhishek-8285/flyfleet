@@ -26,7 +26,7 @@ func (r *MaintenanceRepositoryImpl) RecordDowntimeStart(ctx context.Context, d *
 		d.DowntimeStart = time.Now()
 	}
 
-	_, err := r.db.Exec(ctx, query, d.ID, d.OrgID, d.VehicleID, d.WorkOrderID, d.DowntimeStart, d.Reason)
+	_, err := r.db.Exec(ctx, query, d.ID, d.TenantID, d.VehicleID, d.WorkOrderID, d.DowntimeStart, d.Reason)
 	return err
 }
 

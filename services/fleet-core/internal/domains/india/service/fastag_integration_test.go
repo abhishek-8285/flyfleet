@@ -122,7 +122,7 @@ func (m *MockIndiaRepository) UpdateGSTCompliance(ctx context.Context, id string
 	return nil
 }
 func (m *MockIndiaRepository) DeleteGSTCompliance(ctx context.Context, id string) error { return nil }
-func (m *MockIndiaRepository) ListGSTCompliances(ctx context.Context, orgID uuid.UUID, status *string, limit, offset int) ([]*models.GSTCompliance, int, error) {
+func (m *MockIndiaRepository) ListGSTCompliances(ctx context.Context, tenantID uuid.UUID, status *string, limit, offset int) ([]*models.GSTCompliance, int, error) {
 	return nil, 0, nil
 }
 func (m *MockIndiaRepository) CreateIntegrationConfig(ctx context.Context, config *models.IntegrationConfig) error {
@@ -131,7 +131,7 @@ func (m *MockIndiaRepository) CreateIntegrationConfig(ctx context.Context, confi
 func (m *MockIndiaRepository) GetIntegrationConfig(ctx context.Context, id string) (*models.IntegrationConfig, error) {
 	return nil, nil
 }
-func (m *MockIndiaRepository) GetIntegrationConfigByServiceType(ctx context.Context, orgID uuid.UUID, serviceType string) (*models.IntegrationConfig, error) {
+func (m *MockIndiaRepository) GetIntegrationConfigByServiceType(ctx context.Context, tenantID uuid.UUID, serviceType string) (*models.IntegrationConfig, error) {
 	return nil, nil
 }
 func (m *MockIndiaRepository) UpdateIntegrationConfig(ctx context.Context, id string, updates map[string]interface{}) error {
@@ -140,7 +140,7 @@ func (m *MockIndiaRepository) UpdateIntegrationConfig(ctx context.Context, id st
 func (m *MockIndiaRepository) DeleteIntegrationConfig(ctx context.Context, id string) error {
 	return nil
 }
-func (m *MockIndiaRepository) ListIntegrationConfigs(ctx context.Context, orgID uuid.UUID, serviceType *string, active *bool, limit, offset int) ([]*models.IntegrationConfig, int, error) {
+func (m *MockIndiaRepository) ListIntegrationConfigs(ctx context.Context, tenantID uuid.UUID, serviceType *string, active *bool, limit, offset int) ([]*models.IntegrationConfig, int, error) {
 	return nil, 0, nil
 }
 func (m *MockIndiaRepository) HealthCheck(ctx context.Context) error { return nil }
@@ -170,7 +170,7 @@ func TestFastagIntegrationService_FetchTransactions(t *testing.T) {
 	detector := billingv2service.NewDoubleSwipeDetector(mockRepo, nil, logger)
 	svc := NewFastagIntegrationService(mockRepo, detector, logger)
 
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	tagNumber := "TAG123"
 	from := time.Now().Add(-24 * time.Hour)
 	to := time.Now()
@@ -178,7 +178,7 @@ func TestFastagIntegrationService_FetchTransactions(t *testing.T) {
 	mockRepo.On("CreateIntegrationLog", mock.Anything, mock.Anything).Return(nil)
 	mockRepo.On("CreateFASTagTransaction", mock.Anything, mock.Anything).Return(nil)
 
-	txs, err := svc.FetchTransactions(context.Background(), orgID, tagNumber, from, to)
+	txs, err := svc.FetchTransactions(context.Background(), tenantID, tagNumber, from, to)
 
 	assert.NoError(t, err)
 	assert.Len(t, txs, 1)

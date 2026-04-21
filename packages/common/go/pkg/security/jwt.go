@@ -64,19 +64,19 @@ func (j *JWTServiceImpl) ExtractClaims(tokenString string) (jwt.MapClaims, error
 }
 
 // Common claim helpers
-func CreateAccessToken(userID string, orgID string, roles []string) jwt.MapClaims {
+func CreateAccessToken(userID string, tenantID string, roles []string) jwt.MapClaims {
 	return jwt.MapClaims{
 		"user_id": userID,
-		"org_id":  orgID,
+		"tenant_id":  tenantID,
 		"roles":   roles,
 		"type":    "access",
 	}
 }
 
-func CreateRefreshToken(userID string, orgID string) jwt.MapClaims {
+func CreateRefreshToken(userID string, tenantID string) jwt.MapClaims {
 	return jwt.MapClaims{
 		"user_id": userID,
-		"org_id":  orgID,
+		"tenant_id":  tenantID,
 		"type":    "refresh",
 	}
 }

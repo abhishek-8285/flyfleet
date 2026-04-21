@@ -67,15 +67,15 @@ export const OrganizationDetail: React.FC = () => {
         const [usersRes, vehiclesRes, devicesRes, tripsRes] =
           await Promise.allSettled([
             // Fetch total users for this organization
-            apiClient.get(`/admin/users?org_id=${id}&page=1&size=1`),
+            apiClient.get(`/admin/users?tenant_id=${id}&page=1&size=1`),
             // Fetch total vehicles for this organization
-            apiClient.get(`/admin/vehicles?org_id=${id}&page=1&size=1`),
+            apiClient.get(`/admin/vehicles?tenant_id=${id}&page=1&size=1`),
             // Fetch device stats (using support endpoint)
             fetch(`/api/v1/support/orgs/${id}/devices/stats`).then((res) =>
               res.json(),
             ),
             // Fetch trip stats
-            fetch(`/api/v1/trips/stats?org_id=${id}`).then((res) => res.json()),
+            fetch(`/api/v1/trips/stats?tenant_id=${id}`).then((res) => res.json()),
           ]);
 
         const totalUsers =

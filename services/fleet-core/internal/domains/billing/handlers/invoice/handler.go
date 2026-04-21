@@ -26,7 +26,7 @@ func NewHandler(service invoice.Service) *Handler {
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	orgID, _ := middleware.GetOrgID(ctx)
+	tenantID, _ := middleware.GetTenantID(ctx)
 
 	var req CreateInvoiceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -39,7 +39,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	inv, err := h.service.CreateInvoice(ctx, orgID, req.ToDomain())
+	inv, err := h.service.CreateInvoice(ctx, tenantID, req.ToDomain())
 	if err != nil {
 		http.Error(w, "internal server error: "+uuid.New().String(), http.StatusInternalServerError)
 		return
@@ -52,10 +52,10 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	orgID, _ := middleware.GetOrgID(ctx)
+	tenantID, _ := middleware.GetTenantID(ctx)
 	id, _ := uuid.Parse(chi.URLParam(r, "id"))
 
-	inv, err := h.service.GetInvoice(ctx, orgID, id)
+	inv, err := h.service.GetInvoice(ctx, tenantID, id)
 	if err != nil {
 		http.Error(w, "invoice not found", http.StatusNotFound)
 		return
@@ -67,7 +67,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	orgID, _ := middleware.GetOrgID(ctx)
+	tenantID, _ := middleware.GetTenantID(ctx)
 
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	if page < 1 {
@@ -78,7 +78,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		limit = 20
 	}
 
-	invoices, total, err := h.service.ListInvoices(ctx, orgID, limit, (page-1)*limit)
+	invoices, total, err := h.service.ListInvoices(ctx, tenantID, limit, (page-1)*limit)
 	if err != nil {
 		http.Error(w, "internal server error: "+uuid.New().String(), http.StatusInternalServerError)
 		return
@@ -95,10 +95,10 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Void(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	orgID, _ := middleware.GetOrgID(ctx)
+	tenantID, _ := middleware.GetTenantID(ctx)
 	id, _ := uuid.Parse(chi.URLParam(r, "id"))
 
-	if err := h.service.VoidInvoice(ctx, orgID, id); err != nil {
+	if err := h.service.VoidInvoice(ctx, tenantID, id); err != nil {
 		http.Error(w, "internal server error: "+uuid.New().String(), http.StatusInternalServerError)
 		return
 	}

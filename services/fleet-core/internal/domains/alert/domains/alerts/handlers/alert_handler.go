@@ -89,8 +89,8 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.errorJSON(w, "Organization ID required", http.StatusUnauthorized)
 		return
 	}
@@ -101,10 +101,10 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rule, err := h.service.CreateRule(r.Context(), orgID, &req)
+	rule, err := h.service.CreateRule(r.Context(), tenantID, &req)
 	if err != nil {
 		// SECURITY FIX: Log detailed error but return generic message to client
-		h.logger.Error("failed to create alert rule", zap.Error(err), zap.String("tenant_id", orgID.String()))
+		h.logger.Error("failed to create alert rule", zap.Error(err), zap.String("tenant_id", tenantID.String()))
 		h.errorJSON(w, "Failed to create alert rule", http.StatusInternalServerError)
 		return
 	}
@@ -126,8 +126,8 @@ func (h *AlertHandler) GetRule(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AlertHandler) ListRules(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.errorJSON(w, "Organization ID required", http.StatusUnauthorized)
 		return
 	}
@@ -153,7 +153,7 @@ func (h *AlertHandler) ListRules(w http.ResponseWriter, r *http.Request) {
 		filter.Severity = severities
 	}
 
-	rules, totalCount, err := h.service.ListRules(r.Context(), orgID, filter)
+	rules, totalCount, err := h.service.ListRules(r.Context(), tenantID, filter)
 	if err != nil {
 		h.logger.Error("failed to list alert rules", zap.Error(err))
 		h.errorJSON(w, "Failed to list alert rules", http.StatusInternalServerError)
@@ -241,27 +241,27 @@ func (h *AlertHandler) GetAlert(w http.ResponseWriter, r *http.Request) {
 func (h *AlertHandler) ListAlerts(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 
-	orgIDStr := query.Get("tenant_id")
-	if orgIDStr == "" {
-		orgID := h.getOrgID(r)
-		if orgID != uuid.Nil {
-			orgIDStr = orgID.String()
+	tenantIDStr := query.Get("tenant_id")
+	if tenantIDStr == "" {
+		tenantID := h.getTenantID(r)
+		if tenantID != uuid.Nil {
+			tenantIDStr = tenantID.String()
 		}
 	}
 
-	if orgIDStr == "" {
+	if tenantIDStr == "" {
 		h.errorJSON(w, "Organization ID required", http.StatusUnauthorized)
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr)
+	tenantID, err := uuid.Parse(tenantIDStr)
 	if err != nil {
 		h.errorJSON(w, "Invalid organization ID", http.StatusBadRequest)
 		return
 	}
 
 	filter := models.AlertListFilter{
-		OrgID:    orgID,
+		TenantID:    tenantID,
 		Page:     1,
 		PageSize: 20,
 		OrderBy:  "timestamp",
@@ -374,8 +374,8 @@ func (h *AlertHandler) ResolveAlert(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AlertHandler) GetAlertSummary(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.errorJSON(w, "Organization ID required", http.StatusUnauthorized)
 		return
 	}
@@ -401,7 +401,7 @@ func (h *AlertHandler) GetAlertSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	summary, err := h.service.GetAlertSummary(r.Context(), orgID, fromDate, toDate)
+	summary, err := h.service.GetAlertSummary(r.Context(), tenantID, fromDate, toDate)
 	if err != nil {
 		h.logger.Error("failed to get alert summary", zap.Error(err))
 		h.errorJSON(w, "Failed to get alert summary", http.StatusInternalServerError)
@@ -466,8 +466,8 @@ func (h *AlertHandler) errorJSON(w http.ResponseWriter, message string, status i
 	h.json(w, map[string]string{"error": message}, status)
 }
 
-func (h *AlertHandler) getOrgID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
+func (h *AlertHandler) getTenantID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.TenantIDKey); val != nil {
 		switch v := val.(type) {
 		case uuid.UUID:
 			return v

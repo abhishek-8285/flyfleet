@@ -468,7 +468,7 @@ func (m *MockAuthRepository) MarkRecoveryCodeUsed(ctx context.Context, codeID uu
 	return fmt.Errorf("code not found")
 }
 
-func (m *MockAuthRepository) GetUserPermissions(ctx context.Context, userID, orgID uuid.UUID) ([]string, error) {
+func (m *MockAuthRepository) GetUserPermissions(ctx context.Context, userID, tenantID uuid.UUID) ([]string, error) {
 	return []string{"read:stats", "read:telemetry", "read:audit", "write:api-keys"}, nil
 }
 
@@ -476,7 +476,7 @@ func (m *MockAuthRepository) GetRolePermissions(ctx context.Context, role string
 	return []string{"read:stats", "read:telemetry", "read:audit", "write:api-keys"}, nil
 }
 
-func (m *MockAuthRepository) CheckPermission(ctx context.Context, userID, orgID uuid.UUID, permission string) (bool, error) {
+func (m *MockAuthRepository) CheckPermission(ctx context.Context, userID, tenantID uuid.UUID, permission string) (bool, error) {
 	return true, nil
 }
 
@@ -512,12 +512,12 @@ func (m *MockAuthRepository) SaveAPIKey(ctx context.Context, k *models.APIKey) e
 	return nil
 }
 
-func (m *MockAuthRepository) ListAPIKeys(ctx context.Context, orgID uuid.UUID) ([]models.APIKey, error) {
+func (m *MockAuthRepository) ListAPIKeys(ctx context.Context, tenantID uuid.UUID) ([]models.APIKey, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	var keys []models.APIKey
 	for _, k := range m.apiKeys {
-		if k.OrgID == orgID {
+		if k.TenantID == tenantID {
 			keys = append(keys, *k)
 		}
 	}
@@ -626,7 +626,7 @@ func testExpiredTokenUsage(t *testing.T) {
 	// Generate an expired token
 	claims := jwt.MapClaims{
 		"user_id": uuid.New().String(),
-		"org_id":  uuid.New().String(),
+		"tenant_id":  uuid.New().String(),
 		"role":    "user",
 		"exp":     time.Now().Add(-1 * time.Hour).Unix(), // Expired 1 hour ago
 		"iat":     time.Now().Add(-2 * time.Hour).Unix(),
@@ -659,7 +659,7 @@ func testTamperedJWTSignature(t *testing.T) {
 	// First, generate a valid token
 	claims := jwt.MapClaims{
 		"user_id": uuid.New().String(),
-		"org_id":  uuid.New().String(),
+		"tenant_id":  uuid.New().String(),
 		"role":    "user",
 		"exp":     time.Now().Add(1 * time.Hour).Unix(),
 		"iat":     time.Now().Unix(),
@@ -697,7 +697,7 @@ func testWrongIssuerClaim(t *testing.T) {
 	// Generate token with wrong issuer
 	claims := jwt.MapClaims{
 		"user_id": uuid.New().String(),
-		"org_id":  uuid.New().String(),
+		"tenant_id":  uuid.New().String(),
 		"role":    "user",
 		"iss":     "wrong-issuer", // Wrong issuer
 		"exp":     time.Now().Add(1 * time.Hour).Unix(),
@@ -728,7 +728,7 @@ func testWrongAudienceClaim(t *testing.T) {
 	// Generate token with wrong audience
 	claims := jwt.MapClaims{
 		"user_id": uuid.New().String(),
-		"org_id":  uuid.New().String(),
+		"tenant_id":  uuid.New().String(),
 		"role":    "user",
 		"aud":     "wrong-audience", // Wrong audience
 		"iss":     "FlyFleet",
@@ -763,7 +763,7 @@ func testReplayAttackWithOldToken(t *testing.T) {
 	// Generate a token
 	claims := jwt.MapClaims{
 		"user_id": uuid.New().String(),
-		"org_id":  uuid.New().String(),
+		"tenant_id":  uuid.New().String(),
 		"role":    "user",
 		"jti":     uuid.New().String(),
 		"iss":     "FlyFleet",
@@ -1456,7 +1456,7 @@ func testRefreshTokensTableConstraints(t *testing.T) {
 
 func testAPIKeysTableConstraints(t *testing.T) {
 	// Verify API keys table constraints
-	// API keys should have valid org_id and user_id references
+	// API keys should have valid tenant_id and user_id references
 
 	testResults["DB_APIKeysConstraints"] = true
 	zapLogger.Info("PHASE 8.2: API keys table constraints test completed")

@@ -36,18 +36,18 @@ func (g *WebsocketGateway) Start() error {
 
 	_, err = js.Subscribe("telemetry.gps", func(msg *nats.Msg) {
 		var event struct {
-			OrgID string `json:"tenant_id"`
+			TenantID string `json:"tenant_id"`
 		}
 		if err := json.Unmarshal(msg.Data, &event); err != nil {
 			g.logger.Debug("Failed to unmarshal telemetry event for websocket gateway", zap.Error(err))
 			return
 		}
 
-		if event.OrgID != "" {
-			orgID, parseErr := uuid.Parse(event.OrgID)
+		if event.TenantID != "" {
+			tenantID, parseErr := uuid.Parse(event.TenantID)
 			if parseErr == nil {
 				// Forward the full JSON message directly to WebSocket clients of that Org
-				g.hub.BroadcastToOrg(orgID, json.RawMessage(msg.Data))
+				g.hub.BroadcastToOrg(tenantID, json.RawMessage(msg.Data))
 			}
 		}
 	}, nats.DeliverNew())

@@ -46,7 +46,7 @@ func TestWebSocketHandler_RegisterUnregisterClient(t *testing.T) {
 
 	client := &WSClient{
 		conn:       nil, // not needed for register/unregister
-		orgID:      "test-org",
+		tenantID:      "test-org",
 		send:       make(chan []byte, 1),
 		subscribed: make(map[string]bool),
 		lastSent:   make(map[string]*models.LiveLocation),
@@ -80,7 +80,7 @@ func TestWebSocketHandler_UnregisterNonExistent(t *testing.T) {
 	h := NewWebSocketHandler(nil, "test-secret", vr, lc, zap.NewNop())
 
 	client := &WSClient{
-		orgID: "test-org",
+		tenantID: "test-org",
 		send:  make(chan []byte, 1),
 	}
 
@@ -277,13 +277,13 @@ func TestNewIngestHandler(t *testing.T) {
 
 func TestGeofenceHandler_GetWithGeofences(t *testing.T) {
 	gID := uuid.Must(uuid.NewV4())
-	orgID := uuid.Must(uuid.NewV4())
+	tenantID := uuid.Must(uuid.NewV4())
 	radius := 500.0
 	repo := repository.NewMemGeofenceRepo()
-	repo.AddGeofence(models.Geofence{ID: gID, OrgID: orgID, Name: "Warehouse A", Type: "circle", RadiusM: &radius})
+	repo.AddGeofence(models.Geofence{ID: gID, TenantID: tenantID, Name: "Warehouse A", Type: "circle", RadiusM: &radius})
 	h := NewGeofenceHandler(repo, zap.NewNop())
 
-	ctx := ctxkeys.WithOrgID(context.Background(), orgID.String())
+	ctx := ctxkeys.WithTenantID(context.Background(), tenantID.String())
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/geofences", nil).WithContext(ctx)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)

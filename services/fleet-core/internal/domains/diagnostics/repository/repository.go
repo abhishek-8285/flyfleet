@@ -24,7 +24,7 @@ func (r *DiagnosticsRepository) CreateDevice(ctx context.Context, device *models
 	query := `INSERT INTO devices (id, tenant_id, vehicle_id, device_imei, device_serial, device_model, firmware_version, hardware_version, status, last_seen_at)
 			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
 	start := time.Now()
-	_, err := r.db.Exec(ctx, query, device.ID, device.OrgID, device.VehicleID, device.DeviceIMEI, device.DeviceSerial, device.DeviceModel, device.FirmwareVersion, device.HardwareVersion, device.Status, device.LastSeenAt)
+	_, err := r.db.Exec(ctx, query, device.ID, device.TenantID, device.VehicleID, device.DeviceIMEI, device.DeviceSerial, device.DeviceModel, device.FirmwareVersion, device.HardwareVersion, device.Status, device.LastSeenAt)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("create device: %w", err)
@@ -35,7 +35,7 @@ func (r *DiagnosticsRepository) CreateDevice(ctx context.Context, device *models
 func (r *DiagnosticsRepository) UpdateDevice(ctx context.Context, device *models.Device) error {
 	query := `UPDATE devices SET vehicle_id = $1, status = $2, last_seen_at = $3, firmware_version = $4 WHERE id = $5 AND tenant_id = $6`
 	start := time.Now()
-	_, err := r.db.Exec(ctx, query, device.VehicleID, device.Status, device.LastSeenAt, device.FirmwareVersion, device.ID, device.OrgID)
+	_, err := r.db.Exec(ctx, query, device.VehicleID, device.Status, device.LastSeenAt, device.FirmwareVersion, device.ID, device.TenantID)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("update device: %w", err)
@@ -43,12 +43,12 @@ func (r *DiagnosticsRepository) UpdateDevice(ctx context.Context, device *models
 	return nil
 }
 
-func (r *DiagnosticsRepository) GetDevice(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*models.Device, error) {
+func (r *DiagnosticsRepository) GetDevice(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) (*models.Device, error) {
 	query := `SELECT id, tenant_id, vehicle_id, device_imei, device_serial, device_model, firmware_version, hardware_version, status, last_seen_at, registered_at
 			  FROM devices WHERE id = $1 AND tenant_id = $2`
 	start := time.Now()
 	var d models.Device
-	err := r.db.QueryRow(ctx, query, id, orgID).Scan(&d.ID, &d.OrgID, &d.VehicleID, &d.DeviceIMEI, &d.DeviceSerial, &d.DeviceModel, &d.FirmwareVersion, &d.HardwareVersion, &d.Status, &d.LastSeenAt, &d.RegisteredAt)
+	err := r.db.QueryRow(ctx, query, id, tenantID).Scan(&d.ID, &d.TenantID, &d.VehicleID, &d.DeviceIMEI, &d.DeviceSerial, &d.DeviceModel, &d.FirmwareVersion, &d.HardwareVersion, &d.Status, &d.LastSeenAt, &d.RegisteredAt)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, fmt.Errorf("get device: %w", err)
@@ -56,11 +56,11 @@ func (r *DiagnosticsRepository) GetDevice(ctx context.Context, id uuid.UUID, org
 	return &d, nil
 }
 
-func (r *DiagnosticsRepository) ListDevices(ctx context.Context, orgID uuid.UUID) ([]*models.Device, error) {
+func (r *DiagnosticsRepository) ListDevices(ctx context.Context, tenantID uuid.UUID) ([]*models.Device, error) {
 	query := `SELECT id, tenant_id, vehicle_id, device_imei, device_serial, device_model, firmware_version, hardware_version, status, last_seen_at, registered_at
 			  FROM devices WHERE tenant_id = $1`
 	start := time.Now()
-	rows, err := r.db.Query(ctx, query, orgID)
+	rows, err := r.db.Query(ctx, query, tenantID)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return nil, fmt.Errorf("list devices: %w", err)
@@ -70,7 +70,7 @@ func (r *DiagnosticsRepository) ListDevices(ctx context.Context, orgID uuid.UUID
 	var devices []*models.Device
 	for rows.Next() {
 		var d models.Device
-		if err := rows.Scan(&d.ID, &d.OrgID, &d.VehicleID, &d.DeviceIMEI, &d.DeviceSerial, &d.DeviceModel, &d.FirmwareVersion, &d.HardwareVersion, &d.Status, &d.LastSeenAt, &d.RegisteredAt); err != nil {
+		if err := rows.Scan(&d.ID, &d.TenantID, &d.VehicleID, &d.DeviceIMEI, &d.DeviceSerial, &d.DeviceModel, &d.FirmwareVersion, &d.HardwareVersion, &d.Status, &d.LastSeenAt, &d.RegisteredAt); err != nil {
 			return nil, fmt.Errorf("scan device: %w", err)
 		}
 		devices = append(devices, &d)
@@ -166,7 +166,7 @@ func (r *DiagnosticsRepository) CreateRollout(ctx context.Context, rollout *mode
 	query := `INSERT INTO firmware_rollouts (id, firmware_id, tenant_id, rollout_strategy, target_device_count, status, failure_threshold, batch_size, rollback_enabled, scheduled_at)
 			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
 	start := time.Now()
-	_, err := r.db.Exec(ctx, query, rollout.ID, rollout.FirmwareID, rollout.OrgID, rollout.RolloutStrategy, rollout.TargetDeviceCount, rollout.Status, rollout.FailureThreshold, rollout.BatchSize, rollout.RollbackEnabled, rollout.ScheduledAt)
+	_, err := r.db.Exec(ctx, query, rollout.ID, rollout.FirmwareID, rollout.TenantID, rollout.RolloutStrategy, rollout.TargetDeviceCount, rollout.Status, rollout.FailureThreshold, rollout.BatchSize, rollout.RollbackEnabled, rollout.ScheduledAt)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("create rollout: %w", err)

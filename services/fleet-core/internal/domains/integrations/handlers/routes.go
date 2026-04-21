@@ -10,24 +10,24 @@ import (
 
 type orgCtxKey string
 
-const orgIDKey orgCtxKey = "tenant_id"
+const tenantIDKey orgCtxKey = "tenant_id"
 
 func orgScopeMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		orgIDStr := r.Header.Get("X-Organization-ID")
-		if orgIDStr == "" {
-			orgIDStr = r.URL.Query().Get("orgId")
+		tenantIDStr := r.Header.Get("X-Organization-ID")
+		if tenantIDStr == "" {
+			tenantIDStr = r.URL.Query().Get("orgId")
 		}
-		if orgIDStr == "" {
+		if tenantIDStr == "" {
 			http.Error(w, "MISSING_ORG_ID", http.StatusBadRequest)
 			return
 		}
-		orgID, err := uuid.Parse(orgIDStr)
+		tenantID, err := uuid.Parse(tenantIDStr)
 		if err != nil {
 			http.Error(w, "INVALID_ORG_ID", http.StatusBadRequest)
 			return
 		}
-		ctx := context.WithValue(r.Context(), orgIDKey, orgID)
+		ctx := context.WithValue(r.Context(), tenantIDKey, tenantID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -35,7 +35,7 @@ func orgScopeMiddleware(next http.Handler) http.Handler {
 // RegisterRoutes mounts integrations v2 API routes.
 func (h *Handlers) RegisterRoutes(r chi.Router) {
 	r.Route("/integrations", func(r chi.Router) {
-		// JWT middleware should be applied globally; orgID will come from validated context
+		// JWT middleware should be applied globally; tenantID will come from validated context
 		r.Get("/", h.ListIntegrations)
 		r.Post("/", h.CreateIntegration)
 		r.Get("/logs", h.ListLogs)

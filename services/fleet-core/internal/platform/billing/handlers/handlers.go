@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/flyfleet/fleet-core/internal/platform/billing/service"
-	iam_middleware "github.com/flyfleet/fleet-core/internal/platform/iam/middleware"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
@@ -35,19 +35,27 @@ func (h *BillingHandlers) GetPlans(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *BillingHandlers) GetSubscriptionStatus(w http.ResponseWriter, r *http.Request) {
-	val := r.Context().Value(iam_middleware.OrgIDKey)
-	if val == nil {
+	var tenantID uuid.UUID
+	var ok bool
+
+	if val := r.Context().Value(ctxkeys.TenantIDKey); val != nil {
+		if id, isUUID := val.(uuid.UUID); isUUID {
+			tenantID = id
+			ok = true
+		} else if s, isStr := val.(string); isStr {
+			if id, err := uuid.Parse(s); err == nil {
+				tenantID = id
+				ok = true
+			}
+		}
+	}
+
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	orgID, ok := val.(uuid.UUID)
-	if !ok {
-		http.Error(w, "Invalid Organization ID", http.StatusInternalServerError)
-		return
-	}
-
-	plan, err := h.svc.GetOrganizationPlan(r.Context(), orgID)
+	plan, err := h.svc.GetOrganizationPlan(r.Context(), tenantID)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return

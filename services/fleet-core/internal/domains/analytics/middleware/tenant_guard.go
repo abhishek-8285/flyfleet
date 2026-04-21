@@ -37,7 +37,7 @@ func NewTenantGuard(db DB, metrics *analytics.Metrics, logger *zap.Logger) *Tena
 func (tg *TenantGuard) ResourceOwnershipGuard() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			orgID, ok := r.Context().Value(middleware.OrgIDKey).(uuid.UUID)
+			tenantID, ok := r.Context().Value(middleware.TenantIDKey).(uuid.UUID)
 			if !ok {
 				http.Error(w, "Organization context missing", http.StatusUnauthorized)
 				return
@@ -50,10 +50,10 @@ func (tg *TenantGuard) ResourceOwnershipGuard() func(http.Handler) http.Handler 
 			}
 			if vehicleIDStr != "" {
 				if vid, err := uuid.Parse(vehicleIDStr); err == nil {
-					if !tg.verifyVehicleOwnership(r.Context(), vid, orgID) {
-						tg.metrics.CrossTenantAccessTotal.WithLabelValues(orgID.String(), "vehicle").Inc()
+					if !tg.verifyVehicleOwnership(r.Context(), vid, tenantID) {
+						tg.metrics.CrossTenantAccessTotal.WithLabelValues(tenantID.String(), "vehicle").Inc()
 						tg.logger.Warn("Cross-tenant vehicle access attempt blocked",
-							zap.String("tenant_id", orgID.String()), zap.String("vehicle_id", vehicleIDStr))
+							zap.String("tenant_id", tenantID.String()), zap.String("vehicle_id", vehicleIDStr))
 						http.Error(w, "Forbidden: Vehicle does not belong to this organization", http.StatusForbidden)
 						return
 					}
@@ -67,10 +67,10 @@ func (tg *TenantGuard) ResourceOwnershipGuard() func(http.Handler) http.Handler 
 			}
 			if driverIDStr != "" {
 				if did, err := uuid.Parse(driverIDStr); err == nil {
-					if !tg.verifyDriverOwnership(r.Context(), did, orgID) {
-						tg.metrics.CrossTenantAccessTotal.WithLabelValues(orgID.String(), "driver").Inc()
+					if !tg.verifyDriverOwnership(r.Context(), did, tenantID) {
+						tg.metrics.CrossTenantAccessTotal.WithLabelValues(tenantID.String(), "driver").Inc()
 						tg.logger.Warn("Cross-tenant driver access attempt blocked",
-							zap.String("tenant_id", orgID.String()), zap.String("driver_id", driverIDStr))
+							zap.String("tenant_id", tenantID.String()), zap.String("driver_id", driverIDStr))
 						http.Error(w, "Forbidden: Driver does not belong to this organization", http.StatusForbidden)
 						return
 					}
@@ -82,10 +82,10 @@ func (tg *TenantGuard) ResourceOwnershipGuard() func(http.Handler) http.Handler 
 	}
 }
 
-func (tg *TenantGuard) verifyVehicleOwnership(ctx context.Context, vehicleID, orgID uuid.UUID) bool {
+func (tg *TenantGuard) verifyVehicleOwnership(ctx context.Context, vehicleID, tenantID uuid.UUID) bool {
 	var exists bool
 	query := "SELECT EXISTS(SELECT 1 FROM vehicles WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL)"
-	err := tg.db.QueryRow(ctx, query, vehicleID, orgID).Scan(&exists)
+	err := tg.db.QueryRow(ctx, query, vehicleID, tenantID).Scan(&exists)
 	if err != nil {
 		tg.logger.Error("Failed to verify vehicle ownership", zap.Error(err))
 		return false
@@ -93,10 +93,10 @@ func (tg *TenantGuard) verifyVehicleOwnership(ctx context.Context, vehicleID, or
 	return exists
 }
 
-func (tg *TenantGuard) verifyDriverOwnership(ctx context.Context, driverID, orgID uuid.UUID) bool {
+func (tg *TenantGuard) verifyDriverOwnership(ctx context.Context, driverID, tenantID uuid.UUID) bool {
 	var exists bool
 	query := "SELECT EXISTS(SELECT 1 FROM drivers WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL)"
-	err := tg.db.QueryRow(ctx, query, driverID, orgID).Scan(&exists)
+	err := tg.db.QueryRow(ctx, query, driverID, tenantID).Scan(&exists)
 	if err != nil {
 		tg.logger.Error("Failed to verify driver ownership", zap.Error(err))
 		return false

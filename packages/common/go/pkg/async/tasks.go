@@ -23,7 +23,7 @@ const (
 // WebhookPayload defines the payload for webhook delivery tasks
 type WebhookPayload struct {
 	WebhookID uuid.UUID              `json:"webhook_id"`
-	OrgID     uuid.UUID              `json:"org_id"`
+	TenantID     uuid.UUID              `json:"tenant_id"`
 	Event     string                 `json:"event"`
 	Payload   map[string]interface{} `json:"payload"`
 }
@@ -32,38 +32,38 @@ type WebhookPayload struct {
 type ReportGeneratePayload struct {
 	ExecutionID uuid.UUID `json:"execution_id"`
 	ReportID    uuid.UUID `json:"report_id"`
-	OrgID       uuid.UUID `json:"org_id"`
+	TenantID       uuid.UUID `json:"tenant_id"`
 }
 
 // MaintenanceReminderPayload defines the payload for maintenance reminder tasks
 type MaintenanceReminderPayload struct {
-	OrgID      uuid.UUID `json:"org_id"`
+	TenantID      uuid.UUID `json:"tenant_id"`
 	ScheduleID uuid.UUID `json:"schedule_id"`
 }
 
 // UsageAggregationPayload defines the payload for aggregating consumption events
 type UsageAggregationPayload struct {
-	OrgID     uuid.UUID `json:"org_id"`
+	TenantID     uuid.UUID `json:"tenant_id"`
 	StartTime time.Time `json:"start_time"`
 	EndTime   time.Time `json:"end_time"`
 }
 
 // MonthlyInvoicePayload defines the payload for generating monthly invoices
 type MonthlyInvoicePayload struct {
-	OrgID uuid.UUID `json:"org_id"`
+	TenantID uuid.UUID `json:"tenant_id"`
 	Month time.Month `json:"month"`
 	Year  int        `json:"year"`
 }
 
 // AlertEscalationPayload defines the payload for alert escalation tasks
 type AlertEscalationPayload struct {
-	OrgID   uuid.UUID `json:"org_id"`
+	TenantID   uuid.UUID `json:"tenant_id"`
 	AlertID string    `json:"alert_id"`
 }
 
 // SLAAggregationPayload defines the payload for SLA metric aggregation
 type SLAAggregationPayload struct {
-	OrgID     uuid.UUID `json:"org_id"`
+	TenantID     uuid.UUID `json:"tenant_id"`
 	Metric    string    `json:"metric"`
 	StartTime time.Time `json:"start_time"`
 	EndTime   time.Time `json:"end_time"`

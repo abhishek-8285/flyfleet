@@ -20,30 +20,30 @@ func (m *mockInvoiceRepo) Create(ctx context.Context, inv *invoicing.Invoice) (*
 	return args.Get(0).(*invoicing.Invoice), args.Error(1)
 }
 
-func (m *mockInvoiceRepo) GetByID(ctx context.Context, orgID, id uuid.UUID) (*invoicing.Invoice, error) {
-	args := m.Called(ctx, orgID, id)
+func (m *mockInvoiceRepo) GetByID(ctx context.Context, tenantID, id uuid.UUID) (*invoicing.Invoice, error) {
+	args := m.Called(ctx, tenantID, id)
 	return args.Get(0).(*invoicing.Invoice), args.Error(1)
 }
 
-func (m *mockInvoiceRepo) List(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]invoicing.Invoice, int64, error) {
-	args := m.Called(ctx, orgID, limit, offset)
+func (m *mockInvoiceRepo) List(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]invoicing.Invoice, int64, error) {
+	args := m.Called(ctx, tenantID, limit, offset)
 	return args.Get(0).([]invoicing.Invoice), args.Get(1).(int64), args.Error(2)
 }
 
-func (m *mockInvoiceRepo) UpdateStatus(ctx context.Context, orgID, id uuid.UUID, status invoicing.InvoiceStatus, updatedBy uuid.UUID) error {
-	args := m.Called(ctx, orgID, id, status, updatedBy)
+func (m *mockInvoiceRepo) UpdateStatus(ctx context.Context, tenantID, id uuid.UUID, status invoicing.InvoiceStatus, updatedBy uuid.UUID) error {
+	args := m.Called(ctx, tenantID, id, status, updatedBy)
 	return args.Error(0)
 }
 
-func (m *mockInvoiceRepo) Delete(ctx context.Context, orgID, id uuid.UUID) error {
-	args := m.Called(ctx, orgID, id)
+func (m *mockInvoiceRepo) Delete(ctx context.Context, tenantID, id uuid.UUID) error {
+	args := m.Called(ctx, tenantID, id)
 	return args.Error(0)
 }
 
 func TestCreateInvoice(t *testing.T) {
 	repo := new(mockInvoiceRepo)
 	svc := NewInvoicingService(repo)
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	ctx := context.Background()
 
 	inv := &invoicing.Invoice{
@@ -57,10 +57,10 @@ func TestCreateInvoice(t *testing.T) {
 	}
 
 	repo.On("Create", ctx, mock.MatchedBy(func(i *invoicing.Invoice) bool {
-		return i.OrgID == orgID && i.TotalAmount == 236.0 // 200 + 18% tax
+		return i.TenantID == tenantID && i.TotalAmount == 236.0 // 200 + 18% tax
 	})).Return(inv, nil)
 
-	result, err := svc.CreateInvoice(ctx, orgID, inv)
+	result, err := svc.CreateInvoice(ctx, tenantID, inv)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -72,14 +72,14 @@ func TestCreateInvoice(t *testing.T) {
 func TestGetInvoice(t *testing.T) {
 	repo := new(mockInvoiceRepo)
 	svc := NewInvoicingService(repo)
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	id := uuid.New()
 	ctx := context.Background()
 
-	expected := &invoicing.Invoice{ID: id, OrgID: orgID}
-	repo.On("GetByID", ctx, orgID, id).Return(expected, nil)
+	expected := &invoicing.Invoice{ID: id, TenantID: tenantID}
+	repo.On("GetByID", ctx, tenantID, id).Return(expected, nil)
 
-	result, err := svc.GetInvoice(ctx, orgID, id)
+	result, err := svc.GetInvoice(ctx, tenantID, id)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expected, result)
@@ -88,13 +88,13 @@ func TestGetInvoice(t *testing.T) {
 func TestVoidInvoice(t *testing.T) {
 	repo := new(mockInvoiceRepo)
 	svc := NewInvoicingService(repo)
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	id := uuid.New()
 	ctx := context.Background()
 
-	repo.On("UpdateStatus", ctx, orgID, id, invoicing.StatusVoid, uuid.Nil).Return(nil)
+	repo.On("UpdateStatus", ctx, tenantID, id, invoicing.StatusVoid, uuid.Nil).Return(nil)
 
-	err := svc.VoidInvoice(ctx, orgID, id)
+	err := svc.VoidInvoice(ctx, tenantID, id)
 
 	assert.NoError(t, err)
 }
@@ -102,7 +102,7 @@ func TestVoidInvoice(t *testing.T) {
 func TestCreateInvoice_MissingPhone(t *testing.T) {
 	repo := new(mockInvoiceRepo)
 	svc := NewInvoicingService(repo)
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	ctx := context.Background()
 
 	inv := &invoicing.Invoice{
@@ -115,7 +115,7 @@ func TestCreateInvoice_MissingPhone(t *testing.T) {
 		},
 	}
 
-	result, err := svc.CreateInvoice(ctx, orgID, inv)
+	result, err := svc.CreateInvoice(ctx, tenantID, inv)
 
 	assert.Error(t, err)
 	assert.Nil(t, result)

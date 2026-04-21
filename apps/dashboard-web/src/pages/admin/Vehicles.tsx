@@ -10,7 +10,7 @@ interface Vehicle {
   status: string;
   make: string;
   model: string;
-  org_id: string;
+  tenant_id: string;
   created_at: string;
 }
 

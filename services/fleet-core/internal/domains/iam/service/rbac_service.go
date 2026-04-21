@@ -68,8 +68,8 @@ func NewRBACService(roleRepo *repository.RoleRepository, log *zap.Logger) *RBACS
 }
 
 // ListRoles returns all roles for an organization.
-func (s *RBACService) ListRoles(ctx context.Context, orgID uuid.UUID) ([]models.Role, error) {
-	return s.roleRepo.ListRoles(ctx, orgID)
+func (s *RBACService) ListRoles(ctx context.Context, tenantID uuid.UUID) ([]models.Role, error) {
+	return s.roleRepo.ListRoles(ctx, tenantID)
 }
 
 // GetRole returns a single role by ID.
@@ -85,14 +85,14 @@ func (s *RBACService) GetRole(ctx context.Context, id uuid.UUID) (*models.Role, 
 }
 
 // CreateRole creates a new role with the given permissions.
-func (s *RBACService) CreateRole(ctx context.Context, orgID uuid.UUID, name, description string, permissionStrings []string, createdBy uuid.UUID) (*models.Role, error) {
+func (s *RBACService) CreateRole(ctx context.Context, tenantID uuid.UUID, name, description string, permissionStrings []string, createdBy uuid.UUID) (*models.Role, error) {
 	mask, err := s.permissionsToMask(permissionStrings)
 	if err != nil {
 		return nil, err
 	}
 
 	role := &models.Role{
-		OrgID:          orgID,
+		TenantID:          tenantID,
 		Name:           name,
 		Description:    description,
 		PermissionMask: mask,
@@ -108,7 +108,7 @@ func (s *RBACService) CreateRole(ctx context.Context, orgID uuid.UUID, name, des
 }
 
 // UpdateRole updates a role's name and description, scoped to the caller's org.
-func (s *RBACService) UpdateRole(ctx context.Context, id uuid.UUID, orgID uuid.UUID, name, description string) error {
+func (s *RBACService) UpdateRole(ctx context.Context, id uuid.UUID, tenantID uuid.UUID, name, description string) error {
 	role, err := s.roleRepo.GetByID(ctx, id)
 	if err != nil {
 		return err
@@ -116,7 +116,7 @@ func (s *RBACService) UpdateRole(ctx context.Context, id uuid.UUID, orgID uuid.U
 	if role == nil {
 		return ErrRoleNotFound
 	}
-	if role.OrgID != orgID {
+	if role.TenantID != tenantID {
 		return ErrRoleNotFound // Don't reveal role existence in other orgs
 	}
 	if role.IsSystem {
@@ -127,7 +127,7 @@ func (s *RBACService) UpdateRole(ctx context.Context, id uuid.UUID, orgID uuid.U
 }
 
 // UpdateRolePermissions updates a role's permission mask, scoped to the caller's org.
-func (s *RBACService) UpdateRolePermissions(ctx context.Context, id uuid.UUID, orgID uuid.UUID, permissionStrings []string) error {
+func (s *RBACService) UpdateRolePermissions(ctx context.Context, id uuid.UUID, tenantID uuid.UUID, permissionStrings []string) error {
 	role, err := s.roleRepo.GetByID(ctx, id)
 	if err != nil {
 		return err
@@ -135,7 +135,7 @@ func (s *RBACService) UpdateRolePermissions(ctx context.Context, id uuid.UUID, o
 	if role == nil {
 		return ErrRoleNotFound
 	}
-	if role.OrgID != orgID {
+	if role.TenantID != tenantID {
 		return ErrRoleNotFound
 	}
 	if role.IsSystem {
@@ -151,7 +151,7 @@ func (s *RBACService) UpdateRolePermissions(ctx context.Context, id uuid.UUID, o
 }
 
 // CloneRole creates a copy of an existing role with a new name, scoped to the caller's org.
-func (s *RBACService) CloneRole(ctx context.Context, sourceID uuid.UUID, orgID uuid.UUID, name, description string, createdBy uuid.UUID) (*models.Role, error) {
+func (s *RBACService) CloneRole(ctx context.Context, sourceID uuid.UUID, tenantID uuid.UUID, name, description string, createdBy uuid.UUID) (*models.Role, error) {
 	source, err := s.roleRepo.GetByID(ctx, sourceID)
 	if err != nil {
 		return nil, err
@@ -159,7 +159,7 @@ func (s *RBACService) CloneRole(ctx context.Context, sourceID uuid.UUID, orgID u
 	if source == nil {
 		return nil, ErrRoleNotFound
 	}
-	if source.OrgID != orgID {
+	if source.TenantID != tenantID {
 		return nil, ErrRoleNotFound
 	}
 
@@ -167,7 +167,7 @@ func (s *RBACService) CloneRole(ctx context.Context, sourceID uuid.UUID, orgID u
 }
 
 // DeleteRole soft-deletes a role, scoped to the caller's org (system roles cannot be deleted).
-func (s *RBACService) DeleteRole(ctx context.Context, id uuid.UUID, orgID uuid.UUID) error {
+func (s *RBACService) DeleteRole(ctx context.Context, id uuid.UUID, tenantID uuid.UUID) error {
 	role, err := s.roleRepo.GetByID(ctx, id)
 	if err != nil {
 		return err
@@ -175,7 +175,7 @@ func (s *RBACService) DeleteRole(ctx context.Context, id uuid.UUID, orgID uuid.U
 	if role == nil {
 		return ErrRoleNotFound
 	}
-	if role.OrgID != orgID {
+	if role.TenantID != tenantID {
 		return ErrRoleNotFound
 	}
 	if role.IsSystem {
@@ -186,8 +186,8 @@ func (s *RBACService) DeleteRole(ctx context.Context, id uuid.UUID, orgID uuid.U
 }
 
 // GetPermissionMatrix returns all roles with their permission breakdown.
-func (s *RBACService) GetPermissionMatrix(ctx context.Context, orgID uuid.UUID) ([]models.RolePermissionMatrixEntry, error) {
-	roles, err := s.roleRepo.ListRoles(ctx, orgID)
+func (s *RBACService) GetPermissionMatrix(ctx context.Context, tenantID uuid.UUID) ([]models.RolePermissionMatrixEntry, error) {
+	roles, err := s.roleRepo.ListRoles(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +231,7 @@ func (s *RBACService) GetPermissionMatrix(ctx context.Context, orgID uuid.UUID) 
 }
 
 // AssignRole assigns a role to a user within an organization.
-func (s *RBACService) AssignRole(ctx context.Context, userID, roleID, orgID, assignedBy uuid.UUID) error {
+func (s *RBACService) AssignRole(ctx context.Context, userID, roleID, tenantID, assignedBy uuid.UUID) error {
 	role, err := s.roleRepo.GetByID(ctx, roleID)
 	if err != nil {
 		return err
@@ -240,7 +240,7 @@ func (s *RBACService) AssignRole(ctx context.Context, userID, roleID, orgID, ass
 		return ErrRoleNotFound
 	}
 
-	return s.roleRepo.AssignRole(ctx, userID, roleID, orgID, assignedBy)
+	return s.roleRepo.AssignRole(ctx, userID, roleID, tenantID, assignedBy)
 }
 
 // BulkAssignRoles assigns one or more roles to one or more users.
@@ -255,12 +255,12 @@ type BulkAssignFailure struct {
 	Error  string `json:"error"`
 }
 
-func (s *RBACService) BulkAssignRoles(ctx context.Context, userIDs, roleIDs []uuid.UUID, orgID, assignedBy uuid.UUID) *BulkAssignResult {
+func (s *RBACService) BulkAssignRoles(ctx context.Context, userIDs, roleIDs []uuid.UUID, tenantID, assignedBy uuid.UUID) *BulkAssignResult {
 	result := &BulkAssignResult{}
 
 	for _, uid := range userIDs {
 		for _, rid := range roleIDs {
-			if err := s.AssignRole(ctx, uid, rid, orgID, assignedBy); err != nil {
+			if err := s.AssignRole(ctx, uid, rid, tenantID, assignedBy); err != nil {
 				result.Failed = append(result.Failed, BulkAssignFailure{
 					UserID: uid.String(),
 					Error:  err.Error(),
@@ -282,19 +282,19 @@ func (s *RBACService) BulkAssignRoles(ctx context.Context, userIDs, roleIDs []uu
 }
 
 // UnassignRole removes a role from a user within an organization.
-func (s *RBACService) UnassignRole(ctx context.Context, userID, roleID, orgID uuid.UUID) error {
-	return s.roleRepo.UnassignRole(ctx, userID, roleID, orgID)
+func (s *RBACService) UnassignRole(ctx context.Context, userID, roleID, tenantID uuid.UUID) error {
+	return s.roleRepo.UnassignRole(ctx, userID, roleID, tenantID)
 }
 
 // GetUserRoles returns all roles assigned to a user in an organization.
-func (s *RBACService) GetUserRoles(ctx context.Context, userID, orgID uuid.UUID) ([]models.Role, error) {
-	return s.roleRepo.GetUserRoles(ctx, userID, orgID)
+func (s *RBACService) GetUserRoles(ctx context.Context, userID, tenantID uuid.UUID) ([]models.Role, error) {
+	return s.roleRepo.GetUserRoles(ctx, userID, tenantID)
 }
 
 // GetUserPermissions returns the effective permissions for a user in an organization
 // by OR-ing all their role masks.
-func (s *RBACService) GetUserPermissions(ctx context.Context, userID, orgID uuid.UUID) ([]string, error) {
-	mask, err := s.roleRepo.ComputeEffectivePermissionMask(ctx, userID, orgID)
+func (s *RBACService) GetUserPermissions(ctx context.Context, userID, tenantID uuid.UUID) ([]string, error) {
+	mask, err := s.roleRepo.ComputeEffectivePermissionMask(ctx, userID, tenantID)
 	if err != nil {
 		return nil, err
 	}

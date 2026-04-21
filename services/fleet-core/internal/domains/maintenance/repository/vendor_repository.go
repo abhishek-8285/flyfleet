@@ -32,7 +32,7 @@ func (r *VendorRepository) Create(ctx context.Context, vendor *models.Maintenanc
 		RETURNING id, created_at, updated_at
 	`
 	return r.db.QueryRow(ctx, query,
-		vendor.OrgID, vendor.Name, vendor.Specialization, vendor.Rating,
+		vendor.TenantID, vendor.Name, vendor.Specialization, vendor.Rating,
 		vendor.ContactInfo, vendor.PaymentTerms, vendor.Status,
 	).Scan(&vendor.ID, &vendor.CreatedAt, &vendor.UpdatedAt)
 }
@@ -46,7 +46,7 @@ func (r *VendorRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.M
 	`
 	v := &models.MaintenanceVendor{}
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&v.ID, &v.OrgID, &v.Name, &v.Specialization, &v.Rating,
+		&v.ID, &v.TenantID, &v.Name, &v.Specialization, &v.Rating,
 		&v.ContactInfo, &v.PaymentTerms, &v.Status, &v.CreatedAt, &v.UpdatedAt,
 	)
 	if err == pgx.ErrNoRows {
@@ -77,13 +77,13 @@ func (r *VendorRepository) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 // List retrieves vendors with filters
-func (r *VendorRepository) List(ctx context.Context, orgID uuid.UUID, search string, specialization string) ([]models.MaintenanceVendor, error) {
+func (r *VendorRepository) List(ctx context.Context, tenantID uuid.UUID, search string, specialization string) ([]models.MaintenanceVendor, error) {
 	var conditions []string
 	var args []interface{}
 	argIdx := 1
 
 	conditions = append(conditions, fmt.Sprintf("tenant_id = $%d", argIdx))
-	args = append(args, orgID)
+	args = append(args, tenantID)
 	argIdx++
 
 	if search != "" {
@@ -115,7 +115,7 @@ func (r *VendorRepository) List(ctx context.Context, orgID uuid.UUID, search str
 	for rows.Next() {
 		var v models.MaintenanceVendor
 		if err := rows.Scan(
-			&v.ID, &v.OrgID, &v.Name, &v.Specialization, &v.Rating,
+			&v.ID, &v.TenantID, &v.Name, &v.Specialization, &v.Rating,
 			&v.ContactInfo, &v.PaymentTerms, &v.Status, &v.CreatedAt, &v.UpdatedAt,
 		); err != nil {
 			return nil, err

@@ -12,7 +12,7 @@ export interface Vehicle {
   name: string;
   type: string; // 'TRUCK', 'VAN', 'HEAVY_HAUL'
   status: VehicleStatus;
-  orgId: string;
+  tenantId: string;
   driverId?: string;
   lastUpdate: string;
   metadata: {
@@ -38,7 +38,7 @@ export interface Vehicle {
 export interface FleetSegment {
   id: string;
   name: string;
-  orgId: string;
+  tenantId: string;
   h3HomeCell: string; // The "base" location H3 cell
   vehicleIds: string[];
 }

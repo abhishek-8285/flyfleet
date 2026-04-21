@@ -53,11 +53,11 @@ func (s *organizationService) DeleteOrganization(ctx context.Context, id uuid.UU
 }
 
 func (s *organizationService) ListBranches(ctx context.Context) ([]models.Branch, error) {
-	return s.repo.ListBranches(ctx, s.getOrgIDFromContext(ctx))
+	return s.repo.ListBranches(ctx, s.getTenantIDFromContext(ctx))
 }
 
 func (s *organizationService) ListCostCenters(ctx context.Context) ([]models.CostCenter, error) {
-	return s.repo.ListCostCenters(ctx, s.getOrgIDFromContext(ctx))
+	return s.repo.ListCostCenters(ctx, s.getTenantIDFromContext(ctx))
 }
 
 func (s *organizationService) getUserID(ctx context.Context) uuid.UUID {
@@ -69,8 +69,8 @@ func (s *organizationService) getUserID(ctx context.Context) uuid.UUID {
 	return uid
 }
 
-func (s *organizationService) getOrgIDFromContext(ctx context.Context) uuid.UUID {
-	if val := ctx.Value(ctxkeys.OrgIDKey); val != nil {
+func (s *organizationService) getTenantIDFromContext(ctx context.Context) uuid.UUID {
+	if val := ctx.Value(ctxkeys.TenantIDKey); val != nil {
 		switch v := val.(type) {
 		case string:
 			if id, err := uuid.Parse(v); err == nil {

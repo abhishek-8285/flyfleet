@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
-	iamCtx "github.com/flyfleet/fleet-core/internal/platform/iam/middleware"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
@@ -22,9 +21,9 @@ func TestTenantContextMiddleware(t *testing.T) {
 	})
 
 	// Case: Valid Org ID
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	req := httptest.NewRequest("GET", "/", nil)
-	ctx := context.WithValue(req.Context(), iamCtx.OrgIDKey, orgID)
+	ctx := context.WithValue(req.Context(), ctxkeys.TenantIDKey, tenantID.String())
 	rr := httptest.NewRecorder()
 	middleware(next).ServeHTTP(rr, req.WithContext(ctx))
 	assert.Equal(t, http.StatusOK, rr.Code)
@@ -35,16 +34,16 @@ func TestTenantContextMiddleware(t *testing.T) {
 	middleware(next).ServeHTTP(rr, req)
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 
-	// Case: Super Admin without org_id - bypass, should pass
+	// Case: Super Admin without tenant_id - bypass, should pass
 	req = httptest.NewRequest("GET", "/", nil)
 	ctx = context.WithValue(req.Context(), ctxkeys.RoleKey, "super_admin")
 	rr = httptest.NewRecorder()
 	middleware(next).ServeHTTP(rr, req.WithContext(ctx))
 	assert.Equal(t, http.StatusOK, rr.Code)
 
-	// Case: Super Admin with org_id - should pass and org_id remains set
+	// Case: Super Admin with tenant_id - should pass and tenant_id remains set
 	req = httptest.NewRequest("GET", "/", nil)
-	ctx = context.WithValue(req.Context(), iamCtx.OrgIDKey, orgID)
+	ctx = context.WithValue(req.Context(), ctxkeys.TenantIDKey, tenantID.String())
 	ctx = context.WithValue(ctx, ctxkeys.RoleKey, "super_admin")
 	rr = httptest.NewRecorder()
 	middleware(next).ServeHTTP(rr, req.WithContext(ctx))

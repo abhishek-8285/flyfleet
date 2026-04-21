@@ -10,20 +10,13 @@ import (
 	"net/http"
 	"strings"
 
+	sharedmiddleware "github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	"github.com/google/uuid"
 	"github.com/golang-jwt/jwt/v5"
 	"go.uber.org/zap"
 )
 
-// contextKey is a private type to prevent context key collisions.
-type contextKey string
-
-const (
-	CtxUserID    contextKey = "user_id"
-	CtxOrgID     contextKey = "org_id"
-	CtxUserRoles contextKey = "user_roles"
-)
 
 // JWKSAuthHandler handles token validation using JWKS or shared secret.
 type JWKSAuthHandler struct {
@@ -75,44 +68,45 @@ func (j *JWKSAuthHandler) Handler(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), CtxUserID, claims.UserID)
-		// Set context keys for all standard locations
-		effectiveOrgID := claims.OrgID
-		if effectiveOrgID == uuid.Nil {
-			effectiveOrgID = claims.LegacyOrgID
+		ctx := r.Context()
+
+		// Resolve the effective tenant ID (prefer new claim, fall back to legacy org_id)
+		effectiveTenantID := claims.TenantID
+		if effectiveTenantID == uuid.Nil {
+			effectiveTenantID = claims.LegacyTenantID
 		}
 
-		ctx = context.WithValue(ctx, CtxOrgID, effectiveOrgID)
-		ctx = context.WithValue(ctx, ctxkeys.UserIDKey, claims.UserID.String())
-		ctx = context.WithValue(ctx, ctxkeys.OrgIDKey, effectiveOrgID.String())
-		ctx = context.WithValue(ctx, ctxkeys.TenantIDKey, effectiveOrgID.String())
-		
-		// Handle Role (singular 'rol' or first from 'roles' slice)
+		// Resolve role
 		role := claims.Role
 		if role == "" && len(claims.Roles) > 0 {
 			role = claims.Roles[0]
 		}
+
+		// ── Set context values ONCE each, consistently as UUID / typed values ──
+		// Internal ctxkeys (UUID type — GetTenantID/GetUserID handle both UUID and string)
+		ctx = context.WithValue(ctx, ctxkeys.TenantIDKey, effectiveTenantID)
+		ctx = context.WithValue(ctx, ctxkeys.UserIDKey, claims.UserID)
 		ctx = context.WithValue(ctx, ctxkeys.RoleKey, role)
-		ctx = context.WithValue(ctx, ctxkeys.PermissionMaskKey, float64(claims.PermissionMask))
-		
-		// Set IAM handler string keys (legacy support)
-		ctx = context.WithValue(ctx, "user_id", claims.UserID.String())
-		ctx = context.WithValue(ctx, "org_id", claims.OrgID.String())
-		ctx = context.WithValue(ctx, "role", role)
-		ctx = context.WithValue(ctx, "role_list", claims.Roles)
+		ctx = context.WithValue(ctx, ctxkeys.RolesKey, claims.Roles)
+			ctx = context.WithValue(ctx, ctxkeys.PermissionMaskKey, uint64(claims.PermissionMask))
+
+		// Shared library keys (UUID type — consumed by billing/tracking/shared domains)
+		ctx = context.WithValue(ctx, sharedmiddleware.TenantIDKey, effectiveTenantID)
+		ctx = context.WithValue(ctx, sharedmiddleware.UserIDKey, claims.UserID)
+		ctx = context.WithValue(ctx, sharedmiddleware.RoleKey, role)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
 type Claims struct {
-	UserID         uuid.UUID `json:"sub"`
-	OrgID          uuid.UUID `json:"tenant_id"`
-	LegacyOrgID    uuid.UUID `json:"org_id"`
-	Role           string    `json:"rol"`
-	Roles          []string  `json:"roles"`
-	PermissionMask uint64    `json:"pmsk"`
-	Permissions    []string  `json:"prm"`
+	UserID            uuid.UUID  `json:"sub"`
+	TenantID          uuid.UUID  `json:"tenant_id"`
+	LegacyTenantID    uuid.UUID  `json:"org_id,omitempty"`
+	Role              string     `json:"role"`
+	Roles             []string   `json:"roles"`
+	PermissionMask    int64      `json:"permissions_mask"`
+	Permissions       []string   `json:"permissions"`
 	jwt.RegisteredClaims
 }
 

@@ -9,7 +9,7 @@ import (
 type AuditLog struct {
 	ID        uuid.UUID         `json:"id"`
 	UserID    uuid.UUID         `json:"user_id"`
-	OrgID     uuid.UUID         `json:"tenant_id"`
+	TenantID     uuid.UUID         `json:"tenant_id"`
 	Action    string            `json:"action"`
 	Resource  string            `json:"resource"`
 	Data      map[string]interface{} `json:"data,omitempty"`

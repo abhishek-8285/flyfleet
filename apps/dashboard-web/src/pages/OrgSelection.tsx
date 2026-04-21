@@ -14,7 +14,7 @@ const OrgSelection: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const { uiStrings } = useUIStrings("auth_extended");
-  const { setOrganization } = useAuth();
+  const { setTenant } = useAuth();
   const user = useSelector((state: RootState) => state.auth.user);
 
   const [orgs, setOrgs] = React.useState<any[]>([]);
@@ -33,8 +33,8 @@ const OrgSelection: React.FC = () => {
           const profileOrgs = (user as any)?.organizations || [];
           setOrgs(
             profileOrgs.map((o: any) => ({
-              id: o.org_id || o.id,
-              name: o.org_name || o.name,
+              id: o.tenant_id || o.org_id || o.id,
+              name: o.tenant_name || o.org_name || o.name,
               role: o.role,
               isLocked: o.isLocked || o.is_locked || false,
             })),
@@ -69,7 +69,7 @@ const OrgSelection: React.FC = () => {
     setLoading(true);
 
     try {
-      await setOrganization(targetId);
+      await setTenant(targetId);
       
       const role = (user?.role_id || user?.role || "").toLowerCase();
       let targetPath = "/dashboard";

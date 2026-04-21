@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { useUIStrings } from "../../hooks/useUIStrings";
-import apiClient from "../../services/apiClient";
+import React, { useCallback, useEffect, useState } from 'react';
+import { useUIStrings } from '../../hooks/useUIStrings';
+import apiClient from '../../services/apiClient';
 
 interface Column<T> {
   field: keyof T | string;
@@ -22,7 +22,7 @@ interface DataGridProps<T> {
 interface FilterConfig {
   field: string;
   label: string;
-  type: "text" | "select" | "date" | "date-range" | "multi-select";
+  type: 'text' | 'select' | 'date' | 'date-range' | 'multi-select';
   options?: { value: string; label: string }[];
   placeholder?: string;
 }
@@ -43,7 +43,7 @@ export function DataGrid<T extends { id: string | number }>({
   filters = [],
   onFiltersChange,
 }: DataGridProps<T>) {
-  const { uiStrings } = useUIStrings("common_datagrid");
+  const { uiStrings } = useUIStrings('common_datagrid');
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,8 +65,8 @@ export function DataGrid<T extends { id: string | number }>({
 
       // Add filter parameters
       Object.entries(filterValues).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== "") {
-          if (key === "dateRange") {
+        if (value !== undefined && value !== null && value !== '') {
+          if (key === 'dateRange') {
             if (value.from) params.start_date = value.from;
             if (value.to) params.end_date = value.to;
           } else {
@@ -76,11 +76,40 @@ export function DataGrid<T extends { id: string | number }>({
       });
 
       const response = (await apiClient.get(endpoint, { params })) as any;
-      // Response structure matches our AdminMiddleware: { data: [], meta: {} }
-      setData(response.data || []);
-      setMeta(response.meta);
+
+      // --- Robust Record Extraction ---
+      // Supports: 
+      // 1. Raw array: [...]
+      // 2. Nested data: { data: [...] }
+      // 3. Standardized envelope: { data: { data: [...] } }
+      let records: T[] = [];
+      if (Array.isArray(response)) {
+        records = response;
+      } else if (Array.isArray(response?.data)) {
+        records = response.data;
+      } else if (Array.isArray(response?.data?.data)) {
+        records = response.data.data;
+      }
+
+      // --- Robust Metadata Extraction ---
+      // Supports both standardized MetaInfo and legacy manual maps
+      const rawMeta = response?.meta || response?.data?.meta;
+      
+      const totalCount = rawMeta?.total ?? 
+                        rawMeta?.total_count ?? 
+                        (Array.isArray(response) ? response.length : (response?.data?.length ?? records.length));
+
+      const synthesizedMeta: PaginationMeta = {
+        page: rawMeta?.page ?? page,
+        size: rawMeta?.size ?? rawMeta?.per_page ?? pageSize,
+        total: totalCount,
+        total_page: rawMeta?.total_page ?? (Math.ceil(totalCount / pageSize) || 1),
+      };
+
+      setData(records);
+      setMeta(synthesizedMeta);
     } catch (err: any) {
-      setError(err.message || "Failed to fetch data");
+      setError(err.message || 'Failed to fetch data');
     } finally {
       setLoading(false);
     }
@@ -124,14 +153,12 @@ export function DataGrid<T extends { id: string | number }>({
       {/* Header */}
       <div className="px-6 py-4 border-b border-border-color flex justify-between items-center bg-surface-darker">
         <div>
-          {title && (
-            <h2 className="text-lg font-semibold text-white">{title}</h2>
-          )}
+          {title && <h2 className="text-lg font-semibold text-white">{title}</h2>}
           {meta && (
             <p className="text-xs text-text-muted mt-1">
-              {(uiStrings?.total_records || "Total: {{count}} records").replace(
-                "{{count}}",
-                meta.total.toString(),
+              {(uiStrings?.total_records || 'Total: {{count}} records').replace(
+                '{{count}}',
+                meta?.total?.toString()
               )}
             </p>
           )}
@@ -141,22 +168,17 @@ export function DataGrid<T extends { id: string | number }>({
             <button
               onClick={() => setShowFilters(!showFilters)}
               className="p-2 text-text-muted hover:text-primary transition-colors flex items-center gap-1 border border-border-color rounded hover:bg-border-color"
-              title={uiStrings?.label_filters || "Filters"}
+              title={uiStrings?.label_filters || 'Filters'}
             >
-              <span className="material-symbols-outlined text-[18px]">
-                filter_list
-              </span>
-              <span className="text-xs">
-                {uiStrings?.label_filters || "Filters"}
-              </span>
+              <span className="material-symbols-outlined text-[18px]">filter_list</span>
+              <span className="text-xs">{uiStrings?.label_filters || 'Filters'}</span>
               {Object.keys(filterValues).filter(
-                (k) => filterValues[k] !== undefined && filterValues[k] !== "",
+                (k) => filterValues[k] !== undefined && filterValues[k] !== ''
               ).length > 0 && (
                 <span className="ml-1 bg-primary text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
                   {
                     Object.keys(filterValues).filter(
-                      (k) =>
-                        filterValues[k] !== undefined && filterValues[k] !== "",
+                      (k) => filterValues[k] !== undefined && filterValues[k] !== ''
                     ).length
                   }
                 </span>
@@ -167,10 +189,12 @@ export function DataGrid<T extends { id: string | number }>({
             onClick={fetchData}
             data-testid="refresh-btn"
             className="p-2 text-text-muted hover:text-primary transition-colors"
-            title={uiStrings?.btn_refresh || "Refresh"}
+            title={uiStrings?.btn_refresh || 'Refresh'}
           >
-            <span className={`material-symbols-outlined text-[18px] ${loading ? 'animate-spin' : ''}`}>
-              {uiStrings?.btn_refresh || "refresh"}
+            <span
+              className={`material-symbols-outlined text-[18px] ${loading ? 'animate-spin' : ''}`}
+            >
+              {uiStrings?.btn_refresh || 'refresh'}
             </span>
           </button>
 
@@ -184,14 +208,14 @@ export function DataGrid<T extends { id: string | number }>({
         <div className="p-4 border-b border-border-color bg-surface-darker">
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-sm font-semibold text-white">
-              {uiStrings?.label_filters || "Filters"}
+              {uiStrings?.label_filters || 'Filters'}
             </h3>
             <div className="flex gap-2">
               <button
                 onClick={clearFilters}
                 className="text-xs text-text-muted hover:text-white transition-colors"
               >
-                {uiStrings?.btn_clear_all || "Clear All"}
+                {uiStrings?.btn_clear_all || 'Clear All'}
               </button>
             </div>
           </div>
@@ -201,29 +225,25 @@ export function DataGrid<T extends { id: string | number }>({
                 <label className="text-xs text-text-muted uppercase tracking-wider font-medium">
                   {filter.label}
                 </label>
-                {filter.type === "text" && (
+                {filter.type === 'text' && (
                   <input
                     type="text"
-                    value={filterValues[filter.field] || ""}
-                    onChange={(e) =>
-                      handleFilterChange(filter.field, e.target.value)
-                    }
+                    value={filterValues[filter.field] || ''}
+                    onChange={(e) => handleFilterChange(filter.field, e.target.value)}
                     placeholder={
                       filter.placeholder ||
-                      (
-                        uiStrings?.placeholder_filter ||
-                        "Filter by {{label}}..."
-                      ).replace("{{label}}", filter.label.toLowerCase())
+                      (uiStrings?.placeholder_filter || 'Filter by {{label}}...').replace(
+                        '{{label}}',
+                        filter.label.toLowerCase()
+                      )
                     }
                     className="px-3 py-2 bg-surface-dark border border-border-color rounded text-sm text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none"
                   />
                 )}
-                {filter.type === "select" && (
+                {filter.type === 'select' && (
                   <select
-                    value={filterValues[filter.field] || ""}
-                    onChange={(e) =>
-                      handleFilterChange(filter.field, e.target.value)
-                    }
+                    value={filterValues[filter.field] || ''}
+                    onChange={(e) => handleFilterChange(filter.field, e.target.value)}
                     className="px-3 py-2 bg-surface-dark border border-border-color rounded text-sm text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none"
                   >
                     <option value="">All {filter.label}</option>
@@ -234,55 +254,50 @@ export function DataGrid<T extends { id: string | number }>({
                     ))}
                   </select>
                 )}
-                {filter.type === "date" && (
+                {filter.type === 'date' && (
                   <input
                     type="date"
-                    value={filterValues[filter.field] || ""}
-                    onChange={(e) =>
-                      handleFilterChange(filter.field, e.target.value)
-                    }
+                    value={filterValues[filter.field] || ''}
+                    onChange={(e) => handleFilterChange(filter.field, e.target.value)}
                     className="px-3 py-2 bg-surface-dark border border-border-color rounded text-sm text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none"
                   />
                 )}
-                {filter.type === "date-range" && (
+                {filter.type === 'date-range' && (
                   <div className="flex gap-2">
                     <input
                       type="date"
-                      value={filterValues[filter.field]?.from || ""}
+                      value={filterValues[filter.field]?.from || ''}
                       onChange={(e) =>
                         handleFilterChange(filter.field, {
                           ...filterValues[filter.field],
                           from: e.target.value,
                         })
                       }
-                      placeholder={uiStrings?.label_from || "From"}
+                      placeholder={uiStrings?.label_from || 'From'}
                       className="px-3 py-2 bg-surface-dark border border-border-color rounded text-sm text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none flex-1"
                     />
                     <input
                       type="date"
-                      value={filterValues[filter.field]?.to || ""}
+                      value={filterValues[filter.field]?.to || ''}
                       onChange={(e) =>
                         handleFilterChange(filter.field, {
                           ...filterValues[filter.field],
                           to: e.target.value,
                         })
                       }
-                      placeholder={uiStrings?.label_to || "To"}
+                      placeholder={uiStrings?.label_to || 'To'}
                       className="px-3 py-2 bg-surface-dark border border-border-color rounded text-sm text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none flex-1"
                     />
                   </div>
                 )}
-                {filter.type === "multi-select" && (
+                {filter.type === 'multi-select' && (
                   <select
                     multiple
                     value={filterValues[filter.field] || []}
                     onChange={(e) =>
                       handleFilterChange(
                         filter.field,
-                        Array.from(
-                          e.target.selectedOptions,
-                          (option) => option.value,
-                        ),
+                        Array.from(e.target.selectedOptions, (option) => option.value)
                       )
                     }
                     className="px-3 py-2 bg-surface-dark border border-border-color rounded text-sm text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none h-24"
@@ -303,13 +318,11 @@ export function DataGrid<T extends { id: string | number }>({
       {/* Loading / Error States */}
       {loading && data.length === 0 && (
         <div className="p-8 text-center text-text-muted">
-          {uiStrings?.msg_loading || "Loading data..."}
+          {uiStrings?.msg_loading || 'Loading data...'}
         </div>
       )}
 
-      {error && (
-        <div className="p-8 text-center text-error bg-error/10">{error}</div>
-      )}
+      {error && <div className="p-8 text-center text-error bg-error/10">{error}</div>}
 
       {/* Table */}
       {!loading && !error && (
@@ -318,34 +331,25 @@ export function DataGrid<T extends { id: string | number }>({
             <thead>
               <tr className="bg-surface-darker text-text-muted text-xs uppercase tracking-wider font-semibold border-b border-border-color">
                 {columns.map((col, idx) => (
-                  <th
-                    key={idx}
-                    className="px-6 py-3"
-                    style={{ width: col.width }}
-                  >
+                  <th key={idx} className="px-6 py-3" style={{ width: col.width }}>
                     {col.header}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-border-color">
-              {columns.length > 0 && data.map((row) => (
-                <tr
-                  key={row.id}
-                  className="hover:bg-surface-light/10 transition-colors"
-                >
-                  {columns.map((col, idx) => (
-                    <td
-                      key={idx}
-                      className="px-6 py-4 text-sm text-text-muted whitespace-nowrap"
-                    >
-                      {col.render
-                        ? col.render(row)
-                        : (row[col.field as keyof T] as React.ReactNode)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
+              {columns?.length > 0 &&
+                data?.map((row) => (
+                  <tr key={row.id} className="hover:bg-surface-light/10 transition-colors">
+                    {columns?.map((col, idx) => (
+                      <td key={idx} className="px-6 py-4 text-sm text-text-muted whitespace-nowrap">
+                        {col.render
+                          ? col.render(row)
+                          : (row[col.field as keyof T] as React.ReactNode)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
               {columns.length > 0 && data.length === 0 && (
                 <tr>
                   <td
@@ -372,9 +376,9 @@ export function DataGrid<T extends { id: string | number }>({
       {meta && (
         <div className="px-6 py-3 border-t border-border-color flex items-center justify-between text-sm text-text-muted bg-surface-darker">
           <div>
-            {(uiStrings?.label_page || "Page {{current}} of {{total}}")
-              .replace("{{current}}", meta.page.toString())
-              .replace("{{total}}", meta.total_page.toString())}
+            {(uiStrings?.label_page || 'Page {{current}} of {{total}}')
+              .replace('{{current}}', meta.page.toString())
+              .replace('{{total}}', meta.total_page.toString())}
           </div>
           <div className="flex items-center space-x-2">
             <select
@@ -396,18 +400,14 @@ export function DataGrid<T extends { id: string | number }>({
                 disabled={page === 1}
                 className="px-3 py-1 border border-border-color rounded-l-md hover:bg-border-color disabled:opacity-50 disabled:cursor-not-allowed text-text-muted hover:text-white"
               >
-                <span className="material-symbols-outlined text-[16px]">
-                  chevron_left
-                </span>
+                <span className="material-symbols-outlined text-[16px]">chevron_left</span>
               </button>
               <button
                 onClick={handleNextPage}
                 disabled={page >= meta.total_page}
                 className="px-3 py-1 border-l-0 border border-border-color rounded-r-md hover:bg-border-color disabled:opacity-50 disabled:cursor-not-allowed text-text-muted hover:text-white"
               >
-                <span className="material-symbols-outlined text-[16px]">
-                  chevron_right
-                </span>
+                <span className="material-symbols-outlined text-[16px]">chevron_right</span>
               </button>
             </div>
           </div>

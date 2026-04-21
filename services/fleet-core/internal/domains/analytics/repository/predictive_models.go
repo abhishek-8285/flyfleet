@@ -56,7 +56,7 @@ func (r *AnalyticsRepositoryImpl) CreatePredictiveModel(ctx context.Context, mod
 }
 
 // GetPredictiveModel retrieves a predictive model by ID
-func (r *AnalyticsRepositoryImpl) GetPredictiveModel(ctx context.Context, id string, orgID uuid.UUID) (*models.PredictiveModel, error) {
+func (r *AnalyticsRepositoryImpl) GetPredictiveModel(ctx context.Context, id string, tenantID uuid.UUID) (*models.PredictiveModel, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := `
@@ -70,7 +70,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveModel(ctx context.Context, id str
 	var inputFeaturesJSON []byte
 	var precision, recall, f1Score *float64
 
-	err := r.db.QueryRow(ctx, query, id, orgID).Scan(
+	err := r.db.QueryRow(ctx, query, id, tenantID).Scan(
 		&model.ID, &model.OrganizationID, &model.Name, &model.Description, &model.ModelType, &model.Algorithm,
 		&inputFeaturesJSON, &model.OutputVariable, &model.TrainingDataStart, &model.TrainingDataEnd,
 		&model.Accuracy, &precision, &recall, &f1Score, &model.Status, &model.Version,
@@ -97,7 +97,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveModel(ctx context.Context, id str
 }
 
 // GetPredictiveModelByVersion retrieves a predictive model by name and version
-func (r *AnalyticsRepositoryImpl) GetPredictiveModelByVersion(ctx context.Context, name, version string, orgID uuid.UUID) (*models.PredictiveModel, error) {
+func (r *AnalyticsRepositoryImpl) GetPredictiveModelByVersion(ctx context.Context, name, version string, tenantID uuid.UUID) (*models.PredictiveModel, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := `
@@ -111,7 +111,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveModelByVersion(ctx context.Contex
 	var inputFeaturesJSON []byte
 	var precision, recall, f1Score *float64
 
-	err := r.db.QueryRow(ctx, query, name, version, orgID).Scan(
+	err := r.db.QueryRow(ctx, query, name, version, tenantID).Scan(
 		&model.ID, &model.OrganizationID, &model.Name, &model.Description, &model.ModelType, &model.Algorithm,
 		&inputFeaturesJSON, &model.OutputVariable, &model.TrainingDataStart, &model.TrainingDataEnd,
 		&model.Accuracy, &precision, &recall, &f1Score, &model.Status, &model.Version,
@@ -138,7 +138,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveModelByVersion(ctx context.Contex
 }
 
 // UpdatePredictiveModel updates an existing predictive model
-func (r *AnalyticsRepositoryImpl) UpdatePredictiveModel(ctx context.Context, id string, orgID uuid.UUID, updates map[string]interface{}) error {
+func (r *AnalyticsRepositoryImpl) UpdatePredictiveModel(ctx context.Context, id string, tenantID uuid.UUID, updates map[string]interface{}) error {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	setParts := []string{}
@@ -159,7 +159,7 @@ func (r *AnalyticsRepositoryImpl) UpdatePredictiveModel(ctx context.Context, id 
 		return errors.New("no updates provided")
 	}
 
-	args = append(args, id, orgID)
+	args = append(args, id, tenantID)
 	query := fmt.Sprintf("UPDATE predictive_models SET %s WHERE id = $%d AND organization_id = $%d",
 		strings.Join(setParts, ", "), argIndex, argIndex+1)
 
@@ -171,11 +171,11 @@ func (r *AnalyticsRepositoryImpl) UpdatePredictiveModel(ctx context.Context, id 
 }
 
 // DeletePredictiveModel deletes a predictive model
-func (r *AnalyticsRepositoryImpl) DeletePredictiveModel(ctx context.Context, id string, orgID uuid.UUID) error {
+func (r *AnalyticsRepositoryImpl) DeletePredictiveModel(ctx context.Context, id string, tenantID uuid.UUID) error {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := "DELETE FROM predictive_models WHERE id = $1 AND organization_id = $2"
-	_, err := r.db.Exec(ctx, query, id, orgID)
+	_, err := r.db.Exec(ctx, query, id, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to delete predictive model %s: %w", id, err)
 	}
@@ -183,12 +183,12 @@ func (r *AnalyticsRepositoryImpl) DeletePredictiveModel(ctx context.Context, id 
 }
 
 // ListPredictiveModels retrieves predictive models with filtering
-func (r *AnalyticsRepositoryImpl) ListPredictiveModels(ctx context.Context, orgID uuid.UUID, modelType *string, status *string, cursor string, limit, offset int) ([]*models.PredictiveModel, int, error) {
+func (r *AnalyticsRepositoryImpl) ListPredictiveModels(ctx context.Context, tenantID uuid.UUID, modelType *string, status *string, cursor string, limit, offset int) ([]*models.PredictiveModel, int, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	// Count query
 	countQuery := "SELECT COUNT(*) FROM predictive_models WHERE organization_id = $1"
-	countArgs := []interface{}{orgID}
+	countArgs := []interface{}{tenantID}
 
 	// Filter conditions
 	whereConditions := []string{"organization_id = $1"}
@@ -223,7 +223,7 @@ func (r *AnalyticsRepositoryImpl) ListPredictiveModels(ctx context.Context, orgI
 		"status, version, trained_at, expires_at, created_at, updated_at " +
 		"FROM predictive_models WHERE organization_id = $1"
 
-	args := []interface{}{orgID}
+	args := []interface{}{tenantID}
 	argIndex = 2
 
 	whereConditions = []string{} // Reset for main query

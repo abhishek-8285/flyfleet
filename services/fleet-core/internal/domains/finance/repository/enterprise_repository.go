@@ -27,7 +27,7 @@ func (r *FinanceRepository) CreateGSTInvoice(ctx context.Context, inv *models.GS
 	_, err := r.db.Exec(ctx, query,
 		inv.ID, inv.InvoiceNumber, inv.IRN, inv.AckNumber, inv.AckDate,
 		inv.QRCode, inv.SignedInvoice, string(inv.Status), inv.EntityType, inv.EntityID,
-		inv.OrgID, inv.GSTIN, inv.BuyerGSTIN, inv.TotalAmount, inv.TaxableAmount,
+		inv.TenantID, inv.GSTIN, inv.BuyerGSTIN, inv.TotalAmount, inv.TaxableAmount,
 		inv.CGSTAmount, inv.SGSTAmount, inv.IGSTAmount, inv.ErrorMessage, now, now,
 	)
 	return err
@@ -45,7 +45,7 @@ func (r *FinanceRepository) GetGSTInvoice(ctx context.Context, id uuid.UUID) (*m
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&inv.ID, &inv.InvoiceNumber, &inv.IRN, &inv.AckNumber, &inv.AckDate,
 		&inv.QRCode, &inv.SignedInvoice, &status, &inv.EntityType, &inv.EntityID,
-		&inv.OrgID, &inv.GSTIN, &inv.BuyerGSTIN, &inv.TotalAmount, &inv.TaxableAmount,
+		&inv.TenantID, &inv.GSTIN, &inv.BuyerGSTIN, &inv.TotalAmount, &inv.TaxableAmount,
 		&inv.CGSTAmount, &inv.SGSTAmount, &inv.IGSTAmount, &inv.ErrorMessage,
 		&inv.CreatedAt, &inv.UpdatedAt,
 	)
@@ -69,19 +69,19 @@ func (r *FinanceRepository) CreateTDSRecord(ctx context.Context, rec *models.TDS
 		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`
 
 	_, err := r.db.Exec(ctx, query,
-		rec.ID, rec.EntityType, rec.EntityID, rec.VendorID, rec.OrgID, rec.PANNumber, rec.TDSSection,
+		rec.ID, rec.EntityType, rec.EntityID, rec.VendorID, rec.TenantID, rec.PANNumber, rec.TDSSection,
 		rec.GrossAmount, rec.TDSRate, rec.TDSAmount, rec.NetAmount, rec.DeductedAt,
 		rec.Deposited, rec.FinancialYear, rec.Quarter, time.Now(),
 	)
 	return err
 }
 
-func (r *FinanceRepository) GetTDSRecords(ctx context.Context, orgID uuid.UUID, fy, quarter string) ([]models.TDSRecord, error) {
+func (r *FinanceRepository) GetTDSRecords(ctx context.Context, tenantID uuid.UUID, fy, quarter string) ([]models.TDSRecord, error) {
 	query := `SELECT id, entity_type, entity_id, vendor_id, tenant_id, pan_number, tds_section,
 	                 gross_amount, tds_rate, tds_amount, net_amount, deducted_at,
 	                 deposited, financial_year, quarter, created_at
 	          FROM tds_records WHERE tenant_id = $1`
-	args := []interface{}{orgID}
+	args := []interface{}{tenantID}
 
 	if fy != "" {
 		query += fmt.Sprintf(" AND financial_year = $%d", len(args)+1)
@@ -102,7 +102,7 @@ func (r *FinanceRepository) GetTDSRecords(ctx context.Context, orgID uuid.UUID, 
 	for rows.Next() {
 		var rec models.TDSRecord
 		if err := rows.Scan(
-			&rec.ID, &rec.EntityType, &rec.EntityID, &rec.VendorID, &rec.OrgID, &rec.PANNumber, &rec.TDSSection,
+			&rec.ID, &rec.EntityType, &rec.EntityID, &rec.VendorID, &rec.TenantID, &rec.PANNumber, &rec.TDSSection,
 			&rec.GrossAmount, &rec.TDSRate, &rec.TDSAmount, &rec.NetAmount, &rec.DeductedAt,
 			&rec.Deposited, &rec.FinancialYear, &rec.Quarter, &rec.CreatedAt,
 		); err != nil {
@@ -128,7 +128,7 @@ func (r *FinanceRepository) CreateVendorPayment(ctx context.Context, p *models.V
 
 	now := time.Now()
 	_, err := r.db.Exec(ctx, query,
-		p.ID, p.VendorID, p.OrgID, p.InvoiceNumber, p.Amount, p.TDSDeducted, p.NetPayable,
+		p.ID, p.VendorID, p.TenantID, p.InvoiceNumber, p.Amount, p.TDSDeducted, p.NetPayable,
 		p.Currency, string(p.PaymentStatus), p.PaymentMode, p.PaymentReference,
 		p.BankAccount, p.IFSCCode, p.PaymentDate, p.PaidAt,
 		p.GSTInvoiceID, p.TDSRecordID, p.Notes, p.CreatedBy, now, now,
@@ -136,13 +136,13 @@ func (r *FinanceRepository) CreateVendorPayment(ctx context.Context, p *models.V
 	return err
 }
 
-func (r *FinanceRepository) ListVendorPayments(ctx context.Context, orgID uuid.UUID, vendorID *uuid.UUID) ([]models.VendorPayment, error) {
+func (r *FinanceRepository) ListVendorPayments(ctx context.Context, tenantID uuid.UUID, vendorID *uuid.UUID) ([]models.VendorPayment, error) {
 	query := `SELECT id, vendor_id, tenant_id, invoice_number, amount, tds_deducted, net_payable,
 	                 currency, payment_status, payment_mode, payment_reference, bank_account,
 	                 ifsc_code, payment_date, paid_at, gst_invoice_id, tds_record_id,
 	                 notes, created_by, created_at, updated_at
 	          FROM vendor_payments WHERE tenant_id = $1`
-	args := []interface{}{orgID}
+	args := []interface{}{tenantID}
 
 	if vendorID != nil {
 		query += " AND vendor_id = $2"
@@ -161,7 +161,7 @@ func (r *FinanceRepository) ListVendorPayments(ctx context.Context, orgID uuid.U
 		var p models.VendorPayment
 		var status string
 		if err := rows.Scan(
-			&p.ID, &p.VendorID, &p.OrgID, &p.InvoiceNumber, &p.Amount, &p.TDSDeducted, &p.NetPayable,
+			&p.ID, &p.VendorID, &p.TenantID, &p.InvoiceNumber, &p.Amount, &p.TDSDeducted, &p.NetPayable,
 			&p.Currency, &status, &p.PaymentMode, &p.PaymentReference, &p.BankAccount,
 			&p.IFSCCode, &p.PaymentDate, &p.PaidAt, &p.GSTInvoiceID, &p.TDSRecordID,
 			&p.Notes, &p.CreatedBy, &p.CreatedAt, &p.UpdatedAt,
@@ -246,7 +246,7 @@ func (r *FinanceRepository) CreateFuelCardReconciliation(ctx context.Context, re
 		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`
 
 	_, err := r.db.Exec(ctx, query,
-		rec.ID, rec.CardTransactionID, rec.InternalTransactionID, rec.OrgID,
+		rec.ID, rec.CardTransactionID, rec.InternalTransactionID, rec.TenantID,
 		string(rec.Status), rec.Variance, rec.CardAmount, rec.InternalAmount,
 		rec.ReconciledBy, rec.ReconciledAt, rec.Notes, time.Now(),
 	)
@@ -273,7 +273,7 @@ func (r *FinanceRepository) CreateFraudIncident(ctx context.Context, inc *models
 		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`
 
 	_, err := r.db.Exec(ctx, query,
-		inc.ID, inc.EntityType, inc.EntityID, inc.OrgID, inc.VehicleID, inc.DriverID,
+		inc.ID, inc.EntityType, inc.EntityID, inc.TenantID, inc.VehicleID, inc.DriverID,
 		inc.FraudScore, string(inc.RiskLevel), inc.Signals, inc.Status, time.Now(),
 	)
 	return err
@@ -329,7 +329,7 @@ func (r *FinanceRepository) UpsertTripProfitability(ctx context.Context, tp *mod
 
 	now := time.Now()
 	_, err := r.db.Exec(ctx, query,
-		tp.ID, tp.TripID, tp.OrgID, tp.VehicleID, tp.DriverID, tp.TripRevenue,
+		tp.ID, tp.TripID, tp.TenantID, tp.VehicleID, tp.DriverID, tp.TripRevenue,
 		tp.FuelCost, tp.TollCost, tp.DriverCost, tp.MaintenanceCost, tp.OtherCost,
 		tp.ProfitMargin, tp.DistanceKM, tp.CostPerKM, tp.CalculatedAt, now, now,
 	)
@@ -344,7 +344,7 @@ func (r *FinanceRepository) GetTripProfitability(ctx context.Context, tripID uui
 
 	var tp models.TripProfitability
 	err := r.db.QueryRow(ctx, query, tripID).Scan(
-		&tp.ID, &tp.TripID, &tp.OrgID, &tp.VehicleID, &tp.DriverID, &tp.TripRevenue,
+		&tp.ID, &tp.TripID, &tp.TenantID, &tp.VehicleID, &tp.DriverID, &tp.TripRevenue,
 		&tp.FuelCost, &tp.TollCost, &tp.DriverCost, &tp.MaintenanceCost, &tp.OtherCost,
 		&tp.TotalCost, &tp.Profit, &tp.ProfitMargin, &tp.DistanceKM, &tp.CostPerKM, &tp.CalculatedAt,
 	)
@@ -451,14 +451,14 @@ func (r *FinanceRepository) RefreshFinanceDashboard(ctx context.Context) error {
 	return err
 }
 
-func (r *FinanceRepository) GetFinanceDashboardMetrics(ctx context.Context, orgID uuid.UUID) (*models.FinanceDashboardMetrics, error) {
+func (r *FinanceRepository) GetFinanceDashboardMetrics(ctx context.Context, tenantID uuid.UUID) (*models.FinanceDashboardMetrics, error) {
 	query := `SELECT tenant_id, metric_month, total_revenue, total_fuel_cost,
 	                 total_expenses, profit_margin, avg_cost_per_km
 	          FROM finance_dashboard_metrics WHERE tenant_id = $1`
 
 	var m models.FinanceDashboardMetrics
-	err := r.db.QueryRow(ctx, query, orgID).Scan(
-		&m.OrgID, &m.MetricMonth, &m.TotalRevenue, &m.TotalFuelCost,
+	err := r.db.QueryRow(ctx, query, tenantID).Scan(
+		&m.TenantID, &m.MetricMonth, &m.TotalRevenue, &m.TotalFuelCost,
 		&m.TotalExpenses, &m.ProfitMargin, &m.AvgCostPerKm,
 	)
 	if err != nil {

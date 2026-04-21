@@ -9,7 +9,7 @@ var (
 	ErrVehicleAlreadyExists = errors.New("vehicle already exists")
 	ErrInvalidVehicleID     = errors.New("invalid vehicle ID")
 	ErrUnauthorized         = errors.New("unauthorized access")
-	ErrInvalidOrgID         = errors.New("invalid organization ID")
+	ErrInvalidTenantID         = errors.New("invalid organization ID")
 
 	// Validation errors
 	ErrMissingRequiredField = errors.New("missing required field")

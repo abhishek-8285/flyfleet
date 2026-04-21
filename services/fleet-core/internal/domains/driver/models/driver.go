@@ -7,7 +7,7 @@ import (
 // Driver represents a vehicle driver
 type Driver struct {
 	ID                string                 `json:"id" db:"id"`
-	OrgID             string                 `json:"tenant_id" db:"tenant_id" validate:"required,uuid"`
+	TenantID             string                 `json:"tenant_id" db:"tenant_id" validate:"required,uuid"`
 	FirstName         string                 `json:"first_name" db:"first_name" validate:"required,max=50"`
 	LastName          string                 `json:"last_name" db:"last_name" validate:"required,max=50"`
 	FullName          string                 `json:"name" db:"full_name"`
@@ -119,6 +119,7 @@ type CreateDriverRequest struct {
 	Address          Address                `json:"address" validate:"required"`
 	EmergencyContact EmergencyContact       `json:"emergency_contact" validate:"required"`
 	ExperienceYears  int                    `json:"experience_years" validate:"gte=0,lte=50"`
+	JoiningDate      time.Time              `json:"joining_date" validate:"omitempty"`
 	Metadata         map[string]interface{} `json:"metadata"`
 }
 
@@ -189,7 +190,7 @@ type SetScheduleRequest struct {
 
 // DriverListFilter represents filters for listing drivers
 type DriverListFilter struct {
-	OrgID     string `json:"tenant_id" form:"tenant_id" validate:"omitempty,uuid"`
+	TenantID     string `json:"tenant_id" form:"tenant_id" validate:"omitempty,uuid"`
 	Status    string `json:"status" form:"status" validate:"omitempty,oneof=active inactive suspended resigned"`
 	VehicleID string `json:"vehicle_id" form:"vehicle_id" validate:"omitempty,uuid"`
 	Name      string `json:"name" form:"name" validate:"omitempty,max=100"`
@@ -266,7 +267,7 @@ type DriverPerformanceSummary struct {
 type DriverBehavior struct {
 	ID              string    `json:"id" db:"id" validate:"required,uuid"`
 	DriverID        string    `json:"driver_id" db:"driver_id" validate:"required,uuid"`
-	OrgID           string    `json:"tenant_id" db:"tenant_id" validate:"required,uuid"`
+	TenantID           string    `json:"tenant_id" db:"tenant_id" validate:"required,uuid"`
 	PeriodStart     time.Time `json:"period_start" db:"period_start" validate:"required"`
 	PeriodEnd       time.Time `json:"period_end" db:"period_end" validate:"required"`
 	Score           float64   `json:"score" db:"score" validate:"gte=0,lte=100"`
@@ -314,7 +315,7 @@ type DriverBehavior struct {
 type DriverIncident struct {
 	ID              string                 `json:"id" db:"id" validate:"required,uuid"`
 	DriverID        string                 `json:"driver_id" db:"driver_id" validate:"required,uuid"`
-	OrgID           string                 `json:"tenant_id" db:"tenant_id" validate:"required,uuid"`
+	TenantID           string                 `json:"tenant_id" db:"tenant_id" validate:"required,uuid"`
 	Type            string                 `json:"type" db:"type" validate:"required"`
 	Severity        string                 `json:"severity" db:"severity" validate:"required,oneof=low medium high critical"`
 	Timestamp       time.Time              `json:"timestamp" db:"timestamp" validate:"required"`

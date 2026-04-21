@@ -21,8 +21,8 @@ func NewBillingConfigRepository(db *pgxpool.Pool) *BillingConfigRepository {
 	return &BillingConfigRepository{db: db}
 }
 
-// GetByOrgID retrieves billing config for an organization
-func (r *BillingConfigRepository) GetByOrgID(ctx context.Context, orgID uuid.UUID) (*models.BillingConfiguration, error) {
+// GetByTenantID retrieves billing config for an organization
+func (r *BillingConfigRepository) GetByTenantID(ctx context.Context, tenantID uuid.UUID) (*models.BillingConfiguration, error) {
 	query := `
 		SELECT id, tenant_id, company_name, company_address, company_gstin, company_pan,
 		       company_email, company_phone, company_website, company_logo_url,
@@ -37,8 +37,8 @@ func (r *BillingConfigRepository) GetByOrgID(ctx context.Context, orgID uuid.UUI
 	var config models.BillingConfiguration
 	var termsJSON []byte
 
-	err := r.db.QueryRow(ctx, query, orgID).Scan(
-		&config.ID, &config.OrgID, &config.CompanyName, &config.CompanyAddress, &config.CompanyGSTIN,
+	err := r.db.QueryRow(ctx, query, tenantID).Scan(
+		&config.ID, &config.TenantID, &config.CompanyName, &config.CompanyAddress, &config.CompanyGSTIN,
 		&config.CompanyPAN, &config.CompanyEmail, &config.CompanyPhone, &config.CompanyWebsite,
 		&config.CompanyLogoURL, &config.PrimaryColor, &config.SecondaryColor, &config.Theme,
 		&config.BankName, &config.BankAccountName, &config.BankAccountNumber, &config.BankIFSC,
@@ -116,7 +116,7 @@ func (r *BillingConfigRepository) Create(ctx context.Context, config *models.Bil
 			updated_by = EXCLUDED.updated_by`
 
 	_, err = r.db.Exec(ctx, query,
-		config.ID, config.OrgID, config.CompanyName, config.CompanyAddress, config.CompanyGSTIN,
+		config.ID, config.TenantID, config.CompanyName, config.CompanyAddress, config.CompanyGSTIN,
 		config.CompanyPAN, config.CompanyEmail, config.CompanyPhone, config.CompanyWebsite,
 		config.CompanyLogoURL, config.PrimaryColor, config.SecondaryColor, config.Theme,
 		config.BankName, config.BankAccountName, config.BankAccountNumber, config.BankIFSC,
@@ -139,9 +139,9 @@ func (r *BillingConfigRepository) Update(ctx context.Context, config *models.Bil
 }
 
 // Delete soft-deletes a billing configuration
-func (r *BillingConfigRepository) Delete(ctx context.Context, orgID uuid.UUID) error {
+func (r *BillingConfigRepository) Delete(ctx context.Context, tenantID uuid.UUID) error {
 	query := `UPDATE billing_configurations SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $1`
-	_, err := r.db.Exec(ctx, query, orgID)
+	_, err := r.db.Exec(ctx, query, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to delete billing config: %w", err)
 	}
@@ -149,9 +149,9 @@ func (r *BillingConfigRepository) Delete(ctx context.Context, orgID uuid.UUID) e
 }
 
 // GetOrCreate gets existing config or creates default one
-func (r *BillingConfigRepository) GetOrCreate(ctx context.Context, orgID uuid.UUID, createdBy uuid.UUID) (*models.BillingConfiguration, error) {
+func (r *BillingConfigRepository) GetOrCreate(ctx context.Context, tenantID uuid.UUID, createdBy uuid.UUID) (*models.BillingConfiguration, error) {
 	// Try to get existing
-	config, err := r.GetByOrgID(ctx, orgID)
+	config, err := r.GetByTenantID(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (r *BillingConfigRepository) GetOrCreate(ctx context.Context, orgID uuid.UU
 	}
 
 	// Create default
-	config = models.DefaultBillingConfig(orgID)
+	config = models.DefaultBillingConfig(tenantID)
 	config.CreatedBy = createdBy
 	config.UpdatedBy = createdBy
 

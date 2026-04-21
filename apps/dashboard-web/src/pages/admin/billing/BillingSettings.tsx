@@ -139,28 +139,15 @@ const BillingSettingsPage: React.FC = () => {
                 <Globe className="w-4 h-4" />{" "}
                 {uiStrings?.label_base_currency || "Base Currency"}
               </label>
-              <select
-                value={settings.base_currency}
-                onChange={(e) =>
-                  setSettings({ ...settings, base_currency: e.target.value })
-                }
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary appearance-none cursor-pointer hover:bg-white/10 transition-colors"
-              >
-                <option value="INR" className="bg-gray-900">
-                  {uiStrings?.currency_inr || "INR - Indian Rupee"}
-                </option>
-                <option value="USD" className="bg-gray-900">
-                  {uiStrings?.currency_usd || "USD - US Dollar"}
-                </option>
-                <option value="EUR" className="bg-gray-900">
-                  {uiStrings?.currency_eur || "EUR - Euro"}
-                </option>
-              </select>
+              <div className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white/50 cursor-not-allowed flex items-center justify-between">
+                <span>{uiStrings?.currency_inr || "INR - Indian Rupee"}</span>
+                <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded font-black">LOCKED</span>
+              </div>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-400 flex items-center gap-2">
                 <IndianRupee className="w-4 h-4" />{" "}
-                {uiStrings?.label_default_tax || "Default Tax Rate (%)"}
+                Default GST Rate (%)
               </label>
               <input
                 type="number"

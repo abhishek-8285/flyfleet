@@ -59,7 +59,7 @@ func NewMinioClient(endpoint, accessKeyID, secretAccessKey string, useSSL bool) 
 func (s *S3Storage) getKey(invoice *models.Invoice) string {
 	year := invoice.InvoiceDate.Format("2006")
 	month := invoice.InvoiceDate.Format("01")
-	return fmt.Sprintf("invoices/%s/%s/%s/%s.pdf", invoice.OrgID.String(), year, month, invoice.InvoiceNumber)
+	return fmt.Sprintf("invoices/%s/%s/%s/%s.pdf", invoice.TenantID.String(), year, month, invoice.InvoiceNumber)
 }
 
 func (s *S3Storage) Save(ctx context.Context, invoice *models.Invoice, data []byte) error {

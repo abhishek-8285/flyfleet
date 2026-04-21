@@ -18,7 +18,7 @@ import (
 
 func TestE2E_FullFleetWorkflow(t *testing.T) {
 	ctx := context.Background()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
 	t.Run("Step 46: Full Lifecycle Simulation", func(t *testing.T) {
 		// 1. Customer creates booking (Mocked state change)
@@ -28,7 +28,7 @@ func TestE2E_FullFleetWorkflow(t *testing.T) {
 		// 2. Vehicle assigned & Telemetry starts
 		deviceID := uuid.New()
 		err := repo.CreateDevice(ctx, &models.Device{
-			ID: deviceID, OrgID: orgID, DeviceIMEI: ptr("e2e-fleet-imei"), Status: ptr("ACTIVE"),
+			ID: deviceID, TenantID: tenantID, DeviceIMEI: ptr("e2e-fleet-imei"), Status: ptr("ACTIVE"),
 		})
 		assert.NoError(t, err)
 

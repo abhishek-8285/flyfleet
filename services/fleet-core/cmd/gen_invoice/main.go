@@ -12,12 +12,12 @@ import (
 )
 
 func main() {
-	orgID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+	tenantID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
 
 	// Create a dummy invoice (Matching what we seeded)
 	invoice := &models.Invoice{
 		ID:            uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
-		OrgID:         orgID,
+		TenantID:         tenantID,
 		InvoiceNumber: "INV-2026-001",
 		CustomerName:  "Reliance Logistics",
 		InvoiceDate:   time.Now(),

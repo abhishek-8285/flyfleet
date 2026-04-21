@@ -40,7 +40,7 @@ type Repository interface {
 	ListExpenses(ctx context.Context, driverID string) ([]*models.DriverExpense, error)
 
 	// Behavior Scoring & Incident Methods
-	LogBehaviorScoreChange(ctx context.Context, driverID, orgID uuid.UUID, oldScore, newScore int, reason, eventType string, userID uuid.UUID, userEmail string) error
+	LogBehaviorScoreChange(ctx context.Context, driverID, tenantID uuid.UUID, oldScore, newScore int, reason, eventType string, userID uuid.UUID, userEmail string) error
 	CreateBehaviorScoreUpdate(ctx context.Context, update *models.BehaviorScoreUpdate) error
 	GetBehaviorRecords(ctx context.Context, driverID string, startDate, endDate time.Time) ([]*models.DriverBehavior, error)
 	GetBehaviorSummary(ctx context.Context, driverID string) (*models.DriverBehavior, error)
@@ -53,14 +53,14 @@ type Repository interface {
 	// Attendance & Schedule Methods
 	CreateAttendance(ctx context.Context, attendance *models.DriverAttendance) error
 	GetAttendanceByID(ctx context.Context, id uuid.UUID) (*models.DriverAttendance, error)
-	GetAttendanceByDriver(ctx context.Context, driverID, orgID uuid.UUID, from, to time.Time) ([]*models.DriverAttendance, error)
-	UpdateCheckOut(ctx context.Context, id, orgID uuid.UUID, checkOut time.Time, remarks string) error
+	GetAttendanceByDriver(ctx context.Context, driverID, tenantID uuid.UUID, from, to time.Time) ([]*models.DriverAttendance, error)
+	UpdateCheckOut(ctx context.Context, id, tenantID uuid.UUID, checkOut time.Time, remarks string) error
 
 	CreateSchedule(ctx context.Context, schedule *models.DriverSchedule) error
 	GetScheduleByID(ctx context.Context, id uuid.UUID) (*models.DriverSchedule, error)
-	GetSchedulesByDriver(ctx context.Context, driverID, orgID uuid.UUID) ([]*models.DriverSchedule, error)
+	GetSchedulesByDriver(ctx context.Context, driverID, tenantID uuid.UUID) ([]*models.DriverSchedule, error)
 	UpdateSchedule(ctx context.Context, schedule *models.DriverSchedule) error
-	DeleteSchedule(ctx context.Context, id, orgID uuid.UUID) error
+	DeleteSchedule(ctx context.Context, id, tenantID uuid.UUID) error
 }
 
 type DriverService struct {
@@ -108,7 +108,7 @@ func (s *DriverService) publishEvent(subject string, data interface{}) {
 }
 
 // Create creates a new driver
-func (s *DriverService) Create(ctx context.Context, orgID string, req *models.CreateDriverRequest) (*models.Driver, error) {
+func (s *DriverService) Create(ctx context.Context, tenantID string, req *models.CreateDriverRequest) (*models.Driver, error) {
 	// Validate license expiry date
 	if req.LicenseExpiry.Before(time.Now()) {
 		return nil, fmt.Errorf("license has expired")
@@ -128,7 +128,7 @@ func (s *DriverService) Create(ctx context.Context, orgID string, req *models.Cr
 
 	driver := &models.Driver{
 		ID:               uuid.New().String(),
-		OrgID:            orgID,
+		TenantID:            tenantID,
 		FirstName:        req.FirstName,
 		LastName:         req.LastName,
 		Email:            req.Email,
@@ -146,7 +146,7 @@ func (s *DriverService) Create(ctx context.Context, orgID string, req *models.Cr
 		EmergencyContact: req.EmergencyContact,
 		Status:           "active",
 		EmploymentType:   &req.EmploymentType,
-		JoiningDate:      time.Now(),
+		JoiningDate:      func() time.Time { if !req.JoiningDate.IsZero() { return req.JoiningDate }; return time.Now() }(),
 		ExperienceYears:  req.ExperienceYears,
 		Rating:           0.0,
 		TotalTrips:       0,
@@ -526,7 +526,7 @@ func (s *DriverService) GetActiveDriversDutyHours(ctx context.Context) ([]models
 }
 
 // GetDriverPerformanceSummary retrieves a comprehensive performance summary for a driver
-func (s *DriverService) GetDriverPerformanceSummary(ctx context.Context, driverID, orgID string) (map[string]interface{}, error) {
+func (s *DriverService) GetDriverPerformanceSummary(ctx context.Context, driverID, tenantID string) (map[string]interface{}, error) {
 	driver, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
 		return nil, err
@@ -536,11 +536,11 @@ func (s *DriverService) GetDriverPerformanceSummary(ctx context.Context, driverI
 	}
 
 	// Enforce organization isolation
-	if driver.OrgID != orgID {
+	if driver.TenantID != tenantID {
 		s.logger.Warn("unauthorized access attempt to driver performance summary",
 			zap.String("requested_driver", driverID),
-			zap.String("authorized_org", driver.OrgID),
-			zap.String("requested_org", orgID))
+			zap.String("authorized_org", driver.TenantID),
+			zap.String("requested_org", tenantID))
 		return nil, fmt.Errorf("unauthorized access to driver data")
 	}
 
@@ -588,20 +588,20 @@ func (s *DriverService) GetDriverPerformanceSummary(ctx context.Context, driverI
 // ============================================================================
 
 // MarkAttendance marks attendance for a driver
-func (s *DriverService) MarkAttendance(ctx context.Context, driverID, orgID uuid.UUID, date time.Time, status string, checkIn, checkOut *time.Time, remarks string) error {
+func (s *DriverService) MarkAttendance(ctx context.Context, driverID, tenantID uuid.UUID, date time.Time, status string, checkIn, checkOut *time.Time, remarks string) error {
 	// Verify driver belongs to org
 	driver, err := s.repo.GetByID(ctx, driverID.String())
 	if err != nil {
 		return fmt.Errorf("failed to verify driver: %w", err)
 	}
-	if driver == nil || driver.OrgID != orgID.String() {
+	if driver == nil || driver.TenantID != tenantID.String() {
 		return fmt.Errorf("driver not found or unauthorized")
 	}
 
 	att := &models.DriverAttendance{
 		ID:             uuid.New(),
 		DriverID:       driverID,
-		OrgID:          orgID.String(),
+		TenantID:          tenantID.String(),
 		AttendanceDate: date,
 		Status:         status,
 		CheckInTime:    checkIn,
@@ -618,7 +618,7 @@ func (s *DriverService) MarkAttendance(ctx context.Context, driverID, orgID uuid
 	// Publish event for attendance marking
 	s.publishEvent("driver.attendance.marked", map[string]interface{}{
 		"driver_id": driverID,
-		"tenant_id":    orgID,
+		"tenant_id":    tenantID,
 		"date":      date.Format("2006-01-02"),
 		"status":    status,
 	})
@@ -627,17 +627,17 @@ func (s *DriverService) MarkAttendance(ctx context.Context, driverID, orgID uuid
 }
 
 // GetAttendance retrieves attendance records for a driver
-func (s *DriverService) GetAttendance(ctx context.Context, driverID, orgID uuid.UUID, from, to time.Time) ([]*models.DriverAttendance, error) {
+func (s *DriverService) GetAttendance(ctx context.Context, driverID, tenantID uuid.UUID, from, to time.Time) ([]*models.DriverAttendance, error) {
 	// Verify driver belongs to org
 	driver, err := s.repo.GetByID(ctx, driverID.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify driver: %w", err)
 	}
-	if driver == nil || driver.OrgID != orgID.String() {
+	if driver == nil || driver.TenantID != tenantID.String() {
 		return nil, fmt.Errorf("driver not found or unauthorized")
 	}
 
-	attendance, err := s.repo.GetAttendanceByDriver(ctx, driverID, orgID, from, to)
+	attendance, err := s.repo.GetAttendanceByDriver(ctx, driverID, tenantID, from, to)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get attendance: %w", err)
 	}
@@ -646,18 +646,18 @@ func (s *DriverService) GetAttendance(ctx context.Context, driverID, orgID uuid.
 }
 
 // SetSchedule sets or updates a driver's weekly schedule
-func (s *DriverService) SetSchedule(ctx context.Context, driverID, orgID uuid.UUID, dayOfWeek int, startTime, endTime string, isWorking bool) error {
+func (s *DriverService) SetSchedule(ctx context.Context, driverID, tenantID uuid.UUID, dayOfWeek int, startTime, endTime string, isWorking bool) error {
 	// Verify driver belongs to org
 	driver, err := s.repo.GetByID(ctx, driverID.String())
 	if err != nil {
 		return fmt.Errorf("failed to verify driver: %w", err)
 	}
-	if driver == nil || driver.OrgID != orgID.String() {
+	if driver == nil || driver.TenantID != tenantID.String() {
 		return fmt.Errorf("driver not found or unauthorized")
 	}
 
 	// Check if schedule already exists for this day
-	schedules, err := s.repo.GetSchedulesByDriver(ctx, driverID, orgID)
+	schedules, err := s.repo.GetSchedulesByDriver(ctx, driverID, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to check existing schedule: %w", err)
 	}
@@ -683,7 +683,7 @@ func (s *DriverService) SetSchedule(ctx context.Context, driverID, orgID uuid.UU
 	sch := &models.DriverSchedule{
 		ID:        uuid.New(),
 		DriverID:  driverID,
-		OrgID:     orgID.String(),
+		TenantID:     tenantID.String(),
 		DayOfWeek: dayOfWeek,
 		StartTime: startTime,
 		EndTime:   endTime,
@@ -699,7 +699,7 @@ func (s *DriverService) SetSchedule(ctx context.Context, driverID, orgID uuid.UU
 	// Publish event for schedule update
 	s.publishEvent("driver.schedule.updated", map[string]interface{}{
 		"driver_id":  driverID,
-		"tenant_id":     orgID,
+		"tenant_id":     tenantID,
 		"day":        dayOfWeek,
 		"start_time": startTime,
 		"end_time":   endTime,
@@ -710,17 +710,17 @@ func (s *DriverService) SetSchedule(ctx context.Context, driverID, orgID uuid.UU
 }
 
 // GetSchedule retrieves all schedules for a driver
-func (s *DriverService) GetSchedule(ctx context.Context, driverID, orgID uuid.UUID) ([]*models.DriverSchedule, error) {
+func (s *DriverService) GetSchedule(ctx context.Context, driverID, tenantID uuid.UUID) ([]*models.DriverSchedule, error) {
 	// Verify driver belongs to org
 	driver, err := s.repo.GetByID(ctx, driverID.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify driver: %w", err)
 	}
-	if driver == nil || driver.OrgID != orgID.String() {
+	if driver == nil || driver.TenantID != tenantID.String() {
 		return nil, fmt.Errorf("driver not found or unauthorized")
 	}
 
-	schedules, err := s.repo.GetSchedulesByDriver(ctx, driverID, orgID)
+	schedules, err := s.repo.GetSchedulesByDriver(ctx, driverID, tenantID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get schedules: %w", err)
 	}
@@ -729,17 +729,17 @@ func (s *DriverService) GetSchedule(ctx context.Context, driverID, orgID uuid.UU
 }
 
 // DeleteSchedule deletes a driver's schedule entry
-func (s *DriverService) DeleteSchedule(ctx context.Context, driverID, orgID, scheduleID uuid.UUID) error {
+func (s *DriverService) DeleteSchedule(ctx context.Context, driverID, tenantID, scheduleID uuid.UUID) error {
 	// Verify driver belongs to org
 	driver, err := s.repo.GetByID(ctx, driverID.String())
 	if err != nil {
 		return fmt.Errorf("failed to verify driver: %w", err)
 	}
-	if driver == nil || driver.OrgID != orgID.String() {
+	if driver == nil || driver.TenantID != tenantID.String() {
 		return fmt.Errorf("driver not found or unauthorized")
 	}
 
-	if err := s.repo.DeleteSchedule(ctx, scheduleID, orgID); err != nil {
+	if err := s.repo.DeleteSchedule(ctx, scheduleID, tenantID); err != nil {
 		return fmt.Errorf("failed to delete schedule: %w", err)
 	}
 

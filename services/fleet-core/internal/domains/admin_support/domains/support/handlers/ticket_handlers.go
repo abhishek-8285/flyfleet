@@ -63,9 +63,9 @@ func (h *TicketHandlers) RegisterRoutes(r chi.Router) {
 
 // Dashboard APIs
 func (h *TicketHandlers) GetDashboardSummary(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
-	summary, err := h.service.GetDashboardSummary(r.Context(), orgID)
+	summary, err := h.service.GetDashboardSummary(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("Failed to get dashboard summary", zap.Error(err))
 		h.errorJSON(w, "Failed to get dashboard summary", http.StatusInternalServerError)
@@ -76,7 +76,7 @@ func (h *TicketHandlers) GetDashboardSummary(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *TicketHandlers) GetRecentActivity(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
 	limitStr := r.URL.Query().Get("limit")
 	limit := 10
@@ -86,7 +86,7 @@ func (h *TicketHandlers) GetRecentActivity(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	tickets, err := h.service.GetRecentActivity(r.Context(), orgID, limit)
+	tickets, err := h.service.GetRecentActivity(r.Context(), tenantID, limit)
 	if err != nil {
 		h.logger.Error("Failed to get recent activity", zap.Error(err))
 		h.errorJSON(w, "Failed to get recent activity", http.StatusInternalServerError)
@@ -147,10 +147,10 @@ func (h *TicketHandlers) CreateTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	userID := h.getUserID(r)
 
-	ticket, err := h.service.CreateTicket(r.Context(), req, orgID, userID)
+	ticket, err := h.service.CreateTicket(r.Context(), req, tenantID, userID)
 	if err != nil {
 		h.logger.Error("Failed to create ticket", zap.Error(err))
 		h.errorJSON(w, "Failed to create ticket", http.StatusInternalServerError)
@@ -359,24 +359,16 @@ func (h *TicketHandlers) errorJSON(w http.ResponseWriter, message string, status
 	h.json(w, map[string]string{"error": message}, status)
 }
 
-func (h *TicketHandlers) getOrgID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(ctxkeys.OrgIDKey); val != nil {
-		if orgIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(orgIDStr); err == nil {
-				return id
-			}
-		}
+func (h *TicketHandlers) getTenantID(r *http.Request) uuid.UUID {
+	if id, ok := ctxkeys.GetTenantID(r.Context()); ok {
+		return id
 	}
 	return uuid.Nil
 }
 
 func (h *TicketHandlers) getUserID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(ctxkeys.UserIDKey); val != nil {
-		if userIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(userIDStr); err == nil {
-				return id
-			}
-		}
+	if id, ok := ctxkeys.GetUserID(r.Context()); ok {
+		return id
 	}
 	return uuid.Nil
 }

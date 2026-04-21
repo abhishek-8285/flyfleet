@@ -19,8 +19,8 @@ func NewTelemetryService(repo *repository.DiagnosticsRepository, hs *DeviceHealt
 	return &TelemetryService{repo: repo, healthService: hs}
 }
 
-func (s *TelemetryService) IngestTelemetry(ctx context.Context, deviceID uuid.UUID, orgID uuid.UUID, tel *models.DeviceTelemetry) error {
-	device, err := s.repo.GetDevice(ctx, deviceID, orgID)
+func (s *TelemetryService) IngestTelemetry(ctx context.Context, deviceID uuid.UUID, tenantID uuid.UUID, tel *models.DeviceTelemetry) error {
+	device, err := s.repo.GetDevice(ctx, deviceID, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to load device: %w", err)
 	}

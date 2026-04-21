@@ -15,7 +15,7 @@ func main() {
 	pool, _ := pgxpool.New(ctx, dbURL)
 	defer pool.Close()
 
-	orgID := "00000000-0000-0000-0000-000000000001"
+	tenantID := "00000000-0000-0000-0000-000000000001"
 
 	// 1. Define a Config-Level change (Turn off QR code, change brand color)
 	config := map[string]interface{}{
@@ -27,16 +27,16 @@ func main() {
 
 	// 2. Save this config to the DB for this organization
 	_, err := pool.Exec(ctx, `
-		INSERT INTO billing_settings (org_id, render_config)
+		INSERT INTO billing_settings (tenant_id, render_config)
 		VALUES ($1, $2)
-		ON CONFLICT (org_id) DO UPDATE SET render_config = EXCLUDED.render_config, updated_at = NOW()
-	`, orgID, configJSON)
+		ON CONFLICT (tenant_id) DO UPDATE SET render_config = EXCLUDED.render_config, updated_at = NOW()
+	`, tenantID, configJSON)
 
 	if err != nil {
 		log.Fatalf("Failed to save config: %v", err)
 	}
 
 	fmt.Println("✅ Config-Level changes saved to Database.")
-	fmt.Printf("Org ID: %s\n", orgID)
+	fmt.Printf("Org ID: %s\n", tenantID)
 	fmt.Printf("New Config: %s\n", string(configJSON))
 }

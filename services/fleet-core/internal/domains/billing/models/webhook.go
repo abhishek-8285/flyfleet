@@ -9,7 +9,7 @@ import (
 // WebhookSubscription represents a webhook subscription
 type WebhookSubscription struct {
 	ID                   uuid.UUID              `json:"id" db:"id"`
-	OrgID                uuid.UUID              `json:"tenant_id" db:"tenant_id"`
+	TenantID                uuid.UUID              `json:"tenant_id" db:"tenant_id"`
 	Name                 string                 `json:"name" db:"name"`
 	URL                  string                 `json:"url" db:"url"`
 	Secret               string                 `json:"-" db:"secret"` // Never expose in JSON
@@ -67,7 +67,7 @@ type WebhookEventType struct {
 // WebhookStats represents webhook delivery statistics
 type WebhookStats struct {
 	ID                   uuid.UUID  `json:"id"`
-	OrgID                uuid.UUID  `json:"tenant_id"`
+	TenantID                uuid.UUID  `json:"tenant_id"`
 	Name                 string     `json:"name"`
 	URL                  string     `json:"url"`
 	IsActive             bool       `json:"is_active"`
@@ -129,10 +129,10 @@ func IsValidEventType(eventType string) bool {
 }
 
 // DefaultWebhookSubscription creates a default webhook subscription
-func DefaultWebhookSubscription(orgID uuid.UUID, name, url string) *WebhookSubscription {
+func DefaultWebhookSubscription(tenantID uuid.UUID, name, url string) *WebhookSubscription {
 	return &WebhookSubscription{
 		ID:                 uuid.New(),
-		OrgID:              orgID,
+		TenantID:              tenantID,
 		Name:               name,
 		URL:                url,
 		IsActive:           true,

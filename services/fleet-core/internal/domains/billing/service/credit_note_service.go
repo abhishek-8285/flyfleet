@@ -39,7 +39,7 @@ func (s *CreditNoteService) IssueCreditNote(ctx context.Context, cn *models.Cred
 	// The existing repo expects items as a separate argument
 	err := s.repo.Create(ctx, cn, items)
 	if err != nil {
-		s.logger.Error("Failed to issue credit note", zap.Error(err), zap.String("tenant_id", cn.OrgID.String()))
+		s.logger.Error("Failed to issue credit note", zap.Error(err), zap.String("tenant_id", cn.TenantID.String()))
 		return err
 	}
 
@@ -50,18 +50,18 @@ func (s *CreditNoteService) IssueCreditNote(ctx context.Context, cn *models.Cred
 		for _, item := range items {
 			totalAmount += item.TotalAmount
 		}
-		_ = s.ledgerServ.RecordCreditApplied(ctx, cn.OrgID, cn.OriginalInvoiceID, cn.ID, totalAmount, "USD")
+		_ = s.ledgerServ.RecordCreditApplied(ctx, cn.TenantID, cn.OriginalInvoiceID, cn.ID, totalAmount, "USD")
 	}
 
 	return nil
 }
 
-func (s *CreditNoteService) ListCreditNotes(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.CreditNote, int, error) {
+func (s *CreditNoteService) ListCreditNotes(ctx context.Context, tenantID uuid.UUID, page, size int) ([]models.CreditNote, int, error) {
 	if page <= 0 {
 		page = 1
 	}
 	if size <= 0 {
 		size = 20
 	}
-	return s.repo.ListByOrg(ctx, orgID, page, size)
+	return s.repo.ListByOrg(ctx, tenantID, page, size)
 }

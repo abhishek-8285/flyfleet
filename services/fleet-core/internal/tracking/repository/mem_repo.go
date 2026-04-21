@@ -46,7 +46,7 @@ func (r *MemVehicleRepo) Clear() {
 	r.drivers = make(map[uuid.UUID]*models.DriverInfo)
 }
 
-func (r *MemVehicleRepo) GetOrgVehicles(ctx context.Context, orgID uuid.UUID) ([]VehicleRecord, error) {
+func (r *MemVehicleRepo) GetOrgVehicles(ctx context.Context, tenantID uuid.UUID) ([]VehicleRecord, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	var out []VehicleRecord
@@ -86,7 +86,7 @@ type MemLiveCache struct {
 }
 
 type PublishedMsg struct {
-	OrgID   uuid.UUID
+	TenantID   uuid.UUID
 	Payload []byte
 }
 
@@ -125,10 +125,10 @@ func (r *MemLiveCache) GetBatchLiveLocations(ctx context.Context, ids []uuid.UUI
 	return result, nil
 }
 
-func (r *MemLiveCache) PublishPositionUpdate(ctx context.Context, orgID uuid.UUID, msg []byte) error {
+func (r *MemLiveCache) PublishPositionUpdate(ctx context.Context, tenantID uuid.UUID, msg []byte) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.published = append(r.published, PublishedMsg{OrgID: orgID, Payload: msg})
+	r.published = append(r.published, PublishedMsg{TenantID: tenantID, Payload: msg})
 	return nil
 }
 
@@ -245,12 +245,12 @@ func (r *MemGeofenceRepo) AddGeofence(g models.Geofence) {
 	r.geofences = append(r.geofences, g)
 }
 
-func (r *MemGeofenceRepo) GetOrgGeofences(ctx context.Context, orgID uuid.UUID) ([]models.Geofence, error) {
+func (r *MemGeofenceRepo) GetOrgGeofences(ctx context.Context, tenantID uuid.UUID) ([]models.Geofence, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	var out []models.Geofence
 	for _, g := range r.geofences {
-		if g.OrgID == orgID {
+		if g.TenantID == tenantID {
 			out = append(out, g)
 		}
 	}
@@ -264,13 +264,13 @@ func (r *MemGeofenceRepo) CreateGeofence(ctx context.Context, g *models.Geofence
 	return nil
 }
 
-func (r *MemGeofenceRepo) CheckPointInGeofences(ctx context.Context, orgID uuid.UUID, lat, lng float64) ([]models.Geofence, error) {
+func (r *MemGeofenceRepo) CheckPointInGeofences(ctx context.Context, tenantID uuid.UUID, lat, lng float64) ([]models.Geofence, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	// Simplified: for unit testing, return geofences that match org
 	var out []models.Geofence
 	for _, g := range r.geofences {
-		if g.OrgID != orgID {
+		if g.TenantID != tenantID {
 			continue
 		}
 		// Circle: check distance
@@ -317,23 +317,23 @@ func (r *MemGeofenceRepo) Clear() {
 // MemTenantChecker is an in-memory tenant checker for testing.
 type MemTenantChecker struct {
 	mu        sync.RWMutex
-	membership map[string]bool // "orgID:vehicleID" -> belongs
+	membership map[string]bool // "tenantID:vehicleID" -> belongs
 }
 
 func NewMemTenantChecker() *MemTenantChecker {
 	return &MemTenantChecker{membership: make(map[string]bool)}
 }
 
-func (t *MemTenantChecker) AddMembership(orgID, vehicleID uuid.UUID) {
+func (t *MemTenantChecker) AddMembership(tenantID, vehicleID uuid.UUID) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.membership[orgID.String()+":"+vehicleID.String()] = true
+	t.membership[tenantID.String()+":"+vehicleID.String()] = true
 }
 
-func (t *MemTenantChecker) VehicleBelongsToOrg(ctx context.Context, orgID, vehicleID uuid.UUID) (bool, error) {
+func (t *MemTenantChecker) VehicleBelongsToOrg(ctx context.Context, tenantID, vehicleID uuid.UUID) (bool, error) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	return t.membership[orgID.String()+":"+vehicleID.String()], nil
+	return t.membership[tenantID.String()+":"+vehicleID.String()], nil
 }
 
 func haversineKmTest(lat1, lng1, lat2, lng2 float64) float64 {

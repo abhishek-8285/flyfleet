@@ -49,8 +49,8 @@ func (m *MockEmergencyRepo) LogTimelineEvent(ctx context.Context, event *models.
 	return args.Error(0)
 }
 
-func (m *MockEmergencyRepo) GetActiveIncidentsByOrg(ctx context.Context, orgID uuid.UUID) ([]models.SOSIncident, error) {
-	args := m.Called(ctx, orgID)
+func (m *MockEmergencyRepo) GetActiveIncidentsByOrg(ctx context.Context, tenantID uuid.UUID) ([]models.SOSIncident, error) {
+	args := m.Called(ctx, tenantID)
 	return args.Get(0).([]models.SOSIncident), args.Error(1)
 }
 
@@ -72,8 +72,8 @@ func (m *MockEmergencyRepo) GetRecentSOSByVehicle(ctx context.Context, vehicleID
 	return args.Get(0).(*models.SOSIncident), args.Error(1)
 }
 
-func (m *MockEmergencyRepo) GetIncidentMetrics(ctx context.Context, orgID uuid.UUID, start, end time.Time) (*repository.IncidentMetrics, error) {
-	args := m.Called(ctx, orgID, start, end)
+func (m *MockEmergencyRepo) GetIncidentMetrics(ctx context.Context, tenantID uuid.UUID, start, end time.Time) (*repository.IncidentMetrics, error) {
+	args := m.Called(ctx, tenantID, start, end)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -92,16 +92,16 @@ func (m *MockEmergencyRepo) UpdateEscalationStatus(ctx context.Context, id uuid.
 func (m *MockEmergencyRepo) CreateContact(ctx context.Context, contact *models.EmergencyContact) error {
 	return nil
 }
-func (m *MockEmergencyRepo) ListContacts(ctx context.Context, orgID uuid.UUID) ([]models.EmergencyContact, error) {
+func (m *MockEmergencyRepo) ListContacts(ctx context.Context, tenantID uuid.UUID) ([]models.EmergencyContact, error) {
 	return nil, nil
 }
 func (m *MockEmergencyRepo) CreateResponseUnit(ctx context.Context, unit *models.EmergencyResponseUnit) error {
 	return nil
 }
-func (m *MockEmergencyRepo) ListResponseUnits(ctx context.Context, orgID uuid.UUID) ([]models.EmergencyResponseUnit, error) {
+func (m *MockEmergencyRepo) ListResponseUnits(ctx context.Context, tenantID uuid.UUID) ([]models.EmergencyResponseUnit, error) {
 	return nil, nil
 }
-func (m *MockEmergencyRepo) UpdateVehicleHaltState(ctx context.Context, vehicleID, orgID uuid.UUID, halted bool) error {
+func (m *MockEmergencyRepo) UpdateVehicleHaltState(ctx context.Context, vehicleID, tenantID uuid.UUID, halted bool) error {
 	return nil
 }
 func (m *MockEmergencyRepo) GetVehicleHaltState(ctx context.Context, vehicleID uuid.UUID) (bool, error) {
@@ -113,13 +113,13 @@ func (m *MockEmergencyRepo) GetMediaByIncident(ctx context.Context, id uuid.UUID
 func (m *MockEmergencyRepo) GetVehicleSnapshot(ctx context.Context, id uuid.UUID) (*models.IncidentVehicleSnapshot, error) {
 	return nil, nil
 }
-func (m *MockEmergencyRepo) GetIncidentsByDay(ctx context.Context, orgID uuid.UUID, days int) ([]models.DailyIncidentCount, error) {
+func (m *MockEmergencyRepo) GetIncidentsByDay(ctx context.Context, tenantID uuid.UUID, days int) ([]models.DailyIncidentCount, error) {
 	return nil, nil
 }
-func (m *MockEmergencyRepo) GetIncidentTypeDistribution(ctx context.Context, orgID uuid.UUID) ([]models.IncidentTypeCount, error) {
+func (m *MockEmergencyRepo) GetIncidentTypeDistribution(ctx context.Context, tenantID uuid.UUID) ([]models.IncidentTypeCount, error) {
 	return nil, nil
 }
-func (m *MockEmergencyRepo) GetVehicleSafetyScores(ctx context.Context, orgID uuid.UUID) ([]models.VehicleSafetyScore, error) {
+func (m *MockEmergencyRepo) GetVehicleSafetyScores(ctx context.Context, tenantID uuid.UUID) ([]models.VehicleSafetyScore, error) {
 	return nil, nil
 }
 func (m *MockEmergencyRepo) ArchiveOldSnapshots(ctx context.Context, olderThan time.Time) (int64, error) {
@@ -128,8 +128,8 @@ func (m *MockEmergencyRepo) ArchiveOldSnapshots(ctx context.Context, olderThan t
 func (m *MockEmergencyRepo) ArchiveOldIncidents(ctx context.Context, olderThan time.Time) (int64, error) {
 	return 0, nil
 }
-func (m *MockEmergencyRepo) GetEmergencyContacts(ctx context.Context, orgID uuid.UUID) ([]models.EmergencyContact, error) {
-	args := m.Called(ctx, orgID)
+func (m *MockEmergencyRepo) GetEmergencyContacts(ctx context.Context, tenantID uuid.UUID) ([]models.EmergencyContact, error) {
+	args := m.Called(ctx, tenantID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -148,10 +148,10 @@ func (m *MockEmergencyRepo) RecordContactNotification(ctx context.Context, incid
 func (m *MockEmergencyRepo) UpdateContactResponse(ctx context.Context, incidentID, contactID uuid.UUID, status, notes string) error {
 	return nil
 }
-func (m *MockEmergencyRepo) GetTopLocations(ctx context.Context, orgID uuid.UUID, limit int) ([]string, error) {
+func (m *MockEmergencyRepo) GetTopLocations(ctx context.Context, tenantID uuid.UUID, limit int) ([]string, error) {
 	return nil, nil
 }
-func (m *MockEmergencyRepo) GetIncidentsCount(ctx context.Context, orgID uuid.UUID, since time.Time) (int, error) {
+func (m *MockEmergencyRepo) GetIncidentsCount(ctx context.Context, tenantID uuid.UUID, since time.Time) (int, error) {
 	return 0, nil
 }
 func (m *MockEmergencyRepo) GetStalledIncidents(ctx context.Context, stalledFor time.Duration) ([]models.SOSIncident, error) {
@@ -205,7 +205,7 @@ func (m *MockTrackingRepo) SetLiveLocation(ctx context.Context, loc *trackingMod
 	return nil
 }
 
-func TestEmergencyService_OrgIDIsolation(t *testing.T) {
+func TestEmergencyService_TenantIDIsolation(t *testing.T) {
 	mr, _ := miniredis.Run()
 	defer mr.Close()
 	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
@@ -222,13 +222,13 @@ func TestEmergencyService_OrgIDIsolation(t *testing.T) {
 
 	incident := &models.SOSIncident{
 		ID:     incidentID,
-		OrgID:  orgA,
+		TenantID:  orgA,
 		Status: models.StatusTriggered,
 	}
 
 	repo.On("GetIncidentByID", mock.Anything, incidentID).Return(incident, nil)
 
-	t.Run("Acknowledge with correct OrgID", func(t *testing.T) {
+	t.Run("Acknowledge with correct TenantID", func(t *testing.T) {
 		repo.On("UpdateIncidentStatus", mock.Anything, incidentID, models.StatusAcknowledged, mock.Anything).Return(nil)
 		repo.On("LogTimelineEvent", mock.Anything, mock.Anything).Return(nil)
 		repo.On("LogIncidentAction", mock.Anything, mock.Anything).Return(nil)
@@ -237,7 +237,7 @@ func TestEmergencyService_OrgIDIsolation(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("Acknowledge with wrong OrgID should fail", func(t *testing.T) {
+	t.Run("Acknowledge with wrong TenantID should fail", func(t *testing.T) {
 		err := svc.AcknowledgeIncident(context.Background(), incidentID, orgB, userID, "Hack attempt")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unauthorized")
@@ -254,7 +254,7 @@ func TestEmergencyService_SimulationMode(t *testing.T) {
 	logger := zap.NewNop()
 	svc := service.NewEmergencyService(repo, trackingRepo, nil, rdb, logger, nil, nil, nil, nil, nil)
 
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	vehicleID := uuid.New()
 
 	repo.On("GetRecentSOSByVehicle", mock.Anything, vehicleID, mock.Anything, mock.Anything).Return(nil, nil)
@@ -267,7 +267,7 @@ func TestEmergencyService_SimulationMode(t *testing.T) {
 
 	req := models.CreateSOSRequest{
 		VehicleID:    vehicleID.String(),
-		OrgID:        orgID,
+		TenantID:        tenantID,
 		IncidentType: models.TypePanic,
 		Latitude:     19.0,
 		Longitude:    72.0,

@@ -5,14 +5,13 @@ import (
 	"net/http"
 
 	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
-	iamCtx "github.com/flyfleet/fleet-core/internal/platform/iam/middleware"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
-// TenantContextMiddleware extracts org_id from the context (set by Auth middleware)
+// TenantContextMiddleware extracts tenant_id from the context (set by Auth middleware)
 // and ensures it is properly formatted and available for Repository RLS enforcement.
-// SECURITY: This middleware ONLY uses org_id from the authenticated JWT token.
+// SECURITY: This middleware ONLY uses tenant_id from the authenticated JWT token.
 // Client-supplied headers like X-Organization-ID are IGNORED to prevent spoofing.
 // Super_admin users bypass tenant isolation for system-wide access.
 func TenantContextMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
@@ -26,20 +25,26 @@ func TenantContextMiddleware(logger *zap.Logger) func(http.Handler) http.Handler
 				return
 			}
 
-			// Extract OrgID from context (set by JWKSAuthGate)
-			orgID, ok := ctx.Value(iamCtx.OrgIDKey).(uuid.UUID)
-			if !ok {
-				// Fallback to legacy string if needed
-				if orgIDStr, ok := ctx.Value(ctxkeys.OrgIDKey).(string); ok {
-					if id, err := uuid.Parse(orgIDStr); err == nil {
-						orgID = id
+			// Extract TenantID from context (set by JWKSAuthGate)
+			var tenantID uuid.UUID
+			var ok bool
+
+			if tenantIDVal := ctx.Value(ctxkeys.TenantIDKey); tenantIDVal != nil {
+				// Try as string first (standard in jwks_auth)
+				if tenantIDStr, isStr := tenantIDVal.(string); isStr {
+					if id, err := uuid.Parse(tenantIDStr); err == nil {
+						tenantID = id
 						ok = true
 					}
+				} else if id, isUUID := tenantIDVal.(uuid.UUID); isUUID {
+					// Fallback for types that store as UUID
+					tenantID = id
+					ok = true
 				}
 			}
 
 			if !ok {
-				// OrgID is required for all protected routes - fail securely
+				// TenantID is required for all protected routes - fail securely
 				logger.Warn("tenant context missing for authenticated request",
 					zap.String("path", r.URL.Path),
 					zap.String("method", r.Method))
@@ -48,8 +53,8 @@ func TenantContextMiddleware(logger *zap.Logger) func(http.Handler) http.Handler
 			}
 
 			// Ensure it's available in both formats for wide compatibility
-			ctx = context.WithValue(ctx, ctxkeys.OrgIDKey, orgID.String())
-			ctx = context.WithValue(ctx, iamCtx.OrgIDKey, orgID)
+			// Ensure it's available in standard string format for wide compatibility
+			ctx = context.WithValue(ctx, ctxkeys.TenantIDKey, tenantID.String())
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
@@ -59,14 +64,14 @@ func TenantContextMiddleware(logger *zap.Logger) func(http.Handler) http.Handler
 // GetOrganizationID retrieves the organization ID from the context.
 // Returns uuid.Nil if not found.
 func GetOrganizationID(ctx context.Context) uuid.UUID {
-	// Try the IAM context key first
-	if orgID, ok := ctx.Value(iamCtx.OrgIDKey).(uuid.UUID); ok {
-		return orgID
-	}
-	// Fallback to legacy string format
-	if orgIDStr, ok := ctx.Value(ctxkeys.OrgIDKey).(string); ok {
-		if id, err := uuid.Parse(orgIDStr); err == nil {
+	if tenantIDVal := ctx.Value(ctxkeys.TenantIDKey); tenantIDVal != nil {
+		if id, ok := tenantIDVal.(uuid.UUID); ok {
 			return id
+		}
+		if idStr, ok := tenantIDVal.(string); ok {
+			if id, err := uuid.Parse(idStr); err == nil {
+				return id
+			}
 		}
 	}
 	return uuid.Nil

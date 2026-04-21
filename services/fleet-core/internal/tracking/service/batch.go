@@ -42,9 +42,9 @@ func NewBatchLocationService(
 // GetAllOrgLocations returns enriched live positions for every active
 // vehicle in the organization. Redis cache is tried first; misses fall
 // back to TimescaleDB.
-func (s *BatchLocationService) GetAllOrgLocations(ctx context.Context, orgID uuid.UUID) ([]models.VehicleLocationResponse, error) {
+func (s *BatchLocationService) GetAllOrgLocations(ctx context.Context, tenantID uuid.UUID) ([]models.VehicleLocationResponse, error) {
 	// 1. Get all org vehicles
-	vehicles, err := s.vehicleRepo.GetOrgVehicles(ctx, orgID)
+	vehicles, err := s.vehicleRepo.GetOrgVehicles(ctx, tenantID)
 	if err != nil {
 		return nil, fmt.Errorf("get org vehicles: %w", err)
 	}
@@ -172,13 +172,13 @@ func (s *BatchLocationService) GetAllOrgLocations(ctx context.Context, orgID uui
 // Filters are applied in-memory since the dataset is small (<500 items).
 func (s *BatchLocationService) GetFilteredOrgLocations(
 	ctx context.Context,
-	orgID uuid.UUID,
+	tenantID uuid.UUID,
 	statusFilter string, // "" = all, or "moving"/"idle"/"stopped"/"offline"
 	driverID uuid.UUID,  // uuid.Nil = all
 	search string,       // "" = no search
 ) ([]models.VehicleLocationResponse, error) {
 	// Get all locations using existing logic
-	all, err := s.GetAllOrgLocations(ctx, orgID)
+	all, err := s.GetAllOrgLocations(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}

@@ -37,7 +37,7 @@ type ExpiringDocument struct {
 }
 
 // GetExpiringDocuments retrieves documents expiring within the specified days
-func (s *DocumentExpiryService) GetExpiringDocuments(ctx context.Context, orgID string, days int) ([]ExpiringDocument, error) {
+func (s *DocumentExpiryService) GetExpiringDocuments(ctx context.Context, tenantID string, days int) ([]ExpiringDocument, error) {
 	if days <= 0 {
 		days = 30 // Default to 30 days
 	}
@@ -63,7 +63,7 @@ func (s *DocumentExpiryService) GetExpiringDocuments(ctx context.Context, orgID 
 }
 
 // GetExpiredDocuments retrieves all expired documents
-func (s *DocumentExpiryService) GetExpiredDocuments(ctx context.Context, orgID string) ([]ExpiringDocument, error) {
+func (s *DocumentExpiryService) GetExpiredDocuments(ctx context.Context, tenantID string) ([]ExpiringDocument, error) {
 	// Get all drivers in organization with expired documents
 	var expiredDocs []ExpiringDocument
 
@@ -170,8 +170,8 @@ func (s *DocumentExpiryService) VerifyDocument(ctx context.Context, driverID, do
 }
 
 // SendExpiryNotifications sends notifications for expiring documents
-func (s *DocumentExpiryService) SendExpiryNotifications(ctx context.Context, orgID string, warningDays int) (int, error) {
-	expiringDocs, err := s.GetExpiringDocuments(ctx, orgID, warningDays)
+func (s *DocumentExpiryService) SendExpiryNotifications(ctx context.Context, tenantID string, warningDays int) (int, error) {
+	expiringDocs, err := s.GetExpiringDocuments(ctx, tenantID, warningDays)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get expiring documents: %w", err)
 	}
@@ -205,7 +205,7 @@ func (s *DocumentExpiryService) SendExpiryNotifications(ctx context.Context, org
 }
 
 // GetDocumentComplianceRate calculates document compliance rate for organization
-func (s *DocumentExpiryService) GetDocumentComplianceRate(ctx context.Context, orgID string) (float64, error) {
+func (s *DocumentExpiryService) GetDocumentComplianceRate(ctx context.Context, tenantID string) (float64, error) {
 	// Get all drivers in organization
 	// Count total documents and valid documents
 	// Calculate compliance rate

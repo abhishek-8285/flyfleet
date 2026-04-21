@@ -97,8 +97,8 @@ func propagateIdentityHeaders(outgoing *http.Request, incoming *http.Request) {
 	}
 
 	if outgoing.Header.Get("X-Organization-ID") == "" {
-		if orgID, ok := claims["org_id"].(string); ok && strings.TrimSpace(orgID) != "" {
-			outgoing.Header.Set("X-Organization-ID", orgID)
+		if tenantID, ok := claims["tenant_id"].(string); ok && strings.TrimSpace(tenantID) != "" {
+			outgoing.Header.Set("X-Organization-ID", tenantID)
 		}
 	}
 

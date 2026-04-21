@@ -15,14 +15,14 @@ import (
 
 func TestDeviceCommand_Lifecycle(t *testing.T) {
 	ctx := context.Background()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 	deviceID := uuid.New()
 	cmdID := uuid.New()
 
 	// 1. Setup Device first to satisfy FK
 	device := &models.Device{
 		ID:         deviceID,
-		OrgID:      orgID,
+		TenantID:      tenantID,
 		DeviceIMEI: ptr("command-test-imei"),
 		Status:     ptr("ACTIVE"),
 	}

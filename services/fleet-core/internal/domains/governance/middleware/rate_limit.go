@@ -16,7 +16,7 @@ func DSARRateLimit(rdb *redis.Client, nc *nats.Conn, logger *zap.Logger) func(ht
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			userIDStr := r.Header.Get("X-User-ID")
-			orgIDStr := r.Header.Get("X-Organization-ID")
+			tenantIDStr := r.Header.Get("X-Organization-ID")
 			if userIDStr == "" || rdb == nil {
 				next.ServeHTTP(w, r)
 				return
@@ -40,7 +40,7 @@ func DSARRateLimit(rdb *redis.Client, nc *nats.Conn, logger *zap.Logger) func(ht
 				// Publish Security Alert for DSAR Abuse
 				payload, _ := json.Marshal(map[string]interface{}{
 					"alert_type":      "DSAR_ABUSE_DETECTED",
-					"tenant_id": orgIDStr,
+					"tenant_id": tenantIDStr,
 					"user_id":         userIDStr,
 					"timestamp":       time.Now().Unix(),
 				})

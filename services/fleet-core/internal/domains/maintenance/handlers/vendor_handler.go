@@ -38,11 +38,11 @@ func (h *VendorHandler) RegisterRoutes(r chi.Router) {
 }
 
 func (h *VendorHandler) ListVendors(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 	search := r.URL.Query().Get("search")
 	specialization := r.URL.Query().Get("specialization")
 
-	vendors, err := h.repo.List(r.Context(), orgID, search, specialization)
+	vendors, err := h.repo.List(r.Context(), tenantID, search, specialization)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -52,14 +52,14 @@ func (h *VendorHandler) ListVendors(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *VendorHandler) CreateVendor(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
+	tenantID := h.getTenantID(r)
 
 	var vendor models.MaintenanceVendor
 	if err := json.NewDecoder(r.Body).Decode(&vendor); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	vendor.OrgID = orgID
+	vendor.TenantID = tenantID
 
 	if err := h.repo.Create(r.Context(), &vendor); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -137,10 +137,10 @@ func (h *VendorHandler) writeErrorResponse(w http.ResponseWriter, statusCode int
 	h.writeJSONResponse(w, statusCode, map[string]string{"error": message})
 }
 
-func (h *VendorHandler) getOrgID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
-		if orgIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(orgIDStr); err == nil {
+func (h *VendorHandler) getTenantID(r *http.Request) uuid.UUID {
+	if val := r.Context().Value(middleware.TenantIDKey); val != nil {
+		if tenantIDStr, ok := val.(string); ok {
+			if id, err := uuid.Parse(tenantIDStr); err == nil {
 				return id
 			}
 		}

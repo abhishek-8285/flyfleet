@@ -44,8 +44,8 @@ func (h *ComplianceHandlers) VerifyCompliance(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	orgID := h.getTenantID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeError(w, http.StatusUnauthorized, "Organization ID required")
 		return
 	}
@@ -56,7 +56,7 @@ func (h *ComplianceHandlers) VerifyCompliance(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	comp, status, err := h.compSvc.VerifyCompliance(r.Context(), vehicleID, orgID, &req)
+	comp, status, err := h.compSvc.VerifyCompliance(r.Context(), vehicleID, tenantID, &req)
 	if err != nil {
 		if err.Error() == "vehicle not found" {
 			h.writeError(w, http.StatusNotFound, "Vehicle not found")
@@ -81,13 +81,13 @@ func (h *ComplianceHandlers) GetCompliance(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	orgID := h.getTenantID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeError(w, http.StatusUnauthorized, "Organization ID required")
 		return
 	}
 
-	comp, status, err := h.compSvc.GetCompliance(r.Context(), vehicleID, orgID)
+	comp, status, err := h.compSvc.GetCompliance(r.Context(), vehicleID, tenantID)
 	if err != nil {
 		h.logger.Error("get compliance failed", zap.Error(err))
 		h.writeError(w, http.StatusInternalServerError, "Failed to get compliance")
@@ -140,7 +140,7 @@ func (h *ComplianceHandlers) writeError(w http.ResponseWriter, code int, msg str
 }
 
 func (h *ComplianceHandlers) getTenantID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
+	if val := r.Context().Value(middleware.TenantIDKey); val != nil {
 		if s, ok := val.(string); ok {
 			if id, err := uuid.Parse(s); err == nil {
 				return id

@@ -44,16 +44,14 @@ func RequireRole(logger *zap.Logger, requiredRoles ...string) func(http.Handler)
 func RequirePermissions(logger *zap.Logger, required ...permissions.Permission) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			maskFloat, ok := r.Context().Value(ctxkeys.PermissionMaskKey).(float64)
 			var userMask permissions.Permission = 0
-			if ok {
-				userMask = permissions.Permission(maskFloat)
-			} else {
-				// Also handle natively parsed uint64 if the JWT middleware passes it that way
-				maskInt, okInt := r.Context().Value(ctxkeys.PermissionMaskKey).(uint64)
-				if okInt {
-					userMask = permissions.Permission(maskInt)
-				}
+			switch mask := r.Context().Value(ctxkeys.PermissionMaskKey).(type) {
+			case uint64:
+				userMask = permissions.Permission(mask)
+			case int64:
+				userMask = permissions.Permission(mask)
+			case float64:
+				userMask = permissions.Permission(uint64(mask))
 			}
 
 			// Deny access if mask is completely missing or empty

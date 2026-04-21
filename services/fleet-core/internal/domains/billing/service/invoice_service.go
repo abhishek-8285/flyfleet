@@ -53,7 +53,7 @@ func NewInvoiceService(
 	logger *zap.Logger,
 ) (*InvoiceService, error) {
 	// Create PDF generator
-	pdfGenerator := pdf.NewPDFGenerator(cfg.ChromeTimeout)
+	pdfGenerator := pdf.NewPDFGenerator(cfg.ChromeTimeout, cfg.ChromePath)
 	pdfService := pdf.NewInvoiceService(pdfGenerator)
 
 	// Create cache
@@ -137,7 +137,7 @@ func (s *InvoiceService) PreviewRender(ctx context.Context, htmlContent string, 
 	}
 
 	// 5. Generate PDF
-	pdfGenerator := pdf.NewPDFGenerator(15 * time.Second) // Fast timeout for preview
+	pdfGenerator := pdf.NewPDFGenerator(15*time.Second, "") // Fast timeout for preview, uses discovery
 	return pdfGenerator.GenerateFromHTML(ctx, buf.String(), pdf.DefaultA4Portrait())
 }
 
@@ -191,7 +191,7 @@ func (s *InvoiceService) GetOrGeneratePDF(ctx context.Context, invoice *models.I
 	}
 
 	// Fetch Billing Settings for branding and company info
-	settings, err := s.repo.GetSettings(ctx, invoiceWithItems.OrgID)
+	settings, err := s.repo.GetSettings(ctx, invoiceWithItems.TenantID)
 	if err != nil {
 		s.logger.Warn("Failed to fetch billing settings, using defaults", zap.Error(err))
 	}

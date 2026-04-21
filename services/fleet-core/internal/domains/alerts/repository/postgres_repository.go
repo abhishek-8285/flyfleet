@@ -125,13 +125,13 @@ func (r *postgresRepository) ListPendingLogs(ctx context.Context, limit int) ([]
 	return logs, nil
 }
 
-func (r *postgresRepository) GetTemplate(ctx context.Context, name string, channel models.Channel, language string, orgID uuid.UUID) (*models.Template, error) {
+func (r *postgresRepository) GetTemplate(ctx context.Context, name string, channel models.Channel, language string, tenantID uuid.UUID) (*models.Template, error) {
 	query := `
 		SELECT id, name, channel, language, subject, body, metadata, organization_id, created_at, updated_at
 		FROM alerts_v2_templates
 		WHERE name = $1 AND channel = $2 AND language = $3 AND organization_id = $4
 	`
-	row := r.db.QueryRowContext(ctx, query, name, channel, language, orgID)
+	row := r.db.QueryRowContext(ctx, query, name, channel, language, tenantID)
 	var t models.Template
 	var metadataJSON []byte
 	err := row.Scan(&t.ID, &t.Name, &t.Channel, &t.Language, &t.Subject, &t.Body, &metadataJSON, &t.OrganizationID, &t.CreatedAt, &t.UpdatedAt)
@@ -163,9 +163,9 @@ func (r *postgresRepository) CreateTemplate(ctx context.Context, t *models.Templ
 	return err
 }
 
-func (r *postgresRepository) GetUserPreferences(ctx context.Context, userID, orgID uuid.UUID) ([]models.UserPreference, error) {
+func (r *postgresRepository) GetUserPreferences(ctx context.Context, userID, tenantID uuid.UUID) ([]models.UserPreference, error) {
 	query := `SELECT user_id, organization_id, channel, enabled, updated_at FROM alerts_v2_user_preferences WHERE user_id = $1 AND organization_id = $2`
-	rows, err := r.db.QueryContext(ctx, query, userID, orgID)
+	rows, err := r.db.QueryContext(ctx, query, userID, tenantID)
 	if err != nil {
 		return nil, err
 	}

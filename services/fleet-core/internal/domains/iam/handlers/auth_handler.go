@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
+	"strings"
+	"time"
 
 	"github.com/flyfleet/fleet-core/internal/domains/iam/models"
 	"github.com/flyfleet/fleet-core/internal/domains/iam/service"
@@ -25,6 +28,35 @@ func NewAuthHandler(authSvc authService, passwordSvc passwordService, log *zap.L
 		passwordSvc: passwordSvc,
 		log:         log,
 	}
+}
+
+func shouldUseSecureCookies(r *http.Request) bool {
+	isLocalhost := strings.HasPrefix(r.Host, "localhost") || strings.HasPrefix(r.Host, "127.0.0.1")
+	return (os.Getenv("ENVIRONMENT") == "production" || os.Getenv("SECURE_COOKIES") == "true") && !isLocalhost
+}
+
+func setRefreshCookie(w http.ResponseWriter, r *http.Request, refreshToken string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   shouldUseSecureCookies(r),
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Now().Add(7 * 24 * time.Hour),
+	})
+}
+
+func clearRefreshCookie(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   shouldUseSecureCookies(r),
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Now().Add(-1 * time.Hour),
+	})
 }
 
 // Identify checks if a user exists and returns org info + MFA status.
@@ -89,6 +121,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	setRefreshCookie(w, r, tokens.RefreshToken)
 	h.writeJSON(w, http.StatusOK, tokens)
 }
 
@@ -123,6 +156,7 @@ func (h *AuthHandler) VerifyMFA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	setRefreshCookie(w, r, tokens.RefreshToken)
 	h.writeJSON(w, http.StatusOK, tokens)
 }
 
@@ -130,9 +164,13 @@ func (h *AuthHandler) VerifyMFA(w http.ResponseWriter, r *http.Request) {
 // POST /api/v1/auth/refresh
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	var req models.RefreshRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid_request", "Request body must be valid JSON", r)
-		return
+	if cookie, err := r.Cookie("refresh_token"); err == nil && cookie.Value != "" {
+		req.RefreshToken = cookie.Value
+	} else {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			h.writeError(w, http.StatusBadRequest, "invalid_request", "Request body must be valid JSON", r)
+			return
+		}
 	}
 
 	if req.RefreshToken == "" {
@@ -147,6 +185,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case err.Error() == "invalid_token" || err.Error() == "invalid_token_type":
+			clearRefreshCookie(w, r)
 			h.writeError(w, http.StatusUnauthorized, "invalid_token", "Invalid or expired refresh token", r)
 		case errors.Is(err, service.ErrAccountLocked):
 			h.writeError(w, http.StatusForbidden, "account_locked", "Account is locked", r)
@@ -157,6 +196,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	setRefreshCookie(w, r, resp.RefreshToken)
 	h.writeJSON(w, http.StatusOK, resp)
 }
 
@@ -212,8 +252,8 @@ func (h *AuthHandler) GetPolicy(w http.ResponseWriter, r *http.Request) {
 // SwitchOrg switches the user's active organization.
 // POST /api/v1/auth/orgs/{orgId}/switch
 func (h *AuthHandler) SwitchOrg(w http.ResponseWriter, r *http.Request) {
-	orgIDStr := chi.URLParam(r, "orgId")
-	if orgIDStr == "" {
+	tenantIDStr := chi.URLParam(r, "orgId")
+	if tenantIDStr == "" {
 		h.writeError(w, http.StatusBadRequest, "missing_org", "Organization ID is required", r)
 		return
 	}
@@ -224,13 +264,13 @@ func (h *AuthHandler) SwitchOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID, err := uuid.Parse(orgIDStr)
+	tenantID, err := uuid.Parse(tenantIDStr)
 	if err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid_org_id", "Invalid organization ID", r)
+		h.writeError(w, http.StatusBadRequest, "invalid_tenant_id", "Invalid organization ID", r)
 		return
 	}
 
-	resp, err := h.authSvc.SwitchOrg(r.Context(), userID, orgID, r.RemoteAddr, r.UserAgent())
+	resp, err := h.authSvc.SwitchOrg(r.Context(), userID, tenantID, r.RemoteAddr, r.UserAgent())
 	if err != nil {
 		switch {
 		case err.Error() == "org_switch_failed":
@@ -252,7 +292,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 		Name     string `json:"name"`
-		OrgID    string `json:"tenant_id,omitempty"`
+		TenantID    string `json:"tenant_id,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.writeError(w, http.StatusBadRequest, "invalid_request", "Request body must be valid JSON", r)
@@ -264,17 +304,17 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var orgID uuid.UUID
-	if req.OrgID != "" {
+	var tenantID uuid.UUID
+	if req.TenantID != "" {
 		var err error
-		orgID, err = uuid.Parse(req.OrgID)
+		tenantID, err = uuid.Parse(req.TenantID)
 		if err != nil {
-			h.writeError(w, http.StatusBadRequest, "invalid_org_id", "Invalid organization ID", r)
+			h.writeError(w, http.StatusBadRequest, "invalid_tenant_id", "Invalid organization ID", r)
 			return
 		}
 	}
 
-	tokens, err := h.authSvc.Register(r.Context(), req.Email, req.Password, req.Name, orgID)
+	tokens, err := h.authSvc.Register(r.Context(), req.Email, req.Password, req.Name, tenantID)
 	if err != nil {
 		switch {
 		case err.Error() == "email_already_exists":
@@ -306,6 +346,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	clearRefreshCookie(w, r)
 	h.writeJSON(w, http.StatusOK, map[string]string{"message": "logged_out"})
 }
 
@@ -375,6 +416,46 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.writeJSON(w, http.StatusOK, map[string]string{"message": "password_reset"})
+}
+
+// ResetPasswordForced resets a user's password when they are forced to do so.
+// POST /api/v1/auth/reset-password-forced
+func (h *AuthHandler) ResetPasswordForced(w http.ResponseWriter, r *http.Request) {
+	userID := GetUserIDUUID(r)
+	if userID.String() == "00000000-0000-0000-0000-000000000000" {
+		h.writeError(w, http.StatusUnauthorized, "unauthenticated", "Authentication required", r)
+		return
+	}
+
+	var req models.ForcedResetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.writeError(w, http.StatusBadRequest, "invalid_request", "Request body must be valid JSON", r)
+		return
+	}
+
+	if req.NewPassword == "" {
+		h.writeError(w, http.StatusBadRequest, "missing_password", "new_password is required", r)
+		return
+	}
+
+	if err := h.authSvc.ResetPasswordForced(r.Context(), userID, req.NewPassword); err != nil {
+		switch {
+		case errors.Is(err, service.ErrPasswordTooShort),
+			errors.Is(err, service.ErrPasswordNoUpper),
+			errors.Is(err, service.ErrPasswordNoLower),
+			errors.Is(err, service.ErrPasswordNoDigit),
+			errors.Is(err, service.ErrPasswordNoSpecial):
+			h.writeError(w, http.StatusBadRequest, "password_too_weak", "Password does not meet policy requirements", r)
+		case errors.Is(err, service.ErrPasswordReused):
+			h.writeError(w, http.StatusBadRequest, "password_reused", "Password was recently used", r)
+		default:
+			h.log.Error("forced password reset failed", zap.Error(err), zap.String("user_id", userID.String()))
+			h.writeError(w, http.StatusInternalServerError, "internal_error", "An internal error occurred", r)
+		}
+		return
+	}
+
+	h.writeJSON(w, http.StatusOK, map[string]string{"message": "password_reset_success"})
 }
 
 // ForgotPassword initiates a password reset flow.

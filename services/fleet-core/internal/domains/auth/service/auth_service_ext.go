@@ -17,8 +17,8 @@ func (s *AuthService) GetOrganizationByID(ctx context.Context, id uuid.UUID) (in
 	return nil, nil // Implement with org repository
 }
 
-func (s *AuthService) GetUserPermissions(ctx context.Context, userID, orgID uuid.UUID) ([]string, error) {
-	return s.identity.GetUserPermissions(ctx, userID, orgID)
+func (s *AuthService) GetUserPermissions(ctx context.Context, userID, tenantID uuid.UUID) ([]string, error) {
+	return s.identity.GetUserPermissions(ctx, userID, tenantID)
 }
 
 func (s *AuthService) ListOrganizations(ctx context.Context, limit, offset int32) ([]models.Organization, int32, error) {

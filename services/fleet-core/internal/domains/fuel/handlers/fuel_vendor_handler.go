@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/flyfleet/fleet-core/internal/domains/fuel/models"
 	"github.com/flyfleet/fleet-core/internal/domains/fuel/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 )
 
 type FuelVendorHandler struct {
@@ -27,8 +27,8 @@ func (h *FuelVendorHandler) RegisterRoutes(r chi.Router) {
 }
 
 func (h *FuelVendorHandler) CreateVendor(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
 		return
@@ -39,7 +39,7 @@ func (h *FuelVendorHandler) CreateVendor(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	vendor, err := h.svc.CreateVendor(r.Context(), orgID, req)
+	vendor, err := h.svc.CreateVendor(r.Context(), tenantID, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -50,13 +50,13 @@ func (h *FuelVendorHandler) CreateVendor(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *FuelVendorHandler) ListVendors(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
 		return
 	}
-	vendors, err := h.svc.ListVendors(r.Context(), orgID)
+	vendors, err := h.svc.ListVendors(r.Context(), tenantID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -65,16 +65,10 @@ func (h *FuelVendorHandler) ListVendors(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(vendors)
 }
 
-func (h *FuelVendorHandler) getOrgID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
-		if orgIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(orgIDStr); err == nil {
-				return id
-			}
-		}
+func (h *FuelVendorHandler) getTenantID(r *http.Request) uuid.UUID {
+	if id, ok := ctxkeys.GetTenantID(r.Context()); ok {
+		return id
 	}
-	// SECURITY FIX: Removed fallback to X-Organization-ID header to prevent header spoofing
-	// The org ID must come from validated JWT context only
 	h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
 	return uuid.Nil
 }

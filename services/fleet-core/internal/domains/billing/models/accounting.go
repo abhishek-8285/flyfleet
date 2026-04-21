@@ -32,7 +32,7 @@ const (
 
 type AccountingExport struct {
 	ID             uuid.UUID      `json:"id"`
-	OrgID          uuid.UUID      `json:"tenant_id"`
+	TenantID          uuid.UUID      `json:"tenant_id"`
 	ExternalSystem ExternalSystem `json:"external_system"`
 	ExportType     ExportType     `json:"export_type"`
 	Status         ExportStatus   `json:"status"`
@@ -47,6 +47,6 @@ type AccountingExport struct {
 // AccountingExporter defines the interface for specific platform exporters
 type AccountingExporter interface {
 	GetName() ExternalSystem
-	ExportLedger(orgID uuid.UUID, entries []LedgerEntry) ([]byte, string, error)
-	ExportInvoices(orgID uuid.UUID, invoices []Invoice) ([]byte, string, error)
+	ExportLedger(tenantID uuid.UUID, entries []LedgerEntry) ([]byte, string, error)
+	ExportInvoices(tenantID uuid.UUID, invoices []Invoice) ([]byte, string, error)
 }

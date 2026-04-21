@@ -139,9 +139,9 @@ func TestNewResponse_JSONStructure(t *testing.T) {
 
 func TestApplyToQuery(t *testing.T) {
 	p := Params{Page: 3, Limit: 25}
-	q, args := ApplyToQuery("SELECT * FROM drivers WHERE org_id = $1", p, 2)
+	q, args := ApplyToQuery("SELECT * FROM drivers WHERE tenant_id = $1", p, 2)
 
-	expected := "SELECT * FROM drivers WHERE org_id = $1 LIMIT $2 OFFSET $3"
+	expected := "SELECT * FROM drivers WHERE tenant_id = $1 LIMIT $2 OFFSET $3"
 	if q != expected {
 		t.Errorf("query = %q, want %q", q, expected)
 	}

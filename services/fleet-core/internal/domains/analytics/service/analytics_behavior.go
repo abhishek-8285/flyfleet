@@ -40,7 +40,7 @@ func (s *AnalyticsServiceImpl) CreateDriverBehaviorAnalytics(ctx context.Context
 }
 
 // GetDriverBehaviorAnalytics retrieves driver behavior analytics by ID
-func (s *AnalyticsServiceImpl) GetDriverBehaviorAnalytics(ctx context.Context, id string, orgID uuid.UUID) (*models.DriverBehaviorAnalytics, error) {
+func (s *AnalyticsServiceImpl) GetDriverBehaviorAnalytics(ctx context.Context, id string, tenantID uuid.UUID) (*models.DriverBehaviorAnalytics, error) {
 	start := time.Now()
 	var err error
 	var res *models.DriverBehaviorAnalytics
@@ -54,7 +54,7 @@ func (s *AnalyticsServiceImpl) GetDriverBehaviorAnalytics(ctx context.Context, i
 		params := map[string]interface{}{
 			"id": id,
 		}
-		s.logQuery(ctx, orgID, "get_driver_behavior_analytics", params, time.Since(start), rowCount, cacheHit, err)
+		s.logQuery(ctx, tenantID, "get_driver_behavior_analytics", params, time.Since(start), rowCount, cacheHit, err)
 	}()
 
 	if id == "" {
@@ -62,12 +62,12 @@ func (s *AnalyticsServiceImpl) GetDriverBehaviorAnalytics(ctx context.Context, i
 		return nil, err
 	}
 
-	res, err = s.repo.GetDriverBehaviorAnalytics(ctx, id, orgID)
+	res, err = s.repo.GetDriverBehaviorAnalytics(ctx, id, tenantID)
 	return res, err
 }
 
 // GetDriverBehaviorAnalyticsByDriver retrieves driver behavior analytics by driver ID
-func (s *AnalyticsServiceImpl) GetDriverBehaviorAnalyticsByDriver(ctx context.Context, driverID uuid.UUID, orgID uuid.UUID, limit, offset int) ([]*models.DriverBehaviorAnalytics, int, error) {
+func (s *AnalyticsServiceImpl) GetDriverBehaviorAnalyticsByDriver(ctx context.Context, driverID uuid.UUID, tenantID uuid.UUID, limit, offset int) ([]*models.DriverBehaviorAnalytics, int, error) {
 	start := time.Now()
 	var err error
 	var data []*models.DriverBehaviorAnalytics
@@ -81,7 +81,7 @@ func (s *AnalyticsServiceImpl) GetDriverBehaviorAnalyticsByDriver(ctx context.Co
 			"limit":     limit,
 			"offset":    offset,
 		}
-		s.logQuery(ctx, orgID, "get_driver_behavior_by_driver", params, time.Since(start), rowCount, cacheHit, err)
+		s.logQuery(ctx, tenantID, "get_driver_behavior_by_driver", params, time.Since(start), rowCount, cacheHit, err)
 	}()
 
 	if driverID == uuid.Nil {
@@ -98,12 +98,12 @@ func (s *AnalyticsServiceImpl) GetDriverBehaviorAnalyticsByDriver(ctx context.Co
 		offset = 0
 	}
 
-	data, total, err = s.repo.GetDriverBehaviorAnalyticsByDriver(ctx, driverID, orgID, limit, offset)
+	data, total, err = s.repo.GetDriverBehaviorAnalyticsByDriver(ctx, driverID, tenantID, limit, offset)
 	return data, total, err
 }
 
 // GetDriverBehaviorAnalyticsByOrg retrieves driver behavior analytics by organization
-func (s *AnalyticsServiceImpl) GetDriverBehaviorAnalyticsByOrg(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.DriverBehaviorAnalytics, int, error) {
+func (s *AnalyticsServiceImpl) GetDriverBehaviorAnalyticsByOrg(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.DriverBehaviorAnalytics, int, error) {
 	start := time.Now()
 	var err error
 	var data []*models.DriverBehaviorAnalytics
@@ -116,10 +116,10 @@ func (s *AnalyticsServiceImpl) GetDriverBehaviorAnalyticsByOrg(ctx context.Conte
 			"limit":  limit,
 			"offset": offset,
 		}
-		s.logQuery(ctx, orgID, "get_driver_behavior_by_org", params, time.Since(start), rowCount, cacheHit, err)
+		s.logQuery(ctx, tenantID, "get_driver_behavior_by_org", params, time.Since(start), rowCount, cacheHit, err)
 	}()
 
-	if orgID == uuid.Nil {
+	if tenantID == uuid.Nil {
 		err = errors.New("organization ID is required")
 		return nil, 0, err
 	}
@@ -133,12 +133,12 @@ func (s *AnalyticsServiceImpl) GetDriverBehaviorAnalyticsByOrg(ctx context.Conte
 		offset = 0
 	}
 
-	data, total, err = s.repo.GetDriverBehaviorAnalyticsByOrg(ctx, orgID, limit, offset)
+	data, total, err = s.repo.GetDriverBehaviorAnalyticsByOrg(ctx, tenantID, limit, offset)
 	return data, total, err
 }
 
 // UpdateDriverBehaviorAnalytics updates existing driver behavior analytics
-func (s *AnalyticsServiceImpl) UpdateDriverBehaviorAnalytics(ctx context.Context, id string, orgID uuid.UUID, updates map[string]interface{}) error {
+func (s *AnalyticsServiceImpl) UpdateDriverBehaviorAnalytics(ctx context.Context, id string, tenantID uuid.UUID, updates map[string]interface{}) error {
 	if id == "" {
 		return errors.New("ID is required")
 	}
@@ -146,20 +146,20 @@ func (s *AnalyticsServiceImpl) UpdateDriverBehaviorAnalytics(ctx context.Context
 		return errors.New("updates are required")
 	}
 
-	return s.repo.UpdateDriverBehaviorAnalytics(ctx, id, orgID, updates)
+	return s.repo.UpdateDriverBehaviorAnalytics(ctx, id, tenantID, updates)
 }
 
 // DeleteDriverBehaviorAnalytics deletes driver behavior analytics
-func (s *AnalyticsServiceImpl) DeleteDriverBehaviorAnalytics(ctx context.Context, id string, orgID uuid.UUID) error {
+func (s *AnalyticsServiceImpl) DeleteDriverBehaviorAnalytics(ctx context.Context, id string, tenantID uuid.UUID) error {
 	if id == "" {
 		return errors.New("ID is required")
 	}
 
-	return s.repo.DeleteDriverBehaviorAnalytics(ctx, id, orgID)
+	return s.repo.DeleteDriverBehaviorAnalytics(ctx, id, tenantID)
 }
 
 // ListDriverBehaviorAnalytics retrieves driver behavior analytics with filtering, validation and caching
-func (s *AnalyticsServiceImpl) ListDriverBehaviorAnalytics(ctx context.Context, orgID uuid.UUID, periodStart, periodEnd *time.Time, cursor string, limit, offset int) ([]*models.DriverBehaviorAnalytics, int, error) {
+func (s *AnalyticsServiceImpl) ListDriverBehaviorAnalytics(ctx context.Context, tenantID uuid.UUID, periodStart, periodEnd *time.Time, cursor string, limit, offset int) ([]*models.DriverBehaviorAnalytics, int, error) {
 	start := time.Now()
 	var err error
 	var data []*models.DriverBehaviorAnalytics
@@ -178,10 +178,10 @@ func (s *AnalyticsServiceImpl) ListDriverBehaviorAnalytics(ctx context.Context, 
 		if periodEnd != nil {
 			params["period_end"] = periodEnd.Format(time.RFC3339)
 		}
-		s.logQuery(ctx, orgID, "list_driver_behavior", params, time.Since(start), rowCount, cacheHit, err)
+		s.logQuery(ctx, tenantID, "list_driver_behavior", params, time.Since(start), rowCount, cacheHit, err)
 	}()
 
-	if orgID == uuid.Nil {
+	if tenantID == uuid.Nil {
 		err = errors.New("organization ID is required")
 		return nil, 0, err
 	}
@@ -212,7 +212,7 @@ func (s *AnalyticsServiceImpl) ListDriverBehaviorAnalytics(ctx context.Context, 
 		if periodEnd != nil {
 			params["period_end"] = periodEnd.Format(time.RFC3339)
 		}
-		cacheKey := s.cache.GenerateKey(ctx, orgID.String(), "fleet", "", "list_driver_behavior", params)
+		cacheKey := s.cache.GenerateKey(ctx, tenantID.String(), "fleet", "", "list_driver_behavior", params)
 		type listResult struct {
 			Data  []*models.DriverBehaviorAnalytics
 			Total int
@@ -225,14 +225,14 @@ func (s *AnalyticsServiceImpl) ListDriverBehaviorAnalytics(ctx context.Context, 
 			return data, total, nil
 		}
 
-		data, total, err = s.repo.ListDriverBehaviorAnalytics(ctx, orgID, periodStart, periodEnd, cursor, limit, offset)
+		data, total, err = s.repo.ListDriverBehaviorAnalytics(ctx, tenantID, periodStart, periodEnd, cursor, limit, offset)
 		if err == nil {
 			_ = s.cache.Set(ctx, cacheKey, listResult{Data: data, Total: total}, 0)
 		}
 		return data, total, err
 	}
 
-	data, total, err = s.repo.ListDriverBehaviorAnalytics(ctx, orgID, periodStart, periodEnd, cursor, limit, offset)
+	data, total, err = s.repo.ListDriverBehaviorAnalytics(ctx, tenantID, periodStart, periodEnd, cursor, limit, offset)
 	return data, total, err
 }
 
@@ -260,7 +260,7 @@ func (s *AnalyticsServiceImpl) CreatePredictiveMaintenanceAnalytics(ctx context.
 }
 
 // GetPredictiveMaintenanceAnalytics retrieves predictive maintenance analytics by ID
-func (s *AnalyticsServiceImpl) GetPredictiveMaintenanceAnalytics(ctx context.Context, id string, orgID uuid.UUID) (*models.PredictiveMaintenanceAnalytics, error) {
+func (s *AnalyticsServiceImpl) GetPredictiveMaintenanceAnalytics(ctx context.Context, id string, tenantID uuid.UUID) (*models.PredictiveMaintenanceAnalytics, error) {
 	start := time.Now()
 	var err error
 	var res *models.PredictiveMaintenanceAnalytics
@@ -274,7 +274,7 @@ func (s *AnalyticsServiceImpl) GetPredictiveMaintenanceAnalytics(ctx context.Con
 		params := map[string]interface{}{
 			"id": id,
 		}
-		s.logQuery(ctx, orgID, "get_predictive_maintenance_analytics", params, time.Since(start), rowCount, cacheHit, err)
+		s.logQuery(ctx, tenantID, "get_predictive_maintenance_analytics", params, time.Since(start), rowCount, cacheHit, err)
 	}()
 
 	if id == "" {
@@ -282,12 +282,12 @@ func (s *AnalyticsServiceImpl) GetPredictiveMaintenanceAnalytics(ctx context.Con
 		return nil, err
 	}
 
-	res, err = s.repo.GetPredictiveMaintenanceAnalytics(ctx, id, orgID)
+	res, err = s.repo.GetPredictiveMaintenanceAnalytics(ctx, id, tenantID)
 	return res, err
 }
 
 // GetPredictiveMaintenanceAnalyticsByVehicle retrieves predictive maintenance analytics by vehicle ID
-func (s *AnalyticsServiceImpl) GetPredictiveMaintenanceAnalyticsByVehicle(ctx context.Context, vehicleID uuid.UUID, orgID uuid.UUID, limit, offset int) ([]*models.PredictiveMaintenanceAnalytics, int, error) {
+func (s *AnalyticsServiceImpl) GetPredictiveMaintenanceAnalyticsByVehicle(ctx context.Context, vehicleID uuid.UUID, tenantID uuid.UUID, limit, offset int) ([]*models.PredictiveMaintenanceAnalytics, int, error) {
 	start := time.Now()
 	var err error
 	var data []*models.PredictiveMaintenanceAnalytics
@@ -301,7 +301,7 @@ func (s *AnalyticsServiceImpl) GetPredictiveMaintenanceAnalyticsByVehicle(ctx co
 			"limit":      limit,
 			"offset":     offset,
 		}
-		s.logQuery(ctx, orgID, "get_predictive_maintenance_by_vehicle", params, time.Since(start), rowCount, cacheHit, err)
+		s.logQuery(ctx, tenantID, "get_predictive_maintenance_by_vehicle", params, time.Since(start), rowCount, cacheHit, err)
 	}()
 
 	if vehicleID == uuid.Nil {
@@ -318,12 +318,12 @@ func (s *AnalyticsServiceImpl) GetPredictiveMaintenanceAnalyticsByVehicle(ctx co
 		offset = 0
 	}
 
-	data, total, err = s.repo.GetPredictiveMaintenanceAnalyticsByVehicle(ctx, vehicleID, orgID, limit, offset)
+	data, total, err = s.repo.GetPredictiveMaintenanceAnalyticsByVehicle(ctx, vehicleID, tenantID, limit, offset)
 	return data, total, err
 }
 
 // UpdatePredictiveMaintenanceAnalytics updates existing predictive maintenance analytics
-func (s *AnalyticsServiceImpl) UpdatePredictiveMaintenanceAnalytics(ctx context.Context, id string, orgID uuid.UUID, updates map[string]interface{}) error {
+func (s *AnalyticsServiceImpl) UpdatePredictiveMaintenanceAnalytics(ctx context.Context, id string, tenantID uuid.UUID, updates map[string]interface{}) error {
 	if id == "" {
 		return errors.New("ID is required")
 	}
@@ -331,20 +331,20 @@ func (s *AnalyticsServiceImpl) UpdatePredictiveMaintenanceAnalytics(ctx context.
 		return errors.New("updates are required")
 	}
 
-	return s.repo.UpdatePredictiveMaintenanceAnalytics(ctx, id, orgID, updates)
+	return s.repo.UpdatePredictiveMaintenanceAnalytics(ctx, id, tenantID, updates)
 }
 
 // DeletePredictiveMaintenanceAnalytics deletes predictive maintenance analytics
-func (s *AnalyticsServiceImpl) DeletePredictiveMaintenanceAnalytics(ctx context.Context, id string, orgID uuid.UUID) error {
+func (s *AnalyticsServiceImpl) DeletePredictiveMaintenanceAnalytics(ctx context.Context, id string, tenantID uuid.UUID) error {
 	if id == "" {
 		return errors.New("ID is required")
 	}
 
-	return s.repo.DeletePredictiveMaintenanceAnalytics(ctx, id, orgID)
+	return s.repo.DeletePredictiveMaintenanceAnalytics(ctx, id, tenantID)
 }
 
 // ListPredictiveMaintenanceAnalytics retrieves predictive maintenance analytics with filtering, validation and caching
-func (s *AnalyticsServiceImpl) ListPredictiveMaintenanceAnalytics(ctx context.Context, orgID uuid.UUID, vehicleID *uuid.UUID, cursor string, limit, offset int) ([]*models.PredictiveMaintenanceAnalytics, int, error) {
+func (s *AnalyticsServiceImpl) ListPredictiveMaintenanceAnalytics(ctx context.Context, tenantID uuid.UUID, vehicleID *uuid.UUID, cursor string, limit, offset int) ([]*models.PredictiveMaintenanceAnalytics, int, error) {
 	start := time.Now()
 	var err error
 	var data []*models.PredictiveMaintenanceAnalytics
@@ -360,10 +360,10 @@ func (s *AnalyticsServiceImpl) ListPredictiveMaintenanceAnalytics(ctx context.Co
 		if vehicleID != nil {
 			params["vehicle_id"] = vehicleID.String()
 		}
-		s.logQuery(ctx, orgID, "list_predictive_maintenance", params, time.Since(start), rowCount, cacheHit, err)
+		s.logQuery(ctx, tenantID, "list_predictive_maintenance", params, time.Since(start), rowCount, cacheHit, err)
 	}()
 
-	if orgID == uuid.Nil {
+	if tenantID == uuid.Nil {
 		err = errors.New("organization ID is required")
 		return nil, 0, err
 	}
@@ -387,9 +387,9 @@ func (s *AnalyticsServiceImpl) ListPredictiveMaintenanceAnalytics(ctx context.Co
 		}
 		var cacheKey string
 		if vehicleID != nil {
-			cacheKey = s.cache.GenerateKey(ctx, orgID.String(), "vehicle", vehicleID.String(), "list_predictive_maintenance", params)
+			cacheKey = s.cache.GenerateKey(ctx, tenantID.String(), "vehicle", vehicleID.String(), "list_predictive_maintenance", params)
 		} else {
-			cacheKey = s.cache.GenerateKey(ctx, orgID.String(), "fleet", "", "list_predictive_maintenance", params)
+			cacheKey = s.cache.GenerateKey(ctx, tenantID.String(), "fleet", "", "list_predictive_maintenance", params)
 		}
 		type listResult struct {
 			Data  []*models.PredictiveMaintenanceAnalytics
@@ -403,14 +403,14 @@ func (s *AnalyticsServiceImpl) ListPredictiveMaintenanceAnalytics(ctx context.Co
 			return data, total, nil
 		}
 
-		data, total, err = s.repo.ListPredictiveMaintenanceAnalytics(ctx, orgID, vehicleID, cursor, limit, offset)
+		data, total, err = s.repo.ListPredictiveMaintenanceAnalytics(ctx, tenantID, vehicleID, cursor, limit, offset)
 		if err == nil {
 			_ = s.cache.Set(ctx, cacheKey, listResult{Data: data, Total: total}, 0)
 		}
 		return data, total, err
 	}
 
-	data, total, err = s.repo.ListPredictiveMaintenanceAnalytics(ctx, orgID, vehicleID, cursor, limit, offset)
+	data, total, err = s.repo.ListPredictiveMaintenanceAnalytics(ctx, tenantID, vehicleID, cursor, limit, offset)
 	return data, total, err
 }
 

@@ -7,8 +7,8 @@ import (
 )
 
 type DispatchService interface {
-	Assign(ctx context.Context, orgID uuid.UUID, req AssignRequest) (*AssignResult, error)
-	Redispatch(ctx context.Context, orgID uuid.UUID, req RedispatchRequest) (*RedispatchResult, error)
+	Assign(ctx context.Context, tenantID uuid.UUID, req AssignRequest) (*AssignResult, error)
+	Redispatch(ctx context.Context, tenantID uuid.UUID, req RedispatchRequest) (*RedispatchResult, error)
 }
 
 type AssignRequest struct {
@@ -47,14 +47,14 @@ func NewDispatchService(eb EventBus) DispatchService {
 	return &dispatchService{eventBus: eb}
 }
 
-func (s *dispatchService) Assign(ctx context.Context, orgID uuid.UUID, req AssignRequest) (*AssignResult, error) {
+func (s *dispatchService) Assign(ctx context.Context, tenantID uuid.UUID, req AssignRequest) (*AssignResult, error) {
 	tripID := uuid.New().String()
 	
 	if s.eventBus != nil {
 		s.eventBus.Publish("trip.assigned", map[string]interface{}{
 			"trip_id":     tripID,
 			"shipment_id": req.ShipmentID,
-			"tenant_id":      orgID,
+			"tenant_id":      tenantID,
 		})
 	}
 
@@ -65,7 +65,7 @@ func (s *dispatchService) Assign(ctx context.Context, orgID uuid.UUID, req Assig
 	}, nil
 }
 
-func (s *dispatchService) Redispatch(ctx context.Context, orgID uuid.UUID, req RedispatchRequest) (*RedispatchResult, error) {
+func (s *dispatchService) Redispatch(ctx context.Context, tenantID uuid.UUID, req RedispatchRequest) (*RedispatchResult, error) {
 	return &RedispatchResult{
 		NewTripID: uuid.New().String(),
 		Status:    "REDISPATCHED",

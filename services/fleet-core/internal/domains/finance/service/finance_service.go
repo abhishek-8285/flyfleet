@@ -75,7 +75,7 @@ func (s *FinanceService) SubmitExpenseReport(ctx context.Context, report *models
 	if report.TotalAmount <= 0 {
 		return errors.New("total_amount must be greater than zero")
 	}
-	if report.OrgID == "" || report.SubmitterID == "" {
+	if report.TenantID == "" || report.SubmitterID == "" {
 		return errors.New("tenant_id and submitter_id are required")
 	}
 	if report.Currency == "" {
@@ -100,8 +100,8 @@ func (s *FinanceService) RejectExpenseReport(ctx context.Context, reportID, appr
 	return s.repo.UpdateExpenseReportStatus(ctx, reportID, "REJECTED", &approverID, &reason)
 }
 
-func (s *FinanceService) ListExpenseReports(ctx context.Context, orgID, status string, limit, offset int) (*models.ExpenseReportListResponse, error) {
-	if strings.TrimSpace(orgID) == "" {
+func (s *FinanceService) ListExpenseReports(ctx context.Context, tenantID, status string, limit, offset int) (*models.ExpenseReportListResponse, error) {
+	if strings.TrimSpace(tenantID) == "" {
 		return nil, errors.New("tenant_id is required")
 	}
 	if limit <= 0 || limit > 500 {
@@ -112,7 +112,7 @@ func (s *FinanceService) ListExpenseReports(ctx context.Context, orgID, status s
 	}
 	status = strings.ToUpper(strings.TrimSpace(status))
 
-	reports, total, err := s.repo.ListExpenseReports(ctx, orgID, status, limit, offset)
+	reports, total, err := s.repo.ListExpenseReports(ctx, tenantID, status, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -124,18 +124,18 @@ func (s *FinanceService) ListExpenseReports(ctx context.Context, orgID, status s
 	}, nil
 }
 
-func (s *FinanceService) ListExpensePolicies(ctx context.Context, orgID string) ([]models.ExpensePolicy, error) {
-	if strings.TrimSpace(orgID) == "" {
+func (s *FinanceService) ListExpensePolicies(ctx context.Context, tenantID string) ([]models.ExpensePolicy, error) {
+	if strings.TrimSpace(tenantID) == "" {
 		return nil, errors.New("tenant_id is required")
 	}
-	return s.repo.GetExpensePolicies(ctx, orgID)
+	return s.repo.GetExpensePolicies(ctx, tenantID)
 }
 
 func (s *FinanceService) UpsertExpensePolicy(ctx context.Context, policy *models.ExpensePolicy) error {
 	if policy == nil {
 		return errors.New("policy is required")
 	}
-	if strings.TrimSpace(policy.OrgID) == "" {
+	if strings.TrimSpace(policy.TenantID) == "" {
 		return errors.New("tenant_id is required")
 	}
 	if strings.TrimSpace(policy.Category) == "" {

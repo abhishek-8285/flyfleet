@@ -35,7 +35,7 @@ func TestSecurity_Enterprise(t *testing.T) {
 		tenantB := uuid.New()
 		
 		deviceA := uuid.New()
-		_ = repo.CreateDevice(ctx, &models.Device{ID: deviceA, OrgID: tenantA})
+		_ = repo.CreateDevice(ctx, &models.Device{ID: deviceA, TenantID: tenantA})
 		
 		// Attempt access by Tenant B
 		fetched, err := repo.GetDevice(ctx, deviceA, tenantB)

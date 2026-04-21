@@ -42,9 +42,14 @@ class ApiService {
         (config) => {
           // SECURITY: Get token from Redux store (memory only), not localStorage
           const state = getStore().getState();
-          const token = state.auth.token;
+          const token = state.auth.token || localStorage.getItem('access_token');
           if (token) {
             config.headers.Authorization = `Bearer ${token}`;
+          }
+          // Attach tenant context — required by TenantMiddleware on all non-auth routes
+          const tenantId = localStorage.getItem('tenant_id');
+          if (tenantId && token) {
+            config.headers['X-Tenant-ID'] = tenantId;
           }
           const traceId = createTraceId();
           config.headers[TRACE_ID_HEADER] = traceId;
@@ -64,7 +69,9 @@ class ApiService {
             // Token invalid, clear state and redirect
             getStore().dispatch({ type: 'auth/setToken', payload: null });
             getStore().dispatch({ type: 'auth/setUser', payload: null });
-            window.location.href = "/login";
+            if (window.location.pathname !== "/session-expired") {
+              window.location.href = `/session-expired?redirect=${encodeURIComponent(window.location.pathname)}`;
+            }
           }
           return Promise.reject(error);
         },
@@ -121,6 +128,10 @@ class ApiService {
 
   async changePassword(data: any): Promise<any> {
     return this.client.post("/auth/change-password", data);
+  }
+
+  async resetPasswordForced(data: any): Promise<any> {
+    return this.client.post("/auth/reset-password-forced", data);
   }
 
   async approveDevice(fingerprint: string, approve: boolean): Promise<any> {
@@ -278,8 +289,12 @@ class ApiService {
   }
 
   // Users
-  async getUsers(orgId: string): Promise<any> {
-    return this.client.get("/admin/users", { params: { org_id: orgId } });
+  async getUsers(tenantId: string): Promise<any> {
+    return this.client.get("/admin/users", { params: { tenant_id: tenantId } });
+  }
+
+  async adminCreateUser(data: any): Promise<any> {
+    return this.client.post("/admin/users/create", data);
   }
 
   // Organizations
@@ -467,49 +482,49 @@ class ApiService {
   }
 
   // MFA Security (Routed through BFF)
-  async getMFADashboard(orgId: string): Promise<any> {
+  async getMFADashboard(tenantId: string): Promise<any> {
     return this.bffClient.get("/security/mfa/dashboard", {
-      params: { org_id: orgId },
+      params: { tenant_id: tenantId },
     });
   }
 
-  async getMFAAdoptionTrend(orgId: string, days: number = 30): Promise<any> {
+  async getMFAAdoptionTrend(tenantId: string, days: number = 30): Promise<any> {
     return this.bffClient.get("/security/mfa/adoption-trend", {
-      params: { org_id: orgId, days },
+      params: { tenant_id: tenantId, days },
     });
   }
 
-  async getMFAMethodDistribution(orgId: string): Promise<any> {
+  async getMFAMethodDistribution(tenantId: string): Promise<any> {
     return this.bffClient.get("/security/mfa/method-distribution", {
-      params: { org_id: orgId },
+      params: { tenant_id: tenantId },
     });
   }
 
   async getMFAEvents(
-    orgId: string,
+    tenantId: string,
     page: number = 1,
     pageSize: number = 20,
   ): Promise<any> {
     return this.bffClient.get("/security/mfa/events", {
-      params: { org_id: orgId, page, page_size: pageSize },
+      params: { tenant_id: tenantId, page, page_size: pageSize },
     });
   }
 
-  async getMFAFailureLocations(orgId: string): Promise<any> {
+  async getMFAFailureLocations(tenantId: string): Promise<any> {
     return this.bffClient.get("/security/mfa/failures/locations", {
-      params: { org_id: orgId },
+      params: { tenant_id: tenantId },
     });
   }
 
-  async getMFAFailureUsers(orgId: string): Promise<any> {
+  async getMFAFailureUsers(tenantId: string): Promise<any> {
     return this.bffClient.get("/security/mfa/failures/users", {
-      params: { org_id: orgId },
+      params: { tenant_id: tenantId },
     });
   }
 
-  async getLockedUsers(orgId: string): Promise<any> {
+  async getLockedUsers(tenantId: string): Promise<any> {
     return this.bffClient.get("/security/mfa/locked-users", {
-      params: { org_id: orgId },
+      params: { tenant_id: tenantId },
     });
   }
 
@@ -521,9 +536,9 @@ class ApiService {
     return this.bffClient.post("/security/mfa/reset", { userId });
   }
 
-  async getMFAPolicy(orgId: string): Promise<any> {
+  async getMFAPolicy(tenantId: string): Promise<any> {
     return this.bffClient.get("/security/mfa/policy", {
-      params: { org_id: orgId },
+      params: { tenant_id: tenantId },
     });
   }
 
@@ -531,9 +546,9 @@ class ApiService {
     return this.bffClient.put("/security/mfa/policy", data);
   }
 
-  async getMFAPolicyHistory(orgId: string): Promise<any> {
+  async getMFAPolicyHistory(tenantId: string): Promise<any> {
     return this.bffClient.get("/security/mfa/policy/history", {
-      params: { org_id: orgId },
+      params: { tenant_id: tenantId },
     });
   }
 
@@ -543,9 +558,9 @@ class ApiService {
     });
   }
 
-  async getMFAOrgOverride(orgId: string): Promise<any> {
+  async getMFATenantOverride(tenantId: string): Promise<any> {
     return this.bffClient.get("/security/mfa/overrides", {
-      params: { org_id: orgId },
+      params: { tenant_id: tenantId },
     });
   }
 
@@ -555,7 +570,7 @@ class ApiService {
 
   // Audit Module
   async getAuditLogs(params: {
-    org_id: string;
+    tenant_id: string;
     page?: number;
     action?: string;
     severity?: string;
@@ -564,15 +579,15 @@ class ApiService {
     return this.bffClient.get("/audit/logs", { params });
   }
 
-  async getAuditLogDetails(id: string, org_id: string): Promise<any> {
+  async getAuditLogDetails(id: string, tenant_id: string): Promise<any> {
     return this.bffClient.get(`/audit/logs/${id}`, {
-      params: { org_id },
+      params: { tenant_id },
     });
   }
 
-  async getAuditSettings(orgId: string): Promise<any> {
+  async getAuditSettings(tenantId: string): Promise<any> {
     return this.bffClient.get("/audit/settings", {
-      params: { org_id: orgId },
+      params: { tenant_id: tenantId },
     });
   }
 
@@ -580,19 +595,22 @@ class ApiService {
     return this.bffClient.put("/audit/settings", data);
   }
 
-  async getMFAExceptions(orgId: string): Promise<any> {
+  async getMFAExceptions(tenantId: string): Promise<any> {
     return this.bffClient.get("/security/mfa/exceptions", {
-      params: { org_id: orgId },
+      params: { tenant_id: tenantId },
     });
   }
 
   async addMFAException(data: {
     userId: string;
-    orgId: string;
+    tenantId: string;
     reason: string;
     days: number;
   }): Promise<any> {
-    return this.bffClient.post("/security/mfa/exceptions", data);
+    return this.bffClient.post("/security/mfa/exceptions", {
+      ...data,
+      tenant_id: data.tenantId,
+    });
   }
 
   async deleteMFAException(id: string): Promise<any> {
@@ -623,9 +641,9 @@ class ApiService {
     });
   }
 
-  async getSecuritySessions(orgId: string): Promise<any> {
+  async getSecuritySessions(tenantId: string): Promise<any> {
     return this.bffClient.get("/security/sessions", {
-      params: { org_id: orgId },
+      params: { tenant_id: tenantId },
     });
   }
 
@@ -633,9 +651,9 @@ class ApiService {
     return this.bffClient.delete(`/security/sessions/${sessionId}`);
   }
 
-  async getIPRules(orgId: string): Promise<any> {
+  async getIPRules(tenantId: string): Promise<any> {
     return this.bffClient.get("/security/ip-rules", {
-      params: { org_id: orgId },
+      params: { tenant_id: tenantId },
     });
   }
 
@@ -651,7 +669,7 @@ class ApiService {
   }
 
   async createEvidenceExport(data: {
-    org_id: string;
+    tenant_id: string;
     module: string;
     date_range_start: string;
     date_range_end: string;
@@ -660,9 +678,9 @@ class ApiService {
     return this.bffClient.post("/audit/evidence-exports", data);
   }
 
-  async getEvidenceExports(orgId: string): Promise<any> {
+  async getEvidenceExports(tenantId: string): Promise<any> {
     return this.bffClient.get("/audit/evidence-exports", {
-      params: { org_id: orgId },
+      params: { tenant_id: tenantId },
     });
   }
 
@@ -670,9 +688,9 @@ class ApiService {
     return this.bffClient.get(`/audit/evidence-exports/${id}`);
   }
 
-  async getAuditPolicy(orgId: string): Promise<any> {
+  async getAuditPolicy(tenantId: string): Promise<any> {
     return this.bffClient.get("/audit/policy", {
-      params: { org_id: orgId },
+      params: { tenant_id: tenantId },
     });
   }
 
@@ -681,9 +699,9 @@ class ApiService {
   }
 
   // Integrations Module
-  async getIntegrations(orgId: string): Promise<any> {
+  async getIntegrations(tenantId: string): Promise<any> {
     return this.bffClient.get("/integrations/", {
-      params: { org_id: orgId },
+      params: { tenant_id: tenantId },
     });
   }
 
@@ -699,9 +717,9 @@ class ApiService {
     return this.bffClient.post(`/integrations/${id}/test`);
   }
 
-  async getApiClients(orgId: string): Promise<any> {
+  async getApiClients(tenantId: string): Promise<any> {
     return this.bffClient.get("/api-clients/", {
-      params: { org_id: orgId },
+      params: { tenant_id: tenantId },
     });
   }
 
@@ -709,14 +727,14 @@ class ApiService {
     return this.bffClient.post("/api-clients/", data);
   }
 
-  async getWebhooks(orgId: string): Promise<any> {
+  async getWebhooks(tenantId: string): Promise<any> {
     return this.bffClient.get("/webhooks/", {
-      params: { org_id: orgId },
+      params: { tenant_id: tenantId },
     });
   }
 
   async getIntegrationLogs(params: {
-    org_id: string;
+    tenant_id: string;
     integration_id?: string;
     limit?: number;
     offset?: number;

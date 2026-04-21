@@ -44,7 +44,7 @@ func (s *AuthService) SwitchContext(ctx context.Context, requestorID uuid.UUID, 
 		EventType:  "CONTEXT_SWITCH_EXECUTED",
 		IPAddress:  ipAddress,
 		UserAgent:  userAgent,
-		Metadata:   "switched_to_org: " + target.OrgID.String(),
+		Metadata:   "switched_to_org: " + target.TenantID.String(),
 		ActorID:    &requestor.ID,
 		OnBehalfOf: &target.ID,
 	})

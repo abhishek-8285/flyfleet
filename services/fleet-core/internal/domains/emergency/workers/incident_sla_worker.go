@@ -67,7 +67,7 @@ func (w *IncidentSLAWorker) checkSLAs(ctx context.Context) {
 				zap.Duration("duration", duration),
 			)
 			// Phase 7: Metric increment
-			emergency.SLABreachesTotal.WithLabelValues(incident.OrgID.String(), string(incident.Severity)).Inc()
+			emergency.SLABreachesTotal.WithLabelValues(incident.TenantID.String(), string(incident.Severity)).Inc()
 			w.publishSLABreach(ctx, incident, duration)
 		}
 	}
@@ -96,7 +96,7 @@ func (w *IncidentSLAWorker) publishSLABreach(ctx context.Context, incident model
 	payload := map[string]interface{}{
 		"violation_id": violation.ID,
 		"incident_id":  incident.ID,
-		"tenant_id":       incident.OrgID,
+		"tenant_id":       incident.TenantID,
 		"severity":     incident.Severity,
 		"duration":     duration.Seconds(),
 		"breached_at":  violation.BreachTime,

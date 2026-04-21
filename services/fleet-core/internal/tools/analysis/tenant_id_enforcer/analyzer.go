@@ -1,4 +1,4 @@
-package org_id_enforcer
+package tenant_id_enforcer
 
 import (
 	"go/ast"
@@ -11,7 +11,7 @@ import (
 
 var Analyzer = &analysis.Analyzer{
 	Name:     "orgidenforcer",
-	Doc:      "checks that SQL queries contain org_id for tenant isolation",
+	Doc:      "checks that SQL queries contain tenant_id for tenant isolation",
 	Requires: []*analysis.Analyzer{inspect.Analyzer},
 	Run:      run,
 }
@@ -68,8 +68,8 @@ func run(pass *analysis.Pass) (interface{}, error) {
 				strings.Contains(query, "update") ||
 				strings.Contains(query, "delete")
 
-			if isSensitive && !strings.Contains(query, "org_id") {
-				pass.Reportf(call.Lparen, "SQL query missing org_id filter: %s", lit.Value)
+			if isSensitive && !strings.Contains(query, "tenant_id") {
+				pass.Reportf(call.Lparen, "SQL query missing tenant_id filter: %s", lit.Value)
 			}
 		}
 

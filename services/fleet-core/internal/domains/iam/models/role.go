@@ -8,7 +8,7 @@ import (
 
 type Role struct {
 	ID             uuid.UUID `json:"id"`
-	OrgID          uuid.UUID `json:"tenant_id"`
+	TenantID          uuid.UUID `json:"tenant_id"`
 	Name           string    `json:"name"`
 	Description    string    `json:"description"`
 	IsSystem       bool      `json:"is_system"`
@@ -36,7 +36,7 @@ type UserRole struct {
 	ID         uuid.UUID `json:"id"`
 	UserID     uuid.UUID `json:"user_id"`
 	RoleID     uuid.UUID `json:"role_id"`
-	OrgID      uuid.UUID `json:"tenant_id"`
+	TenantID      uuid.UUID `json:"tenant_id"`
 	AssignedBy uuid.UUID `json:"assigned_by"`
 	AssignedAt time.Time `json:"assigned_at"`
 }

@@ -6,13 +6,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	"github.com/flyfleet/fleet-core/internal/domains/maintenance/models"
 	"github.com/flyfleet/fleet-core/internal/domains/maintenance/service"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 )
 
 type MaintenanceHandler struct {
@@ -66,8 +66,8 @@ func (h *MaintenanceHandler) CreateSchedule(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return
 	}
@@ -78,7 +78,7 @@ func (h *MaintenanceHandler) CreateSchedule(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	schedule, err := h.service.CreateSchedule(r.Context(), orgID, &req, userID)
+	schedule, err := h.service.CreateSchedule(r.Context(), tenantID, &req, userID)
 	if err != nil {
 		h.logger.Error("failed to create maintenance schedule", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -92,13 +92,13 @@ func (h *MaintenanceHandler) CreateSchedule(w http.ResponseWriter, r *http.Reque
 func (h *MaintenanceHandler) GetSchedule(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return
 	}
 
-	schedule, err := h.service.GetSchedule(r.Context(), id, orgID)
+	schedule, err := h.service.GetSchedule(r.Context(), id, tenantID)
 	if err != nil {
 		h.logger.Error("failed to get maintenance schedule", zap.String("schedule_id", id), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusNotFound, "Maintenance schedule not found", nil)
@@ -110,15 +110,15 @@ func (h *MaintenanceHandler) GetSchedule(w http.ResponseWriter, r *http.Request)
 
 // ListSchedules godoc
 func (h *MaintenanceHandler) ListSchedules(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return
 	}
 
 	query := r.URL.Query()
 	filter := models.MaintenanceListFilter{
-		OrgID:    orgID,
+		TenantID:    tenantID,
 		Page:     1,
 		PageSize: 20,
 		OrderBy:  "due_date",
@@ -190,8 +190,8 @@ func (h *MaintenanceHandler) ListSchedules(w http.ResponseWriter, r *http.Reques
 func (h *MaintenanceHandler) UpdateSchedule(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return
 	}
@@ -203,7 +203,7 @@ func (h *MaintenanceHandler) UpdateSchedule(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	schedule, err := h.service.UpdateSchedule(r.Context(), id, orgID, &req)
+	schedule, err := h.service.UpdateSchedule(r.Context(), id, tenantID, &req)
 	if err != nil {
 		h.logger.Error("failed to update maintenance schedule", zap.String("schedule_id", id), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusNotFound, "Maintenance schedule not found", nil)
@@ -217,13 +217,13 @@ func (h *MaintenanceHandler) UpdateSchedule(w http.ResponseWriter, r *http.Reque
 func (h *MaintenanceHandler) DeleteSchedule(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return
 	}
 
-	if err := h.service.DeleteSchedule(r.Context(), id, orgID); err != nil {
+	if err := h.service.DeleteSchedule(r.Context(), id, tenantID); err != nil {
 		h.logger.Error("failed to delete maintenance schedule", zap.String("schedule_id", id), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusNotFound, "Maintenance schedule not found", nil)
 		return
@@ -241,13 +241,13 @@ func (h *MaintenanceHandler) CreateLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return
 	}
 
-	logEntry, err := h.service.CreateLog(r.Context(), orgID, &req)
+	logEntry, err := h.service.CreateLog(r.Context(), tenantID, &req)
 	if err != nil {
 		h.logger.Error("failed to create maintenance log", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -261,13 +261,13 @@ func (h *MaintenanceHandler) CreateLog(w http.ResponseWriter, r *http.Request) {
 func (h *MaintenanceHandler) GetLog(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return
 	}
 
-	logEntry, err := h.service.GetLog(r.Context(), id, orgID)
+	logEntry, err := h.service.GetLog(r.Context(), id, tenantID)
 	if err != nil {
 		h.logger.Error("failed to get maintenance log", zap.String("log_id", id), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusNotFound, "Maintenance log not found", nil)
@@ -279,15 +279,15 @@ func (h *MaintenanceHandler) GetLog(w http.ResponseWriter, r *http.Request) {
 
 // ListLogs godoc
 func (h *MaintenanceHandler) ListLogs(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return
 	}
 
 	query := r.URL.Query()
 	filter := models.MaintenanceListFilter{
-		OrgID:    orgID,
+		TenantID:    tenantID,
 		Page:     1,
 		PageSize: 20,
 		OrderBy:  "start_date",
@@ -356,8 +356,8 @@ func (h *MaintenanceHandler) ListLogs(w http.ResponseWriter, r *http.Request) {
 func (h *MaintenanceHandler) UpdateLog(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return
 	}
@@ -369,7 +369,7 @@ func (h *MaintenanceHandler) UpdateLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logEntry, err := h.service.UpdateLog(r.Context(), id, orgID, &req)
+	logEntry, err := h.service.UpdateLog(r.Context(), id, tenantID, &req)
 	if err != nil {
 		h.logger.Error("failed to update maintenance log", zap.String("log_id", id), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusNotFound, "Maintenance log not found", nil)
@@ -383,13 +383,13 @@ func (h *MaintenanceHandler) UpdateLog(w http.ResponseWriter, r *http.Request) {
 func (h *MaintenanceHandler) DeleteLog(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return
 	}
 
-	if err := h.service.DeleteLog(r.Context(), id, orgID); err != nil {
+	if err := h.service.DeleteLog(r.Context(), id, tenantID); err != nil {
 		h.logger.Error("failed to delete maintenance log", zap.String("log_id", id), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusNotFound, "Maintenance log not found", nil)
 		return
@@ -407,8 +407,8 @@ func (h *MaintenanceHandler) GetVehicleMaintenanceHistory(w http.ResponseWriter,
 		return
 	}
 
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return
 	}
@@ -420,7 +420,7 @@ func (h *MaintenanceHandler) GetVehicleMaintenanceHistory(w http.ResponseWriter,
 		}
 	}
 
-	logs, err := h.service.GetMaintenanceHistory(r.Context(), vehicleID, orgID, limit)
+	logs, err := h.service.GetMaintenanceHistory(r.Context(), vehicleID, tenantID, limit)
 	if err != nil {
 		h.logger.Error("failed to get maintenance history", zap.String("vehicle_id", vehicleIDStr), zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to get maintenance history", nil)
@@ -432,8 +432,8 @@ func (h *MaintenanceHandler) GetVehicleMaintenanceHistory(w http.ResponseWriter,
 
 // GetUpcomingMaintenance godoc
 func (h *MaintenanceHandler) GetUpcomingMaintenance(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return
 	}
@@ -445,7 +445,7 @@ func (h *MaintenanceHandler) GetUpcomingMaintenance(w http.ResponseWriter, r *ht
 		}
 	}
 
-	schedules, err := h.service.GetUpcomingSchedules(r.Context(), orgID, days)
+	schedules, err := h.service.GetUpcomingSchedules(r.Context(), tenantID, days)
 	if err != nil {
 		h.logger.Error("failed to get upcoming maintenance", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to get upcoming maintenance", nil)
@@ -457,13 +457,13 @@ func (h *MaintenanceHandler) GetUpcomingMaintenance(w http.ResponseWriter, r *ht
 
 // GetOverdueMaintenance godoc
 func (h *MaintenanceHandler) GetOverdueMaintenance(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return
 	}
 
-	schedules, err := h.service.GetOverdueSchedules(r.Context(), orgID)
+	schedules, err := h.service.GetOverdueSchedules(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("failed to get overdue maintenance", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to get overdue maintenance", nil)
@@ -475,8 +475,8 @@ func (h *MaintenanceHandler) GetOverdueMaintenance(w http.ResponseWriter, r *htt
 
 // GetMaintenanceSummary godoc
 func (h *MaintenanceHandler) GetMaintenanceSummary(w http.ResponseWriter, r *http.Request) {
-	orgID := h.getOrgID(r)
-	if orgID == uuid.Nil {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
 		return
 	}
@@ -502,7 +502,7 @@ func (h *MaintenanceHandler) GetMaintenanceSummary(w http.ResponseWriter, r *htt
 		return
 	}
 
-	summary, err := h.service.GetMaintenanceSummary(r.Context(), orgID, fromDate, toDate)
+	summary, err := h.service.GetMaintenanceSummary(r.Context(), tenantID, fromDate, toDate)
 	if err != nil {
 		h.logger.Error("failed to get maintenance summary", zap.Error(err))
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to get maintenance summary", nil)
@@ -532,24 +532,16 @@ func (h *MaintenanceHandler) writeErrorResponse(w http.ResponseWriter, statusCod
 	h.writeJSONResponse(w, statusCode, resp)
 }
 
-func (h *MaintenanceHandler) getOrgID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.OrgIDKey); val != nil {
-		if orgIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(orgIDStr); err == nil {
-				return id
-			}
-		}
+func (h *MaintenanceHandler) getTenantID(r *http.Request) uuid.UUID {
+	if id, ok := ctxkeys.GetTenantID(r.Context()); ok {
+		return id
 	}
 	return uuid.Nil
 }
 
 func (h *MaintenanceHandler) getUserID(r *http.Request) uuid.UUID {
-	if val := r.Context().Value(middleware.UserIDKey); val != nil {
-		if userIDStr, ok := val.(string); ok {
-			if id, err := uuid.Parse(userIDStr); err == nil {
-				return id
-			}
-		}
+	if id, ok := ctxkeys.GetUserID(r.Context()); ok {
+		return id
 	}
 	return uuid.Nil
 }

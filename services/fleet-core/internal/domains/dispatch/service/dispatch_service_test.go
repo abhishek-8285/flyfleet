@@ -24,7 +24,7 @@ type mockShipment struct {
 	DistanceKm *float64
 	Origin    []byte
 	Destination []byte
-	OrgID     uuid.UUID // NOTE: Shipment struct has NO OrgID — this is a test wrapper
+	TenantID     uuid.UUID // NOTE: Shipment struct has NO TenantID — this is a test wrapper
 }
 
 func (m *mockCustomerRepo) GetShipmentByID(ctx context.Context, id uuid.UUID) (*mockShipment, error) {
@@ -83,7 +83,7 @@ type mockTrip struct {
 	Status string
 }
 
-func (m *mockTripService) Create(ctx context.Context, orgID string, req interface{}) (*mockTrip, error) {
+func (m *mockTripService) Create(ctx context.Context, tenantID string, req interface{}) (*mockTrip, error) {
 	m.createCalled = true
 	t := &mockTrip{ID: uuid.New().String(), Status: "CREATED"}
 	m.createdTrip = t
@@ -94,14 +94,14 @@ func (m *mockTripService) Create(ctx context.Context, orgID string, req interfac
 
 func TestDispatchService_Assign_HappyPath(t *testing.T) {
 	shipmentID := uuid.New()
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
 	customerRepo := &mockCustomerRepo{
 		shipments: map[uuid.UUID]*mockShipment{
 			shipmentID: {
 				ID:        shipmentID,
 				Status:    "CONFIRMED",
-				OrgID:     orgID,
+				TenantID:     tenantID,
 				BookingID: uuidPtr(uuid.New()),
 			},
 		},
@@ -118,7 +118,7 @@ func TestDispatchService_Assign_HappyPath(t *testing.T) {
 	require.Equal(t, "CONFIRMED", shipment.Status)
 
 	// Verify trip creation is called
-	result, err := tripSvc.Create(context.Background(), orgID.String(), nil)
+	result, err := tripSvc.Create(context.Background(), tenantID.String(), nil)
 	require.NoError(t, err)
 	assert.True(t, tripSvc.createCalled)
 	assert.NotEmpty(t, result.ID)

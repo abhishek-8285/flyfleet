@@ -22,12 +22,12 @@ func NewBulkRepository(db *pgxpool.Pool) *BulkRepository {
 
 func (r *BulkRepository) CreateJob(ctx context.Context, job *models.BulkJob) error {
 	query := `
-		INSERT INTO bulk_jobs (id, organization_id, file_name, status, total_records, success_count, failed_count, retry_count, created_by, created_at, updated_at)
+		INSERT INTO bulk_jobs (id, tenant_id, file_name, status, total_records, success_count, failed_count, retry_count, created_by, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
 	start := time.Now()
 	_, err := r.db.Exec(ctx, query,
-		job.ID, job.OrganizationID, job.FileName, job.Status, job.TotalRecords, job.SuccessCount, job.FailedCount, job.RetryCount, job.CreatedBy, job.CreatedAt, job.UpdatedAt)
+		job.ID, job.TenantID, job.FileName, job.Status, job.TotalRecords, job.SuccessCount, job.FailedCount, job.RetryCount, job.CreatedBy, job.CreatedAt, job.UpdatedAt)
 	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
@@ -57,12 +57,12 @@ func (r *BulkRepository) IncrementRetryCount(ctx context.Context, id uuid.UUID) 
 }
 
 func (r *BulkRepository) GetJob(ctx context.Context, id uuid.UUID) (*models.BulkJob, error) {
-	query := `SELECT id, organization_id, file_name, status, total_records, success_count, failed_count, retry_count, created_by, created_at, updated_at FROM bulk_jobs WHERE id = $1`
+	query := `SELECT id, tenant_id, file_name, status, total_records, success_count, failed_count, retry_count, created_by, created_at, updated_at FROM bulk_jobs WHERE id = $1`
 
 	var job models.BulkJob
 	start := time.Now()
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&job.ID, &job.OrganizationID, &job.FileName, &job.Status,
+		&job.ID, &job.TenantID, &job.FileName, &job.Status,
 		&job.TotalRecords, &job.SuccessCount, &job.FailedCount, &job.RetryCount,
 		&job.CreatedBy, &job.CreatedAt, &job.UpdatedAt,
 	)
@@ -126,15 +126,15 @@ func (r *BulkRepository) GetJobRecords(ctx context.Context, jobID uuid.UUID, sta
 	return records, nil
 }
 
-func (r *BulkRepository) ListJobs(ctx context.Context, orgID uuid.UUID, status string, page, limit int) ([]models.BulkJob, int, error) {
+func (r *BulkRepository) ListJobs(ctx context.Context, tenantID uuid.UUID, status string, page, limit int) ([]models.BulkJob, int, error) {
 	offset := (page - 1) * limit
 
 	// List jobs
 	// Base query
-	query := `SELECT id, organization_id, file_name, status, total_records, success_count, failed_count, retry_count, created_by, created_at, updated_at FROM bulk_jobs WHERE organization_id = $1`
-	countQuery := `SELECT COUNT(*) FROM bulk_jobs WHERE organization_id = $1`
+	query := `SELECT id, tenant_id, file_name, status, total_records, success_count, failed_count, retry_count, created_by, created_at, updated_at FROM bulk_jobs WHERE tenant_id = $1`
+	countQuery := `SELECT COUNT(*) FROM bulk_jobs WHERE tenant_id = $1`
 
-	args := []interface{}{orgID}
+	args := []interface{}{tenantID}
 	if status != "" {
 		query += ` AND status = $2`
 		countQuery += ` AND status = $2`
@@ -168,7 +168,7 @@ func (r *BulkRepository) ListJobs(ctx context.Context, orgID uuid.UUID, status s
 	for rows.Next() {
 		var job models.BulkJob
 		if err := rows.Scan(
-			&job.ID, &job.OrganizationID, &job.FileName, &job.Status,
+			&job.ID, &job.TenantID, &job.FileName, &job.Status,
 			&job.TotalRecords, &job.SuccessCount, &job.FailedCount, &job.RetryCount,
 			&job.CreatedBy, &job.CreatedAt, &job.UpdatedAt,
 		); err != nil {

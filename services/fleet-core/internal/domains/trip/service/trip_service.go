@@ -23,7 +23,7 @@ import (
 // TripServiceInterface defines the interface for trip service
 type TripServiceInterface interface {
 	// CRUD
-	Create(ctx context.Context, orgID string, req *models.CreateTripRequest) (*models.Trip, error)
+	Create(ctx context.Context, tenantID string, req *models.CreateTripRequest) (*models.Trip, error)
 	GetTripByID(ctx context.Context, id string) (*models.Trip, error)
 	List(ctx context.Context, filter models.TripListFilter) ([]*models.Trip, int, error)
 	Update(ctx context.Context, id string, req *models.UpdateTripRequest) (*models.Trip, error)
@@ -49,11 +49,11 @@ type TripServiceInterface interface {
 
 	// Analytics
 	GetActiveTripsForVehicle(ctx context.Context, vehicleID string) ([]*models.Trip, error)
-	GetTripSummary(ctx context.Context, orgID string, startDate, endDate time.Time) (*models.TripSummary, error)
-	GetDriverStats(ctx context.Context, orgID string) ([]models.DriverPerformance, error)
-	GetTripStats(ctx context.Context, orgID string) ([]models.DailyTripTrend, error)
+	GetTripSummary(ctx context.Context, tenantID string, startDate, endDate time.Time) (*models.TripSummary, error)
+	GetDriverStats(ctx context.Context, tenantID string) ([]models.DriverPerformance, error)
+	GetTripStats(ctx context.Context, tenantID string) ([]models.DailyTripTrend, error)
 	GetStats(ctx context.Context) (*models.TripStats, error)
-	GetTripCustomers(ctx context.Context, orgID string) ([]string, error)
+	GetTripCustomers(ctx context.Context, tenantID string) ([]string, error)
 
 	// Telemetry
 	GetTelemetry(ctx context.Context, tripID string) ([]models.TelemetryPoint, error)
@@ -107,7 +107,7 @@ func (s *TripService) publishEvent(subject string, data interface{}) {
 }
 
 // Create creates a new trip
-func (s *TripService) Create(ctx context.Context, orgID string, req *models.CreateTripRequest) (*models.Trip, error) {
+func (s *TripService) Create(ctx context.Context, tenantID string, req *models.CreateTripRequest) (*models.Trip, error) {
 	// Business Rule: Duplicate trip detection (overlapping windows)
 	endTime := req.ScheduledStart.Add(time.Duration(req.EstimatedDurationMin) * time.Minute)
 	if req.PlannedETA != nil {
@@ -122,7 +122,7 @@ func (s *TripService) Create(ctx context.Context, orgID string, req *models.Crea
 
 	trip := &models.Trip{
 		ID:                   uuid.New().String(),
-		OrgID:                orgID,
+		TenantID:                tenantID,
 		VehicleID:            req.VehicleID,
 		DriverID:             &req.DriverID,
 		Status:               models.TripStatusCreated,
@@ -155,7 +155,7 @@ func (s *TripService) Create(ctx context.Context, orgID string, req *models.Crea
 	s.logger.Info("trip created",
 		zap.String("trip_id", trip.ID),
 		zap.String("correlation_id", trip.CorrelationID),
-		zap.String("tenant_id", trip.OrgID),
+		zap.String("tenant_id", trip.TenantID),
 	)
 	return trip, nil
 }
@@ -169,14 +169,14 @@ func (s *TripService) GetTripByID(ctx context.Context, id string) (*models.Trip,
 	}
 
 	// SECURITY FIX: Validate tenant ownership (CWE-639)
-	orgIDVal := ctx.Value(ctxkeys.OrgIDKey)
-	if orgIDVal != nil {
-		orgID, ok := orgIDVal.(string)
-		if ok && orgID != trip.OrgID {
+	tenantIDVal := ctx.Value(ctxkeys.TenantIDKey)
+	if tenantIDVal != nil {
+		tenantID, ok := tenantIDVal.(string)
+		if ok && tenantID != trip.TenantID {
 			s.logger.Warn("unauthorized trip access attempt",
 				zap.String("trip_id", id),
-				zap.String("trip_tenant", trip.OrgID),
-				zap.String("request_tenant", orgID))
+				zap.String("trip_tenant", trip.TenantID),
+				zap.String("request_tenant", tenantID))
 			return nil, fmt.Errorf("trip not found") // Opaque error to prevent tenant enumeration
 		}
 	}
@@ -205,14 +205,14 @@ func (s *TripService) Update(ctx context.Context, id string, req *models.UpdateT
 	}
 
 	// SECURITY FIX: Validate tenant ownership (CWE-639)
-	orgIDVal := ctx.Value(ctxkeys.OrgIDKey)
-	if orgIDVal != nil {
-		orgID, ok := orgIDVal.(string)
-		if ok && orgID != existingTrip.OrgID {
+	tenantIDVal := ctx.Value(ctxkeys.TenantIDKey)
+	if tenantIDVal != nil {
+		tenantID, ok := tenantIDVal.(string)
+		if ok && tenantID != existingTrip.TenantID {
 			s.logger.Warn("unauthorized trip update attempt",
 				zap.String("trip_id", id),
-				zap.String("trip_tenant", existingTrip.OrgID),
-				zap.String("request_tenant", orgID))
+				zap.String("trip_tenant", existingTrip.TenantID),
+				zap.String("request_tenant", tenantID))
 			return nil, fmt.Errorf("trip not found")
 		}
 	}
@@ -283,14 +283,14 @@ func (s *TripService) Delete(ctx context.Context, id string) error {
 	}
 
 	// SECURITY FIX: Validate tenant ownership (CWE-639)
-	orgIDVal := ctx.Value(ctxkeys.OrgIDKey)
-	if orgIDVal != nil {
-		orgID, ok := orgIDVal.(string)
-		if ok && orgID != trip.OrgID {
+	tenantIDVal := ctx.Value(ctxkeys.TenantIDKey)
+	if tenantIDVal != nil {
+		tenantID, ok := tenantIDVal.(string)
+		if ok && tenantID != trip.TenantID {
 			s.logger.Warn("unauthorized trip delete attempt",
 				zap.String("trip_id", id),
-				zap.String("trip_tenant", trip.OrgID),
-				zap.String("request_tenant", orgID))
+				zap.String("trip_tenant", trip.TenantID),
+				zap.String("request_tenant", tenantID))
 			return fmt.Errorf("trip not found")
 		}
 	}
@@ -317,17 +317,17 @@ func (s *TripService) Approve(ctx context.Context, id string) error {
 	}
 
 	// SECURITY FIX: Validate tenant ownership (CWE-639)
-	orgIDVal := ctx.Value(ctxkeys.OrgIDKey)
-	if orgIDVal == nil {
+	tenantIDVal := ctx.Value(ctxkeys.TenantIDKey)
+	if tenantIDVal == nil {
 		s.logger.Error("tenant context missing")
 		return fmt.Errorf("unauthorized")
 	}
-	orgID, ok := orgIDVal.(string)
-	if !ok || orgID != trip.OrgID {
+	tenantID, ok := tenantIDVal.(string)
+	if !ok || tenantID != trip.TenantID {
 		s.logger.Warn("unauthorized trip approval attempt",
 			zap.String("trip_id", id),
-			zap.String("trip_tenant", trip.OrgID),
-			zap.Any("request_tenant", orgIDVal))
+			zap.String("trip_tenant", trip.TenantID),
+			zap.Any("request_tenant", tenantIDVal))
 		return fmt.Errorf("unauthorized")
 	}
 
@@ -353,14 +353,14 @@ func (s *TripService) Start(ctx context.Context, id, driverID string, req *model
 	}
 
 	// SECURITY FIX: Validate tenant ownership (CWE-639)
-	orgIDVal := ctx.Value(ctxkeys.OrgIDKey)
-	if orgIDVal != nil {
-		orgID, ok := orgIDVal.(string)
-		if ok && orgID != trip.OrgID {
+	tenantIDVal := ctx.Value(ctxkeys.TenantIDKey)
+	if tenantIDVal != nil {
+		tenantID, ok := tenantIDVal.(string)
+		if ok && tenantID != trip.TenantID {
 			s.logger.Warn("unauthorized trip start attempt",
 				zap.String("trip_id", id),
-				zap.String("trip_tenant", trip.OrgID),
-				zap.String("request_tenant", orgID))
+				zap.String("trip_tenant", trip.TenantID),
+				zap.String("request_tenant", tenantID))
 			return nil, fmt.Errorf("trip not found")
 		}
 	}
@@ -428,10 +428,10 @@ func (s *TripService) Start(ctx context.Context, id, driverID string, req *model
 	s.logger.Info("trip started", zap.String("trip_id", id))
 
 	// Record metrics
-	orgID := trip.OrgID
+	tenantID := trip.TenantID
 	tripType := "standard"   // Placeholder: derive from trip type/category if available
 	vehicleType := "unknown" // Placeholder: derive from vehicle type if available
-	tripmetrics.TripsStartedTotal.WithLabelValues(orgID, tripType, vehicleType).Inc()
+	tripmetrics.TripsStartedTotal.WithLabelValues(tenantID, tripType, vehicleType).Inc()
 	metrics.ActiveTrips.Inc()
 
 	// Return updated trip
@@ -446,14 +446,14 @@ func (s *TripService) Pause(ctx context.Context, id, driverID string) (*models.T
 	}
 
 	// SECURITY FIX: Validate tenant ownership (CWE-639)
-	orgIDVal := ctx.Value(ctxkeys.OrgIDKey)
-	if orgIDVal != nil {
-		orgID, ok := orgIDVal.(string)
-		if ok && orgID != trip.OrgID {
+	tenantIDVal := ctx.Value(ctxkeys.TenantIDKey)
+	if tenantIDVal != nil {
+		tenantID, ok := tenantIDVal.(string)
+		if ok && tenantID != trip.TenantID {
 			s.logger.Warn("unauthorized trip pause attempt",
 				zap.String("trip_id", id),
-				zap.String("trip_tenant", trip.OrgID),
-				zap.String("request_tenant", orgID))
+				zap.String("trip_tenant", trip.TenantID),
+				zap.String("request_tenant", tenantID))
 			return nil, fmt.Errorf("trip not found")
 		}
 	}
@@ -488,14 +488,14 @@ func (s *TripService) Resume(ctx context.Context, id, driverID string) (*models.
 	}
 
 	// SECURITY FIX: Validate tenant ownership (CWE-639)
-	orgIDVal := ctx.Value(ctxkeys.OrgIDKey)
-	if orgIDVal != nil {
-		orgID, ok := orgIDVal.(string)
-		if ok && orgID != trip.OrgID {
+	tenantIDVal := ctx.Value(ctxkeys.TenantIDKey)
+	if tenantIDVal != nil {
+		tenantID, ok := tenantIDVal.(string)
+		if ok && tenantID != trip.TenantID {
 			s.logger.Warn("unauthorized trip resume attempt",
 				zap.String("trip_id", id),
-				zap.String("trip_tenant", trip.OrgID),
-				zap.String("request_tenant", orgID))
+				zap.String("trip_tenant", trip.TenantID),
+				zap.String("request_tenant", tenantID))
 			return nil, fmt.Errorf("trip not found")
 		}
 	}
@@ -530,14 +530,14 @@ func (s *TripService) Complete(ctx context.Context, id, driverID string, req *mo
 	}
 
 	// SECURITY FIX: Validate tenant ownership (CWE-639)
-	orgIDVal := ctx.Value(ctxkeys.OrgIDKey)
-	if orgIDVal != nil {
-		orgID, ok := orgIDVal.(string)
-		if ok && orgID != trip.OrgID {
+	tenantIDVal := ctx.Value(ctxkeys.TenantIDKey)
+	if tenantIDVal != nil {
+		tenantID, ok := tenantIDVal.(string)
+		if ok && tenantID != trip.TenantID {
 			s.logger.Warn("unauthorized trip complete attempt",
 				zap.String("trip_id", id),
-				zap.String("trip_tenant", trip.OrgID),
-				zap.String("request_tenant", orgID))
+				zap.String("trip_tenant", trip.TenantID),
+				zap.String("request_tenant", tenantID))
 			return nil, fmt.Errorf("trip not found")
 		}
 	}
@@ -601,7 +601,7 @@ func (s *TripService) Complete(ctx context.Context, id, driverID string, req *mo
 	// Financial Hooks & Event Emission
 	s.publishEvent("trip.completed", map[string]interface{}{
 		"trip_id":           id,
-		"tenant_id":            trip.OrgID,
+		"tenant_id":            trip.TenantID,
 		"vehicle_id":        trip.VehicleID,
 		"driver_id":         driverID,
 		"billable_distance": actualDistance,
@@ -620,14 +620,14 @@ func (s *TripService) Cancel(ctx context.Context, id, reason string) error {
 	}
 
 	// SECURITY FIX: Validate tenant ownership (CWE-639)
-	orgIDVal := ctx.Value(ctxkeys.OrgIDKey)
-	if orgIDVal != nil {
-		orgID, ok := orgIDVal.(string)
-		if ok && orgID != trip.OrgID {
+	tenantIDVal := ctx.Value(ctxkeys.TenantIDKey)
+	if tenantIDVal != nil {
+		tenantID, ok := tenantIDVal.(string)
+		if ok && tenantID != trip.TenantID {
 			s.logger.Warn("unauthorized trip cancel attempt",
 				zap.String("trip_id", id),
-				zap.String("trip_tenant", trip.OrgID),
-				zap.String("request_tenant", orgID))
+				zap.String("trip_tenant", trip.TenantID),
+				zap.String("request_tenant", tenantID))
 			return fmt.Errorf("trip not found")
 		}
 	}
@@ -662,14 +662,14 @@ func (s *TripService) Fail(ctx context.Context, id, reason string) error {
 	}
 
 	// SECURITY FIX: Validate tenant ownership (CWE-639)
-	orgIDVal := ctx.Value(ctxkeys.OrgIDKey)
-	if orgIDVal != nil {
-		orgID, ok := orgIDVal.(string)
-		if ok && orgID != trip.OrgID {
+	tenantIDVal := ctx.Value(ctxkeys.TenantIDKey)
+	if tenantIDVal != nil {
+		tenantID, ok := tenantIDVal.(string)
+		if ok && tenantID != trip.TenantID {
 			s.logger.Warn("unauthorized trip fail attempt",
 				zap.String("trip_id", id),
-				zap.String("trip_tenant", trip.OrgID),
-				zap.String("request_tenant", orgID))
+				zap.String("trip_tenant", trip.TenantID),
+				zap.String("request_tenant", tenantID))
 			return fmt.Errorf("trip not found")
 		}
 	}
@@ -703,14 +703,14 @@ func (s *TripService) AddEvent(ctx context.Context, tripID, driverID string, req
 	}
 
 	// SECURITY FIX: Validate tenant ownership (CWE-639)
-	orgIDVal := ctx.Value(ctxkeys.OrgIDKey)
-	if orgIDVal != nil {
-		orgID, ok := orgIDVal.(string)
-		if ok && orgID != trip.OrgID {
+	tenantIDVal := ctx.Value(ctxkeys.TenantIDKey)
+	if tenantIDVal != nil {
+		tenantID, ok := tenantIDVal.(string)
+		if ok && tenantID != trip.TenantID {
 			s.logger.Warn("unauthorized trip add event attempt",
 				zap.String("trip_id", tripID),
-				zap.String("trip_tenant", trip.OrgID),
-				zap.String("request_tenant", orgID))
+				zap.String("trip_tenant", trip.TenantID),
+				zap.String("request_tenant", tenantID))
 			return fmt.Errorf("trip not found")
 		}
 	}
@@ -761,14 +761,14 @@ func (s *TripService) SubmitPOD(ctx context.Context, tripID, driverID string, re
 	}
 
 	// SECURITY FIX: Validate tenant ownership (CWE-639)
-	orgIDVal := ctx.Value(ctxkeys.OrgIDKey)
-	if orgIDVal != nil {
-		orgID, ok := orgIDVal.(string)
-		if ok && orgID != trip.OrgID {
+	tenantIDVal := ctx.Value(ctxkeys.TenantIDKey)
+	if tenantIDVal != nil {
+		tenantID, ok := tenantIDVal.(string)
+		if ok && tenantID != trip.TenantID {
 			s.logger.Warn("unauthorized trip pod submission attempt",
 				zap.String("trip_id", tripID),
-				zap.String("trip_tenant", trip.OrgID),
-				zap.String("request_tenant", orgID))
+				zap.String("trip_tenant", trip.TenantID),
+				zap.String("request_tenant", tenantID))
 			return fmt.Errorf("trip not found")
 		}
 	}
@@ -834,10 +834,10 @@ func (s *TripService) GetActiveTripsForVehicle(ctx context.Context, vehicleID st
 }
 
 // GetSummary retrieves trip analytics for a tenant
-func (s *TripService) GetTripSummary(ctx context.Context, orgID string, startDate, endDate time.Time) (*models.TripSummary, error) {
-	summary, err := s.repo.GetTripSummary(ctx, orgID, startDate, endDate)
+func (s *TripService) GetTripSummary(ctx context.Context, tenantID string, startDate, endDate time.Time) (*models.TripSummary, error) {
+	summary, err := s.repo.GetTripSummary(ctx, tenantID, startDate, endDate)
 	if err != nil {
-		s.logger.Error("failed to get trip summary", zap.String("tenant_id", orgID), zap.Error(err))
+		s.logger.Error("failed to get trip summary", zap.String("tenant_id", tenantID), zap.Error(err))
 		return nil, fmt.Errorf("failed to get trip summary: %w", err)
 	}
 
@@ -845,13 +845,13 @@ func (s *TripService) GetTripSummary(ctx context.Context, orgID string, startDat
 }
 
 // GetDriverStats retrieves driver performance metrics
-func (s *TripService) GetDriverStats(ctx context.Context, orgID string) ([]models.DriverPerformance, error) {
-	return s.repo.GetDriverStats(ctx, orgID)
+func (s *TripService) GetDriverStats(ctx context.Context, tenantID string) ([]models.DriverPerformance, error) {
+	return s.repo.GetDriverStats(ctx, tenantID)
 }
 
 // GetTripStats retrieves daily trip statistics for the last 7 days
-func (s *TripService) GetTripStats(ctx context.Context, orgID string) ([]models.DailyTripTrend, error) {
-	return s.repo.GetTripStats(ctx, orgID)
+func (s *TripService) GetTripStats(ctx context.Context, tenantID string) ([]models.DailyTripTrend, error) {
+	return s.repo.GetTripStats(ctx, tenantID)
 }
 func (s *TripService) GetStats(ctx context.Context) (*models.TripStats, error) {
 	stats, err := s.repo.GetStats(ctx)
@@ -863,8 +863,8 @@ func (s *TripService) GetStats(ctx context.Context) (*models.TripStats, error) {
 }
 
 // GetTripCustomers returns distinct customer names for the filter dropdown
-func (s *TripService) GetTripCustomers(ctx context.Context, orgID string) ([]string, error) {
-	customers, err := s.repo.GetTripCustomers(ctx, orgID)
+func (s *TripService) GetTripCustomers(ctx context.Context, tenantID string) ([]string, error) {
+	customers, err := s.repo.GetTripCustomers(ctx, tenantID)
 	if err != nil {
 		s.logger.Error("failed to get trip customers", zap.Error(err))
 		return nil, fmt.Errorf("failed to get trip customers: %w", err)
@@ -882,17 +882,17 @@ func (s *TripService) GetTelemetry(ctx context.Context, tripID string) ([]models
 	}
 
 	// SECURITY FIX: Validate tenant ownership
-	orgIDVal := ctx.Value(ctxkeys.OrgIDKey)
-	if orgIDVal == nil {
+	tenantIDVal := ctx.Value(ctxkeys.TenantIDKey)
+	if tenantIDVal == nil {
 		s.logger.Error("tenant context missing for telemetry access")
 		return nil, fmt.Errorf("unauthorized")
 	}
-	orgID, ok := orgIDVal.(string)
-	if !ok || orgID != trip.OrgID {
+	tenantID, ok := tenantIDVal.(string)
+	if !ok || tenantID != trip.TenantID {
 		s.logger.Warn("unauthorized telemetry access attempt",
 			zap.String("trip_id", tripID),
-			zap.String("trip_tenant", trip.OrgID),
-			zap.Any("request_tenant", orgIDVal))
+			zap.String("trip_tenant", trip.TenantID),
+			zap.Any("request_tenant", tenantIDVal))
 		return nil, fmt.Errorf("unauthorized")
 	}
 

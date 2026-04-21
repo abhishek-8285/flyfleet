@@ -39,7 +39,7 @@ func (s *AnalyticsServiceImpl) CreateFleetAnalytics(ctx context.Context, analyti
 }
 
 // GetFleetAnalytics retrieves fleet analytics by ID
-func (s *AnalyticsServiceImpl) GetFleetAnalytics(ctx context.Context, id string, orgID uuid.UUID) (*models.FleetAnalytics, error) {
+func (s *AnalyticsServiceImpl) GetFleetAnalytics(ctx context.Context, id string, tenantID uuid.UUID) (*models.FleetAnalytics, error) {
 	start := time.Now()
 	var err error
 	var res *models.FleetAnalytics
@@ -50,7 +50,7 @@ func (s *AnalyticsServiceImpl) GetFleetAnalytics(ctx context.Context, id string,
 			rowCount = 1
 		}
 		params := map[string]interface{}{"id": id}
-		s.logQuery(ctx, orgID, "get_fleet_analytics", params, time.Since(start), rowCount, false, err)
+		s.logQuery(ctx, tenantID, "get_fleet_analytics", params, time.Since(start), rowCount, false, err)
 	}()
 
 	if id == "" {
@@ -58,12 +58,12 @@ func (s *AnalyticsServiceImpl) GetFleetAnalytics(ctx context.Context, id string,
 		return nil, err
 	}
 
-	res, err = s.repo.GetFleetAnalytics(ctx, id, orgID)
+	res, err = s.repo.GetFleetAnalytics(ctx, id, tenantID)
 	return res, err
 }
 
 // GetFleetAnalyticsByPeriod retrieves fleet analytics by organization and date period
-func (s *AnalyticsServiceImpl) GetFleetAnalyticsByPeriod(ctx context.Context, orgID uuid.UUID, startDate, endDate time.Time) (*models.FleetAnalytics, error) {
+func (s *AnalyticsServiceImpl) GetFleetAnalyticsByPeriod(ctx context.Context, tenantID uuid.UUID, startDate, endDate time.Time) (*models.FleetAnalytics, error) {
 	start := time.Now()
 	var err error
 	var res *models.FleetAnalytics
@@ -78,10 +78,10 @@ func (s *AnalyticsServiceImpl) GetFleetAnalyticsByPeriod(ctx context.Context, or
 			"start_date": startDate.Format(time.RFC3339),
 			"end_date":   endDate.Format(time.RFC3339),
 		}
-		s.logQuery(ctx, orgID, "get_fleet_analytics_period", params, time.Since(start), rowCount, cacheHit, err)
+		s.logQuery(ctx, tenantID, "get_fleet_analytics_period", params, time.Since(start), rowCount, cacheHit, err)
 	}()
 
-	if orgID == uuid.Nil {
+	if tenantID == uuid.Nil {
 		err = errors.New("organization ID is required")
 		return nil, err
 	}
@@ -103,26 +103,26 @@ func (s *AnalyticsServiceImpl) GetFleetAnalyticsByPeriod(ctx context.Context, or
 			"start_date": startDate.Format(time.RFC3339),
 			"end_date":   endDate.Format(time.RFC3339),
 		}
-		cacheKey := s.cache.GenerateKey(ctx, orgID.String(), "fleet", "", "fleet_analytics_period", params)
+		cacheKey := s.cache.GenerateKey(ctx, tenantID.String(), "fleet", "", "fleet_analytics_period", params)
 
 		if found, _ := s.cache.Get(ctx, cacheKey, &res); found {
 			cacheHit = true
 			return res, nil
 		}
 
-		res, err = s.repo.GetFleetAnalyticsByPeriod(ctx, orgID, startDate, endDate)
+		res, err = s.repo.GetFleetAnalyticsByPeriod(ctx, tenantID, startDate, endDate)
 		if err == nil && res != nil {
 			_ = s.cache.Set(ctx, cacheKey, res, 0)
 		}
 		return res, err
 	}
 
-	res, err = s.repo.GetFleetAnalyticsByPeriod(ctx, orgID, startDate, endDate)
+	res, err = s.repo.GetFleetAnalyticsByPeriod(ctx, tenantID, startDate, endDate)
 	return res, err
 }
 
 // UpdateFleetAnalytics updates existing fleet analytics
-func (s *AnalyticsServiceImpl) UpdateFleetAnalytics(ctx context.Context, id string, orgID uuid.UUID, updates map[string]interface{}) error {
+func (s *AnalyticsServiceImpl) UpdateFleetAnalytics(ctx context.Context, id string, tenantID uuid.UUID, updates map[string]interface{}) error {
 	if id == "" {
 		return errors.New("ID is required")
 	}
@@ -130,20 +130,20 @@ func (s *AnalyticsServiceImpl) UpdateFleetAnalytics(ctx context.Context, id stri
 		return errors.New("updates are required")
 	}
 
-	return s.repo.UpdateFleetAnalytics(ctx, id, orgID, updates)
+	return s.repo.UpdateFleetAnalytics(ctx, id, tenantID, updates)
 }
 
 // DeleteFleetAnalytics deletes fleet analytics
-func (s *AnalyticsServiceImpl) DeleteFleetAnalytics(ctx context.Context, id string, orgID uuid.UUID) error {
+func (s *AnalyticsServiceImpl) DeleteFleetAnalytics(ctx context.Context, id string, tenantID uuid.UUID) error {
 	if id == "" {
 		return errors.New("ID is required")
 	}
 
-	return s.repo.DeleteFleetAnalytics(ctx, id, orgID)
+	return s.repo.DeleteFleetAnalytics(ctx, id, tenantID)
 }
 
 // ListFleetAnalytics retrieves fleet analytics with filtering, validation and caching
-func (s *AnalyticsServiceImpl) ListFleetAnalytics(ctx context.Context, orgID uuid.UUID, startDate, endDate *time.Time, cursor string, limit, offset int) ([]*models.FleetAnalytics, int, error) {
+func (s *AnalyticsServiceImpl) ListFleetAnalytics(ctx context.Context, tenantID uuid.UUID, startDate, endDate *time.Time, cursor string, limit, offset int) ([]*models.FleetAnalytics, int, error) {
 	start := time.Now()
 	var err error
 	var data []*models.FleetAnalytics
@@ -162,10 +162,10 @@ func (s *AnalyticsServiceImpl) ListFleetAnalytics(ctx context.Context, orgID uui
 		if endDate != nil {
 			params["end_date"] = endDate.Format(time.RFC3339)
 		}
-		s.logQuery(ctx, orgID, "list_fleet_analytics", params, time.Since(start), rowCount, cacheHit, err)
+		s.logQuery(ctx, tenantID, "list_fleet_analytics", params, time.Since(start), rowCount, cacheHit, err)
 	}()
 
-	if orgID == uuid.Nil {
+	if tenantID == uuid.Nil {
 		err = errors.New("organization ID is required")
 		return nil, 0, err
 	}
@@ -196,7 +196,7 @@ func (s *AnalyticsServiceImpl) ListFleetAnalytics(ctx context.Context, orgID uui
 		if endDate != nil {
 			params["end_date"] = endDate.Format(time.RFC3339)
 		}
-		cacheKey := s.cache.GenerateKey(ctx, orgID.String(), "fleet", "", "list_fleet_analytics", params)
+		cacheKey := s.cache.GenerateKey(ctx, tenantID.String(), "fleet", "", "list_fleet_analytics", params)
 		type listResult struct {
 			Data  []*models.FleetAnalytics
 			Total int
@@ -209,19 +209,19 @@ func (s *AnalyticsServiceImpl) ListFleetAnalytics(ctx context.Context, orgID uui
 			return data, total, nil
 		}
 
-		data, total, err = s.repo.ListFleetAnalytics(ctx, orgID, startDate, endDate, cursor, limit, offset)
+		data, total, err = s.repo.ListFleetAnalytics(ctx, tenantID, startDate, endDate, cursor, limit, offset)
 		if err == nil {
 			_ = s.cache.Set(ctx, cacheKey, listResult{Data: data, Total: total}, 0)
 		}
 		return data, total, err
 	}
 
-	data, total, err = s.repo.ListFleetAnalytics(ctx, orgID, startDate, endDate, cursor, limit, offset)
+	data, total, err = s.repo.ListFleetAnalytics(ctx, tenantID, startDate, endDate, cursor, limit, offset)
 	return data, total, err
 }
 
 // CreateDriverBehaviorAnalytics creates new driver behavior analytics with validation
-func (s *AnalyticsServiceImpl) GetVehicleDailyStats(ctx context.Context, vehicleID uuid.UUID, orgID uuid.UUID, startDate, endDate time.Time, cursor string, limit int) ([]*models.VehicleDailyStats, string, error) {
+func (s *AnalyticsServiceImpl) GetVehicleDailyStats(ctx context.Context, vehicleID uuid.UUID, tenantID uuid.UUID, startDate, endDate time.Time, cursor string, limit int) ([]*models.VehicleDailyStats, string, error) {
 	start := time.Now()
 	var err error
 	var res []*models.VehicleDailyStats
@@ -237,7 +237,7 @@ func (s *AnalyticsServiceImpl) GetVehicleDailyStats(ctx context.Context, vehicle
 			"cursor":     cursor,
 			"limit":      limit,
 		}
-		s.logQuery(ctx, orgID, "get_vehicle_daily_stats", params, time.Since(start), rowCount, cacheHit, err)
+		s.logQuery(ctx, tenantID, "get_vehicle_daily_stats", params, time.Since(start), rowCount, cacheHit, err)
 	}()
 
 	if vehicleID == uuid.Nil {
@@ -256,7 +256,7 @@ func (s *AnalyticsServiceImpl) GetVehicleDailyStats(ctx context.Context, vehicle
 			"cursor":     cursor,
 			"limit":      limit,
 		}
-		cacheKey := s.cache.GenerateKey(ctx, orgID.String(), "vehicle", vehicleID.String(), "vehicle_daily_stats", params)
+		cacheKey := s.cache.GenerateKey(ctx, tenantID.String(), "vehicle", vehicleID.String(), "vehicle_daily_stats", params)
 
 		type cachedResult struct {
 			Data   []*models.VehicleDailyStats `json:"data"`
@@ -271,7 +271,7 @@ func (s *AnalyticsServiceImpl) GetVehicleDailyStats(ctx context.Context, vehicle
 			return res, nextCursor, nil
 		}
 
-		res, nextCursor, err = s.repo.GetVehicleDailyStats(ctx, vehicleID, orgID, startDate, endDate, cursor, limit)
+		res, nextCursor, err = s.repo.GetVehicleDailyStats(ctx, vehicleID, tenantID, startDate, endDate, cursor, limit)
 		if err == nil {
 			rowCount = len(res)
 			_ = s.cache.Set(ctx, cacheKey, cachedResult{Data: res, Cursor: nextCursor}, 0)
@@ -279,13 +279,13 @@ func (s *AnalyticsServiceImpl) GetVehicleDailyStats(ctx context.Context, vehicle
 		return res, nextCursor, err
 	}
 
-	res, nextCursor, err = s.repo.GetVehicleDailyStats(ctx, vehicleID, orgID, startDate, endDate, cursor, limit)
+	res, nextCursor, err = s.repo.GetVehicleDailyStats(ctx, vehicleID, tenantID, startDate, endDate, cursor, limit)
 	rowCount = len(res)
 	return res, nextCursor, err
 }
 
 // GetDriverDailyStats retrieves daily stats for a driver with cursor pagination
-func (s *AnalyticsServiceImpl) GetDriverDailyStats(ctx context.Context, driverID uuid.UUID, orgID uuid.UUID, startDate, endDate time.Time, cursor string, limit int) ([]*models.DriverDailyStats, string, error) {
+func (s *AnalyticsServiceImpl) GetDriverDailyStats(ctx context.Context, driverID uuid.UUID, tenantID uuid.UUID, startDate, endDate time.Time, cursor string, limit int) ([]*models.DriverDailyStats, string, error) {
 	start := time.Now()
 	var err error
 	var res []*models.DriverDailyStats
@@ -301,7 +301,7 @@ func (s *AnalyticsServiceImpl) GetDriverDailyStats(ctx context.Context, driverID
 			"cursor":     cursor,
 			"limit":      limit,
 		}
-		s.logQuery(ctx, orgID, "get_driver_daily_stats", params, time.Since(start), rowCount, cacheHit, err)
+		s.logQuery(ctx, tenantID, "get_driver_daily_stats", params, time.Since(start), rowCount, cacheHit, err)
 	}()
 
 	if driverID == uuid.Nil {
@@ -320,7 +320,7 @@ func (s *AnalyticsServiceImpl) GetDriverDailyStats(ctx context.Context, driverID
 			"cursor":     cursor,
 			"limit":      limit,
 		}
-		cacheKey := s.cache.GenerateKey(ctx, orgID.String(), "driver", driverID.String(), "driver_daily_stats", params)
+		cacheKey := s.cache.GenerateKey(ctx, tenantID.String(), "driver", driverID.String(), "driver_daily_stats", params)
 
 		type cachedResult struct {
 			Data   []*models.DriverDailyStats `json:"data"`
@@ -335,7 +335,7 @@ func (s *AnalyticsServiceImpl) GetDriverDailyStats(ctx context.Context, driverID
 			return res, nextCursor, nil
 		}
 
-		res, nextCursor, err = s.repo.GetDriverDailyStats(ctx, driverID, orgID, startDate, endDate, cursor, limit)
+		res, nextCursor, err = s.repo.GetDriverDailyStats(ctx, driverID, tenantID, startDate, endDate, cursor, limit)
 		if err == nil {
 			rowCount = len(res)
 			_ = s.cache.Set(ctx, cacheKey, cachedResult{Data: res, Cursor: nextCursor}, 0)
@@ -343,13 +343,13 @@ func (s *AnalyticsServiceImpl) GetDriverDailyStats(ctx context.Context, driverID
 		return res, nextCursor, err
 	}
 
-	res, nextCursor, err = s.repo.GetDriverDailyStats(ctx, driverID, orgID, startDate, endDate, cursor, limit)
+	res, nextCursor, err = s.repo.GetDriverDailyStats(ctx, driverID, tenantID, startDate, endDate, cursor, limit)
 	rowCount = len(res)
 	return res, nextCursor, err
 }
 
 // GetFleetHourlyStats retrieves pre-aggregated hourly stats for the fleet
-func (s *AnalyticsServiceImpl) GetFleetHourlyStats(ctx context.Context, orgID uuid.UUID, startDate, endDate time.Time, cursor string, limit int) ([]*models.FleetHourlyStats, string, error) {
+func (s *AnalyticsServiceImpl) GetFleetHourlyStats(ctx context.Context, tenantID uuid.UUID, startDate, endDate time.Time, cursor string, limit int) ([]*models.FleetHourlyStats, string, error) {
 	start := time.Now()
 	var err error
 	var res []*models.FleetHourlyStats
@@ -364,10 +364,10 @@ func (s *AnalyticsServiceImpl) GetFleetHourlyStats(ctx context.Context, orgID uu
 			"cursor":     cursor,
 			"limit":      limit,
 		}
-		s.logQuery(ctx, orgID, "get_fleet_hourly_stats", params, time.Since(start), rowCount, cacheHit, err)
+		s.logQuery(ctx, tenantID, "get_fleet_hourly_stats", params, time.Since(start), rowCount, cacheHit, err)
 	}()
 
-	if orgID == uuid.Nil {
+	if tenantID == uuid.Nil {
 		err = errors.New("organization ID is required")
 		return nil, "", err
 	}
@@ -382,7 +382,7 @@ func (s *AnalyticsServiceImpl) GetFleetHourlyStats(ctx context.Context, orgID uu
 			"cursor":     cursor,
 			"limit":      limit,
 		}
-		cacheKey := s.cache.GenerateKey(ctx, orgID.String(), "fleet", "", "fleet_hourly_stats", params)
+		cacheKey := s.cache.GenerateKey(ctx, tenantID.String(), "fleet", "", "fleet_hourly_stats", params)
 
 		type cachedResult struct {
 			Data   []*models.FleetHourlyStats `json:"data"`
@@ -398,7 +398,7 @@ func (s *AnalyticsServiceImpl) GetFleetHourlyStats(ctx context.Context, orgID uu
 			return res, nextCursor, nil
 		}
 
-		res, nextCursor, err = s.repo.GetFleetHourlyStats(ctx, orgID, startDate, endDate, cursor, limit)
+		res, nextCursor, err = s.repo.GetFleetHourlyStats(ctx, tenantID, startDate, endDate, cursor, limit)
 		if err == nil {
 			rowCount = len(res)
 			_ = s.cache.Set(ctx, cacheKey, cachedResult{Data: res, Cursor: nextCursor}, 0)
@@ -406,7 +406,7 @@ func (s *AnalyticsServiceImpl) GetFleetHourlyStats(ctx context.Context, orgID uu
 		return res, nextCursor, err
 	}
 
-	res, nextCursor, err = s.repo.GetFleetHourlyStats(ctx, orgID, startDate, endDate, cursor, limit)
+	res, nextCursor, err = s.repo.GetFleetHourlyStats(ctx, tenantID, startDate, endDate, cursor, limit)
 	rowCount = len(res)
 	return res, nextCursor, err
 }

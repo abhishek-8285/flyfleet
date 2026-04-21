@@ -94,17 +94,17 @@ func createPool(ctx context.Context, dbURL string, maxConns int32, appName strin
 		}()
 
 		// Try to extract Context claims robustly
-		var orgIDStr string
-		if val := ctx.Value(ctxkeys.OrgIDKey); val != nil {
+		var tenantIDStr string
+		if val := ctx.Value(ctxkeys.TenantIDKey); val != nil {
 			switch v := val.(type) {
 			case string:
-				orgIDStr = v
+				tenantIDStr = v
 			case fmt.Stringer:
-				orgIDStr = v.String()
+				tenantIDStr = v.String()
 			}
 		} else if val := ctx.Value(ctxkeys.TenantIDKey); val != nil {
 			if s, ok := val.(string); ok {
-				orgIDStr = s
+				tenantIDStr = s
 			}
 		}
 
@@ -130,17 +130,17 @@ func createPool(ctx context.Context, dbURL string, maxConns int32, appName strin
 
 		// Note: The original code had a single `err` variable.
 		// The new code uses `:=` for `err` in the inner blocks, making them local.
-		// The `orgIDStr` block still uses the outer `err` variable.
+		// The `tenantIDStr` block still uses the outer `err` variable.
 		// This is consistent with the provided instruction.
 		var err error
 		// Note: PostgreSQL `SET` command does not support `$1` binding. We MUST use `set_config`
 		// to securely pass parameterized inputs, otherwise pgxpool panics.
 		// The `false` flag makes this session-wide, which is cleared explicitly
 		// during AfterRelease.
-		if orgIDStr == "" {
-			_, err = conn.Exec(ctx, "SELECT set_config('flyfleet.current_org_id', '', false)")
+		if tenantIDStr == "" {
+			_, err = conn.Exec(ctx, "SELECT set_config('flyfleet.current_tenant_id', '', false)")
 		} else {
-			_, err = conn.Exec(ctx, "SELECT set_config('flyfleet.current_org_id', $1, false)", orgIDStr)
+			_, err = conn.Exec(ctx, "SELECT set_config('flyfleet.current_tenant_id', $1, false)", tenantIDStr)
 		}
 		if err != nil {
 			log.Printf("Failed to set org ID in connection: %v\n", err)
@@ -176,7 +176,7 @@ func createPool(ctx context.Context, dbURL string, maxConns int32, appName strin
 		}
 
 		// Update connection state
-		connState.Store(conn, orgIDStr)
+		connState.Store(conn, tenantIDStr)
 		return true
 	}
 
@@ -186,7 +186,7 @@ func createPool(ctx context.Context, dbURL string, maxConns int32, appName strin
 
 	config.AfterRelease = func(conn *pgx.Conn) bool {
 		// Strictly clear all custom session variables before returning to the pool
-		_, errOrg := conn.Exec(context.Background(), "SELECT set_config('flyfleet.current_org_id', '', false)")
+		_, errOrg := conn.Exec(context.Background(), "SELECT set_config('flyfleet.current_tenant_id', '', false)")
 		_, errUser := conn.Exec(context.Background(), "SELECT set_config('flyfleet.current_user_id', '', false)")
 		_, errRole := conn.Exec(context.Background(), "SELECT set_config('flyfleet.current_role', '', false)")
 

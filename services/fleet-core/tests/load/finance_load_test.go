@@ -29,7 +29,7 @@ func RunFinanceLoadTest(svc *service.FinanceService, concurrency int, totalReque
 			defer wg.Done()
 			for range reqChan {
 				tx := &models.FuelTransaction{
-					OrgID:           "7ca5b00c-b261-4a57-9d7e-721fb0d3bc64",
+					TenantID:           "7ca5b00c-b261-4a57-9d7e-721fb0d3bc64",
 					VehicleID:       "5e9f8f4a-9b4e-4b4e-9b4e-9b4e9b4e9b4e",
 					Liters:          50.0,
 					Amount:          5000.0,

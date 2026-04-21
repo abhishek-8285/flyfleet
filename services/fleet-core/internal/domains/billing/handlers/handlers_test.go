@@ -11,7 +11,7 @@ import (
 
 	"github.com/flyfleet/fleet-core/internal/domains/billing/models"
 	"github.com/flyfleet/fleet-core/internal/domains/billing/service"
-	coremiddleware "github.com/flyfleet/fleet-core/internal/middleware"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -31,13 +31,13 @@ type mockBillingService struct {
 	payErr    error
 }
 
-func (m *mockBillingService) ListInvoices(ctx context.Context, orgID uuid.UUID, page, size int) ([]models.Invoice, int, error) {
+func (m *mockBillingService) ListInvoices(ctx context.Context, tenantID uuid.UUID, page, size int) ([]models.Invoice, int, error) {
 	if m.listErr != nil {
 		return nil, 0, m.listErr
 	}
 	var result []models.Invoice
 	for _, inv := range m.invoices {
-		if inv.OrgID == orgID {
+		if inv.TenantID == tenantID {
 			result = append(result, *inv)
 		}
 	}
@@ -107,10 +107,10 @@ func (m *mockBillingService) RecordPayment(ctx context.Context, id uuid.UUID, am
 	return service.ErrInvoiceNotFound
 }
 
-func (m *mockBillingService) GetSettings(ctx context.Context, orgID uuid.UUID) (*models.BillingSettings, error) {
+func (m *mockBillingService) GetSettings(ctx context.Context, tenantID uuid.UUID) (*models.BillingSettings, error) {
 	if m.settings == nil {
 		return &models.BillingSettings{
-			OrgID:                orgID,
+			TenantID:                tenantID,
 			DefaultTaxRate:       18.0,
 			BaseCurrency:         "USD",
 			GracePeriodDays:      14,
@@ -125,20 +125,20 @@ func (m *mockBillingService) UpdateSettings(ctx context.Context, s *models.Billi
 	return nil
 }
 
-func (m *mockBillingService) GetMetrics(ctx context.Context, orgID uuid.UUID) (*models.BillingMetrics, error) {
+func (m *mockBillingService) GetMetrics(ctx context.Context, tenantID uuid.UUID) (*models.BillingMetrics, error) {
 	if m.metrics == nil {
 		return &models.BillingMetrics{}, nil
 	}
 	return m.metrics, nil
 }
 
-func (m *mockBillingService) GenerateDraftInvoice(ctx context.Context, orgID uuid.UUID) (*models.Invoice, error) {
+func (m *mockBillingService) GenerateDraftInvoice(ctx context.Context, tenantID uuid.UUID) (*models.Invoice, error) {
 	if m.createErr != nil {
 		return nil, m.createErr
 	}
 	inv := &models.Invoice{
 		ID:            uuid.New(),
-		OrgID:         orgID,
+		TenantID:         tenantID,
 		InvoiceNumber: "DRAFT-TEST",
 		Status:        "DRAFT",
 	}
@@ -154,17 +154,17 @@ func newTestHandler(svc *mockBillingService) *BillingHandler {
 	)
 }
 
-func contextWithOrgID(parent context.Context, orgID uuid.UUID) context.Context {
-	if orgID == uuid.Nil {
-		orgID = uuid.New()
+func contextWithTenantID(parent context.Context, tenantID uuid.UUID) context.Context {
+	if tenantID == uuid.Nil {
+		tenantID = uuid.New()
 	}
-	return context.WithValue(parent, coremiddleware.CtxOrgID, orgID)
+	return context.WithValue(parent, ctxkeys.TenantIDKey, tenantID.String())
 }
 
 // ─── Test ListInvoices Handler ──────────────────────────────────────────────
 
 func TestListInvoicesHandler(t *testing.T) {
-	orgID := uuid.New()
+	tenantID := uuid.New()
 
 	tests := []struct {
 		name       string
@@ -183,7 +183,7 @@ func TestListInvoicesHandler(t *testing.T) {
 		{
 			name: "returns invoices for org",
 			invoices: []*models.Invoice{
-				{ID: uuid.New(), OrgID: orgID, CustomerName: "Acme", InvoiceDate: parseTime("2026-04-01"), DueDate: parseTime("2026-05-01"), Status: "PENDING", Currency: "INR", TotalAmount: 10000, AmountPaid: 0, BalanceDue: 10000},
+				{ID: uuid.New(), TenantID: tenantID, CustomerName: "Acme", InvoiceDate: parseTime("2026-04-01"), DueDate: parseTime("2026-05-01"), Status: "PENDING", Currency: "INR", TotalAmount: 10000, AmountPaid: 0, BalanceDue: 10000},
 			},
 			query:      "/api/v1/billing/invoices",
 			wantStatus: http.StatusOK,
@@ -197,7 +197,7 @@ func TestListInvoicesHandler(t *testing.T) {
 			h := newTestHandler(svc)
 
 			req := httptest.NewRequest(http.MethodGet, tt.query, nil)
-			req = req.WithContext(contextWithOrgID(req.Context(), orgID))
+			req = req.WithContext(contextWithTenantID(req.Context(), tenantID))
 			rr := httptest.NewRecorder()
 
 			h.ListInvoices(rr, req)
@@ -261,7 +261,7 @@ func TestCreateInvoiceHandler(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/billing/invoices", bytes.NewReader(bodyBytes))
 			req.Header.Set("Content-Type", "application/json")
-			req = req.WithContext(contextWithOrgID(req.Context(), uuid.New())) // Use a fresh random orgID
+			req = req.WithContext(contextWithTenantID(req.Context(), uuid.New())) // Use a fresh random tenantID
 			rr := httptest.NewRecorder()
 
 			h.CreateInvoice(rr, req)
@@ -279,7 +279,7 @@ func TestGetInvoiceHandler(t *testing.T) {
 	invID := uuid.New()
 	svc := &mockBillingService{
 		invoices: []*models.Invoice{
-			{ID: invID, OrgID: uuid.New(), CustomerName: "Acme", InvoiceDate: parseTime("2026-04-01"), DueDate: parseTime("2026-05-01"), Status: "PENDING", Currency: "INR", TotalAmount: 10000},
+			{ID: invID, TenantID: uuid.New(), CustomerName: "Acme", InvoiceDate: parseTime("2026-04-01"), DueDate: parseTime("2026-05-01"), Status: "PENDING", Currency: "INR", TotalAmount: 10000},
 		},
 	}
 	h := newTestHandler(svc)
@@ -300,7 +300,7 @@ func TestGetInvoiceHandler(t *testing.T) {
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("id", tt.id)
 			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
-			req = req.WithContext(contextWithOrgID(req.Context(), svc.invoices[0].OrgID))
+			req = req.WithContext(contextWithTenantID(req.Context(), svc.invoices[0].TenantID))
 			rr := httptest.NewRecorder()
 
 			h.GetInvoice(rr, req)
@@ -318,7 +318,7 @@ func TestRecordPaymentHandler(t *testing.T) {
 	invID := uuid.New()
 	svc := &mockBillingService{
 		invoices: []*models.Invoice{
-			{ID: invID, OrgID: uuid.New(), CustomerName: "Acme", InvoiceDate: parseTime("2026-04-01"), DueDate: parseTime("2026-05-01"), Status: "PENDING", Currency: "INR", TotalAmount: 10000, AmountPaid: 0, BalanceDue: 10000},
+			{ID: invID, TenantID: uuid.New(), CustomerName: "Acme", InvoiceDate: parseTime("2026-04-01"), DueDate: parseTime("2026-05-01"), Status: "PENDING", Currency: "INR", TotalAmount: 10000, AmountPaid: 0, BalanceDue: 10000},
 		},
 	}
 	h := newTestHandler(svc)
@@ -363,7 +363,7 @@ func TestRecordPaymentHandler(t *testing.T) {
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("id", tt.id)
 			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
-			req = req.WithContext(contextWithOrgID(req.Context(), svc.invoices[0].OrgID))
+			req = req.WithContext(contextWithTenantID(req.Context(), svc.invoices[0].TenantID))
 			rr := httptest.NewRecorder()
 
 			h.RecordPayment(rr, req)
@@ -382,7 +382,7 @@ func TestGetSettingsHandler(t *testing.T) {
 	h := newTestHandler(svc)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/billing/settings", nil)
-	req = req.WithContext(contextWithOrgID(req.Context(), uuid.New()))
+	req = req.WithContext(contextWithTenantID(req.Context(), uuid.New()))
 	rr := httptest.NewRecorder()
 
 	h.GetSettings(rr, req)
@@ -413,7 +413,7 @@ func TestGetMetricsHandler(t *testing.T) {
 	h := newTestHandler(svc)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/billing/metrics", nil)
-	req = req.WithContext(contextWithOrgID(req.Context(), uuid.New()))
+	req = req.WithContext(contextWithTenantID(req.Context(), uuid.New()))
 	rr := httptest.NewRecorder()
 
 	h.GetMetrics(rr, req)
@@ -432,11 +432,11 @@ func TestGetMetricsHandler(t *testing.T) {
 // ─── Test DeleteInvoice Handler ─────────────────────────────────────────────
 
 func TestDeleteInvoiceHandler(t *testing.T) {
-	fixedOrgID := uuid.New()
+	fixedTenantID := uuid.New()
 	invID := uuid.New()
 	svc := &mockBillingService{
 		invoices: []*models.Invoice{
-			{ID: invID, OrgID: fixedOrgID, CustomerName: "Acme", InvoiceDate: parseTime("2026-04-01"), DueDate: parseTime("2026-05-01"), Status: "DRAFT", Currency: "INR", TotalAmount: 10000},
+			{ID: invID, TenantID: fixedTenantID, CustomerName: "Acme", InvoiceDate: parseTime("2026-04-01"), DueDate: parseTime("2026-05-01"), Status: "DRAFT", Currency: "INR", TotalAmount: 10000},
 		},
 	}
 	h := newTestHandler(svc)
@@ -453,7 +453,7 @@ func TestDeleteInvoiceHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodDelete, "/api/v1/billing/invoices/"+tt.id, nil)
-			req = req.WithContext(contextWithOrgID(req.Context(), fixedOrgID))
+			req = req.WithContext(contextWithTenantID(req.Context(), fixedTenantID))
 			rctx := chi.NewRouteContext()
 			rctx.URLParams.Add("id", tt.id)
 			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))

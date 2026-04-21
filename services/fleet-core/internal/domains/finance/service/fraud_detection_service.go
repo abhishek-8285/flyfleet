@@ -33,7 +33,7 @@ func NewFraudDetectionService(repo *repository.FinanceRepository, logger *zap.Lo
 }
 
 // ScoreFuelLog computes a fraud score [0–100] for a fuel log with detected signals.
-func (s *FraudDetectionService) ScoreFuelLog(ctx context.Context, logID uuid.UUID, orgID uuid.UUID) (float64, models.FraudRiskLevel, []FraudSignal, error) {
+func (s *FraudDetectionService) ScoreFuelLog(ctx context.Context, logID uuid.UUID, tenantID uuid.UUID) (float64, models.FraudRiskLevel, []FraudSignal, error) {
 	score := 0.0
 	var signals []FraudSignal
 
@@ -52,14 +52,14 @@ func (s *FraudDetectionService) ScoreFuelLog(ctx context.Context, logID uuid.UUI
 
 	// Stub signals for demonstration
 	_ = logID
-	_ = orgID
+	_ = tenantID
 
 	level := riskLevel(score)
 	return score, level, signals, nil
 }
 
 // CreateFraudIncident persists a detected fraud incident.
-func (s *FraudDetectionService) CreateFraudIncident(ctx context.Context, entityType string, entityID, orgID uuid.UUID, score float64, level models.FraudRiskLevel, signals []FraudSignal) (*models.FraudIncident, error) {
+func (s *FraudDetectionService) CreateFraudIncident(ctx context.Context, entityType string, entityID, tenantID uuid.UUID, score float64, level models.FraudRiskLevel, signals []FraudSignal) (*models.FraudIncident, error) {
 	sigStrs := make([]string, len(signals))
 	for i, sig := range signals {
 		sigStrs[i] = string(sig)
@@ -69,7 +69,7 @@ func (s *FraudDetectionService) CreateFraudIncident(ctx context.Context, entityT
 		ID:         uuid.New(),
 		EntityType: entityType,
 		EntityID:   entityID,
-		OrgID:      orgID,
+		TenantID:      tenantID,
 		FraudScore: score,
 		RiskLevel:  level,
 		Signals:    sigStrs,

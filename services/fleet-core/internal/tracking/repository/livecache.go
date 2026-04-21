@@ -121,8 +121,8 @@ func (r *LiveCacheRepository) GetBatchLiveLocations(ctx context.Context, vehicle
 
 // PublishPositionUpdate publishes a position update to the org's
 // Redis pub/sub channel for WebSocket fan-out.
-func (r *LiveCacheRepository) PublishPositionUpdate(ctx context.Context, orgID uuid.UUID, msg []byte) error {
-	channel := database.RedisChannelForOrg(orgID.String())
+func (r *LiveCacheRepository) PublishPositionUpdate(ctx context.Context, tenantID uuid.UUID, msg []byte) error {
+	channel := database.RedisChannelForOrg(tenantID.String())
 	return r.rdb.Publish(ctx, channel, msg).Err()
 }
 

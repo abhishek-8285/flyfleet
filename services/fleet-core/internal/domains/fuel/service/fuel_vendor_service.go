@@ -18,10 +18,10 @@ func NewFuelVendorService(repo repository.FuelLogRepository, logger *zap.Logger)
 	return &FuelVendorService{repo: repo, logger: logger}
 }
 
-func (s *FuelVendorService) CreateVendor(ctx context.Context, orgID uuid.UUID, req models.CreateFuelVendorRequest) (*models.FuelVendor, error) {
+func (s *FuelVendorService) CreateVendor(ctx context.Context, tenantID uuid.UUID, req models.CreateFuelVendorRequest) (*models.FuelVendor, error) {
 	vendor := &models.FuelVendor{
 		ID:             uuid.New(),
-		OrganizationID: orgID,
+		OrganizationID: tenantID,
 		Name:           req.Name,
 		GSTIN:          req.GSTIN,
 		Address:        req.Address,
@@ -37,6 +37,6 @@ func (s *FuelVendorService) CreateVendor(ctx context.Context, orgID uuid.UUID, r
 	return vendor, nil
 }
 
-func (s *FuelVendorService) ListVendors(ctx context.Context, orgID uuid.UUID) ([]models.FuelVendor, error) {
-	return s.repo.ListVendors(ctx, orgID)
+func (s *FuelVendorService) ListVendors(ctx context.Context, tenantID uuid.UUID) ([]models.FuelVendor, error) {
+	return s.repo.ListVendors(ctx, tenantID)
 }

@@ -44,8 +44,8 @@ func LoggingMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
 			}
 
 			// Extract org ID from context (if available from tenant middleware)
-			if orgID, ok := r.Context().Value("org_id").(string); ok && orgID != "" {
-				fields = append(fields, zap.String("org_id", orgID))
+			if tenantID, ok := r.Context().Value("tenant_id").(string); ok && tenantID != "" {
+				fields = append(fields, zap.String("tenant_id", tenantID))
 			}
 
 			logger.Info("HTTP request", fields...)

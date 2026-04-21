@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/fleet-platform/shared/pkg/middleware"
 	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 )
 
@@ -178,38 +177,31 @@ func (h *DashboardHandlers) GetProfile(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Attempt extraction from JWKS middleware context first (Modern Monolith Approach)
-	userIDStr := ""
-	if uid, ok := ctx.Value(middleware.UserIDKey).(uuid.UUID); ok {
-		userIDStr = uid.String()
-	} else if sub, ok := ctx.Value(ctxkeys.UserIDKey).(string); ok {
-		userIDStr = sub
-	}
-
-	// Fallback to legacy BFF Header extraction
-	if userIDStr == "" {
-		userIDStr = r.Header.Get("X-User-ID")
-	}
-
-	if userIDStr == "" {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		http.Error(w, "invalid user id", http.StatusBadRequest)
-		return
+	userID, ok := ctxkeys.GetUserID(ctx)
+	if !ok {
+		// Fallback to legacy BFF Header extraction
+		userIDStr := r.Header.Get("X-User-ID")
+		if userIDStr == "" {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		var err error
+		userID, err = uuid.Parse(userIDStr)
+		if err != nil {
+			http.Error(w, "invalid user id", http.StatusBadRequest)
+			return
+		}
 	}
 
 	user, err := h.authSvc.GetUserByID(ctx, userID)
 	if err != nil {
-		h.logger.Error("user not found", zap.Error(err), zap.String("user_id", userIDStr))
+		h.logger.Error("user not found", zap.Error(err), zap.String("user_id", userID.String()))
 		http.Error(w, "user not found", http.StatusNotFound)
 		return
 	}
 
-	orgID := user.OrgID
-	permissions, _ := h.authSvc.GetUserPermissions(ctx, userID, orgID)
+	tenantID := user.TenantID
+	permissions, _ := h.authSvc.GetUserPermissions(ctx, userID, tenantID)
 
 	// Use orgSvc to get organizations
 	orgs, _, _ := h.orgSvc.GetOrganizations(ctx, 1, 100, "")

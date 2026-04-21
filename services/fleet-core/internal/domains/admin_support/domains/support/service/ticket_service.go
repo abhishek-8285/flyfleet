@@ -12,16 +12,16 @@ import (
 )
 
 type TicketService interface {
-	CreateTicket(ctx context.Context, req *models.CreateTicketRequest, orgID, reporterID uuid.UUID) (*models.SupportTicket, error)
+	CreateTicket(ctx context.Context, req *models.CreateTicketRequest, tenantID, reporterID uuid.UUID) (*models.SupportTicket, error)
 	GetTicket(ctx context.Context, id uuid.UUID) (*models.SupportTicket, error)
 	ListTickets(ctx context.Context, filter models.TicketFilter) ([]*models.SupportTicket, int, error)
 	UpdateTicketStatus(ctx context.Context, id uuid.UUID, status string, userID uuid.UUID) error
 	AssignTicket(ctx context.Context, id, assignedTo, userID uuid.UUID) error
 	AddComment(ctx context.Context, ticketID, userID uuid.UUID, req *models.AddCommentRequest, authorName string) error
 	GetTicketComments(ctx context.Context, ticketID uuid.UUID) ([]*models.IncidentComment, error)
-	GetRecentActivity(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.SupportTicket, error)
-	GetDashboardSummary(ctx context.Context, orgID uuid.UUID) (*models.DashboardSummary, error)
-	GetOrgMetrics(ctx context.Context, orgID uuid.UUID) (*models.OrgSupportMetrics, error)
+	GetRecentActivity(ctx context.Context, tenantID uuid.UUID, limit int) ([]*models.SupportTicket, error)
+	GetDashboardSummary(ctx context.Context, tenantID uuid.UUID) (*models.DashboardSummary, error)
+	GetOrgMetrics(ctx context.Context, tenantID uuid.UUID) (*models.OrgSupportMetrics, error)
 }
 
 type ticketService struct {
@@ -48,7 +48,7 @@ func NewTicketService(repo repository.TicketRepository, logger *zap.Logger, noti
 	}
 }
 
-func (s *ticketService) CreateTicket(ctx context.Context, req *models.CreateTicketRequest, orgID, reporterID uuid.UUID) (*models.SupportTicket, error) {
+func (s *ticketService) CreateTicket(ctx context.Context, req *models.CreateTicketRequest, tenantID, reporterID uuid.UUID) (*models.SupportTicket, error) {
 	// Generate unique ticket number using database sequence
 	ticketNum, err := s.repo.GetNextTicketNumber(ctx)
 	if err != nil {
@@ -71,7 +71,7 @@ func (s *ticketService) CreateTicket(ctx context.Context, req *models.CreateTick
 	ticket := &models.SupportTicket{
 		ID:          uuid.New(),
 		TicketID:    ticketID,
-		OrgID:       orgID,
+		TenantID:       tenantID,
 		Title:       req.Title,
 		Description: req.Description,
 		Status:      "OPEN",
@@ -223,12 +223,12 @@ func (s *ticketService) GetTicketComments(ctx context.Context, ticketID uuid.UUI
 	return comments, nil
 }
 
-func (s *ticketService) GetRecentActivity(ctx context.Context, orgID uuid.UUID, limit int) ([]*models.SupportTicket, error) {
+func (s *ticketService) GetRecentActivity(ctx context.Context, tenantID uuid.UUID, limit int) ([]*models.SupportTicket, error) {
 	if limit <= 0 {
 		limit = 10
 	}
 
-	tickets, err := s.repo.GetRecentActivity(ctx, orgID, limit)
+	tickets, err := s.repo.GetRecentActivity(ctx, tenantID, limit)
 	if err != nil {
 		s.logger.Error("Failed to get recent activity", zap.Error(err))
 		return nil, fmt.Errorf("failed to get recent activity: %w", err)
@@ -236,8 +236,8 @@ func (s *ticketService) GetRecentActivity(ctx context.Context, orgID uuid.UUID, 
 	return tickets, nil
 }
 
-func (s *ticketService) GetDashboardSummary(ctx context.Context, orgID uuid.UUID) (*models.DashboardSummary, error) {
-	summary, err := s.repo.GetDashboardSummary(ctx, orgID)
+func (s *ticketService) GetDashboardSummary(ctx context.Context, tenantID uuid.UUID) (*models.DashboardSummary, error) {
+	summary, err := s.repo.GetDashboardSummary(ctx, tenantID)
 	if err != nil {
 		s.logger.Error("Failed to get dashboard summary", zap.Error(err))
 		return nil, fmt.Errorf("failed to get dashboard summary: %w", err)
@@ -245,12 +245,12 @@ func (s *ticketService) GetDashboardSummary(ctx context.Context, orgID uuid.UUID
 	return summary, nil
 }
 
-func (s *ticketService) GetOrgMetrics(ctx context.Context, orgID uuid.UUID) (*models.OrgSupportMetrics, error) {
-	metrics, err := s.repo.GetOrgMetrics(ctx, orgID)
+func (s *ticketService) GetOrgMetrics(ctx context.Context, tenantID uuid.UUID) (*models.OrgSupportMetrics, error) {
+	metrics, err := s.repo.GetOrgMetrics(ctx, tenantID)
 	if err != nil {
 		// Return default metrics if not found
 		return &models.OrgSupportMetrics{
-			OrgID:           orgID,
+			TenantID:           tenantID,
 			OpenTickets:     0,
 			ResolvedTickets: 0,
 			SLABreaches:     0,

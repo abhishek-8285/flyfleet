@@ -34,7 +34,7 @@ func (s *AnalyticsServiceImpl) CreatePredictiveModel(ctx context.Context, model 
 }
 
 // GetPredictiveModel retrieves a predictive model by ID
-func (s *AnalyticsServiceImpl) GetPredictiveModel(ctx context.Context, id string, orgID uuid.UUID) (*models.PredictiveModel, error) {
+func (s *AnalyticsServiceImpl) GetPredictiveModel(ctx context.Context, id string, tenantID uuid.UUID) (*models.PredictiveModel, error) {
 	start := time.Now()
 	var err error
 	var res *models.PredictiveModel
@@ -46,7 +46,7 @@ func (s *AnalyticsServiceImpl) GetPredictiveModel(ctx context.Context, id string
 			rowCount = 1
 		}
 		params := map[string]interface{}{"id": id}
-		s.logQuery(ctx, orgID, "get_predictive_model", params, time.Since(start), rowCount, cacheHit, err)
+		s.logQuery(ctx, tenantID, "get_predictive_model", params, time.Since(start), rowCount, cacheHit, err)
 	}()
 
 	if id == "" {
@@ -56,27 +56,27 @@ func (s *AnalyticsServiceImpl) GetPredictiveModel(ctx context.Context, id string
 
 	if s.cache != nil {
 		params := map[string]interface{}{"id": id}
-		cacheKey := s.cache.GenerateKey(ctx, orgID.String(), "fleet", "", "predictive_model", params)
+		cacheKey := s.cache.GenerateKey(ctx, tenantID.String(), "fleet", "", "predictive_model", params)
 		if found, _ := s.cache.Get(ctx, cacheKey, &res); found {
 			cacheHit = true
 			return res, nil
 		}
 
-		res, err = s.repo.GetPredictiveModel(ctx, id, orgID)
+		res, err = s.repo.GetPredictiveModel(ctx, id, tenantID)
 		if err == nil && res != nil {
 			params := map[string]interface{}{"id": id}
-			cacheKey := s.cache.GenerateKey(ctx, orgID.String(), "fleet", "", "predictive_model", params)
+			cacheKey := s.cache.GenerateKey(ctx, tenantID.String(), "fleet", "", "predictive_model", params)
 			_ = s.cache.Set(ctx, cacheKey, res, 0)
 		}
 		return res, err
 	}
 
-	res, err = s.repo.GetPredictiveModel(ctx, id, orgID)
+	res, err = s.repo.GetPredictiveModel(ctx, id, tenantID)
 	return res, err
 }
 
 // GetPredictiveModelByVersion retrieves a predictive model by name and version
-func (s *AnalyticsServiceImpl) GetPredictiveModelByVersion(ctx context.Context, name, version string, orgID uuid.UUID) (*models.PredictiveModel, error) {
+func (s *AnalyticsServiceImpl) GetPredictiveModelByVersion(ctx context.Context, name, version string, tenantID uuid.UUID) (*models.PredictiveModel, error) {
 	start := time.Now()
 	var err error
 	var res *models.PredictiveModel
@@ -87,7 +87,7 @@ func (s *AnalyticsServiceImpl) GetPredictiveModelByVersion(ctx context.Context, 
 			rowCount = 1
 		}
 		params := map[string]interface{}{"name": name, "version": version}
-		s.logQuery(ctx, orgID, "get_predictive_model_version", params, time.Since(start), rowCount, false, err)
+		s.logQuery(ctx, tenantID, "get_predictive_model_version", params, time.Since(start), rowCount, false, err)
 	}()
 
 	if name == "" {
@@ -99,12 +99,12 @@ func (s *AnalyticsServiceImpl) GetPredictiveModelByVersion(ctx context.Context, 
 		return nil, err
 	}
 
-	res, err = s.repo.GetPredictiveModelByVersion(ctx, name, version, orgID)
+	res, err = s.repo.GetPredictiveModelByVersion(ctx, name, version, tenantID)
 	return res, err
 }
 
 // UpdatePredictiveModel updates an existing predictive model with validation
-func (s *AnalyticsServiceImpl) UpdatePredictiveModel(ctx context.Context, id string, orgID uuid.UUID, updates map[string]interface{}) error {
+func (s *AnalyticsServiceImpl) UpdatePredictiveModel(ctx context.Context, id string, tenantID uuid.UUID, updates map[string]interface{}) error {
 	if id == "" {
 		return errors.New("ID is required")
 	}
@@ -112,32 +112,32 @@ func (s *AnalyticsServiceImpl) UpdatePredictiveModel(ctx context.Context, id str
 		return errors.New("updates are required")
 	}
 
-	err := s.repo.UpdatePredictiveModel(ctx, id, orgID, updates)
+	err := s.repo.UpdatePredictiveModel(ctx, id, tenantID, updates)
 	if err == nil && s.cache != nil {
 		params := map[string]interface{}{"id": id}
-		cacheKey := s.cache.GenerateKey(ctx, orgID.String(), "fleet", "", "predictive_model", params)
+		cacheKey := s.cache.GenerateKey(ctx, tenantID.String(), "fleet", "", "predictive_model", params)
 		_ = s.cache.Invalidate(ctx, cacheKey)
 	}
 	return err
 }
 
 // DeletePredictiveModel deletes a predictive model
-func (s *AnalyticsServiceImpl) DeletePredictiveModel(ctx context.Context, id string, orgID uuid.UUID) error {
+func (s *AnalyticsServiceImpl) DeletePredictiveModel(ctx context.Context, id string, tenantID uuid.UUID) error {
 	if id == "" {
 		return errors.New("ID is required")
 	}
 
-	err := s.repo.DeletePredictiveModel(ctx, id, orgID)
+	err := s.repo.DeletePredictiveModel(ctx, id, tenantID)
 	if err == nil && s.cache != nil {
 		params := map[string]interface{}{"id": id}
-		cacheKey := s.cache.GenerateKey(ctx, orgID.String(), "fleet", "", "predictive_model", params)
+		cacheKey := s.cache.GenerateKey(ctx, tenantID.String(), "fleet", "", "predictive_model", params)
 		_ = s.cache.Invalidate(ctx, cacheKey)
 	}
 	return err
 }
 
 // ListPredictiveModels retrieves predictive models with filtering
-func (s *AnalyticsServiceImpl) ListPredictiveModels(ctx context.Context, orgID uuid.UUID, modelType *string, status *string, cursor string, limit, offset int) ([]*models.PredictiveModel, int, error) {
+func (s *AnalyticsServiceImpl) ListPredictiveModels(ctx context.Context, tenantID uuid.UUID, modelType *string, status *string, cursor string, limit, offset int) ([]*models.PredictiveModel, int, error) {
 	start := time.Now()
 	var err error
 	var data []*models.PredictiveModel
@@ -151,7 +151,7 @@ func (s *AnalyticsServiceImpl) ListPredictiveModels(ctx context.Context, orgID u
 		if status != nil {
 			params["status"] = *status
 		}
-		s.logQuery(ctx, orgID, "list_predictive_models", params, time.Since(start), len(data), false, err)
+		s.logQuery(ctx, tenantID, "list_predictive_models", params, time.Since(start), len(data), false, err)
 	}()
 
 	if limit <= 0 {
@@ -164,21 +164,21 @@ func (s *AnalyticsServiceImpl) ListPredictiveModels(ctx context.Context, orgID u
 		offset = 0
 	}
 
-	data, total, err = s.repo.ListPredictiveModels(ctx, orgID, modelType, status, cursor, limit, offset)
+	data, total, err = s.repo.ListPredictiveModels(ctx, tenantID, modelType, status, cursor, limit, offset)
 	return data, total, err
 }
 
 // RunInference executes a specific predictive model on an entity using Phase 8 deployment strategies
-func (s *AnalyticsServiceImpl) RunInference(ctx context.Context, modelID string, entityID uuid.UUID, orgID uuid.UUID, input map[string]interface{}) (*models.PredictionResult, error) {
+func (s *AnalyticsServiceImpl) RunInference(ctx context.Context, modelID string, entityID uuid.UUID, tenantID uuid.UUID, input map[string]interface{}) (*models.PredictionResult, error) {
 	start := time.Now()
 
 	// Quota Check (Phase 8)
-	if allowed, _ := s.CheckQuota(ctx, orgID, 1); !allowed {
+	if allowed, _ := s.CheckQuota(ctx, tenantID, 1); !allowed {
 		return nil, errors.New("organization analytics quota exceeded for today")
 	}
 
 	// Fetch Model
-	model, err := s.repo.GetPredictiveModel(ctx, modelID, orgID)
+	model, err := s.repo.GetPredictiveModel(ctx, modelID, tenantID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch model: %w", err)
 	}
@@ -189,7 +189,7 @@ func (s *AnalyticsServiceImpl) RunInference(ctx context.Context, modelID string,
 	// 1. Compliance Audit (Phase 11)
 	s.LogAccess(ctx, &models.AnalyticsAccessLog{
 		ID:             uuid.New(),
-		OrganizationID: orgID,
+		OrganizationID: tenantID,
 		UserID:         uuid.Nil, // Should be extracted from context in real implementation
 		ResourceID:     modelID,
 		ResourceType:   "MODEL",
@@ -198,7 +198,7 @@ func (s *AnalyticsServiceImpl) RunInference(ctx context.Context, modelID string,
 	})
 
 	// 2. Automated Rollback Check (Phase 11)
-	if err := s.CheckModelHealth(ctx, modelID, orgID); err != nil {
+	if err := s.CheckModelHealth(ctx, modelID, tenantID); err != nil {
 		s.logger.Error("Model health check failed, blocking inference", zap.String("model_id", modelID), zap.Error(err))
 		return nil, fmt.Errorf("model safety guard triggered: %w", err)
 	}
@@ -210,7 +210,7 @@ func (s *AnalyticsServiceImpl) RunInference(ctx context.Context, modelID string,
 			zap.String("version", requestedVersion),
 			zap.String("model_id", modelID))
 
-		features, err := s.GetFeaturesByVersion(ctx, orgID, "VEHICLE", entityID, requestedVersion)
+		features, err := s.GetFeaturesByVersion(ctx, tenantID, "VEHICLE", entityID, requestedVersion)
 		if err == nil && len(features) > 0 {
 			// Inject these features into the input map for the specific scoring logic
 			for _, f := range features {
@@ -222,7 +222,7 @@ func (s *AnalyticsServiceImpl) RunInference(ctx context.Context, modelID string,
 	}
 
 	// Check for Deployment Strategy (Phase 8)
-	deployment, err := s.repo.GetActiveModelDeployment(ctx, modelID, orgID)
+	deployment, err := s.repo.GetActiveModelDeployment(ctx, modelID, tenantID)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		s.logger.Warn("failed to retrieve deployment info, falling back to standard", zap.Error(err))
 	}
@@ -232,9 +232,9 @@ func (s *AnalyticsServiceImpl) RunInference(ctx context.Context, modelID string,
 		switch deployment.DeploymentStrategy {
 		case "shadow":
 			// Execute primary (specified in deployment or current active model)
-			primaryResult, err = s.executeInference(ctx, model, entityID, orgID, input)
+			primaryResult, err = s.executeInference(ctx, model, entityID, tenantID, input)
 			// Execute Shadow (Log/Observe but don't return)
-			go s.executeShadowInference(ctx, deployment.ModelID, entityID, orgID, input)
+			go s.executeShadowInference(ctx, deployment.ModelID, entityID, tenantID, input)
 
 		case "ab":
 			// Deterministic split based on entityID to ensure consistency for that vehicle/driver
@@ -242,28 +242,28 @@ func (s *AnalyticsServiceImpl) RunInference(ctx context.Context, modelID string,
 			hash := uint32(hashBytes[0])<<24 | uint32(hashBytes[1])<<16 | uint32(hashBytes[2])<<8 | uint32(hashBytes[3])
 			if float64(hash%100) < deployment.TrafficSplit {
 				// Traffic routed to variant
-				primaryResult, err = s.executeInference(ctx, model, entityID, orgID, input)
+				primaryResult, err = s.executeInference(ctx, model, entityID, tenantID, input)
 			} else {
 				// Traffic routed to control
-				primaryResult, err = s.executeInference(ctx, model, entityID, orgID, input)
+				primaryResult, err = s.executeInference(ctx, model, entityID, tenantID, input)
 			}
 		default:
-			primaryResult, err = s.executeInference(ctx, model, entityID, orgID, input)
+			primaryResult, err = s.executeInference(ctx, model, entityID, tenantID, input)
 		}
 	} else {
-		primaryResult, err = s.executeInference(ctx, model, entityID, orgID, input)
+		primaryResult, err = s.executeInference(ctx, model, entityID, tenantID, input)
 	}
 
 	if err != nil {
-		s.metrics.PredictionErrorCounter.WithLabelValues(orgID.String(), modelID, "orchestration_error").Inc()
+		s.metrics.PredictionErrorCounter.WithLabelValues(tenantID.String(), modelID, "orchestration_error").Inc()
 		return nil, err
 	}
 
 	// Quota tracking update (Phase 8)
-	_ = s.repo.UpdateUsedCredits(ctx, orgID, 1)
+	_ = s.repo.UpdateUsedCredits(ctx, tenantID, 1)
 
 	duration := time.Since(start)
-	s.metrics.InferenceLatencyHistogram.WithLabelValues(orgID.String(), modelID).Observe(duration.Seconds())
+	s.metrics.InferenceLatencyHistogram.WithLabelValues(tenantID.String(), modelID).Observe(duration.Seconds())
 
 	s.logger.Info("Inference orchestration complete",
 		zap.String("model_id", modelID),
@@ -273,7 +273,7 @@ func (s *AnalyticsServiceImpl) RunInference(ctx context.Context, modelID string,
 	return primaryResult, nil
 }
 
-func (s *AnalyticsServiceImpl) executeInference(ctx context.Context, model *models.PredictiveModel, entityID uuid.UUID, orgID uuid.UUID, input map[string]interface{}) (*models.PredictionResult, error) {
+func (s *AnalyticsServiceImpl) executeInference(ctx context.Context, model *models.PredictiveModel, entityID uuid.UUID, tenantID uuid.UUID, input map[string]interface{}) (*models.PredictionResult, error) {
 	var predictedValue interface{}
 	var confidence float64
 	var anomaly bool
@@ -293,7 +293,7 @@ func (s *AnalyticsServiceImpl) executeInference(ctx context.Context, model *mode
 	result := &models.PredictionResult{
 		ID:              uuid.New().String(),
 		ModelID:         model.ID,
-		OrganizationID:  orgID,
+		OrganizationID:  tenantID,
 		PredictionInput: input,
 		PredictedValue:  predictedValue,
 		ConfidenceScore: confidence,
@@ -308,11 +308,11 @@ func (s *AnalyticsServiceImpl) executeInference(ctx context.Context, model *mode
 		return nil, fmt.Errorf("failed to save prediction result: %w", err)
 	}
 
-	s.metrics.PredictiveAnalyticCounter.WithLabelValues(orgID.String(), model.ModelType, "success").Inc()
+	s.metrics.PredictiveAnalyticCounter.WithLabelValues(tenantID.String(), model.ModelType, "success").Inc()
 	return result, nil
 }
 
-func (s *AnalyticsServiceImpl) executeShadowInference(ctx context.Context, modelID string, entityID uuid.UUID, orgID uuid.UUID, input map[string]interface{}) {
+func (s *AnalyticsServiceImpl) executeShadowInference(ctx context.Context, modelID string, entityID uuid.UUID, tenantID uuid.UUID, input map[string]interface{}) {
 	// Shadow execution should not affect primary flow
 	// Placeholder for Drift Detection comparison
 	s.logger.Debug("Shadow inference execution (Phase 8 Observer)", zap.String("model_id", modelID))
@@ -416,7 +416,7 @@ func (s *AnalyticsServiceImpl) CreatePredictionResult(ctx context.Context, resul
 }
 
 // GetPredictionResult retrieves a prediction result by ID
-func (s *AnalyticsServiceImpl) GetPredictionResult(ctx context.Context, id string, orgID uuid.UUID) (*models.PredictionResult, error) {
+func (s *AnalyticsServiceImpl) GetPredictionResult(ctx context.Context, id string, tenantID uuid.UUID) (*models.PredictionResult, error) {
 	start := time.Now()
 	var err error
 	var res *models.PredictionResult
@@ -427,7 +427,7 @@ func (s *AnalyticsServiceImpl) GetPredictionResult(ctx context.Context, id strin
 			rowCount = 1
 		}
 		params := map[string]interface{}{"id": id}
-		s.logQuery(ctx, orgID, "get_prediction_result", params, time.Since(start), rowCount, false, err)
+		s.logQuery(ctx, tenantID, "get_prediction_result", params, time.Since(start), rowCount, false, err)
 	}()
 
 	if id == "" {
@@ -435,12 +435,12 @@ func (s *AnalyticsServiceImpl) GetPredictionResult(ctx context.Context, id strin
 		return nil, err
 	}
 
-	res, err = s.repo.GetPredictionResult(ctx, id, orgID)
+	res, err = s.repo.GetPredictionResult(ctx, id, tenantID)
 	return res, err
 }
 
 // GetPredictionResultsByModel retrieves prediction results by model ID
-func (s *AnalyticsServiceImpl) GetPredictionResultsByModel(ctx context.Context, modelID string, orgID uuid.UUID, limit, offset int) ([]*models.PredictionResult, int, error) {
+func (s *AnalyticsServiceImpl) GetPredictionResultsByModel(ctx context.Context, modelID string, tenantID uuid.UUID, limit, offset int) ([]*models.PredictionResult, int, error) {
 	start := time.Now()
 	var err error
 	var data []*models.PredictionResult
@@ -448,7 +448,7 @@ func (s *AnalyticsServiceImpl) GetPredictionResultsByModel(ctx context.Context, 
 
 	defer func() {
 		params := map[string]interface{}{"model_id": modelID, "limit": limit, "offset": offset}
-		s.logQuery(ctx, orgID, "get_prediction_results_model", params, time.Since(start), len(data), false, err)
+		s.logQuery(ctx, tenantID, "get_prediction_results_model", params, time.Since(start), len(data), false, err)
 	}()
 
 	if modelID == "" {
@@ -465,12 +465,12 @@ func (s *AnalyticsServiceImpl) GetPredictionResultsByModel(ctx context.Context, 
 		offset = 0
 	}
 
-	data, total, err = s.repo.GetPredictionResultsByModel(ctx, modelID, orgID, limit, offset)
+	data, total, err = s.repo.GetPredictionResultsByModel(ctx, modelID, tenantID, limit, offset)
 	return data, total, err
 }
 
 // GetPredictionResultsByOrg retrieves prediction results by organization
-func (s *AnalyticsServiceImpl) GetPredictionResultsByOrg(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.PredictionResult, int, error) {
+func (s *AnalyticsServiceImpl) GetPredictionResultsByOrg(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.PredictionResult, int, error) {
 	start := time.Now()
 	var err error
 	var data []*models.PredictionResult
@@ -478,10 +478,10 @@ func (s *AnalyticsServiceImpl) GetPredictionResultsByOrg(ctx context.Context, or
 
 	defer func() {
 		params := map[string]interface{}{"limit": limit, "offset": offset}
-		s.logQuery(ctx, orgID, "get_prediction_results_org", params, time.Since(start), len(data), false, err)
+		s.logQuery(ctx, tenantID, "get_prediction_results_org", params, time.Since(start), len(data), false, err)
 	}()
 
-	if orgID == uuid.Nil {
+	if tenantID == uuid.Nil {
 		err = errors.New("organization ID is required")
 		return nil, 0, err
 	}
@@ -495,12 +495,12 @@ func (s *AnalyticsServiceImpl) GetPredictionResultsByOrg(ctx context.Context, or
 		offset = 0
 	}
 
-	data, total, err = s.repo.GetPredictionResultsByOrg(ctx, orgID, limit, offset)
+	data, total, err = s.repo.GetPredictionResultsByOrg(ctx, tenantID, limit, offset)
 	return data, total, err
 }
 
 // UpdatePredictionResult updates an existing prediction result with validation
-func (s *AnalyticsServiceImpl) UpdatePredictionResult(ctx context.Context, id string, orgID uuid.UUID, updates map[string]interface{}) error {
+func (s *AnalyticsServiceImpl) UpdatePredictionResult(ctx context.Context, id string, tenantID uuid.UUID, updates map[string]interface{}) error {
 	if id == "" {
 		return errors.New("ID is required")
 	}
@@ -508,20 +508,20 @@ func (s *AnalyticsServiceImpl) UpdatePredictionResult(ctx context.Context, id st
 		return errors.New("updates are required")
 	}
 
-	return s.repo.UpdatePredictionResult(ctx, id, orgID, updates)
+	return s.repo.UpdatePredictionResult(ctx, id, tenantID, updates)
 }
 
 // DeletePredictionResult deletes a prediction result
-func (s *AnalyticsServiceImpl) DeletePredictionResult(ctx context.Context, id string, orgID uuid.UUID) error {
+func (s *AnalyticsServiceImpl) DeletePredictionResult(ctx context.Context, id string, tenantID uuid.UUID) error {
 	if id == "" {
 		return errors.New("ID is required")
 	}
 
-	return s.repo.DeletePredictionResult(ctx, id, orgID)
+	return s.repo.DeletePredictionResult(ctx, id, tenantID)
 }
 
 // ListPredictionResults retrieves prediction results with filtering
-func (s *AnalyticsServiceImpl) ListPredictionResults(ctx context.Context, orgID uuid.UUID, modelID *string, anomalyDetected *bool, cursor string, limit, offset int) ([]*models.PredictionResult, int, error) {
+func (s *AnalyticsServiceImpl) ListPredictionResults(ctx context.Context, tenantID uuid.UUID, modelID *string, anomalyDetected *bool, cursor string, limit, offset int) ([]*models.PredictionResult, int, error) {
 	start := time.Now()
 	var err error
 	var data []*models.PredictionResult
@@ -535,10 +535,10 @@ func (s *AnalyticsServiceImpl) ListPredictionResults(ctx context.Context, orgID 
 		if anomalyDetected != nil {
 			params["anomaly_detected"] = *anomalyDetected
 		}
-		s.logQuery(ctx, orgID, "list_prediction_results", params, time.Since(start), len(data), false, err)
+		s.logQuery(ctx, tenantID, "list_prediction_results", params, time.Since(start), len(data), false, err)
 	}()
 
-	if orgID == uuid.Nil {
+	if tenantID == uuid.Nil {
 		err = errors.New("organization ID is required")
 		return nil, 0, err
 	}
@@ -552,6 +552,6 @@ func (s *AnalyticsServiceImpl) ListPredictionResults(ctx context.Context, orgID 
 		offset = 0
 	}
 
-	data, total, err = s.repo.ListPredictionResults(ctx, orgID, modelID, anomalyDetected, cursor, limit, offset)
+	data, total, err = s.repo.ListPredictionResults(ctx, tenantID, modelID, anomalyDetected, cursor, limit, offset)
 	return data, total, err
 }

@@ -11,16 +11,16 @@ import (
 type VehicleRepositoryInterface interface {
 	Create(ctx context.Context, vehicle *models.Vehicle) error
 	GetByID(ctx context.Context, id uuid.UUID) (*models.Vehicle, error)
-	GetByOrgID(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]*models.Vehicle, int64, error)
+	GetByTenantID(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.Vehicle, int64, error)
 	Update(ctx context.Context, vehicle *models.Vehicle) error
-	Delete(ctx context.Context, id, orgID uuid.UUID) error
-	AssignDriver(ctx context.Context, vehicleID, orgID, driverID uuid.UUID) error
+	Delete(ctx context.Context, id, tenantID uuid.UUID) error
+	AssignDriver(ctx context.Context, vehicleID, tenantID, driverID uuid.UUID) error
 	GetStats(ctx context.Context) (*models.VehicleStats, error)
 
 	// Enterprise extensions
 	GetByRegistrationNumber(ctx context.Context, tenantID uuid.UUID, registrationNumber string) (*models.Vehicle, error)
 	Search(ctx context.Context, params models.VehicleSearchParams) ([]*models.Vehicle, int64, error)
-	IsGPSAvailable(ctx context.Context, orgID uuid.UUID, deviceID string, excludingVehicleID *uuid.UUID) (bool, string, error)
+	IsGPSAvailable(ctx context.Context, tenantID uuid.UUID, deviceID string, excludingVehicleID *uuid.UUID) (bool, string, error)
 }
 
 // ComplianceRepositoryInterface is the compliance sub-domain data access contract.

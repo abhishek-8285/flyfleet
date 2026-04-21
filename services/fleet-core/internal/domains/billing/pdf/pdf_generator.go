@@ -51,17 +51,21 @@ func DefaultA4Portrait() PDFOptions {
 // PDFGenerator generates PDFs using chromedp with an internal Circuit Breaker
 type PDFGenerator struct {
 	timeout           time.Duration
+	chromePath        string // Preferred path from config
 	consecutiveErrors int
 	lastErrorTime     time.Time
 	mu                sync.RWMutex
 }
 
-// NewPDFGenerator creates a new PDF generator with circuit breaker state
-func NewPDFGenerator(timeout time.Duration) *PDFGenerator {
+// NewPDFGenerator creates a new PDF generator with circuit breaker state and optional chrome path
+func NewPDFGenerator(timeout time.Duration, chromePath string) *PDFGenerator {
 	if timeout == 0 {
 		timeout = 60 * time.Second
 	}
-	return &PDFGenerator{timeout: timeout}
+	return &PDFGenerator{
+		timeout:    timeout,
+		chromePath: chromePath,
+	}
 }
 
 // isBroken checks if the circuit breaker is "Open" (tripped)
@@ -100,10 +104,40 @@ func (g *PDFGenerator) GenerateFromHTML(ctx context.Context, html string, option
 		return nil, fmt.Errorf("%s", reason)
 	}
 
-	// Termux/Android Fix: Explicitly define the Chrome path and headless flags
-	chromePath := os.Getenv("CHROME_PATH")
+	// Environment-specific discovery logic
+	chromePath := g.chromePath
 	if chromePath == "" {
-		chromePath = "/usr/bin/chromium"
+		chromePath = os.Getenv("CHROME_PATH")
+	}
+
+	if chromePath == "" {
+		// Common Linux, local, and Termux paths
+		candidates := []string{
+			"/data/data/com.termux/files/usr/bin/chromium-browser", // Termux (verified)
+			"/usr/bin/chromium",
+			"/usr/bin/google-chrome-stable",
+			"/usr/bin/google-chrome",
+			"/usr/local/bin/chromium",
+			"/usr/bin/chromium-browser",
+			"chromium",             // Resolve from PATH
+			"google-chrome-stable", // Resolve from PATH
+		}
+
+		for _, p := range candidates {
+			if _, err := os.Stat(p); err == nil {
+				chromePath = p
+				break
+			}
+			// If it's a simple binary name, assume it's in PATH and let exec find it
+			if !filepath.IsAbs(p) {
+				chromePath = p
+				break
+			}
+		}
+
+		if chromePath == "" {
+			chromePath = "/usr/bin/chromium" // Ultimate fallback
+		}
 	}
 
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],

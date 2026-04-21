@@ -18,11 +18,11 @@ func NewRoleRepository(pool *pgxpool.Pool) *RoleRepository {
 	return &RoleRepository{pool: pool}
 }
 
-func (r *RoleRepository) ListRoles(ctx context.Context, orgID uuid.UUID) ([]models.Role, error) {
+func (r *RoleRepository) ListRoles(ctx context.Context, tenantID uuid.UUID) ([]models.Role, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT id, tenant_id, name, description, is_system, permission_mask,
 			   created_by, created_at, updated_at
-		FROM roles WHERE tenant_id = $1 AND deleted_at IS NULL ORDER BY name`, orgID)
+		FROM roles WHERE tenant_id = $1 AND deleted_at IS NULL ORDER BY name`, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +31,7 @@ func (r *RoleRepository) ListRoles(ctx context.Context, orgID uuid.UUID) ([]mode
 	var roles []models.Role
 	for rows.Next() {
 		var role models.Role
-		if err := rows.Scan(&role.ID, &role.OrgID, &role.Name, &role.Description,
+		if err := rows.Scan(&role.ID, &role.TenantID, &role.Name, &role.Description,
 			&role.IsSystem, &role.PermissionMask, &role.CreatedBy, &role.CreatedAt, &role.UpdatedAt); err != nil {
 			return nil, err
 		}
@@ -46,7 +46,7 @@ func (r *RoleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Rol
 		SELECT id, tenant_id, name, description, is_system, permission_mask,
 			   created_by, created_at, updated_at
 		FROM roles WHERE id = $1 AND deleted_at IS NULL`, id).Scan(
-		&role.ID, &role.OrgID, &role.Name, &role.Description, &role.IsSystem,
+		&role.ID, &role.TenantID, &role.Name, &role.Description, &role.IsSystem,
 		&role.PermissionMask, &role.CreatedBy, &role.CreatedAt, &role.UpdatedAt,
 	)
 	if err != nil {
@@ -63,7 +63,7 @@ func (r *RoleRepository) Create(ctx context.Context, role *models.Role) error {
 		INSERT INTO roles (tenant_id, name, description, is_system, permission_mask, created_by)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, created_at, updated_at`,
-		role.OrgID, role.Name, role.Description, role.IsSystem, role.PermissionMask, role.CreatedBy,
+		role.TenantID, role.Name, role.Description, role.IsSystem, role.PermissionMask, role.CreatedBy,
 	).Scan(&role.ID, &role.CreatedAt, &role.UpdatedAt)
 }
 
@@ -95,14 +95,14 @@ func (r *RoleRepository) Clone(ctx context.Context, sourceID uuid.UUID, name, de
 	var source models.Role
 	err := r.pool.QueryRow(ctx, `
 		SELECT tenant_id, permission_mask FROM roles WHERE id = $1`, sourceID).Scan(
-		&source.OrgID, &source.PermissionMask,
+		&source.TenantID, &source.PermissionMask,
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	clone := &models.Role{
-		OrgID:          source.OrgID,
+		TenantID:          source.TenantID,
 		Name:           name,
 		Description:    description,
 		PermissionMask: source.PermissionMask,
@@ -135,13 +135,13 @@ func (r *RoleRepository) GetAllPermissions(ctx context.Context) ([]models.Permis
 	return perms, nil
 }
 
-func (r *RoleRepository) GetUserRoles(ctx context.Context, userID, orgID uuid.UUID) ([]models.Role, error) {
+func (r *RoleRepository) GetUserRoles(ctx context.Context, userID, tenantID uuid.UUID) ([]models.Role, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT r.id, r.tenant_id, r.name, r.description, r.is_system, r.permission_mask,
 			   r.created_by, r.created_at, r.updated_at
 		FROM user_roles ur
 		JOIN roles r ON r.id = ur.role_id
-		WHERE ur.user_id = $1 AND ur.tenant_id = $2`, userID, orgID)
+		WHERE ur.user_id = $1 AND ur.tenant_id = $2`, userID, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +150,7 @@ func (r *RoleRepository) GetUserRoles(ctx context.Context, userID, orgID uuid.UU
 	var roles []models.Role
 	for rows.Next() {
 		var role models.Role
-		if err := rows.Scan(&role.ID, &role.OrgID, &role.Name, &role.Description,
+		if err := rows.Scan(&role.ID, &role.TenantID, &role.Name, &role.Description,
 			&role.IsSystem, &role.PermissionMask, &role.CreatedBy, &role.CreatedAt, &role.UpdatedAt); err != nil {
 			return nil, err
 		}
@@ -159,31 +159,31 @@ func (r *RoleRepository) GetUserRoles(ctx context.Context, userID, orgID uuid.UU
 	return roles, nil
 }
 
-func (r *RoleRepository) AssignRole(ctx context.Context, userID, roleID, orgID, assignedBy uuid.UUID) error {
+func (r *RoleRepository) AssignRole(ctx context.Context, userID, roleID, tenantID, assignedBy uuid.UUID) error {
 	_, err := r.pool.Exec(ctx, `
 		INSERT INTO user_roles (user_id, role_id, tenant_id, assigned_by)
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (user_id, role_id, tenant_id) DO NOTHING`,
-		userID, roleID, orgID, assignedBy,
+		userID, roleID, tenantID, assignedBy,
 	)
 	return err
 }
 
-func (r *RoleRepository) UnassignRole(ctx context.Context, userID, roleID, orgID uuid.UUID) error {
+func (r *RoleRepository) UnassignRole(ctx context.Context, userID, roleID, tenantID uuid.UUID) error {
 	_, err := r.pool.Exec(ctx, `
 		DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2 AND tenant_id = $3`,
-		userID, roleID, orgID,
+		userID, roleID, tenantID,
 	)
 	return err
 }
 
-func (r *RoleRepository) ComputeEffectivePermissionMask(ctx context.Context, userID, orgID uuid.UUID) (int64, error) {
+func (r *RoleRepository) ComputeEffectivePermissionMask(ctx context.Context, userID, tenantID uuid.UUID) (int64, error) {
 	var mask int64
 	err := r.pool.QueryRow(ctx, `
 		SELECT COALESCE(MAX(r.permission_mask), 0)
 		FROM user_roles ur
 		JOIN roles r ON r.id = ur.role_id
-		WHERE ur.user_id = $1 AND ur.tenant_id = $2`, userID, orgID).Scan(&mask)
+		WHERE ur.user_id = $1 AND ur.tenant_id = $2`, userID, tenantID).Scan(&mask)
 	if err != nil {
 		return 0, err
 	}
@@ -192,7 +192,7 @@ func (r *RoleRepository) ComputeEffectivePermissionMask(ctx context.Context, use
 		SELECT r.permission_mask
 		FROM user_roles ur
 		JOIN roles r ON r.id = ur.role_id
-		WHERE ur.user_id = $1 AND ur.tenant_id = $2`, userID, orgID)
+		WHERE ur.user_id = $1 AND ur.tenant_id = $2`, userID, tenantID)
 	if err != nil {
 		return 0, err
 	}
