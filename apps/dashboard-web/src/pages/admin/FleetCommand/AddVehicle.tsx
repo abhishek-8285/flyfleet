@@ -123,6 +123,10 @@ export default function AddVehicle() {
         odometer: Math.round(
           toKm(parseFloat(formData.odometer) || 0, formData.odometer_unit) * 1000
         ),
+        // Filter out empty UUID strings to prevent backend decoding errors
+        branch_id: formData.branch_id || undefined,
+        cost_center_id: formData.cost_center_id || undefined,
+        current_driver_id: formData.current_driver_id || undefined,
       };
       await api.createVehicle(payload);
       navigate('/admin/vehicles');

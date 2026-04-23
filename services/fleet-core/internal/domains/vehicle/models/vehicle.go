@@ -55,6 +55,8 @@ type Vehicle struct {
 	Odometer           *int64     `json:"odometer"             db:"odometer"`
 	CurrentDriverID    *uuid.UUID `json:"current_driver_id"    db:"current_driver_id"`
 	SpeedLimit         float64    `json:"speed_limit"          db:"speed_limit"`
+	LicensePlate       string     `json:"license_plate"        db:"license_plate"`
+
 
 
 	CreatedAt time.Time  `json:"created_at" db:"created_at"`
@@ -64,7 +66,6 @@ type Vehicle struct {
 }
 
 // Backward-compat aliases used by existing code / tests.
-func (v *Vehicle) LicensePlate() string { return v.RegistrationNumber }
 
 // VehicleLocation is the real-time location snapshot for a vehicle.
 type VehicleLocation struct {

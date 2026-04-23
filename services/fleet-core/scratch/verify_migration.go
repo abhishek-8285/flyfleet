@@ -1,3 +1,3 @@
-package scratch
+package scratch_deprecated
 
-// This tool has been moved to scratch/verify/main.go to avoid package conflicts.
+// This file has been moved to a subdirectory to avoid 'main' redeclaration errors.

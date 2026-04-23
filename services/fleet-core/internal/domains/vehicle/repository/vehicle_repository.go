@@ -24,24 +24,24 @@ func NewVehicleRepository(db *pgxpool.Pool, logger *zap.Logger) *VehicleReposito
 func (r *VehicleRepository) Create(ctx context.Context, vehicle *models.Vehicle) error {
 	query := `
 		INSERT INTO vehicles (
-			id, tenant_id, registration_number, chassis_number, engine_number, vin_number,
+			id, tenant_id, registration_number, license_plate, chassis_number, engine_number, vin_number,
 			vehicle_type, capacity_tonnage, fuel_type, fuel_tank_capacity, ownership_type,
 			parent_vehicle_id, branch_id, cost_center_id, status,
 			gps_device_id, gps_enabled, gps_device_type, immobilizer_enabled, ais140_compliant,
 			make, model, year, color, odometer, current_driver_id, speed_limit,
 			created_at, updated_at, version
 		) VALUES (
-			$1, $2, $3, $4, $5, $6,
-			$7, $8, $9, $10, $11,
-			$12, $13, $14, $15,
-			$16, $17, $18, $19, $20,
-			$21, $22, $23, $24, $25, $26, $27,
+			$1, $2, $3, $4, $5, $6, $7,
+			$8, $9, $10, $11, $12,
+			$13, $14, $15, $16,
+			$17, $18, $19, $20, $21,
+			$22, $23, $24, $25, $26, $27, $28,
 			NOW(), NOW(), 1
 		) RETURNING id, created_at, updated_at, version`
 
 	start := time.Now()
 	err := r.db.QueryRow(ctx, query,
-		vehicle.ID, vehicle.TenantID, vehicle.RegistrationNumber,
+		vehicle.ID, vehicle.TenantID, vehicle.RegistrationNumber, vehicle.LicensePlate,
 		vehicle.ChassisNumber, vehicle.EngineNumber, vehicle.VINNumber,
 		vehicle.VehicleType, vehicle.CapacityTonnage, vehicle.FuelType,
 		vehicle.FuelTankCapacity, vehicle.OwnershipType,
@@ -55,7 +55,7 @@ func (r *VehicleRepository) Create(ctx context.Context, vehicle *models.Vehicle)
 
 func (r *VehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Vehicle, error) {
 	query := `
-		SELECT id, tenant_id, COALESCE(registration_number, '') as registration_number, chassis_number, engine_number, vin_number,
+		SELECT id, tenant_id, COALESCE(registration_number, '') as registration_number, COALESCE(license_plate, '') as license_plate, chassis_number, engine_number, vin_number,
 		       vehicle_type, capacity_tonnage, fuel_type, fuel_tank_capacity, ownership_type,
 		       parent_vehicle_id, branch_id, cost_center_id, status,
 		       gps_device_id, gps_enabled, gps_device_type, immobilizer_enabled, ais140_compliant,
@@ -66,7 +66,7 @@ func (r *VehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.
 	v := &models.Vehicle{}
 	start := time.Now()
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&v.ID, &v.TenantID, &v.RegistrationNumber, &v.ChassisNumber, &v.EngineNumber, &v.VINNumber,
+		&v.ID, &v.TenantID, &v.RegistrationNumber, &v.LicensePlate, &v.ChassisNumber, &v.EngineNumber, &v.VINNumber,
 		&v.VehicleType, &v.CapacityTonnage, &v.FuelType, &v.FuelTankCapacity, &v.OwnershipType,
 		&v.ParentVehicleID, &v.BranchID, &v.CostCenterID, &v.Status,
 		&v.GPSDeviceID, &v.GPSEnabled, &v.GPSDeviceType, &v.ImmobilizerEnabled, &v.AIS140Compliant,
@@ -95,7 +95,8 @@ func (r *VehicleRepository) GetByTenantID(ctx context.Context, tenantID uuid.UUI
 	metrics.RecordDBQuery("SELECT COUNT(*) FROM vehicles WHERE tenant_id = $1 AND deleted_at IS NULL", time.Since(start))
 
 	query := `
-		SELECT id, tenant_id, COALESCE(registration_number, '') as registration_number, chassis_number, engine_number, vin_number,
+		SELECT id, tenant_id, COALESCE(registration_number, '') as registration_number, COALESCE(license_plate, '') as license_plate,
+		       chassis_number, engine_number, vin_number,
 		       vehicle_type, capacity_tonnage, fuel_type, fuel_tank_capacity, ownership_type,
 		       parent_vehicle_id, branch_id, cost_center_id, status,
 		       gps_device_id, gps_enabled, gps_device_type, immobilizer_enabled, ais140_compliant,
@@ -116,7 +117,7 @@ func (r *VehicleRepository) GetByTenantID(ctx context.Context, tenantID uuid.UUI
 	for rows.Next() {
 		v := &models.Vehicle{}
 		if err := rows.Scan(
-			&v.ID, &v.TenantID, &v.RegistrationNumber, &v.ChassisNumber, &v.EngineNumber, &v.VINNumber,
+			&v.ID, &v.TenantID, &v.RegistrationNumber, &v.LicensePlate, &v.ChassisNumber, &v.EngineNumber, &v.VINNumber,
 			&v.VehicleType, &v.CapacityTonnage, &v.FuelType, &v.FuelTankCapacity, &v.OwnershipType,
 			&v.ParentVehicleID, &v.BranchID, &v.CostCenterID, &v.Status,
 			&v.GPSDeviceID, &v.GPSEnabled, &v.GPSDeviceType, &v.ImmobilizerEnabled, &v.AIS140Compliant,
@@ -135,6 +136,7 @@ func (r *VehicleRepository) Update(ctx context.Context, vehicle *models.Vehicle)
 	query := `
 		UPDATE vehicles SET
 			registration_number  = COALESCE($1, registration_number),
+			license_plate        = COALESCE($28, license_plate),
 			chassis_number       = COALESCE($2, chassis_number),
 			engine_number        = COALESCE($3, engine_number),
 			vin_number           = COALESCE($4, vin_number),
@@ -169,9 +171,10 @@ func (r *VehicleRepository) Update(ctx context.Context, vehicle *models.Vehicle)
 		vehicle.RegistrationNumber, vehicle.ChassisNumber, vehicle.EngineNumber, vehicle.VINNumber,
 		vehicle.VehicleType, vehicle.CapacityTonnage, vehicle.FuelType, vehicle.FuelTankCapacity,
 		vehicle.OwnershipType, vehicle.ParentVehicleID, vehicle.BranchID, vehicle.CostCenterID,
-		vehicle.Status, vehicle.GPSDeviceID, vehicle.GPSEnabled, vehicle.GPSDeviceType, vehicle.ImmobilizerEnabled, vehicle.AIS140Compliant,
-		vehicle.Make, vehicle.Model, vehicle.Year, vehicle.Color, vehicle.Odometer, vehicle.CurrentDriverID, vehicle.SpeedLimit,
-		vehicle.ID, vehicle.Version,
+		vehicle.Status, vehicle.GPSDeviceID, vehicle.GPSEnabled, vehicle.GPSDeviceType,
+		vehicle.ImmobilizerEnabled, vehicle.AIS140Compliant, vehicle.Make, vehicle.Model,
+		vehicle.Year, vehicle.Color, vehicle.Odometer, vehicle.CurrentDriverID,
+		vehicle.SpeedLimit, vehicle.ID, vehicle.Version, vehicle.LicensePlate,
 	).Scan(&vehicle.UpdatedAt, &vehicle.Version)
 	metrics.RecordDBQuery(query, time.Since(start))
 

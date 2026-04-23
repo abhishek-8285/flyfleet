@@ -287,7 +287,7 @@ function App() {
           <SessionTimeoutWarning
             onLogout={() => (window.location.href = "/login")}
           />
-          <BrowserRouter>
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={
@@ -491,8 +491,9 @@ function App() {
                 <Route path="vehicles/:id" element={<FleetVehicleDetail />} />
                 <Route
                   path="vehicles/:id/edit"
-                  element={<FleetVehicleList />} 
+                  element={<FleetEditVehicle />} 
                 />
+
                 <Route path="drivers" element={<DriverList />} />
                 <Route path="drivers/new" element={<AddDriver />} />
                 <Route path="drivers/:id" element={<DriverDetail />} />

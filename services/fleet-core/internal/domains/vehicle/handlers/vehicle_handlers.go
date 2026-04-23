@@ -21,9 +21,9 @@ import (
 // DTOs for request payloads (separate from models to prevent mass assignment)
 type createVehicleRequestDTO struct {
 	RegistrationNumber string     `json:"registration_number" validate:"required"`
-	VehicleType        string     `json:"vehicle_type"        validate:"required,oneof=TRUCK BUS VAN CAR TRAILER TANKER TIPPER CRANE OTHER"`
-	FuelType           string     `json:"fuel_type"           validate:"required,oneof=PETROL DIESEL CNG ELECTRIC HYBRID LPG"`
-	OwnershipType      string     `json:"ownership_type"      validate:"required,oneof=OWNED LEASED FINANCED VENDOR"`
+	VehicleType        string     `json:"vehicle_type"        validate:"required,oneof=TRUCK BUS VAN CAR TRAILER TANKER TIPPER CRANE OTHER truck bus van car trailer tanker tipper crane other"`
+	FuelType           string     `json:"fuel_type"           validate:"required,oneof=PETROL DIESEL CNG ELECTRIC HYBRID LPG petrol diesel cng electric hybrid lpg"`
+	OwnershipType      string     `json:"ownership_type"      validate:"required,oneof=OWNED LEASED FINANCED VENDOR owned leased financed vendor"`
 	CapacityTonnage    *float64   `json:"capacity_tonnage"`
 	FuelTankCapacity   *float64   `json:"fuel_tank_capacity"`
 	ChassisNumber      *string    `json:"chassis_number"`
@@ -43,14 +43,15 @@ type createVehicleRequestDTO struct {
 	Color              *string    `json:"color"`
 	Odometer           *int64     `json:"odometer"`
 	CurrentDriverID    *uuid.UUID `json:"current_driver_id"`
+	SpeedLimit         *float64   `json:"speed_limit"`
 	// Legacy fields (still accepted from old clients)
 	LicensePlate *string `json:"license_plate"`
 }
 
 type updateVehicleRequestDTO struct {
-	VehicleType        *string    `json:"vehicle_type"      validate:"omitempty,oneof=TRUCK BUS VAN CAR TRAILER TANKER TIPPER CRANE OTHER"`
-	FuelType           *string    `json:"fuel_type"         validate:"omitempty,oneof=PETROL DIESEL CNG ELECTRIC HYBRID LPG"`
-	OwnershipType      *string    `json:"ownership_type"    validate:"omitempty,oneof=OWNED LEASED FINANCED VENDOR"`
+	VehicleType        *string    `json:"vehicle_type"      validate:"omitempty,oneof=TRUCK BUS VAN CAR TRAILER TANKER TIPPER CRANE OTHER truck bus van car trailer tanker tipper crane other"`
+	FuelType           *string    `json:"fuel_type"         validate:"omitempty,oneof=PETROL DIESEL CNG ELECTRIC HYBRID LPG petrol diesel cng electric hybrid lpg"`
+	OwnershipType      *string    `json:"ownership_type"    validate:"omitempty,oneof=OWNED LEASED FINANCED VENDOR owned leased financed vendor"`
 	CapacityTonnage    *float64   `json:"capacity_tonnage"`
 	FuelTankCapacity   *float64   `json:"fuel_tank_capacity"`
 	ChassisNumber      *string    `json:"chassis_number"`
@@ -72,6 +73,7 @@ type updateVehicleRequestDTO struct {
 	Status    *string `json:"status"   validate:"omitempty,oneof=ACTIVE MAINTENANCE SUSPENDED DECOMMISSIONED active inactive maintenance retired"`
 	Odometer  *int64  `json:"odometer" validate:"omitempty,min=0"`
 	Insurance *string `json:"insurance"`
+	SpeedLimit *float64 `json:"speed_limit"`
 }
 
 type assignDriverRequestDTO struct {
@@ -145,7 +147,12 @@ func (h *VehicleHandlers) CreateVehicle(w http.ResponseWriter, r *http.Request) 
 		Color:              dto.Color,
 		Odometer:           dto.Odometer,
 		CurrentDriverID:    dto.CurrentDriverID,
+		SpeedLimit:         0, // Default
 		LicensePlate:       dto.LicensePlate,
+	}
+
+	if dto.SpeedLimit != nil {
+		req.SpeedLimit = *dto.SpeedLimit
 	}
 
 	vehicle, err := h.service.CreateVehicle(r.Context(), req, tenantID)
@@ -273,6 +280,7 @@ func (h *VehicleHandlers) UpdateVehicle(w http.ResponseWriter, r *http.Request) 
 		Status:             dto.Status,
 		Odometer:           dto.Odometer,
 		Insurance:          dto.Insurance,
+		SpeedLimit:         dto.SpeedLimit,
 	}
 
 	vehicle, err := h.service.UpdateVehicle(r.Context(), vehicleID, req)
@@ -458,7 +466,19 @@ func (h *VehicleHandlers) writeJSONResponse(w http.ResponseWriter, statusCode in
 }
 
 func (h *VehicleHandlers) writeErrorResponse(w http.ResponseWriter, statusCode int, message string, err error) {
-	h.writeJSONResponse(w, statusCode, map[string]string{"error": message})
+	resp := map[string]interface{}{"error": message}
+	if err != nil {
+		if ve, ok := err.(validator.ValidationErrors); ok {
+			details := make(map[string]string)
+			for _, f := range ve {
+				details[f.Field()] = fmt.Sprintf("failed validation: %s", f.Tag())
+			}
+			resp["details"] = details
+		} else {
+			resp["details"] = err.Error()
+		}
+	}
+	h.writeJSONResponse(w, statusCode, resp)
 }
 
 func (h *VehicleHandlers) getTenantID(ctx context.Context) uuid.UUID {

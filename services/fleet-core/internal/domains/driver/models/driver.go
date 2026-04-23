@@ -47,21 +47,22 @@ type Driver struct {
 
 // Address represents driver's address information
 type Address struct {
-	Street    string   `json:"street" db:"street" validate:"required,max=200"`
-	City      string   `json:"city" db:"city" validate:"required,max=100"`
-	State     string   `json:"state" db:"state" validate:"required,max=100"`
-	Pincode   string   `json:"pincode" db:"pincode" validate:"required,max=20"`
-	Country   string   `json:"country" db:"country" validate:"required,max=100"`
+	Street    string   `json:"street" db:"street" validate:"omitempty,max=200"`
+	City      string   `json:"city" db:"city" validate:"omitempty,max=100"`
+	State     string   `json:"state" db:"state" validate:"omitempty,max=100"`
+	Pincode   string   `json:"pincode" db:"pincode" validate:"omitempty,max=20"`
+	Country   string   `json:"country" db:"country" validate:"omitempty,max=100"`
 	Latitude  *float64 `json:"latitude" db:"latitude" validate:"omitempty,gte=-90,lte=90"`
 	Longitude *float64 `json:"longitude" db:"longitude" validate:"omitempty,gte=-180,lte=180"`
 }
 
 // EmergencyContact represents emergency contact information
 type EmergencyContact struct {
-	Name     string `json:"name" db:"name" validate:"required,max=100"`
-	Phone    string `json:"phone" db:"phone" validate:"required,e164"`
-	Relation string `json:"relation" db:"relation" validate:"required,max=50"`
+	Name     string `json:"name" db:"name" validate:"omitempty,max=100"`
+	Phone    string `json:"phone" db:"phone" validate:"omitempty"`
+	Relation string `json:"relation" db:"relation" validate:"omitempty,max=50"`
 }
+
 
 // DriverDocument represents driver-related documents
 type DriverDocument struct {

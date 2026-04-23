@@ -125,13 +125,25 @@ export const EditVehicle: React.FC = () => {
             speed_limit: v.speed_limit ? v.speed_limit.toString() : "0",
           });
 
+          const ensureArray = (resp: any, key?: string) => {
+            if (!resp) return [];
+            if (Array.isArray(resp)) return resp;
+            if (key && Array.isArray(resp[key])) return resp[key];
+            if (Array.isArray(resp.data)) return resp.data;
+            if (resp.data && key && Array.isArray(resp.data[key])) return resp.data[key];
+            return [];
+          };
+
           setDropdowns({
-            vehicles: (vList.data?.vehicles || []).map((v: any) => ({ value: v.id, label: v.registration_number })),
-            drivers: (dResp.data?.drivers || []).map((d: any) => ({ value: d.id, label: `${d.first_name} ${d.last_name}` })),
-            branches: (bResp.data?.data || []).map((b: any) => ({ value: b.id, label: b.name })),
-            costCenters: (cResp.data?.data || []).map((c: any) => ({ value: c.id, label: c.name })),
+            vehicles: ensureArray(vList, "vehicles").map((v: any) => ({ value: v.id, label: v.registration_number })),
+            drivers: ensureArray(dResp, "drivers").map((d: any) => ({ 
+              value: d.id, 
+              label: `${d.first_name || ""} ${d.last_name || ""}`.trim() || d.name || d.id 
+            })),
+            branches: ensureArray(bResp, "data").map((b: any) => ({ value: b.id, label: b.name })),
+            costCenters: ensureArray(cResp, "data").map((c: any) => ({ value: c.id, label: c.name })),
           });
-          setGpsDeviceTypes(tResp.data || []);
+          setGpsDeviceTypes(ensureArray(tResp));
         } catch (err) {
           console.error("Failed to fetch vehicle data:", err);
         } finally {
@@ -162,7 +174,13 @@ export const EditVehicle: React.FC = () => {
         fuel_tank_capacity: parseFloat(form.fuel_tank_capacity) || 0,
         speed_limit: parseFloat(form.speed_limit) || 0,
         odometer: Math.round(toKm(parseFloat(form.odometer) || 0, form.odometer_unit) * 1000),
+        // Filter out empty UUID strings to prevent backend decoding errors
+        branch_id: form.branch_id || null,
+        cost_center_id: form.cost_center_id || null,
+        current_driver_id: form.current_driver_id || null,
+        parent_vehicle_id: form.parent_vehicle_id || null,
       };
+      console.log("[EditVehicle] Sending update payload:", payload);
       await apiClient.put(`/admin/vehicles/${id}`, payload);
       navigate(`/admin/vehicles/${id}`);
     } catch (err: any) {
@@ -270,7 +288,7 @@ export const EditVehicle: React.FC = () => {
                          <div className="w-1.5 h-1.5 rounded-full bg-primary" /> core identity
                        </h3>
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                         <TextInput label="Registration (Read Only)" name="registration_number" value={vehicle.registration_number} disabled className="opacity-50" />
+                         <TextInput label="Registration (Read Only)" name="registration_number" value={vehicle.registration_number} onChange={() => {}} disabled className="opacity-50" />
                          <SelectInput label="Registry Classification" name="vehicle_type" value={form.vehicle_type} options={VEHICLE_TYPES} onChange={(e) => updateField("vehicle_type", e.target.value)} />
                        </div>
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -351,10 +369,10 @@ export const EditVehicle: React.FC = () => {
                          <div className="w-1.5 h-1.5 rounded-full bg-primary" /> Org Hierarchy
                        </h3>
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                         <SelectInput label="Operational Branch" name="branch_id" value={form.branch_id} options={dropdowns.branches} onChange={(e) => updateField("branch_id", e.target.value)} />
-                         <SelectInput label="Cost Allocation" name="cost_center_id" value={form.cost_center_id} options={dropdowns.costCenters} onChange={(e) => updateField("cost_center_id", e.target.value)} />
-                         <SelectInput label="Guardian Driver" name="current_driver_id" value={form.current_driver_id} options={dropdowns.drivers} onChange={(e) => updateField("current_driver_id", e.target.value)} />
-                         <SelectInput label="Parent Unified Node" name="parent_vehicle_id" value={form.parent_vehicle_id} options={dropdowns.vehicles} onChange={(e) => updateField("parent_vehicle_id", e.target.value)} />
+                         <SelectInput label="Operational Branch" name="branch_id" value={form.branch_id} options={dropdowns.branches} onChange={(e) => updateField("branch_id", e.target.value)} placeholder="Ungrouped" />
+                         <SelectInput label="Cost Allocation" name="cost_center_id" value={form.cost_center_id} options={dropdowns.costCenters} onChange={(e) => updateField("cost_center_id", e.target.value)} placeholder="Default" />
+                         <SelectInput label="Guardian Driver" name="current_driver_id" value={form.current_driver_id} options={dropdowns.drivers} onChange={(e) => updateField("current_driver_id", e.target.value)} placeholder="Unassigned" />
+                         <SelectInput label="Parent Unified Node" name="parent_vehicle_id" value={form.parent_vehicle_id} options={dropdowns.vehicles} onChange={(e) => updateField("parent_vehicle_id", e.target.value)} placeholder="Top Level" />
                        </div>
                     </section>
                   </div>

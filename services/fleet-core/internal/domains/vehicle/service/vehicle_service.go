@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
+
 
 	"github.com/fleet-platform/shared/pkg/middleware"
 
@@ -95,11 +97,11 @@ func (s *VehicleService) CreateVehicle(ctx context.Context, req *models.CreateVe
 		ChassisNumber:      req.ChassisNumber,
 		EngineNumber:       req.EngineNumber,
 		VINNumber:          req.VINNumber,
-		VehicleType:        req.VehicleType,
+		VehicleType:        strings.ToLower(req.VehicleType),
 		CapacityTonnage:    req.CapacityTonnage,
-		FuelType:           req.FuelType,
+		FuelType:           strings.ToLower(req.FuelType),
 		FuelTankCapacity:   req.FuelTankCapacity,
-		OwnershipType:      req.OwnershipType,
+		OwnershipType:      strings.ToLower(req.OwnershipType),
 		ParentVehicleID:    req.ParentVehicleID,
 		BranchID:           req.BranchID,
 		CostCenterID:       req.CostCenterID,
@@ -115,7 +117,10 @@ func (s *VehicleService) CreateVehicle(ctx context.Context, req *models.CreateVe
 		Odometer:           req.Odometer,
 		CurrentDriverID:    req.CurrentDriverID,
 		SpeedLimit:         req.SpeedLimit,
-		Status:             models.StatusActive,
+		LicensePlate:       regNo,
+		Status:             strings.ToLower(models.StatusActive),
+
+
 		CreatedAt:          time.Now(),
 		UpdatedAt:          time.Now(),
 	}
@@ -258,13 +263,13 @@ func (s *VehicleService) UpdateVehicle(ctx context.Context, id uuid.UUID, req *m
 	}
 
 	if req.VehicleType != nil {
-		vehicle.VehicleType = *req.VehicleType
+		vehicle.VehicleType = strings.ToLower(*req.VehicleType)
 	}
 	if req.FuelType != nil {
-		vehicle.FuelType = *req.FuelType
+		vehicle.FuelType = strings.ToLower(*req.FuelType)
 	}
 	if req.OwnershipType != nil {
-		vehicle.OwnershipType = *req.OwnershipType
+		vehicle.OwnershipType = strings.ToLower(*req.OwnershipType)
 	}
 	if req.CapacityTonnage != nil {
 		vehicle.CapacityTonnage = req.CapacityTonnage

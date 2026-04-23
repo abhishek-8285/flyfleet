@@ -25,20 +25,22 @@ type createDriverRequestDTO struct {
 	Phone            string                  `json:"phone" validate:"required,e164"`
 	LicenseNumber    string                  `json:"license_number" validate:"required,max=50"`
 	LicenseType      string                  `json:"license_type" validate:"required,oneof=LMV HMV Transport"`
-	LicenseExpiry    time.Time               `json:"license_expiry" validate:"required"`
-	LicenseAuthority string                  `json:"license_authority" validate:"required,max=100"`
-	LicenseIssueDate *time.Time              `json:"license_issue_date" validate:"omitempty"`
-	DateOfBirth      time.Time               `json:"date_of_birth" validate:"required"`
+	LicenseExpiry    string                  `json:"license_expiry" validate:"required"`
+	LicenseAuthority string                  `json:"license_authority" validate:"omitempty,max=100"`
+	LicenseIssueDate string                  `json:"license_issue_date" validate:"omitempty"`
+	DateOfBirth      string                  `json:"date_of_birth" validate:"required"`
 	EmployeeCode     string                  `json:"employee_code" validate:"omitempty,max=50"`
 	AadhaarNumber    string                  `json:"aadhaar_number" validate:"omitempty,len=12"`
 	PanNumber        string                  `json:"pan_number" validate:"omitempty,len=10"`
 	EmploymentType   string                  `json:"employment_type" validate:"required,oneof=FULL_TIME CONTRACT"`
-	Address          models.Address          `json:"address" validate:"required"`
+	Address          models.Address          `json:"address" validate:"omitempty"`
 	EmergencyContact models.EmergencyContact `json:"emergency_contact" validate:"required"`
+
 	ExperienceYears  int                     `json:"experience_years" validate:"gte=0,lte=50"`
-	JoiningDate      time.Time               `json:"joining_date" validate:"omitempty"`
+	JoiningDate      string                  `json:"joining_date" validate:"omitempty"`
 	Metadata         map[string]interface{}  `json:"metadata"`
 }
+
 
 type updateDriverRequestDTO struct {
 	FirstName        *string                  `json:"first_name,omitempty" validate:"omitempty,max=50"`
@@ -215,6 +217,20 @@ func (h *DriverHandler) RegisterRoutes(r chi.Router) {
 	})
 }
 
+func parseDate(dateStr string) (time.Time, error) {
+	if dateStr == "" {
+		return time.Time{}, nil
+	}
+	// Try RFC3339 first
+	t, err := time.Parse(time.RFC3339, dateStr)
+	if err == nil {
+		return t, nil
+	}
+	// Try simple date format
+	return time.Parse("2006-01-02", dateStr)
+}
+
+
 // CreateDriver godoc
 func (h *DriverHandler) CreateDriver(w http.ResponseWriter, r *http.Request) {
 	var dto createDriverRequestDTO
@@ -231,7 +247,17 @@ func (h *DriverHandler) CreateDriver(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Map DTO to model
+	// Map DTO to model with date parsing
+	licenseExpiry, _ := parseDate(dto.LicenseExpiry)
+	dob, _ := parseDate(dto.DateOfBirth)
+	joiningDate, _ := parseDate(dto.JoiningDate)
+	var licenseIssueDate *time.Time
+	if dto.LicenseIssueDate != "" {
+		if t, err := parseDate(dto.LicenseIssueDate); err == nil {
+			licenseIssueDate = &t
+		}
+	}
+
 	req := &models.CreateDriverRequest{
 		FirstName:        dto.FirstName,
 		LastName:         dto.LastName,
@@ -239,10 +265,10 @@ func (h *DriverHandler) CreateDriver(w http.ResponseWriter, r *http.Request) {
 		Phone:            dto.Phone,
 		LicenseNumber:    dto.LicenseNumber,
 		LicenseType:      dto.LicenseType,
-		LicenseExpiry:    dto.LicenseExpiry,
+		LicenseExpiry:    licenseExpiry,
 		LicenseAuthority: dto.LicenseAuthority,
-		LicenseIssueDate: dto.LicenseIssueDate,
-		DateOfBirth:      dto.DateOfBirth,
+		LicenseIssueDate: licenseIssueDate,
+		DateOfBirth:      dob,
 		EmployeeCode:     dto.EmployeeCode,
 		AadhaarNumber:    dto.AadhaarNumber,
 		PanNumber:        dto.PanNumber,
@@ -250,8 +276,10 @@ func (h *DriverHandler) CreateDriver(w http.ResponseWriter, r *http.Request) {
 		Address:          dto.Address,
 		EmergencyContact: dto.EmergencyContact,
 		ExperienceYears:  dto.ExperienceYears,
+		JoiningDate:      joiningDate,
 		Metadata:         dto.Metadata,
 	}
+
 
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {

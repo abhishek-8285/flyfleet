@@ -1,18 +1,10 @@
-import React, { useState, useRef, useEffect } from "react";
-import { useSelector } from "react-redux";
-import maplibregl from "maplibre-gl";
-import { LiveAlertsFeed } from "../../modules/dispatch/components/LiveAlertsFeed";
-import { FleetList } from "../../modules/fleet/components/FleetList";
-import MapEngine from "../../modules/map/MapEngine";
-import { MapErrorBoundary } from "../../modules/map/components/MapErrorBoundary";
-import { useTelemetryStream } from "../../modules/map/hooks/useTelemetryStream";
-import {
-    addVehicleLayers,
-    updateVehicleSource,
-} from "../../modules/map/layers/VehicleSymbolLayer";
-import { VehicleDetailPanel } from "../../features/tracking/components/VehicleDetailPanel";
-import { RootState } from "../../store";
-import { useAuth } from "../../context/AuthProvider";
+import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
+import { useAuth } from '../../context/AuthProvider';
+import { VehicleDetailPanel } from '../../features/tracking/components/VehicleDetailPanel';
+import LiveOperationsMap from '../../modules/dashboard/components/LiveOperationsMap';
+import { FleetList } from '../../modules/fleet/components/FleetList';
+import { RootState } from '../../store';
 
 /**
  * DispatchCenter: The central operational hub of the FlyFleet platform.
@@ -20,81 +12,10 @@ import { useAuth } from "../../context/AuthProvider";
  */
 export const DispatchCenter: React.FC = () => {
   const { toggleSidebar } = useAuth();
-  const sidebarCollapsed = useSelector((state: RootState) => state.auth.user?.sidebar_collapsed);
-  const mapRef = useRef<maplibregl.Map | null>(null);
-  
-  // Immersive 'Focus Mode': Auto-collapse global navigation on mount
-  useEffect(() => {
-    if (!sidebarCollapsed) {
-      toggleSidebar();
-    }
-  }, []);
-
   const [sidebarWidth, setSidebarWidth] = useState(400);
-  const telemetryVehicles = useSelector(
-    (state: RootState) => state.telemetry.vehicles,
-  );
+  const telemetryVehicles = useSelector((state: RootState) => state.telemetry.vehicles);
   const selectedVehicleId = useSelector((state: RootState) => state.telemetry.selectedVehicleId);
-  const { updateViewport } = useTelemetryStream();
-
-  // Selection Focus: Smoothly fly to selected asset
-  useEffect(() => {
-    if (mapRef.current && selectedVehicleId && telemetryVehicles[selectedVehicleId]) {
-        const v = telemetryVehicles[selectedVehicleId];
-        if (v.latitude && v.longitude) {
-            mapRef.current.flyTo({
-                center: [v.longitude, v.latitude],
-                zoom: 15,
-                essential: true,
-                padding: { right: 450, left: 0, top: 0, bottom: 0 } // Offset for the right drawer
-            });
-        }
-    }
-  }, [selectedVehicleId]);
-
-  // Reactive Map Sync: Push data to map source without React re-render loops
-  useEffect(() => {
-    if (mapRef.current) {
-        const vehicleList = Object.values(telemetryVehicles);
-        updateVehicleSource(mapRef.current, vehicleList);
-    }
-  }, [telemetryVehicles]);
-
-  const handleMapLoad = (map: maplibregl.Map) => {
-    mapRef.current = map;
-    addVehicleLayers(map);
-
-    // Initial Hydration: Force data onto map in case it arrived before map was ready
-    const initialVehicles = Object.values(telemetryVehicles);
-    if (initialVehicles.length > 0) {
-      updateVehicleSource(map, initialVehicles);
-    }
-    
-    // Interactive Map Popups for live telemetry
-    map.on("click", "unclustered-point", (e) => {
-        const features = map.queryRenderedFeatures(e.point, { layers: ["unclustered-point"] });
-        if (!features.length) return;
-        const f = features[0];
-        const props = f.properties;
-        
-        new maplibregl.Popup({ className: 'telemetry-popup' })
-          .setLngLat((f.geometry as any).coordinates)
-          .setHTML(`
-            <div class="p-1">
-              <h3 class="font-bold text-[11px] mb-1 text-primary-dark">${props.registration}</h3>
-              <div class="text-[9px] space-y-1 text-slate-700">
-                <p>Velocity: <span class="font-bold">${props.speed} km/h</span></p>
-                <p>Status: <span class="uppercase font-bold">${props.status}</span></p>
-              </div>
-            </div>
-          `)
-          .addTo(map);
-    });
-
-    // Change cursor on hover
-    map.on("mouseenter", "unclustered-point", () => map.getCanvas().style.cursor = "pointer");
-    map.on("mouseleave", "unclustered-point", () => map.getCanvas().style.cursor = "");
-  };
+  const selectedId = selectedVehicleId; // Alias for LiveOperationsMap
 
   return (
     <div className="flex h-full w-full bg-background-dark overflow-hidden relative">
@@ -111,7 +32,9 @@ export const DispatchCenter: React.FC = () => {
             </h2>
           </div>
           <div className="flex-1 overflow-hidden">
-            <FleetList variant="compact" gpsOnly={true} />
+            <div className="flex-1 overflow-auto">
+              <FleetList variant="compact" gpsOnly={true} />
+            </div>
           </div>
         </div>
 
@@ -123,36 +46,75 @@ export const DispatchCenter: React.FC = () => {
             const startWidth = sidebarWidth;
             const onMouseMove = (moveEvent: MouseEvent) => {
               setSidebarWidth(
-                Math.max(
-                  300,
-                  Math.min(600, startWidth + (moveEvent.pageX - startX)),
-                ),
+                Math.max(300, Math.min(600, startWidth + (moveEvent.pageX - startX)))
               );
             };
             const onMouseUp = () => {
-              document.removeEventListener("mousemove", onMouseMove);
-              document.removeEventListener("mouseup", onMouseUp);
+              document.removeEventListener('mousemove', onMouseMove);
+              document.removeEventListener('mouseup', onMouseUp);
             };
-            document.addEventListener("mousemove", onMouseMove);
-            document.addEventListener("mouseup", onMouseUp);
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
           }}
         />
 
         {/* Main Map Workspace */}
-        <div className="flex-1 relative bg-background-dark">
-          <MapErrorBoundary>
-            <MapEngine onMapLoad={handleMapLoad} />
-          </MapErrorBoundary>
-
-          {/* HUD Overlays */}
+        <div className="flex-1 relative bg-background-dark overflow-hidden">
+          <LiveOperationsMap
+            vehicles={Object.values(telemetryVehicles).map((v) => ({
+              id: v.id,
+              lat: v.latitude,
+              lng: v.longitude,
+              status: (v.speed ?? 0) > 0 ? 'active' : 'idle',
+              label: v.registrationNumber || v.id.substring(0, 8),
+            }))}
+            height="100%"
+            selectedId={selectedId}
+            className="rounded-none"
+            showLegend={false}
+          />
           <div className="absolute top-6 left-6 pointer-events-none">
-            <div className="bg-surface-dark/80 backdrop-blur-md border border-border-color p-4 rounded-xl shadow-2xl pointer-events-auto">
-              <h2 className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">
-                Fleet Operations
-              </h2>
-              <p className="text-xl font-bold text-white leading-tight">
-                Dispatch Alpha
-              </p>
+            <div className="bg-surface-dark/90 backdrop-blur-xl border border-border-color px-6 py-3 rounded-xl shadow-2xl pointer-events-auto flex items-center gap-8">
+              <div className="flex flex-col border-r border-white/10 pr-8">
+                <h2 className="text-[9px] font-black uppercase tracking-widest text-primary leading-none mb-1">
+                  Ops Center
+                </h2>
+                <p className="text-sm font-bold text-white leading-none">
+                  Dispatch Alpha
+                </p>
+              </div>
+
+              <div className="flex gap-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                  <div>
+                    <p className="text-[9px] text-text-muted uppercase font-bold tracking-widest leading-none mb-1">Active</p>
+                    <p className="text-lg font-black text-white leading-none">
+                      {Object.values(telemetryVehicles).filter((v) => (v.speed ?? 0) > 0).length}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.5)]" />
+                  <div>
+                    <p className="text-[9px] text-text-muted uppercase font-bold tracking-widest leading-none mb-1">Idle</p>
+                    <p className="text-lg font-black text-white leading-none">
+                      {Object.values(telemetryVehicles).filter((v) => (v.speed ?? 0) === 0).length}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                  <div>
+                    <p className="text-[9px] text-text-muted uppercase font-bold tracking-widest leading-none mb-1">Alerts</p>
+                    <p className="text-lg font-black text-white leading-none">
+                      {Object.values(telemetryVehicles).filter((v) => v.status === 'alert').length}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

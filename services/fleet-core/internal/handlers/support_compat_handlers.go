@@ -819,7 +819,9 @@ func (h *UIHandlers) GetMenuById(w http.ResponseWriter, r *http.Request) {
 			items = append(items, map[string]interface{}{"label": "Billing", "title": "Billing", "icon": "payments", "path": "/admin/billing", "items": []any{}})
 		}
 
-		items = append(items, map[string]interface{}{"label": "Control Tower", "title": "Control Tower", "icon": "radar", "path": "/admin/control-tower", "items": []any{}})
+		if role == "super_admin" {
+			items = append(items, map[string]interface{}{"label": "Control Tower", "title": "Control Tower", "icon": "radar", "path": "/admin/control-tower", "items": []any{}})
+		}
 		items = append(items, map[string]interface{}{"label": "Fleet Command", "title": "Fleet Command", "icon": "local_shipping", "path": "/admin/vehicles", "items": []any{}})
 		items = append(items, map[string]interface{}{"label": "Dispatch", "title": "Dispatch", "icon": "route", "path": "/admin/dispatch", "items": []any{}})
 

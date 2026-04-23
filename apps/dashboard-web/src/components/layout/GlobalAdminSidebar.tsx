@@ -30,7 +30,7 @@ export const GlobalAdminSidebar: React.FC = () => {
         title: 'Control Tower',
         path: '/admin/control-tower',
         icon: 'satellite_alt',
-        roles: ['*'],
+        roles: ['super_admin'],
         items: [],
       },
       {

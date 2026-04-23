@@ -37,14 +37,39 @@ export const VehicleDetail: React.FC = () => {
       
       // Fetch current driver info if assigned
       if (res.data?.current_driver_id) {
+        console.log("[VehicleDetail] Found current_driver_id:", res.data.current_driver_id);
         try {
           const driversRes = await apiClient.get("/admin/drivers?limit=500");
-          const allDrivers = driversRes?.data || [];
-          const driver = allDrivers.find((d: any) => d.id === res.data.current_driver_id);
-          setCurrentDriver(driver || null);
-        } catch {
+          console.log("[VehicleDetail] Drivers API response:", driversRes);
+          const ensureArray = (resp: any, key?: string) => {
+            if (!resp) return [];
+            if (Array.isArray(resp)) return resp;
+            if (key && Array.isArray(resp[key])) return resp[key];
+            if (Array.isArray(resp.data)) return resp.data;
+            if (resp.data && key && Array.isArray(resp.data[key])) return resp.data[key];
+            return [];
+          };
+          const allDrivers = ensureArray(driversRes, "drivers");
+          console.log("[VehicleDetail] All drivers array:", allDrivers);
+          
+          const targetId = String(res.data.current_driver_id).toLowerCase();
+          const driver = allDrivers.find((d: any) => String(d.id).toLowerCase() === targetId);
+          
+          if (driver) {
+            console.log("[VehicleDetail] Matched driver:", driver);
+            // Normalize name
+            const fullName = `${driver.first_name || ""} ${driver.last_name || ""}`.trim() || driver.name || "Unknown Driver";
+            setCurrentDriver({ ...driver, name: fullName });
+          } else {
+            console.warn("[VehicleDetail] Could not find driver with ID in list:", targetId);
+            setCurrentDriver(null);
+          }
+        } catch (err) {
+          console.error("[VehicleDetail] Failed to fetch drivers list:", err);
           setCurrentDriver(null);
         }
+      } else {
+        console.log("[VehicleDetail] No current_driver_id assigned to this vehicle");
       }
     } catch (error) {
       console.error("Failed to fetch vehicle:", error);

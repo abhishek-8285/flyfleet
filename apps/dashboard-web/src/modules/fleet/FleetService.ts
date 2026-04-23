@@ -130,13 +130,13 @@ class FleetService {
     );
   }
 
-  async getFilterMetadata(): Promise<{ tenants: string[]; statuses: string[] }> {
+  async getFilterMetadata(): Promise<{ orgs: string[]; statuses: string[] }> {
     // If worker is available, use it
     if (this.worker) {
       return new Promise((resolve) => {
         const timeout = setTimeout(() => {
           window.removeEventListener("VEHICLE_FILTER_METADATA", handler);
-          resolve({ tenants: [], statuses: [] });
+          resolve({ orgs: [], statuses: [] });
         }, 2000);
 
         function handler(e: any) {
@@ -161,18 +161,18 @@ class FleetService {
         ? raw
         : raw?.vehicles || raw?.data || [];
 
-      const tenantSet = new Set<string>();
+      const orgSet = new Set<string>();
       const statusSet = new Set<string>();
       vehicles.forEach((v: any) => {
         const tid = v.tenant_id || v.tenantId || v.org_id || v.org;
-        if (tid) tenantSet.add(String(tid));
-        if (v.org_name) tenantSet.add(v.org_name); // Legacy name field
+        if (tid) orgSet.add(String(tid));
+        if (v.org_name) orgSet.add(v.org_name); // Legacy name field
         if (v.status) statusSet.add(v.status);
       });
-      return { tenants: Array.from(tenantSet), statuses: Array.from(statusSet) };
+      return { orgs: Array.from(orgSet), statuses: Array.from(statusSet) };
     } catch (error) {
       console.error("[FleetService] getFilterMetadata REST fallback failed:", error);
-      return { tenants: [], statuses: [] };
+      return { orgs: [], statuses: [] };
     }
   }
 }
