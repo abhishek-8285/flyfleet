@@ -16,7 +16,13 @@ export const VehicleDetailPanel: React.FC = () => {
     }
 
     const vehicle = vehicles[selectedVehicleId];
-    const color = statusColor((vehicle.derived_status || vehicle.status || 'offline') as any);
+    
+    // Determine the operational status: if it has 0,0 coordinates, it's effectively offline/no-data
+    const isNoData = !vehicle.latitude || !vehicle.longitude || (Number(vehicle.latitude) === 0 && Number(vehicle.longitude) === 0);
+    const operationalStatus = isNoData ? 'offline' : (vehicle.derived_status || vehicle.status || 'offline');
+    
+    const color = statusColor(operationalStatus as any);
+    const label = isNoData ? "NO DATA RECEIVED" : statusLabel(operationalStatus as any);
 
     return (
         <div className="fixed right-0 top-0 h-full w-[450px] bg-surface-container border-l border-outline shadow-2xl z-20 flex flex-col overflow-hidden animate-in slide-in-from-right duration-500">
@@ -56,7 +62,7 @@ export const VehicleDetailPanel: React.FC = () => {
                                 />
                             </div>
                             <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white">
-                                {statusLabel(vehicle.derived_status || (vehicle as any).status || "offline")}
+                                {label}
                             </span>
                         </div>
                         <span className="text-[9px] font-black uppercase tracking-widest text-on-surface-variant opacity-50">
@@ -102,11 +108,15 @@ export const VehicleDetailPanel: React.FC = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="bg-surface-container rounded-2xl p-4 border border-outline/50">
                                     <span className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant block mb-1">LATITUDE</span>
-                                    <p className="font-mono text-xs font-bold text-white tracking-tighter">{(Number(vehicle.latitude) || 0).toFixed(6)}</p>
+                                    <p className="font-mono text-xs font-bold text-white tracking-tighter">
+                                        {Number(vehicle.latitude) !== 0 ? (Number(vehicle.latitude) || 0).toFixed(6) : "WAITING FOR GPS"}
+                                    </p>
                                 </div>
                                 <div className="bg-surface-container rounded-2xl p-4 border border-outline/50">
                                     <span className="text-[8px] font-black uppercase tracking-widest text-on-surface-variant block mb-1">LONGITUDE</span>
-                                    <p className="font-mono text-xs font-bold text-white tracking-tighter">{(Number(vehicle.longitude) || 0).toFixed(6)}</p>
+                                    <p className="font-mono text-xs font-bold text-white tracking-tighter">
+                                        {Number(vehicle.longitude) !== 0 ? (Number(vehicle.longitude) || 0).toFixed(6) : "WAITING FOR GPS"}
+                                    </p>
                                 </div>
                             </div>
                             {vehicle.speed_kmh !== undefined && (

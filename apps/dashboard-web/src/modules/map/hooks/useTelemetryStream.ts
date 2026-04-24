@@ -299,7 +299,7 @@ export const useTelemetryStream = () => {
   /**
    * Updates all workers with latest viewport bounds.
    */
-  const updateViewport = (bounds: {
+  const updateViewport = React.useCallback((bounds: {
     minLng: number;
     maxLng: number;
     minLat: number;
@@ -315,61 +315,61 @@ export const useTelemetryStream = () => {
       type: "UPDATE_VIEWPORT",
       payload: bounds,
     });
-  };
+  }, []);
 
-  const sendToWorker = (type: string, payload: any) => {
+  const sendToWorker = React.useCallback((type: string, payload: any) => {
     if (ingestionWorkerRef.current) {
       ingestionWorkerRef.current.postMessage({ type, payload });
     }
-  };
+  }, []);
 
-  const connectTelemetry = (url: string) => {
+  const connectTelemetry = React.useCallback((url: string) => {
     if (ingestionWorkerRef.current) {
       ingestionWorkerRef.current.postMessage({
         type: "CONNECT_WEBSOCKET",
         payload: { url },
       });
     }
-  };
+  }, []);
 
-  const searchVehicle = (query: string, filters?: any) => {
+  const searchVehicle = React.useCallback((query: string, filters?: any) => {
     searchWorkerRef.current?.postMessage({
       type: "SEARCH",
       payload: { query, filters },
     });
-  };
+  }, []);
 
-  const getFilterMetadata = () => {
+  const getFilterMetadata = React.useCallback(() => {
     searchWorkerRef.current?.postMessage({ type: "GET_FILTER_METADATA" });
-  };
+  }, []);
 
-  const requestReplayData = (start: number, end: number) => {
+  const requestReplayData = React.useCallback((start: number, end: number) => {
     searchWorkerRef.current?.postMessage({
       type: "GET_REPLAY_DATA",
       payload: { start, end },
     });
-  };
+  }, []);
 
-  const setReplayState = (vehicles: any[]) => {
+  const setReplayState = React.useCallback((vehicles: any[]) => {
     telemetryWorkerRef.current?.postMessage({
       type: "SET_REPLAY_STATE",
       payload: vehicles,
     });
-  };
+  }, []);
 
-  const setWorkerMode = (mode: "LIVE" | "REPLAY") => {
+  const setWorkerMode = React.useCallback((mode: "LIVE" | "REPLAY") => {
     telemetryWorkerRef.current?.postMessage({
       type: "SET_WORKER_MODE",
       payload: { mode },
     });
-  };
+  }, []);
 
-  const requestBreadcrumbs = (vehicleId: string) => {
+  const requestBreadcrumbs = React.useCallback((vehicleId: string) => {
     telemetryWorkerRef.current?.postMessage({
       type: "GET_BREADCRUMBS",
       payload: { vehicleId },
     });
-  };
+  }, []);
 
   return {
     sendToWorker,

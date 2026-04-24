@@ -87,11 +87,19 @@ func NewIngestionService(
 	}
 }
 
+// SetHMACSecret updates the HMAC secret for ingestion validation.
+func (s *IngestionService) SetHMACSecret(secret string) {
+	s.cfg.HMACSecret = secret
+}
+
 // Ingest validates and stores a single telemetry event.
 // Returns a typed error wrapping the rejection reason on validation failure.
 func (s *IngestionService) Ingest(ctx context.Context, event *models.TelemetryEvent) ([]models.AnomalyEvent, error) {
 	// 1 ── HMAC validation (if secret is configured)
-	if s.cfg.HMACSecret != "" && event.Signature != "" {
+	if s.cfg.HMACSecret != "" {
+		if event.Signature == "" {
+			return nil, fmt.Errorf("X-HMAC-Signature is required for hardware ingestion")
+		}
 		if !s.verifyHMAC(event.EventID+event.DeviceID, event.Signature) {
 			return nil, fmt.Errorf("invalid HMAC signature")
 		}

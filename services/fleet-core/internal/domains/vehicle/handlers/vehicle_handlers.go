@@ -201,18 +201,21 @@ func (h *VehicleHandlers) GetVehicle(w http.ResponseWriter, r *http.Request) {
 // ListVehicles godoc
 func (h *VehicleHandlers) ListVehicles(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	tenantIDStr := query.Get("tenant_id")
-	var tenantID uuid.UUID
-	if tenantIDStr != "" {
-		var err error
-		tenantID, err = uuid.Parse(tenantIDStr)
-		if err != nil {
-			h.writeErrorResponse(w, http.StatusBadRequest, "Invalid tenant_id format", err)
-			return
+	tenantID, _ := ctxkeys.GetTenantID(r.Context())
+	role := ctxkeys.GetRole(r.Context())
+
+	// Only super_admin can override tenant_id via query param
+	if role == "super_admin" {
+		if tidStr := query.Get("tenant_id"); tidStr != "" {
+			if tid, err := uuid.Parse(tidStr); err == nil {
+				tenantID = tid
+			}
 		}
-	} else {
-		// Fallback to context if not in query
-		tenantID = h.getTenantID(r.Context())
+	}
+
+	if tenantID == uuid.Nil && role != "super_admin" {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context required", nil)
+		return
 	}
 
 	page, _ := strconv.Atoi(query.Get("page"))

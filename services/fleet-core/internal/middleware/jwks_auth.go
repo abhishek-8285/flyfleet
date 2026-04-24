@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"net/http"
 	"strings"
@@ -158,7 +159,7 @@ func validateToken(tokenStr, secret, jwksURL string) (*Claims, error) {
 		return nil, err
 	}
 	if !token.Valid {
-		return nil, jwt.ErrTokenSignatureInvalid
+		return nil, fmt.Errorf("token signature invalid (check JWT_SECRET synchronization): %w", jwt.ErrTokenSignatureInvalid)
 	}
 	return claims, nil
 }

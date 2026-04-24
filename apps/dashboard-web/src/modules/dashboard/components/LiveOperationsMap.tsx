@@ -35,7 +35,7 @@ const MapController: React.FC<{ vehicles: VehicleMarker[]; selectedId: string | 
   React.useEffect(() => {
     if (selectedId) {
       const v = vehicles.find((m) => m.id === selectedId);
-      if (v) {
+      if (v && typeof v.lat === 'number' && typeof v.lng === 'number' && v.lat !== 0 && v.lng !== 0) {
         map.flyTo([v.lat, v.lng], 15);
       }
     }
@@ -91,7 +91,7 @@ const LiveOperationsMap: React.FC<{
         <MapController vehicles={vehicles} selectedId={selectedId} />
 
         <MarkerClusterGroup chunkedLoading maxClusterRadius={60}>
-          {vehicles.map((v) => (
+          {vehicles.filter(v => typeof v.lat === 'number' && typeof v.lng === 'number' && v.lat !== 0 && v.lng !== 0).map((v) => (
             <Marker key={v.id} position={[v.lat, v.lng]}>
               <Popup>
                 <div className="text-gray-900">

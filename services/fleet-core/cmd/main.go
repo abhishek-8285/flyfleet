@@ -67,7 +67,8 @@ func main() {
 
 	logger.Info("starting fleet-core service",
 		zap.String("port", cfg.Port),
-		zap.String("environment", cfg.Environment))
+		zap.String("environment", cfg.Environment),
+		zap.Int("jwt_secret_len", len(cfg.JWTSecret)))
 
 	ctx := context.Background()
 
@@ -98,6 +99,7 @@ func main() {
 	// --- Services ---
 	tenantChecker := &pgTenantChecker{pool: pool}
 	ingestionSvc := ts.NewIngestionService(telemRepo, liveCache, rdb, logger)
+	ingestionSvc.SetHMACSecret(cfg.TelemetryHMACSecret)
 	querySvc := ts.NewTelemetryQueryService(telemRepo, liveCache, tenantChecker, logger)
 	batchSvc := ts.NewBatchLocationService(vehicleRepo, liveCache, telemRepo, logger, cfg.Flags.MaxVehiclesOnMap)
 
@@ -241,6 +243,9 @@ func main() {
 		w.Write([]byte(`{"status":"healthy","service":"fleet-core"}`))
 	})
 
+	// PUBLIC Hardware Telemetry (No User Token Required)
+	r.Post("/api/v1/telemetry", ingestHandler.ServeHTTP)
+
 	// --- API Routes ---
 
 	// --- API Routes ---
@@ -281,8 +286,8 @@ func main() {
 		// Landing page data
 		landingHandler := th.NewLandingHandler()
 		r.Get("/data", landingHandler.ServeHTTP)
-
-		// 2. All authenticated API routes
+		
+		// 1.5 Authenticated API routes
 		r.Group(func(r chi.Router) {
 			authGate := middleware.NewJWKSAuthGate("FlyFleet", "fleet-dashboard", cfg.JWTSecret, logger)
 			r.Use(authGate.Handler)
@@ -295,7 +300,6 @@ func main() {
 
 			// Tracking endpoints
 			if cfg.Flags.VehicleMapEnabled {
-				r.Post("/telemetry", ingestHandler.ServeHTTP)
 				r.Get("/vehicles/locations", locationsHandler.ServeHTTP)
 
 				if cfg.Flags.HistoryTrail {
@@ -429,6 +433,7 @@ func syncAllSchemas(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger)
 	ensureCustomerSchema(ctx, pool, logger)
 	ensureInvoicingSchema(ctx, pool, logger)
 	ensureBillingSchema(ctx, pool, logger)
+	ensureHardwareBillingSchema(ctx, pool, logger)
 	ensureAnalyticsSchema(ctx, pool, logger)
 	ensureTrackingSchema(ctx, pool, logger)
 
@@ -604,6 +609,93 @@ func ensureBillingSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Lo
 	}
 }
 
+func ensureHardwareBillingSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
+	logger.Info("Syncing Hardware Billing Schema...")
+	
+	// Create hardware products table
+	pool.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS billing_hardware_products (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			name VARCHAR(255) NOT NULL,
+			model_code VARCHAR(100) UNIQUE NOT NULL,
+			category VARCHAR(50) NOT NULL,
+			one_time_price DECIMAL(15, 2) NOT NULL,
+			lease_monthly_price DECIMAL(15, 2),
+			currency VARCHAR(3) NOT NULL DEFAULT 'USD',
+			metadata JSONB DEFAULT '{}',
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		)
+	`)
+
+	// Create device assignments table
+	pool.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS billing_device_assignments (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			tenant_id UUID NOT NULL,
+			device_id VARCHAR(100) NOT NULL,
+			product_id UUID NOT NULL REFERENCES billing_hardware_products(id),
+			billing_type VARCHAR(20) NOT NULL,
+			status VARCHAR(20) NOT NULL DEFAULT 'PENDING_ACTIVATION',
+			activated_at TIMESTAMPTZ,
+			invoice_id UUID REFERENCES invoices(id), 
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			UNIQUE(device_id)
+		)
+	`)
+
+	// Seed data if empty
+	var count int
+	pool.QueryRow(ctx, "SELECT COUNT(*) FROM billing_hardware_products").Scan(&count)
+	if count == 0 {
+		pool.Exec(ctx, `
+			INSERT INTO billing_hardware_products (name, model_code, category, one_time_price, lease_monthly_price)
+			VALUES 
+			('FlyFleet Vision Pro Dashcam', 'FF-CAM-V2', 'DASHCAM', 399.00, 25.00),
+			('FlyFleet Standard GPS Tracker', 'FF-GPS-100', 'TRACKER', 99.00, 10.00),
+			('FlyFleet OBD-II Telematics Node', 'FF-OBD-V1', 'TRACKER', 149.00, 15.00)
+		`)
+	}
+
+	// Ensure indexes
+	pool.Exec(ctx, "CREATE INDEX IF NOT EXISTS idx_device_assignments_tenant_id ON billing_device_assignments(tenant_id)")
+	pool.Exec(ctx, "CREATE INDEX IF NOT EXISTS idx_device_assignments_device_id ON billing_device_assignments(device_id)")
+
+	// BACKWARD COMPATIBILITY: Auto-populate assignments for existing vehicles
+	// This ensures that existing vehicles with GPS devices don't throw "not in inventory" errors.
+	pool.Exec(ctx, `
+		INSERT INTO billing_device_assignments (tenant_id, device_id, product_id, billing_type, status)
+		SELECT 
+			v.tenant_id, 
+			v.gps_device_id, 
+			(SELECT id FROM billing_hardware_products WHERE model_code = 'FF-GPS-100' LIMIT 1),
+			'ONE_TIME',
+			'ACTIVE'
+		FROM vehicles v
+		WHERE v.gps_device_id IS NOT NULL 
+		  AND v.gps_device_id != ''
+		  AND v.deleted_at IS NULL
+		ON CONFLICT (device_id) DO NOTHING
+	`)
+
+	// Ensure they also exist in tracking registry
+	pool.Exec(ctx, `
+		INSERT INTO device_registry (device_id, status, created_at, updated_at)
+		SELECT 
+			gps_device_id, 
+			'active', 
+			NOW(), 
+			NOW()
+		FROM vehicles
+		WHERE gps_device_id IS NOT NULL 
+		  AND gps_device_id != ''
+		  AND deleted_at IS NULL
+		ON CONFLICT (device_id) DO NOTHING
+	`)
+}
+
+
 func ensureAnalyticsSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
 	logger.Info("Syncing Analytics Schema...")
 	statements := []string{
@@ -619,6 +711,45 @@ func ensureAnalyticsSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.
 
 func ensureTrackingSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
 	logger.Info("Syncing Tracking Schema...")
+	
+	// Ensure device_registry exists for tracking control plane
+	pool.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS device_registry (
+			device_id         VARCHAR(100) PRIMARY KEY,
+			vehicle_id        UUID,
+			firmware_version  VARCHAR(50),
+			sim_iccid         VARCHAR(30),
+			carrier           VARCHAR(50),
+			last_heartbeat    TIMESTAMPTZ,
+			status            VARCHAR(20) NOT NULL DEFAULT 'active',
+			certificate_hash  VARCHAR(64),
+			created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		)
+	`)
+
+	// Ensure telemetry_points exists for tracking data plane
+	pool.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS telemetry_points (
+			id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			device_id    VARCHAR(100) NOT NULL,
+			lat          DOUBLE PRECISION NOT NULL,
+			lng          DOUBLE PRECISION NOT NULL,
+			speed        DOUBLE PRECISION DEFAULT 0,
+			recorded_at  TIMESTAMP WITH TIME ZONE NOT NULL,
+			event_id     UUID NOT NULL,
+			tenant_id    UUID NOT NULL
+		)
+	`)
+
+	// Ensure extended columns exist
+	pool.Exec(ctx, "ALTER TABLE telemetry_points ADD COLUMN IF NOT EXISTS received_at TIMESTAMP WITH TIME ZONE")
+	pool.Exec(ctx, "ALTER TABLE telemetry_points ADD COLUMN IF NOT EXISTS vehicle_id UUID")
+	pool.Exec(ctx, "ALTER TABLE telemetry_points ADD COLUMN IF NOT EXISTS heading DOUBLE PRECISION")
+	pool.Exec(ctx, "ALTER TABLE telemetry_points ADD COLUMN IF NOT EXISTS ignition BOOLEAN")
+	pool.Exec(ctx, "ALTER TABLE telemetry_points ADD COLUMN IF NOT EXISTS fuel_level DOUBLE PRECISION")
+	pool.Exec(ctx, "ALTER TABLE telemetry_points ADD COLUMN IF NOT EXISTS raw_data JSONB")
+
 	statements := []string{
 		"ALTER TABLE geofences ADD COLUMN IF NOT EXISTS tenant_id UUID",
 		"ALTER TABLE geofences ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE",

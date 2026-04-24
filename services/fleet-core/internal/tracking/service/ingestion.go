@@ -2,6 +2,10 @@ package service
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -18,10 +22,11 @@ import (
 // IngestionService validates, stores, and broadcasts incoming
 // telemetry events from GPS devices.
 type IngestionService struct {
-	telemRepo repository.TelemetryRepositoryer
-	liveCache repository.LiveCacher
-	redis     *redis.Client
-	logger    *zap.Logger
+	telemRepo  repository.TelemetryRepositoryer
+	liveCache  repository.LiveCacher
+	redis      *redis.Client
+	logger     *zap.Logger
+	hmacSecret string
 }
 
 func NewIngestionService(
@@ -38,9 +43,38 @@ func NewIngestionService(
 	}
 }
 
+// SetHMACSecret updates the HMAC secret for ingestion validation.
+func (s *IngestionService) SetHMACSecret(secret string) {
+	s.hmacSecret = secret
+}
+
+// verifyHMAC computes HMAC-SHA256(key, message) and compares with sig.
+func (s *IngestionService) verifyHMAC(message, sig string) bool {
+	if s.hmacSecret == "" {
+		return true
+	}
+
+	mac := hmac.New(sha256.New, []byte(s.hmacSecret))
+	mac.Write([]byte(message))
+	expected := hex.EncodeToString(mac.Sum(nil))
+
+	return subtle.ConstantTimeCompare([]byte(expected), []byte(sig)) == 1
+}
+
 // Ingest validates and persists a telemetry event, updates the Redis
 // live cache, and publishes a position update for WebSocket fans.
 func (s *IngestionService) Ingest(ctx context.Context, event *models.TelemetryEvent) error {
+	// HMAC validation (if secret is configured)
+	if s.hmacSecret != "" {
+		if event.Signature == "" {
+			return fmt.Errorf("X-HMAC-Signature is required for hardware ingestion")
+		}
+		// Message for signature is EventID + DeviceID
+		if !s.verifyHMAC(event.EventID.String()+event.DeviceID, event.Signature) {
+			return fmt.Errorf("invalid HMAC signature")
+		}
+	}
+
 	// Validate coordinates
 	if event.Lat < -90 || event.Lat > 90 {
 		return fmt.Errorf("invalid latitude: %f", event.Lat)
@@ -83,8 +117,9 @@ func (s *IngestionService) Ingest(ctx context.Context, event *models.TelemetryEv
 		// Non-fatal — core ingest succeeded
 	}
 
-	s.logger.Debug("telemetry ingested",
+	s.logger.Info("telemetry ingested successfully",
 		zap.String("vehicle_id", event.VehicleID.String()),
+		zap.String("device_id", event.DeviceID),
 		zap.String("status", status),
 		zap.Float64("lat", event.Lat),
 		zap.Float64("lng", event.Lng),

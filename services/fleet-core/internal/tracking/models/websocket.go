@@ -19,10 +19,10 @@ type WSMessage struct {
 
 // PositionUpdate is pushed from server to client when a vehicle moves.
 type PositionUpdate struct {
-	VehicleID string  `json:"vehicle_id"`
+	VehicleID string  `json:"id"`
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
-	SpeedKmh  float64 `json:"speed_kmh"`
+	SpeedKmh  float64 `json:"speed"`
 	Heading   float64 `json:"heading"`
 	Status    string  `json:"status"`
 	Timestamp string  `json:"timestamp"`

@@ -1,6 +1,6 @@
 module github.com/flyfleet/fleet-core
 
-go 1.26.1
+go 1.22
 
 replace github.com/fleet-platform/shared => ../../packages/common/go
 

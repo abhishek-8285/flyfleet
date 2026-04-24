@@ -31,9 +31,9 @@ func NewIngestHandler(ingestion ingestService, logger *zap.Logger) *IngestHandle
 type ingestRequest struct {
 	VehicleID  string  `json:"vehicle_id"`
 	DeviceID   string  `json:"device_id"`
-	Latitude   float64 `json:"latitude"`
-	Longitude  float64 `json:"longitude"`
-	Speed      float64 `json:"speed_kmh"`
+	Latitude   float64 `json:"lat"`
+	Longitude  float64 `json:"lng"`
+	Speed      float64 `json:"speed"`
 	Heading    float64 `json:"heading"`
 	Ignition   bool    `json:"ignition"`
 	FuelLevel  float64 `json:"fuel_level"`
@@ -41,6 +41,8 @@ type ingestRequest struct {
 	SequenceNo int64   `json:"sequence_no"`
 	RecordedAt string  `json:"recorded_at"`
 	RawData    string  `json:"raw_data"`
+	EventID    string  `json:"event_id"`
+	TenantID   string  `json:"tenant_id"`
 }
 
 func (h *IngestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -61,18 +63,22 @@ func (h *IngestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var deviceID uuid.UUID
-	if req.DeviceID != "" {
-		deviceID, _ = uuid.FromString(req.DeviceID)
+	eventID, _ := uuid.FromString(req.EventID)
+	if eventID == uuid.Nil {
+		eventID = uuid.Must(uuid.NewV4())
 	}
 
-	// FIX: GetTenantID takes context.Context, and returns google/uuid.UUID — convert via string
+	// Resolve TenantID: Try context first (User), fallback to body (Hardware)
 	middlewareTenantID := middleware.GetTenantID(r.Context())
 	tenantID, _ := uuid.FromString(middlewareTenantID.String())
+	if tenantID == uuid.Nil && req.TenantID != "" {
+		tenantID, _ = uuid.FromString(req.TenantID)
+	}
 
 	event := &models.TelemetryEvent{
+		EventID:    eventID,
 		VehicleID:  vehicleID,
-		DeviceID:   deviceID,
+		DeviceID:   req.DeviceID,
 		TenantID:   tenantID,
 		Lat:        req.Latitude,
 		Lng:        req.Longitude,
@@ -83,6 +89,7 @@ func (h *IngestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Odometer:   req.Odometer,
 		SequenceNo: req.SequenceNo,
 		RawData:    req.RawData,
+		Signature:  r.Header.Get("X-HMAC-Signature"),
 	}
 
 	if req.RecordedAt != "" {
@@ -99,6 +106,10 @@ func (h *IngestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"internal error"}`, http.StatusInternalServerError)
 		return
 	}
+
+	h.logger.Info("telemetry event accepted", 
+		zap.String("event_id", event.EventID.String()),
+		zap.String("device_id", event.DeviceID))
 
 	w.WriteHeader(http.StatusAccepted)
 	json.NewEncoder(w).Encode(map[string]string{"status": "accepted"})

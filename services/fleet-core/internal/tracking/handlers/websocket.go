@@ -71,10 +71,11 @@ func (h *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Authenticate via query param
 	claims, err := middleware.ValidateJWTFromQuery(r, h.jwtSecret)
 	if err != nil {
-		h.logger.Debug("ws auth failed", zap.Error(err))
+		h.logger.Warn("ws auth failed", zap.Error(err), zap.String("query_token_present", fmt.Sprintf("%v", r.URL.Query().Get("token") != "")))
 		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 		return
 	}
+	h.logger.Info("ws client connected", zap.String("tenant_id", claims.TenantID.String()))
 
 	tenantID := claims.TenantID.String()
 
@@ -87,12 +88,18 @@ func (h *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	client := &WSClient{
 		conn:       conn,
-		tenantID:      tenantID,
+		tenantID:   tenantID,
 		send:       make(chan []byte, 256),
 		subscribed: make(map[string]bool),
 		lastSent:   make(map[string]*models.LiveLocation),
 		lastPong:   time.Now(),
 	}
+
+	// Set protocol-level pong handler
+	conn.SetPongHandler(func(string) error {
+		client.lastPong = time.Now()
+		return nil
+	})
 
 	h.registerClient(tenantID, client)
 
@@ -107,14 +114,16 @@ func (h *WebSocketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 	client.send <- ack
 
-	ctx := r.Context()
+	// Use Background context for long-running goroutines
+	// The request context is cancelled when ServeHTTP returns
+	bgCtx := context.Background()
 
 	// Start read/write loops and subscriptions
 	go client.writePump()
 	go h.readPump(client)
-	go h.subscribeToOrgUpdates(ctx, client)
+	go h.subscribeToOrgUpdates(bgCtx, client)
 	go h.startHeartbeat(client)
-	go h.startPositionTicker(ctx, client)
+	go h.startPositionTicker(bgCtx, client)
 }
 
 func (h *WebSocketHandler) registerClient(tenantID string, client *WSClient) {
@@ -158,8 +167,19 @@ func (h *WebSocketHandler) subscribeToOrgUpdates(ctx context.Context, client *WS
 			if !ok {
 				return
 			}
+			
+			// Envelope the raw Redis payload into a WSMessage
+			envelope := models.WSMessage{
+				Type: models.WSMsgPositionUpdate,
+				Data: json.RawMessage(msg.Payload),
+			}
+			payload, _ := json.Marshal(envelope)
+
+			h.logger.Info("sending ws position update",
+				zap.String("tenant_id", client.tenantID))
+
 			select {
-			case client.send <- []byte(msg.Payload):
+			case client.send <- payload:
 			default:
 				h.logger.Warn("ws telemetry buffer full, dropping message",
 					zap.String("tenant_id", client.tenantID))
@@ -168,8 +188,16 @@ func (h *WebSocketHandler) subscribeToOrgUpdates(ctx context.Context, client *WS
 			if !ok {
 				return
 			}
+
+			// Envelope the geofence alert
+			envelope := models.WSMessage{
+				Type: models.WSMsgGeofenceAlert,
+				Data: json.RawMessage(msg.Payload),
+			}
+			payload, _ := json.Marshal(envelope)
+
 			select {
-			case client.send <- []byte(msg.Payload):
+			case client.send <- payload:
 			default:
 				h.logger.Warn("ws geofence buffer full, dropping message",
 					zap.String("tenant_id", client.tenantID))
@@ -193,7 +221,9 @@ func (h *WebSocketHandler) startHeartbeat(client *WSClient) {
 			client.conn.Close()
 			return
 		}
-		client.conn.WriteMessage(websocket.PingMessage, nil)
+		if err := client.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			return // Connection closed by readPump or client
+		}
 	}
 }
 
@@ -286,7 +316,9 @@ func (h *WebSocketHandler) readPump(client *WSClient) {
 			if websocket.IsUnexpectedCloseError(err,
 				websocket.CloseGoingAway,
 				websocket.CloseNormalClosure) {
-				h.logger.Debug("ws unexpected close", zap.Error(err))
+				h.logger.Warn("ws unexpected close", zap.Error(err), zap.String("tenant_id", client.tenantID))
+			} else {
+				h.logger.Info("ws connection closed", zap.Error(err), zap.String("tenant_id", client.tenantID))
 			}
 			break
 		}
@@ -319,6 +351,8 @@ func (h *WebSocketHandler) readPump(client *WSClient) {
 			case client.send <- pong:
 			default:
 			}
+		case models.WSMsgPong:
+			client.lastPong = time.Now()
 		}
 	}
 }

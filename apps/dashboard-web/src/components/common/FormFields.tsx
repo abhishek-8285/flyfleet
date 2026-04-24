@@ -14,11 +14,12 @@ interface InputProps {
   hint?: string;
   className?: string;
   maxLength?: number;
+  disabled?: boolean;
 }
 
 export const TextInput: React.FC<InputProps> = ({
   name, value, onChange, onBlur, label, placeholder, type = "text",
-  icon, error, required, hint, className, maxLength,
+  icon, error, required, hint, className, maxLength, disabled,
 }) => (
   <div className={`space-y-1.5 ${className || ""}`}>
     <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
@@ -38,13 +39,14 @@ export const TextInput: React.FC<InputProps> = ({
         onBlur={onBlur}
         placeholder={placeholder}
         maxLength={maxLength}
+        disabled={disabled}
         className={`w-full bg-surface-darker border rounded-lg py-2.5 ${
           icon ? "pl-10" : "px-4"
         } pr-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50 ${
           error
             ? "border-danger/50 focus:ring-danger focus:border-danger"
             : "border-border-color"
-        }`}
+        } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
       />
     </div>
     {error ? (

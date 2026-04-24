@@ -105,11 +105,22 @@ self.onmessage = async (event: MessageEvent) => {
             }),
           );
         }
-        shardedIndexes.get(tenant_id)!.add(updated);
+        const shard = shardedIndexes.get(tenant_id)!;
+        if (shard.has(updated.id)) {
+          shard.replace(updated);
+        } else {
+          shard.add(updated);
+        }
       }
     });
 
-    miniSearch.addAll(updates);
+    updates.forEach((u) => {
+      if (miniSearch.has(u.id)) {
+        miniSearch.replace(u);
+      } else {
+        miniSearch.add(u);
+      }
+    });
     persistBatch(payload);
   }
 

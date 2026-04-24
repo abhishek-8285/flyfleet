@@ -18,12 +18,12 @@ const (
 // Aligned with AIS-140 telemetry format.
 type TelemetryEvent struct {
 	EventID     uuid.UUID  `json:"event_id"`
-	DeviceID    uuid.UUID  `json:"device_id"`
+	DeviceID    string     `json:"device_id"`
 	VehicleID   uuid.UUID  `json:"vehicle_id"`
 	TenantID    uuid.UUID  `json:"tenant_id"`
-	Lat         float64    `json:"latitude"`
-	Lng         float64    `json:"longitude"`
-	Speed       float64    `json:"speed_kmh"`
+	Lat         float64    `json:"lat"`
+	Lng         float64    `json:"lng"`
+	Speed       float64    `json:"speed"`
 	Heading     float64    `json:"heading"`
 	Ignition    bool       `json:"ignition"`
 	FuelLevel   float64    `json:"fuel_level"`
@@ -32,12 +32,14 @@ type TelemetryEvent struct {
 	RecordedAt  time.Time  `json:"recorded_at"`
 	ReceivedAt  time.Time  `json:"received_at"`
 	RawData     string     `json:"raw_data,omitempty"`
+	Signature   string     `json:"signature,omitempty"`
 }
 
 // LiveLocation is the cached "last known position" for a vehicle,
 // stored in Redis with a 5-minute TTL.
 type LiveLocation struct {
 	VehicleID  uuid.UUID `json:"vehicle_id"`
+	DeviceID   string    `json:"device_id"`
 	Lat        float64   `json:"latitude"`
 	Lng        float64   `json:"longitude"`
 	Speed      float64   `json:"speed_kmh"`

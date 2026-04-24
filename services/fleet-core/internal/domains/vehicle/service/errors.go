@@ -47,7 +47,7 @@ var (
 	ErrLegalHoldActive            = errors.New("vehicle is on legal hold — modification prevented")
 	ErrDecommissionedIrreversible = errors.New("DECOMMISSIONED status is irreversible")
 	ErrComplianceRequired         = errors.New("vehicle cannot be activated: compliance requirement not met")
-	ErrGPSDeviceConflict          = errors.New("GPS device is already bound to another vehicle")
+	ErrGPSDeviceValidation        = errors.New("GPS device validation failed")
 	ErrGPSDeviceNotFound          = errors.New("GPS device not found in organization inventory")
 	ErrGPSRequired                = errors.New("GPS serial and device type are required when tracking is enabled")
 	ErrTenantMismatch             = errors.New("parent vehicle must belong to the same tenant")

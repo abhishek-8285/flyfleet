@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useAuth } from '../../context/AuthProvider';
 import { VehicleDetailPanel } from '../../features/tracking/components/VehicleDetailPanel';
 import LiveOperationsMap from '../../modules/dashboard/components/LiveOperationsMap';
 import { FleetList } from '../../modules/fleet/components/FleetList';
 import { RootState } from '../../store';
+import { useTelemetryStream } from '../../modules/map/hooks/useTelemetryStream';
 
 /**
  * DispatchCenter: The central operational hub of the FlyFleet platform.
@@ -16,6 +17,14 @@ export const DispatchCenter: React.FC = () => {
   const telemetryVehicles = useSelector((state: RootState) => state.telemetry.vehicles);
   const selectedVehicleId = useSelector((state: RootState) => state.telemetry.selectedVehicleId);
   const selectedId = selectedVehicleId; // Alias for LiveOperationsMap
+
+  const { connectTelemetry } = useTelemetryStream();
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token') || '';
+    const wsUrl = `ws://localhost:8084/ws/telemetry?token=${token}`;
+    connectTelemetry(wsUrl);
+  }, [connectTelemetry]);
 
   return (
     <div className="flex h-full w-full bg-background-dark overflow-hidden relative">

@@ -204,7 +204,7 @@ export const FleetList: React.FC<FleetListProps> = ({
                   )}
                   <span
                     className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter ${
-                      v.status === 'ACTIVE' || (v.telemetry?.speed ?? 0) > 0
+                      (v.status === 'ACTIVE' && v.telemetry?.latitude !== 0 && v.telemetry?.latitude !== undefined) || (v.telemetry?.speed ?? 0) > 0
                         ? 'bg-emerald-500/10 text-emerald-400'
                         : v.status === 'STALLED'
                           ? 'bg-red-500/10 text-red-400'

@@ -3,6 +3,8 @@ import { RingBuffer } from "../modules/telemetry/RingBuffer";
 
 let ringBuffer: RingBuffer | null = null;
 let socket: WebSocket | null = null;
+let reconnectAttempts = 0;
+let reconnectTimer: any = null;
 
 // Fixed-size record layout (128 bytes)
 const RECORD_SIZE = 128;
@@ -85,15 +87,28 @@ const serializationUint8 = new Uint8Array(serializationBuffer);
 const encoder = new TextEncoder();
 
 function connect(url: string) {
-  if (socket) {
-    socket.close();
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
   }
 
+  if (socket) {
+    console.log("[IngestionWorker] Closing existing socket before reconnecting...");
+    socket.onopen = null;
+    socket.onmessage = null;
+    socket.onclose = null;
+    socket.onerror = null;
+    socket.close();
+    socket = null;
+  }
+
+  console.log(`[IngestionWorker] Connecting to ${url} (Attempt ${reconnectAttempts + 1})`);
   socket = new WebSocket(url);
   socket.binaryType = "arraybuffer";
 
   socket.onopen = () => {
     console.log("[IngestionWorker] WebSocket Connected");
+    reconnectAttempts = 0; // Reset attempts on success
   };
 
   socket.onmessage = (event: MessageEvent) => {
@@ -124,9 +139,35 @@ function connect(url: string) {
       }
     } else {
       // Legacy JSON path
-      const data =
+      let data =
         typeof event.data === "string" ? JSON.parse(event.data) : event.data;
-      chunk = serializeTelemetry(data);
+      
+      try {
+        // Handle message types
+        if (data && data.type === "connection_ack") {
+          console.log("[IngestionWorker] Connection Ack received:", data.data);
+          return;
+        }
+        if (data && data.type === "ping") {
+          socket?.send(JSON.stringify({ type: "pong", data: { timestamp: new Date().toISOString() } }));
+          return;
+        }
+        
+        // Unwrap WSMessage envelope if present
+        if (data && data.type === "position_update" && data.data) {
+          data = data.data;
+          const vehicleId = data.vehicle_id || data.id || "unknown";
+          console.log(`[IngestionWorker] Position Update for ${vehicleId}:`, data);
+        } else if (data && data.type) {
+          // Ignore other message types for now
+          return;
+        }
+        
+        chunk = serializeTelemetry(data);
+      } catch (err) {
+        console.error("[IngestionWorker] Error processing message:", err);
+        return;
+      }
     }
 
     const pushed = ringBuffer.push(chunk);
@@ -150,12 +191,16 @@ function connect(url: string) {
   };
 
   socket.onclose = () => {
-    console.log("[IngestionWorker] WebSocket Disconnected. Reconnecting...");
-    setTimeout(() => connect(url), 5000);
+    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000) + Math.random() * 1000;
+    console.log(`[IngestionWorker] WebSocket Disconnected. Reconnecting in ${Math.round(delay)}ms...`);
+    
+    reconnectAttempts++;
+    reconnectTimer = setTimeout(() => connect(url), delay);
   };
 
   socket.onerror = (error) => {
     console.error("[IngestionWorker] WebSocket Error:", error);
+    // onclose will handle the reconnection
   };
 }
 
@@ -164,10 +209,10 @@ function serializeTelemetry(data: any): Uint8Array {
   serializationView.setFloat64(0, Date.now());
   serializationView.setFloat64(8, data.latitude || 0);
   serializationView.setFloat64(16, data.longitude || 0);
-  serializationView.setFloat32(24, data.speed || 0);
+  serializationView.setFloat32(24, data.speed_kmh || data.speed || 0);
   serializationView.setFloat32(28, data.heading || 0);
 
-  const idStr = data.id || "";
+  const idStr = data.vehicle_id || data.id || "";
   const idBytes = encoder.encode(idStr);
   const len = Math.min(idBytes.length, 95);
 

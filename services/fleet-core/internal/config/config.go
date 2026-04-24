@@ -20,6 +20,7 @@ type Config struct {
 	Flags       FeatureFlags `mapstructure:"feature_flags"`
 	IAM         IAMConfig    `mapstructure:"iam"`
 	Billing     BillingConfig `mapstructure:"billing"`
+	TelemetryHMACSecret string `mapstructure:"telemetry_hmac_secret"`
 }
 
 // BillingConfig configures the invoice generator and billing services
@@ -139,5 +140,6 @@ func Load() *Config {
 			Enabled:              v.GetBool("billing.enabled"),
 			ChromeTimeoutSeconds: v.GetInt("billing.chrome_timeout_seconds"),
 		},
+		TelemetryHMACSecret: v.GetString("telemetry_hmac_secret"),
 	}
 }

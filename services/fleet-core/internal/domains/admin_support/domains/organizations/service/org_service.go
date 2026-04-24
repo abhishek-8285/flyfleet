@@ -61,24 +61,11 @@ func (s *organizationService) ListCostCenters(ctx context.Context) ([]models.Cos
 }
 
 func (s *organizationService) getUserID(ctx context.Context) uuid.UUID {
-	val, ok := ctx.Value(ctxkeys.UserIDKey).(string)
-	if !ok {
-		return uuid.Nil
-	}
-	uid, _ := uuid.Parse(val)
-	return uid
+	id, _ := ctxkeys.GetUserID(ctx)
+	return id
 }
 
 func (s *organizationService) getTenantIDFromContext(ctx context.Context) uuid.UUID {
-	if val := ctx.Value(ctxkeys.TenantIDKey); val != nil {
-		switch v := val.(type) {
-		case string:
-			if id, err := uuid.Parse(v); err == nil {
-				return id
-			}
-		case uuid.UUID:
-			return v
-		}
-	}
-	return uuid.Nil
+	id, _ := ctxkeys.GetTenantID(ctx)
+	return id
 }

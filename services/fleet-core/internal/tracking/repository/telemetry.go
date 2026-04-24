@@ -26,21 +26,41 @@ func NewTelemetryRepository(pool *pgxpool.Pool, logger *zap.Logger) *TelemetryRe
 
 // Write inserts a telemetry point into the TimescaleDB hypertable.
 func (r *TelemetryRepository) Write(ctx context.Context, event *models.TelemetryEvent) error {
-	q := `INSERT INTO telemetry_points (time, vehicle_id, latitude, longitude, speed_kmh, heading, ignition, fuel_level, raw_data, created_at)
-	      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())`
+	// Self-healing: ensure table exists
+	_, _ = r.pool.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS telemetry_points (
+			id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			device_id    VARCHAR(100) NOT NULL,
+			lat          DOUBLE PRECISION NOT NULL,
+			lng          DOUBLE PRECISION NOT NULL,
+			speed        DOUBLE PRECISION DEFAULT 0,
+			recorded_at  TIMESTAMP WITH TIME ZONE NOT NULL,
+			event_id     UUID NOT NULL,
+			tenant_id    UUID NOT NULL,
+			received_at  TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			vehicle_id   UUID,
+			heading      DOUBLE PRECISION,
+			ignition     BOOLEAN,
+			fuel_level   DOUBLE PRECISION,
+			raw_data     JSONB
+		)
+	`)
+
+	q := `INSERT INTO telemetry_points (recorded_at, device_id, tenant_id, event_id, lat, lng, speed, vehicle_id, received_at)
+	      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`
 
 	_, err := r.pool.Exec(ctx, q,
 		event.RecordedAt,
-		event.VehicleID,
+		event.DeviceID,
+		event.TenantID,
+		event.EventID,
 		event.Lat,
 		event.Lng,
 		event.Speed,
-		event.Heading,
-		event.Ignition,
-		event.FuelLevel,
-		event.RawData,
+		event.VehicleID,
 	)
 	if err != nil {
+		r.logger.Error("DB insert failed", zap.Error(err), zap.String("query", q))
 		return fmt.Errorf("insert telemetry: %w", err)
 	}
 	return nil
@@ -49,10 +69,10 @@ func (r *TelemetryRepository) Write(ctx context.Context, event *models.Telemetry
 // GetLatestByVehicle returns the most recent telemetry point for a
 // single vehicle. Used as DB fallback when Redis cache misses.
 func (r *TelemetryRepository) GetLatestByVehicle(ctx context.Context, vehicleID uuid.UUID) (*models.TelemetryEvent, error) {
-	q := `SELECT vehicle_id, latitude, longitude, speed_kmh, heading, ignition, fuel_level, time
+	q := `SELECT vehicle_id, lat, lng, speed, heading, ignition, fuel_level, recorded_at
 	      FROM telemetry_points
 	      WHERE vehicle_id = $1
-	      ORDER BY time DESC
+	      ORDER BY recorded_at DESC
 	      LIMIT 1`
 
 	var t models.TelemetryEvent
@@ -81,17 +101,17 @@ func (r *TelemetryRepository) GetHistoryBucket(ctx context.Context, vehicleID uu
 	// Try TimescaleDB time_bucket first
 	q := fmt.Sprintf(`
 		SELECT
-			time_bucket('%s', time) AS bucket_time,
-			AVG(latitude)  AS latitude,
-			AVG(longitude) AS longitude,
-			AVG(speed_kmh) AS speed_kmh,
+			time_bucket('%s', recorded_at) AS bucket_time,
+			AVG(lat)  AS lat,
+			AVG(lng) AS lng,
+			AVG(speed) AS speed,
 			AVG(heading)   AS heading,
 			BOOL_OR(ignition) AS ignition,
-			MAX(speed_kmh) AS max_speed
+			MAX(speed) AS max_speed
 		FROM telemetry_points
 		WHERE vehicle_id = $1
-		  AND time >= $2
-		  AND time <= $3
+		  AND recorded_at >= $2
+		  AND recorded_at <= $3
 		GROUP BY bucket_time
 		ORDER BY bucket_time`, bucketInterval)
 
@@ -104,17 +124,17 @@ func (r *TelemetryRepository) GetHistoryBucket(ctx context.Context, vehicleID uu
 		}
 		q = `
 			SELECT
-				to_timestamp(floor(extract(epoch from time) / $4) * $4) AS bucket_time,
-				AVG(latitude)  AS latitude,
-				AVG(longitude) AS longitude,
-				AVG(speed_kmh) AS speed_kmh,
+				to_timestamp(floor(extract(epoch from recorded_at) / $4) * $4) AS bucket_time,
+				AVG(lat)  AS lat,
+				AVG(lng) AS lng,
+				AVG(speed) AS speed,
 				AVG(heading)   AS heading,
 				BOOL_OR(ignition) AS ignition,
-				MAX(speed_kmh) AS max_speed
+				MAX(speed) AS max_speed
 			FROM telemetry_points
 			WHERE vehicle_id = $1
-			  AND time >= $2
-			  AND time <= $3
+			  AND recorded_at >= $2
+			  AND recorded_at <= $3
 			GROUP BY bucket_time
 			ORDER BY bucket_time`
 		rows, err = r.pool.Query(ctx, q, vehicleID, start, end, bucketSecs)
@@ -180,10 +200,10 @@ func (r *TelemetryRepository) GetBatchLatest(ctx context.Context, vehicleIDs []u
 
 	q := `
 		SELECT DISTINCT ON (vehicle_id)
-			vehicle_id, latitude, longitude, speed_kmh, heading, ignition, fuel_level, time
+			vehicle_id, lat, lng, speed, heading, ignition, fuel_level, recorded_at
 		FROM telemetry_points
 		WHERE vehicle_id = ANY($1)
-		ORDER BY vehicle_id, time DESC`
+		ORDER BY vehicle_id, recorded_at DESC`
 
 	rows, err := r.pool.Query(ctx, q, vehicleIDs)
 	if err != nil {

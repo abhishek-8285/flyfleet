@@ -86,7 +86,7 @@ func (s *VehicleService) CreateVehicle(ctx context.Context, req *models.CreateVe
 			return nil, err
 		}
 		if !available {
-			return nil, fmt.Errorf("%w: %s", ErrGPSDeviceConflict, msg)
+			return nil, fmt.Errorf("%w: %s", ErrGPSDeviceValidation, msg)
 		}
 	}
 
@@ -258,7 +258,7 @@ func (s *VehicleService) UpdateVehicle(ctx context.Context, id uuid.UUID, req *m
 			return nil, err
 		}
 		if !available {
-			return nil, fmt.Errorf("%w: %s", ErrGPSDeviceConflict, msg)
+			return nil, fmt.Errorf("%w: %s", ErrGPSDeviceValidation, msg)
 		}
 	}
 
