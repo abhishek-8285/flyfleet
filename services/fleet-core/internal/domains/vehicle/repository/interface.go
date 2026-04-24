@@ -15,6 +15,7 @@ type VehicleRepositoryInterface interface {
 	Update(ctx context.Context, vehicle *models.Vehicle) error
 	Delete(ctx context.Context, id, tenantID uuid.UUID) error
 	AssignDriver(ctx context.Context, vehicleID, tenantID, driverID uuid.UUID) error
+	UnassignDriver(ctx context.Context, vehicleID, tenantID uuid.UUID) error
 	GetStats(ctx context.Context) (*models.VehicleStats, error)
 
 	// Enterprise extensions

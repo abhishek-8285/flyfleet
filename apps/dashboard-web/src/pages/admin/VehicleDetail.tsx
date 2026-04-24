@@ -47,6 +47,24 @@ export const VehicleDetail: React.FC = () => {
     fetchVehicle();
   }, [id]);
 
+  const handleUnassign = async () => {
+    if (!vehicle || !window.confirm("Are you sure you want to unassign the current driver?")) return;
+    
+    try {
+      setLoading(true);
+      await apiClient.post(`/admin/vehicles/${vehicle.id}/unassign-driver`, {});
+      // Refresh data
+      const direct = (await apiClient.get(`/admin/vehicles?id=${id}`)) as any;
+      setVehicle(direct?.data ?? direct);
+      alert("Driver unassigned successfully.");
+    } catch (error) {
+      console.error("Failed to unassign driver:", error);
+      alert("Failed to unassign driver. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading)
     return (
       <div className="flex items-center justify-center min-h-screen bg-surface-dim">
@@ -146,8 +164,11 @@ export const VehicleDetail: React.FC = () => {
               Current Personnel
             </h3>
             {vehicle.current_driver_id && (
-              <button className="text-[10px] text-primary font-black uppercase tracking-widest hover:underline">
-                Reassign
+              <button 
+                onClick={handleUnassign}
+                className="text-[10px] text-primary font-black uppercase tracking-widest hover:underline"
+              >
+                Unassign
               </button>
             )}
           </div>

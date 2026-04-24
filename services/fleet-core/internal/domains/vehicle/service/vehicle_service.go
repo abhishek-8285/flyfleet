@@ -27,6 +27,7 @@ type VehicleServiceInterface interface {
 
 	// Driver assignment
 	AssignDriver(ctx context.Context, vehicleID, tenantID, driverID uuid.UUID) (*models.Vehicle, error)
+	UnassignDriver(ctx context.Context, vehicleID, tenantID uuid.UUID) (*models.Vehicle, error)
 
 	// Location (stub — real data from tracking service)
 	GetVehicleLocation(ctx context.Context, vehicleID uuid.UUID) (*models.VehicleLocation, error)
@@ -369,7 +370,7 @@ func (s *VehicleService) DeleteVehicle(ctx context.Context, id, tenantID uuid.UU
 }
 
 func (s *VehicleService) AssignDriver(ctx context.Context, vehicleID, tenantID, driverID uuid.UUID) (*models.Vehicle, error) {
-	// Verify vehicle belongs to org
+	// 1. Verify vehicle belongs to org
 	vehicle, err := s.repo.GetByID(ctx, vehicleID)
 	if err != nil {
 		return nil, err
@@ -380,9 +381,30 @@ func (s *VehicleService) AssignDriver(ctx context.Context, vehicleID, tenantID, 
 			zap.String("tenant_id", tenantID.String()))
 		return nil, fmt.Errorf("vehicle not found")
 	}
+
+	// 2. Perform the assignment (includes strict exclusivity checks)
 	if err := s.repo.AssignDriver(ctx, vehicleID, tenantID, driverID); err != nil {
-		return nil, fmt.Errorf("failed to assign driver: %w", err)
+		return nil, err // Return the error directly (e.g., "please unmap first")
 	}
+
+	return s.repo.GetByID(ctx, vehicleID)
+}
+
+func (s *VehicleService) UnassignDriver(ctx context.Context, vehicleID, tenantID uuid.UUID) (*models.Vehicle, error) {
+	// 1. Verify vehicle belongs to org
+	vehicle, err := s.repo.GetByID(ctx, vehicleID)
+	if err != nil {
+		return nil, err
+	}
+	if vehicle.TenantID != tenantID {
+		return nil, fmt.Errorf("vehicle not found")
+	}
+
+	// 2. Perform the unassignment (bidirectional)
+	if err := s.repo.UnassignDriver(ctx, vehicleID, tenantID); err != nil {
+		return nil, fmt.Errorf("failed to unassign driver: %w", err)
+	}
+
 	return s.repo.GetByID(ctx, vehicleID)
 }
 

@@ -55,15 +55,19 @@ func (r *VehicleRepository) Create(ctx context.Context, vehicle *models.Vehicle)
 
 func (r *VehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Vehicle, error) {
 	query := `
-		SELECT id, tenant_id, COALESCE(registration_number, '') as registration_number, COALESCE(license_plate, '') as license_plate, chassis_number, engine_number, vin_number,
-		       vehicle_type, capacity_tonnage, fuel_type, fuel_tank_capacity, ownership_type,
-		       parent_vehicle_id, branch_id, cost_center_id, status,
-		       gps_device_id, gps_enabled, gps_device_type, immobilizer_enabled, ais140_compliant,
-		       make, model, year, color, odometer, current_driver_id, speed_limit,
-		       created_at, updated_at, deleted_at, version
-		FROM vehicles WHERE id = $1 AND deleted_at IS NULL`
+		SELECT v.id, v.tenant_id, COALESCE(v.registration_number, '') as registration_number, COALESCE(v.license_plate, '') as license_plate, v.chassis_number, v.engine_number, v.vin_number,
+		       v.vehicle_type, v.capacity_tonnage, v.fuel_type, v.fuel_tank_capacity, v.ownership_type,
+		       v.parent_vehicle_id, v.branch_id, v.cost_center_id, v.status,
+		       v.gps_device_id, v.gps_enabled, v.gps_device_type, v.immobilizer_enabled, v.ais140_compliant,
+		       v.make, v.model, v.year, v.color, v.odometer, v.current_driver_id, v.speed_limit,
+		       v.created_at, v.updated_at, v.deleted_at, v.version,
+		       d.full_name as current_driver_name
+		FROM vehicles v
+		LEFT JOIN drivers d ON v.current_driver_id = d.id::uuid
+		WHERE v.id = $1 AND v.deleted_at IS NULL`
 
 	v := &models.Vehicle{}
+	var driverName *string
 	start := time.Now()
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&v.ID, &v.TenantID, &v.RegistrationNumber, &v.LicensePlate, &v.ChassisNumber, &v.EngineNumber, &v.VINNumber,
@@ -72,6 +76,7 @@ func (r *VehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.
 		&v.GPSDeviceID, &v.GPSEnabled, &v.GPSDeviceType, &v.ImmobilizerEnabled, &v.AIS140Compliant,
 		&v.Make, &v.Model, &v.Year, &v.Color, &v.Odometer, &v.CurrentDriverID, &v.SpeedLimit,
 		&v.CreatedAt, &v.UpdatedAt, &v.DeletedAt, &v.Version,
+		&driverName,
 	)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
@@ -81,6 +86,14 @@ func (r *VehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.
 		r.logger.Error("failed to get vehicle by id", zap.Error(err))
 		return nil, fmt.Errorf("database error: %w", err)
 	}
+
+	if v.CurrentDriverID != nil && driverName != nil {
+		v.CurrentDriver = &models.DriverInfo{
+			ID:   *v.CurrentDriverID,
+			Name: *driverName,
+		}
+	}
+
 	return v, nil
 }
 
@@ -95,15 +108,18 @@ func (r *VehicleRepository) GetByTenantID(ctx context.Context, tenantID uuid.UUI
 	metrics.RecordDBQuery("SELECT COUNT(*) FROM vehicles WHERE tenant_id = $1 AND deleted_at IS NULL", time.Since(start))
 
 	query := `
-		SELECT id, tenant_id, COALESCE(registration_number, '') as registration_number, COALESCE(license_plate, '') as license_plate,
-		       chassis_number, engine_number, vin_number,
-		       vehicle_type, capacity_tonnage, fuel_type, fuel_tank_capacity, ownership_type,
-		       parent_vehicle_id, branch_id, cost_center_id, status,
-		       gps_device_id, gps_enabled, gps_device_type, immobilizer_enabled, ais140_compliant,
-		       make, model, year, color, odometer, current_driver_id, speed_limit,
-		       created_at, updated_at, deleted_at, version
-		FROM vehicles WHERE tenant_id = $1 AND deleted_at IS NULL
-		ORDER BY created_at DESC LIMIT $2 OFFSET $3`
+		SELECT v.id, v.tenant_id, COALESCE(v.registration_number, '') as registration_number, COALESCE(v.license_plate, '') as license_plate,
+		       v.chassis_number, v.engine_number, v.vin_number,
+		       v.vehicle_type, v.capacity_tonnage, v.fuel_type, v.fuel_tank_capacity, v.ownership_type,
+		       v.parent_vehicle_id, v.branch_id, v.cost_center_id, v.status,
+		       v.gps_device_id, v.gps_enabled, v.gps_device_type, v.immobilizer_enabled, v.ais140_compliant,
+		       v.make, v.model, v.year, v.color, v.odometer, v.current_driver_id, v.speed_limit,
+		       v.created_at, v.updated_at, v.deleted_at, v.version,
+		       d.full_name as current_driver_name
+		FROM vehicles v
+		LEFT JOIN drivers d ON v.current_driver_id = d.id::uuid
+		WHERE v.tenant_id = $1 AND v.deleted_at IS NULL
+		ORDER BY v.created_at DESC LIMIT $2 OFFSET $3`
 
 	queryStart := time.Now()
 	rows, err := r.db.Query(ctx, query, tenantID, limit, offset)
@@ -116,6 +132,7 @@ func (r *VehicleRepository) GetByTenantID(ctx context.Context, tenantID uuid.UUI
 	var vehicles []*models.Vehicle
 	for rows.Next() {
 		v := &models.Vehicle{}
+		var driverName *string
 		if err := rows.Scan(
 			&v.ID, &v.TenantID, &v.RegistrationNumber, &v.LicensePlate, &v.ChassisNumber, &v.EngineNumber, &v.VINNumber,
 			&v.VehicleType, &v.CapacityTonnage, &v.FuelType, &v.FuelTankCapacity, &v.OwnershipType,
@@ -123,8 +140,16 @@ func (r *VehicleRepository) GetByTenantID(ctx context.Context, tenantID uuid.UUI
 			&v.GPSDeviceID, &v.GPSEnabled, &v.GPSDeviceType, &v.ImmobilizerEnabled, &v.AIS140Compliant,
 			&v.Make, &v.Model, &v.Year, &v.Color, &v.Odometer, &v.CurrentDriverID, &v.SpeedLimit,
 			&v.CreatedAt, &v.UpdatedAt, &v.DeletedAt, &v.Version,
+			&driverName,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan error: %w", err)
+		}
+
+		if v.CurrentDriverID != nil && driverName != nil {
+			v.CurrentDriver = &models.DriverInfo{
+				ID:   *v.CurrentDriverID,
+				Name: *driverName,
+			}
 		}
 		vehicles = append(vehicles, v)
 	}
@@ -204,17 +229,91 @@ func (r *VehicleRepository) Delete(ctx context.Context, id, tenantID uuid.UUID) 
 }
 
 func (r *VehicleRepository) AssignDriver(ctx context.Context, vehicleID, tenantID, driverID uuid.UUID) error {
-	query := `UPDATE vehicles SET updated_at = NOW() WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`
+	if driverID == uuid.Nil {
+		return fmt.Errorf("use UnassignDriver for unmapping")
+	}
+
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// 1. Check if the vehicle already has a driver assigned
+	var existingDriverID *uuid.UUID
+	err = tx.QueryRow(ctx, `SELECT current_driver_id FROM vehicles WHERE id = $1 AND tenant_id = $2`, vehicleID, tenantID).Scan(&existingDriverID)
+	if err != nil {
+		return fmt.Errorf("failed to check vehicle assignment: %w", err)
+	}
+	if existingDriverID != nil && *existingDriverID != uuid.Nil {
+		return fmt.Errorf("vehicle is already assigned; please unmap first")
+	}
+
+	// 2. Check if the driver already has a vehicle assigned
+	var existingVehicleID *string
+	err = tx.QueryRow(ctx, `SELECT current_vehicle_id FROM drivers WHERE id = $1 AND tenant_id = $2`, driverID.String(), tenantID.String()).Scan(&existingVehicleID)
+	if err != nil {
+		return fmt.Errorf("failed to check driver assignment: %w", err)
+	}
+	if existingVehicleID != nil && *existingVehicleID != "" {
+		return fmt.Errorf("driver is already assigned; please unmap first")
+	}
+
+	// 3. Update the primary vehicle record
+	query := `UPDATE vehicles SET current_driver_id = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3 AND deleted_at IS NULL`
 	start := time.Now()
-	result, err := r.db.Exec(ctx, query, vehicleID, tenantID)
+	result, err := tx.Exec(ctx, query, driverID, vehicleID, tenantID)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
-		return fmt.Errorf("database error: %w", err)
+		return fmt.Errorf("failed to update vehicle: %w", err)
 	}
 	if result.RowsAffected() == 0 {
 		return fmt.Errorf("vehicle not found")
 	}
-	return nil
+
+	// 4. Update the driver record (Bidirectional Sync)
+	_, err = tx.Exec(ctx, `
+		UPDATE drivers 
+		SET current_vehicle_id = $1, updated_at = NOW() 
+		WHERE id = $2 AND tenant_id = $3 AND deleted_at IS NULL`,
+		vehicleID.String(), driverID.String(), tenantID.String())
+	if err != nil {
+		return fmt.Errorf("failed to update driver record: %w", err)
+	}
+
+	return tx.Commit(ctx)
+}
+
+// UnassignDriver clears the assignment from both vehicles and drivers tables
+func (r *VehicleRepository) UnassignDriver(ctx context.Context, vehicleID, tenantID uuid.UUID) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// 1. Find the driver currently assigned to this vehicle
+	var driverID *uuid.UUID
+	err = tx.QueryRow(ctx, `SELECT current_driver_id FROM vehicles WHERE id = $1 AND tenant_id = $2`, vehicleID, tenantID).Scan(&driverID)
+	if err != nil {
+		return fmt.Errorf("failed to check current assignment: %w", err)
+	}
+
+	// 2. Clear assignment in vehicles table
+	_, err = tx.Exec(ctx, `UPDATE vehicles SET current_driver_id = NULL, updated_at = NOW() WHERE id = $1 AND tenant_id = $2`, vehicleID, tenantID)
+	if err != nil {
+		return fmt.Errorf("failed to clear vehicle assignment: %w", err)
+	}
+
+	// 3. Clear assignment in drivers table
+	if driverID != nil && *driverID != uuid.Nil {
+		_, err = tx.Exec(ctx, `UPDATE drivers SET current_vehicle_id = NULL, updated_at = NOW() WHERE id = $1 AND tenant_id = $2`, driverID.String(), tenantID.String())
+		if err != nil {
+			return fmt.Errorf("failed to clear driver assignment: %w", err)
+		}
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *VehicleRepository) GetStats(ctx context.Context) (*models.VehicleStats, error) {
@@ -275,64 +374,72 @@ func (r *VehicleRepository) GetByRegistrationNumber(ctx context.Context, tenantI
 
 func (r *VehicleRepository) Search(ctx context.Context, params models.VehicleSearchParams) ([]*models.Vehicle, int64, error) {
 	args := []interface{}{}
-	where := "deleted_at IS NULL"
+	where := "v.deleted_at IS NULL"
 	argN := 1
 
 	if params.TenantID != nil {
-		where += fmt.Sprintf(" AND tenant_id = $%d", argN)
+		where += fmt.Sprintf(" AND v.tenant_id = $%d", argN)
 		args = append(args, *params.TenantID)
 		argN++
 	}
 	if params.Status != "" {
-		where += fmt.Sprintf(" AND status = $%d", argN)
+		where += fmt.Sprintf(" AND v.status = $%d", argN)
 		args = append(args, params.Status)
 		argN++
 	}
 	if params.VehicleType != "" {
-		where += fmt.Sprintf(" AND vehicle_type = $%d", argN)
+		where += fmt.Sprintf(" AND v.vehicle_type = $%d", argN)
 		args = append(args, params.VehicleType)
 		argN++
 	}
 	if params.FuelType != "" {
-		where += fmt.Sprintf(" AND fuel_type = $%d", argN)
+		where += fmt.Sprintf(" AND v.fuel_type = $%d", argN)
 		args = append(args, params.FuelType)
 		argN++
 	}
 	if params.BranchID != nil {
-		where += fmt.Sprintf(" AND branch_id = $%d", argN)
+		where += fmt.Sprintf(" AND v.branch_id = $%d", argN)
 		args = append(args, *params.BranchID)
 		argN++
 	}
 	if params.Query != "" {
-		where += fmt.Sprintf(" AND (registration_number ILIKE $%d OR vin_number ILIKE $%d)", argN, argN)
+		where += fmt.Sprintf(" AND (v.registration_number ILIKE $%d OR v.vin_number ILIKE $%d)", argN, argN)
 		args = append(args, "%"+params.Query+"%")
 		argN++
 	}
 	if params.GPSEnabled != nil {
-		where += fmt.Sprintf(" AND gps_enabled = $%d", argN)
+		where += fmt.Sprintf(" AND v.gps_enabled = $%d", argN)
 		args = append(args, *params.GPSEnabled)
 		argN++
 	}
 
 	var total int64
 	start := time.Now()
-	if err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM vehicles WHERE "+where, args...).Scan(&total); err != nil {
-		metrics.RecordDBQuery("SELECT COUNT(*) FROM vehicles WHERE "+where, time.Since(start))
+	if err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM vehicles v WHERE "+where, args...).Scan(&total); err != nil {
+		metrics.RecordDBQuery("SELECT COUNT(*) FROM vehicles v WHERE "+where, time.Since(start))
 		return nil, 0, fmt.Errorf("database error: %w", err)
 	}
-	metrics.RecordDBQuery("SELECT COUNT(*) FROM vehicles WHERE "+where, time.Since(start))
+	metrics.RecordDBQuery("SELECT COUNT(*) FROM vehicles v WHERE "+where, time.Since(start))
 
 	offset := (params.Page - 1) * params.Limit
 	args = append(args, params.Limit, offset)
 	query := fmt.Sprintf(`
-		SELECT id, tenant_id, COALESCE(registration_number, '') as registration_number, chassis_number, engine_number, vin_number,
-		       vehicle_type, capacity_tonnage, fuel_type, fuel_tank_capacity, ownership_type,
-		       parent_vehicle_id, branch_id, cost_center_id, status,
-		       gps_device_id, gps_enabled, gps_device_type, immobilizer_enabled, ais140_compliant,
-		       make, model, year, color, odometer, current_driver_id, speed_limit, created_at, updated_at, deleted_at, version
-		FROM vehicles WHERE %s
-		ORDER BY created_at DESC LIMIT $%d OFFSET $%d`, where, argN, argN+1)
+		SELECT v.id, v.tenant_id, COALESCE(v.registration_number, '') as registration_number, v.chassis_number, v.engine_number, v.vin_number,
+		       v.vehicle_type, v.capacity_tonnage, v.fuel_type, v.fuel_tank_capacity, v.ownership_type,
+		       v.parent_vehicle_id, v.branch_id, v.cost_center_id, v.status,
+		       v.gps_device_id, v.gps_enabled, v.gps_device_type, v.immobilizer_enabled, v.ais140_compliant,
+		       v.make, v.model, v.year, v.color, v.odometer, v.current_driver_id, v.speed_limit, v.created_at, v.updated_at, v.deleted_at, v.version,
+		       d.full_name as current_driver_name
+		FROM vehicles v
+		LEFT JOIN drivers d ON v.current_driver_id = d.id::uuid
+		WHERE %s
+		ORDER BY v.created_at DESC LIMIT $%d OFFSET $%d`, 
+		where, argN, argN+1)
 
+	// Since where clause might have changed table references, let's be safe and prefix all columns in where if needed.
+	// But let's check what 'where' contains.
+	// Actually, the where clause built above uses raw column names.
+	
 	queryStart := time.Now()
 	rows, err := r.db.Query(ctx, query, args...)
 	metrics.RecordDBQuery(query, time.Since(queryStart))
@@ -345,6 +452,7 @@ func (r *VehicleRepository) Search(ctx context.Context, params models.VehicleSea
 	var vehicles []*models.Vehicle
 	for rows.Next() {
 		v := &models.Vehicle{}
+		var driverName *string
 		if err := rows.Scan(
 			&v.ID, &v.TenantID, &v.RegistrationNumber, &v.ChassisNumber, &v.EngineNumber, &v.VINNumber,
 			&v.VehicleType, &v.CapacityTonnage, &v.FuelType, &v.FuelTankCapacity, &v.OwnershipType,
@@ -352,8 +460,16 @@ func (r *VehicleRepository) Search(ctx context.Context, params models.VehicleSea
 			&v.GPSDeviceID, &v.GPSEnabled, &v.GPSDeviceType, &v.ImmobilizerEnabled, &v.AIS140Compliant,
 			&v.Make, &v.Model, &v.Year, &v.Color, &v.Odometer, &v.CurrentDriverID, &v.SpeedLimit,
 			&v.CreatedAt, &v.UpdatedAt, &v.DeletedAt, &v.Version,
+			&driverName,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan error: %w", err)
+		}
+
+		if v.CurrentDriverID != nil && driverName != nil {
+			v.CurrentDriver = &models.DriverInfo{
+				ID:   *v.CurrentDriverID,
+				Name: *driverName,
+			}
 		}
 		vehicles = append(vehicles, v)
 	}

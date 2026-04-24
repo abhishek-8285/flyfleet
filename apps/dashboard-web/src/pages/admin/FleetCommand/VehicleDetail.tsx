@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { RootState } from "../../../store";
 import apiClient from "../../../services/apiClient";
+import LiveOperationsMap from "../../../modules/dashboard/components/LiveOperationsMap";
 import { STATUS_COLORS, FUEL_LABELS, TYPE_ICONS } from "./constants";
 import { fromKm, fromTonnes, fromLitres, getUnitLabel } from "./utils";
 
@@ -29,6 +32,16 @@ export const VehicleDetail: React.FC = () => {
     fetchVehicle();
     checkSystemHealth();
   }, [id]);
+
+  const telemetry = useSelector((state: RootState) => state.telemetry.vehicles[id || ""]);
+
+  const markers = telemetry ? [{
+    id: telemetry.id,
+    lat: telemetry.latitude,
+    lng: telemetry.longitude,
+    status: (telemetry.status === 'moving' ? 'active' : (telemetry.status === 'alert' ? 'alert' : 'idle')) as any,
+    label: vehicle?.registration_number || "Vehicle"
+  }] : [];
 
   const fetchVehicle = async () => {
     try {
@@ -400,31 +413,43 @@ export const VehicleDetail: React.FC = () => {
                 )}
               </div>
               <div className="relative flex-1 bg-surface-darker w-full h-full overflow-hidden">
-                <div className="absolute inset-0 opacity-10 bg-[url('https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/World_map_blank_without_borders.svg/2000px-World_map_blank_without_borders.svg.png')] bg-cover bg-center grayscale invert"></div>
                 {vehicle.gps_device_id ? (
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                    <div className="relative">
-                      <div className="w-12 h-12 bg-primary/20 rounded-full animate-pulse absolute -top-3 -left-3"></div>
-                      <span className="material-symbols-outlined text-primary text-2xl drop-shadow-lg">navigation</span>
-                    </div>
-                  </div>
+                  <LiveOperationsMap 
+                    vehicles={markers}
+                    selectedId={id}
+                    height="100%"
+                    showLegend={false}
+                    className="z-0"
+                  />
                 ) : (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <span className="material-symbols-outlined text-4xl text-text-muted opacity-30">signal_wifi_off</span>
-                      <p className="text-text-muted text-xs mt-2">No GPS device installed</p>
+                  <>
+                    <div className="absolute inset-0 opacity-10 bg-[url('https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/World_map_blank_without_borders.svg/2000px-World_map_blank_without_borders.svg.png')] bg-cover bg-center grayscale invert"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-center">
+                        <span className="material-symbols-outlined text-4xl text-text-muted opacity-30">signal_wifi_off</span>
+                        <p className="text-text-muted text-xs mt-2">No GPS device installed</p>
+                      </div>
                     </div>
-                  </div>
+                  </>
                 )}
+                
                 {vehicle.gps_device_id && (
-                  <div className="absolute bottom-4 left-4 right-4 bg-surface-dark/90 backdrop-blur-sm border border-border-color p-3 rounded-lg shadow-lg">
+                  <div className="absolute bottom-4 left-4 right-4 bg-surface-dark/90 backdrop-blur-sm border border-border-color p-3 rounded-lg shadow-lg z-10">
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="text-xs text-text-muted">Device ID</div>
                         <div className="text-sm font-bold text-white mt-1 font-mono">{vehicle.gps_device_id}</div>
-                        <div className="text-[10px] text-text-muted mt-0.5">Last sync: {vehicle.updated_at ? new Date(vehicle.updated_at).toLocaleString() : "Never"}</div>
+                        <div className="text-[10px] text-text-muted mt-0.5">
+                          Last sync: {telemetry?.lastUpdate ? new Date(telemetry.lastUpdate).toLocaleString() : (vehicle.updated_at ? new Date(vehicle.updated_at).toLocaleString() : "Never")}
+                        </div>
                       </div>
-                      <button className="p-1.5 bg-primary rounded hover:bg-primary-dark text-white transition-colors">
+                      <button 
+                        className="p-1.5 bg-primary rounded hover:bg-primary-dark text-white transition-colors"
+                        onClick={() => {
+                          // Force center on vehicle
+                          window.dispatchEvent(new CustomEvent('map-fly-to', { detail: { id: id } }));
+                        }}
+                      >
                         <span className="material-symbols-outlined text-[16px]">near_me</span>
                       </button>
                     </div>

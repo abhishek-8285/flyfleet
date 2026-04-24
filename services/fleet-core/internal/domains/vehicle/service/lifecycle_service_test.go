@@ -42,6 +42,9 @@ func (m *mockVehicleRepo) GetByTenantID(ctx context.Context, tenantID uuid.UUID,
 }
 func (m *mockVehicleRepo) Delete(ctx context.Context, id, tenantID uuid.UUID) error         { return nil }
 func (m *mockVehicleRepo) AssignDriver(ctx context.Context, v, tenantID, d uuid.UUID) error { return nil }
+func (m *mockVehicleRepo) UnassignDriver(ctx context.Context, v, tenantID uuid.UUID) error {
+	return m.Called(ctx, v, tenantID).Error(0)
+}
 func (m *mockVehicleRepo) GetStats(ctx context.Context) (*models.VehicleStats, error) {
 	return nil, nil
 }

@@ -54,15 +54,20 @@ type Vehicle struct {
 	Color *string `json:"color"                db:"color"`
 	Odometer           *int64     `json:"odometer"             db:"odometer"`
 	CurrentDriverID    *uuid.UUID `json:"current_driver_id"    db:"current_driver_id"`
+	CurrentDriver      *DriverInfo `json:"current_driver,omitempty"`
 	SpeedLimit         float64    `json:"speed_limit"          db:"speed_limit"`
 	LicensePlate       string     `json:"license_plate"        db:"license_plate"`
-
-
 
 	CreatedAt time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at" db:"updated_at"`
 	DeletedAt *time.Time `json:"deleted_at,omitempty" db:"deleted_at"`
 	Version   int        `json:"version"    db:"version"`
+}
+
+// DriverInfo represents basic driver details embedded in other models.
+type DriverInfo struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
 }
 
 // Backward-compat aliases used by existing code / tests.

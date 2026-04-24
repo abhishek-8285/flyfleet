@@ -26,6 +26,7 @@ type Driver struct {
 	EmergencyContact  EmergencyContact       `json:"emergency_contact" db:"emergency_contact" validate:"required"`
 	Status            string                 `json:"status" db:"status" validate:"required,oneof=active inactive suspended resigned"`
 	CurrentVehicleID  *string                `json:"current_vehicle_id" db:"current_vehicle_id"`
+	CurrentVehicle    *VehicleInfo           `json:"current_vehicle,omitempty"`
 	CurrentTripID     *string                `json:"current_trip_id" db:"current_trip_id"`
 	JoiningDate       time.Time              `json:"joining_date" db:"joining_date"`
 	ResignationDate   *time.Time             `json:"resignation_date" db:"resignation_date"`
@@ -43,6 +44,12 @@ type Driver struct {
 	CreatedAt         time.Time              `json:"created_at" db:"created_at"`
 	UpdatedAt         time.Time              `json:"updated_at" db:"updated_at"`
 	DeletedAt         *time.Time             `json:"deleted_at" db:"deleted_at"`
+}
+
+// VehicleInfo represents basic vehicle details embedded in other models.
+type VehicleInfo struct {
+	ID                 string `json:"id"`
+	RegistrationNumber string `json:"registration_number"`
 }
 
 // Address represents driver's address information

@@ -52,6 +52,10 @@ func (m *MockVehicleRepository) AssignDriver(ctx context.Context, vehicleID, ten
 	args := m.Called(ctx, vehicleID, tenantID, driverID)
 	return args.Error(0)
 }
+func (m *MockVehicleRepository) UnassignDriver(ctx context.Context, vehicleID, tenantID uuid.UUID) error {
+	args := m.Called(ctx, vehicleID, tenantID)
+	return args.Error(0)
+}
 
 func (m *MockVehicleRepository) GetStats(ctx context.Context) (*models.VehicleStats, error) {
 	args := m.Called(ctx)

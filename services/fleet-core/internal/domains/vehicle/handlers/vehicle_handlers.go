@@ -104,6 +104,7 @@ func (h *VehicleHandlers) RegisterRoutes(r chi.Router) {
 		r.Put("/", h.UpdateVehicle)
 		r.Delete("/", h.DeleteVehicle)
 		r.Post("/assign-driver", h.AssignDriver)
+		r.Post("/unassign-driver", h.UnassignDriver)
 	})
 }
 
@@ -351,7 +352,32 @@ func (h *VehicleHandlers) AssignDriver(w http.ResponseWriter, r *http.Request) {
 
 	vehicle, err := h.service.AssignDriver(r.Context(), vehicleID, tenantID, dto.DriverID)
 	if err != nil {
-		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to assign driver", err)
+		// Pass through custom error messages (e.g. "please unmap first")
+		h.writeErrorResponse(w, http.StatusConflict, err.Error(), nil)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, vehicle)
+}
+
+// UnassignDriver godoc
+func (h *VehicleHandlers) UnassignDriver(w http.ResponseWriter, r *http.Request) {
+	vehicleID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid vehicle ID format", err)
+		return
+	}
+
+	tenantID := h.getTenantID(r.Context())
+	if tenantID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		return
+	}
+
+	vehicle, err := h.service.UnassignDriver(r.Context(), vehicleID, tenantID)
+	if err != nil {
+		h.logger.Error("failed to unassign driver", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to unassign driver", err)
 		return
 	}
 
