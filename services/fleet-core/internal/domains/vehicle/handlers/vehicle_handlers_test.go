@@ -68,6 +68,14 @@ func (m *MockVehicleService) AssignDriver(ctx context.Context, vehicleID, tenant
 	return args.Get(0).(*models.Vehicle), args.Error(1)
 }
 
+func (m *MockVehicleService) UnassignDriver(ctx context.Context, vehicleID, tenantID uuid.UUID) (*models.Vehicle, error) {
+	args := m.Called(ctx, vehicleID, tenantID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Vehicle), args.Error(1)
+}
+
 func (m *MockVehicleService) GetVehicleLocation(ctx context.Context, vehicleID uuid.UUID) (*models.VehicleLocation, error) {
 	args := m.Called(ctx, vehicleID)
 	if args.Get(0) == nil {

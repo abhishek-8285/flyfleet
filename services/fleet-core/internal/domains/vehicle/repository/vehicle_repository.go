@@ -8,16 +8,24 @@ import (
 	"github.com/fleet-platform/shared/pkg/metrics"
 	"github.com/flyfleet/fleet-core/internal/domains/vehicle/models"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"go.uber.org/zap"
 )
 
+type pgxPool interface {
+	Begin(ctx context.Context) (pgx.Tx, error)
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
 type VehicleRepository struct {
-	db     *pgxpool.Pool
+	db     pgxPool
 	logger *zap.Logger
 }
 
-func NewVehicleRepository(db *pgxpool.Pool, logger *zap.Logger) *VehicleRepository {
+func NewVehicleRepository(db pgxPool, logger *zap.Logger) *VehicleRepository {
 	return &VehicleRepository{db: db, logger: logger}
 }
 
