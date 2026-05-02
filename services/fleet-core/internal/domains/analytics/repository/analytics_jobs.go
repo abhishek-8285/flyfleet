@@ -20,7 +20,7 @@ func (r *AnalyticsRepositoryImpl) CreateAnalyticsJob(ctx context.Context, job *m
 	query := `
 		INSERT INTO analytics_jobs (id, name, type, description, status, job_type, parameters, 
 			input_source, output_destination, start_time, end_time, progress, error_details, 
-			result_key, organization_id, created_by, created_at, updated_at, idempotency_key)
+			result_key, tenant_id, created_by, created_at, updated_at, idempotency_key)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
 	`
 
@@ -47,7 +47,7 @@ func (r *AnalyticsRepositoryImpl) CreateAnalyticsJob(ctx context.Context, job *m
 
 	_, err = r.db.Exec(ctx, query, job.ID, job.Name, job.Type, job.Description, job.Status, job.JobType,
 		parametersJSON, job.InputSource, job.OutputDestination, startTime, endTime, job.Progress,
-		errorDetails, job.ResultKey, job.OrganizationID, job.CreatedBy, job.CreatedAt, job.UpdatedAt, job.IdempotencyKey)
+		errorDetails, job.ResultKey, job.TenantID, job.CreatedBy, job.CreatedAt, job.UpdatedAt, job.IdempotencyKey)
 
 	if err != nil {
 		if strings.Contains(err.Error(), "idx_analytics_jobs_dedup") || strings.Contains(err.Error(), "unique constraint") {
@@ -65,8 +65,8 @@ func (r *AnalyticsRepositoryImpl) GetAnalyticsJob(ctx context.Context, id string
 	query := `
 		SELECT id, name, type, description, status, job_type, parameters, 
 			input_source, output_destination, start_time, end_time, progress, error_details, 
-			result_key, organization_id, created_by, created_at, updated_at, idempotency_key
-		FROM analytics_jobs WHERE id = $1 AND organization_id = $2
+			result_key, tenant_id, created_by, created_at, updated_at, idempotency_key
+		FROM analytics_jobs WHERE id = $1 AND tenant_id = $2
 	`
 
 	var job models.AnalyticsJob
@@ -77,7 +77,7 @@ func (r *AnalyticsRepositoryImpl) GetAnalyticsJob(ctx context.Context, id string
 	err := r.db.QueryRow(ctx, query, id, tenantID).Scan(
 		&job.ID, &job.Name, &job.Type, &job.Description, &job.Status, &job.JobType, &parametersJSON,
 		&job.InputSource, &job.OutputDestination, &startTime, &endTime, &job.Progress, &errorDetails,
-		&job.ResultKey, &job.OrganizationID, &job.CreatedBy, &job.CreatedAt, &job.UpdatedAt, &job.IdempotencyKey,
+		&job.ResultKey, &job.TenantID, &job.CreatedBy, &job.CreatedAt, &job.UpdatedAt, &job.IdempotencyKey,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -121,7 +121,7 @@ func (r *AnalyticsRepositoryImpl) UpdateAnalyticsJob(ctx context.Context, id str
 	}
 
 	args = append(args, id, tenantID)
-	query := fmt.Sprintf("UPDATE analytics_jobs SET %s WHERE id = $%d AND organization_id = $%d",
+	query := fmt.Sprintf("UPDATE analytics_jobs SET %s WHERE id = $%d AND tenant_id = $%d",
 		strings.Join(setParts, ", "), argIndex, argIndex+1)
 
 	_, err := r.db.Exec(ctx, query, args...)
@@ -132,7 +132,7 @@ func (r *AnalyticsRepositoryImpl) UpdateAnalyticsJob(ctx context.Context, id str
 func (r *AnalyticsRepositoryImpl) DeleteAnalyticsJob(ctx context.Context, id string, tenantID uuid.UUID) error {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
-	query := "DELETE FROM analytics_jobs WHERE id = $1 AND organization_id = $2"
+	query := "DELETE FROM analytics_jobs WHERE id = $1 AND tenant_id = $2"
 	_, err := r.db.Exec(ctx, query, id, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to delete analytics job %s: %w", id, err)
@@ -158,11 +158,11 @@ func (r *AnalyticsRepositoryImpl) ListAnalyticsJobs(ctx context.Context, jobType
 	baseQuery := `
 		SELECT id, name, type, description, status, job_type, parameters,
 		       input_source, output_destination, start_time, end_time, progress, error_details,
-		       result_key, organization_id, created_by, created_at, updated_at, idempotency_key
+		       result_key, tenant_id, created_by, created_at, updated_at, idempotency_key
 		FROM analytics_jobs
-		WHERE organization_id = $1
+		WHERE tenant_id = $1
 	`
-	countQuery := `SELECT COUNT(*) FROM analytics_jobs WHERE organization_id = $1`
+	countQuery := `SELECT COUNT(*) FROM analytics_jobs WHERE tenant_id = $1`
 
 	args := []interface{}{tenantID}
 	argIndex := 2
@@ -221,7 +221,7 @@ func (r *AnalyticsRepositoryImpl) ListAnalyticsJobs(ctx context.Context, jobType
 			&job.ID, &job.Name, &job.Type, &job.Description, &job.Status, &job.JobType,
 			&parametersJSON, &job.InputSource, &job.OutputDestination,
 			&startTime, &endTime, &job.Progress, &errorDetails,
-			&job.ResultKey, &job.OrganizationID, &job.CreatedBy, &job.CreatedAt, &job.UpdatedAt, &job.IdempotencyKey,
+			&job.ResultKey, &job.TenantID, &job.CreatedBy, &job.CreatedAt, &job.UpdatedAt, &job.IdempotencyKey,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan analytics job: %w", err)

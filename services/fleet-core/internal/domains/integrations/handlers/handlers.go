@@ -24,11 +24,11 @@ func NewHandlers(s service.IntegrationsService) *Handlers {
 func (h *Handlers) getTenantID(r *http.Request) (uuid.UUID, error) {
 	tenantIDStr := middleware.GetTenantID(r.Context())
 	if tenantIDStr == "" {
-		return uuid.Nil, fmt.Errorf("unauthorized: organization context required")
+		return uuid.Nil, fmt.Errorf("unauthorized: tenant context required")
 	}
 	tenantID, err := uuid.Parse(tenantIDStr)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("invalid organization ID")
+		return uuid.Nil, fmt.Errorf("invalid tenant ID")
 	}
 	return tenantID, nil
 }

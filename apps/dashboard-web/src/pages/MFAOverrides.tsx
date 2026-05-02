@@ -14,7 +14,7 @@ const MFAOverrides: React.FC = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const orgs = await api.getOrganizations();
+                const orgs = await api.getTenants();
                 setOrganizations(orgs || []);
                 
                 // Fetch override status for each org (in parallel)
@@ -89,7 +89,7 @@ const MFAOverrides: React.FC = () => {
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="border-b border-white/5 text-[10px] text-text-muted uppercase tracking-[0.2em] bg-white/5 font-black">
-                                            <th className="px-8 py-4">Organization Identity</th>
+                                            <th className="px-8 py-4">Tenant Identity</th>
                                             <th className="px-8 py-4">Tenant Domain</th>
                                             <th className="px-8 py-4">Policy Enforcement</th>
                                             <th className="px-8 py-4 text-right">Override Status</th>
@@ -151,7 +151,7 @@ const MFAOverrides: React.FC = () => {
                                             <tr>
                                                 <td colSpan={4} className="px-8 py-20 text-center">
                                                     <span className="material-symbols-outlined text-4xl text-white/5 mb-3 block">domain_disabled</span>
-                                                    <p className="text-text-muted text-sm font-medium">No system organizations detected.</p>
+                                                    <p className="text-text-muted text-sm font-medium">No platform tenants detected.</p>
                                                 </td>
                                             </tr>
                                         )}

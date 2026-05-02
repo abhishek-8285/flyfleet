@@ -29,7 +29,7 @@ func (r *IndiaIntegrationRepositoryImpl) CreateDriverVerification(ctx context.Co
 	_, err = r.db.Exec(ctx, query,
 		verification.ID,
 		verification.DriverID,
-		verification.OrganizationID,
+		verification.TenantID,
 		verification.LicenseNumber,
 		verification.Status,
 		verification.VerificationDate,
@@ -74,7 +74,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetDriverVerification(ctx context.Conte
 	err := row.Scan(
 		&verification.ID,
 		&verification.DriverID,
-		&verification.OrganizationID,
+		&verification.TenantID,
 		&verification.LicenseNumber,
 		&verification.Status,
 		&verification.VerificationDate,
@@ -131,7 +131,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetDriverVerificationByLicenseNumber(ct
 	err := row.Scan(
 		&verification.ID,
 		&verification.DriverID,
-		&verification.OrganizationID,
+		&verification.TenantID,
 		&verification.LicenseNumber,
 		&verification.Status,
 		&verification.VerificationDate,
@@ -285,7 +285,7 @@ func (r *IndiaIntegrationRepositoryImpl) ListDriverVerifications(ctx context.Con
 		err := rows.Scan(
 			&verification.ID,
 			&verification.DriverID,
-			&verification.OrganizationID,
+			&verification.TenantID,
 			&verification.LicenseNumber,
 			&verification.Status,
 			&verification.VerificationDate,

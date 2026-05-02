@@ -22,7 +22,7 @@ func (h *IAMHandlers) Register(w http.ResponseWriter, r *http.Request) {
 		Name     string    `json:"name"`
 		Email    string    `json:"email"`
 		Password string    `json:"password"`
-		TenantID    uuid.UUID `json:"organization_id"`
+		TenantID    uuid.UUID `json:"tenant_id"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

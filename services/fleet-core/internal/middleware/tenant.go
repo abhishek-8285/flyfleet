@@ -11,9 +11,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// TenantMiddleware ensures that all requests have a valid organization_id in the context.
-// SECURITY: The organization ID MUST come from the authenticated JWT token set by the
-// Auth middleware. Client-supplied headers are NOT trusted to prevent org spoofing.
+// TenantMiddleware ensures that all requests have a valid tenant_id in the context.
+// SECURITY: The tenant ID MUST come from the authenticated JWT token set by the
+// Auth middleware. Client-supplied headers are NOT trusted to prevent tenant spoofing.
 func TenantMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -21,9 +21,9 @@ func TenantMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
 
 			// Skip tenant check for global admin or identity endpoints
 			path := r.URL.Path
-			if strings.HasPrefix(path, "/api/v1/admin/organizations") ||
+			if strings.HasPrefix(path, "/api/v1/admin/tenants") ||
 				strings.HasPrefix(path, "/api/v1/auth/profile") ||
-				strings.HasPrefix(path, "/api/v1/auth/orgs") ||
+				strings.HasPrefix(path, "/api/v1/auth/tenants") ||
 				strings.HasPrefix(path, "/api/v1/dashboard/stats") {
 				next.ServeHTTP(w, r)
 				return
@@ -36,12 +36,12 @@ func TenantMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
 				// No valid tenant_id from authentication - check for header as fallback ONLY for logging purposes
 				// so we can see what the client was TRYING to do.
 				headerTenantID := r.Header.Get("X-Tenant-ID")
-				logger.Warn("organization context missing for authenticated request",
+				logger.Warn("tenant context missing for authenticated request",
 					zap.String("path", r.URL.Path),
 					zap.String("method", r.Method),
 					zap.String("header_tenant_id", headerTenantID))
 				
-				http.Error(w, "Organization context required", http.StatusUnauthorized)
+				http.Error(w, "Tenant context required", http.StatusUnauthorized)
 				return
 			}
 

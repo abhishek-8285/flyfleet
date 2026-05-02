@@ -55,7 +55,7 @@ func (h *BillingHandlers) GetSubscriptionStatus(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	plan, err := h.svc.GetOrganizationPlan(r.Context(), tenantID)
+	plan, err := h.svc.GetTenantPlan(r.Context(), tenantID)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return

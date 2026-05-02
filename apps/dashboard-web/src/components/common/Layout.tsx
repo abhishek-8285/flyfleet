@@ -254,15 +254,15 @@ const Layout: React.FC = () => {
                     type="button"
                     onClick={() => {
                       setIsProfileOpen(false);
-                      navigate("/admin/organizations");
+                      navigate("/admin/tenants");
                     }}
                     className="flex items-center gap-2 px-3 py-2 rounded text-sm text-text-muted hover:text-white hover:bg-border-color transition-colors text-left w-full"
                   >
                     <span className="material-symbols-outlined text-[18px]">
                       settings_suggest
                     </span>
-                    {sidebarStrings?.nav_org_settings ||
-                      "Organization Settings"}
+                    {sidebarStrings?.nav_tenant_settings ||
+                      "Tenant Settings"}
                   </button>
                 </div>
                 <div className="border-t border-border-color p-2">

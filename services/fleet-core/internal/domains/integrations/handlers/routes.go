@@ -14,17 +14,23 @@ const tenantIDKey orgCtxKey = "tenant_id"
 
 func orgScopeMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tenantIDStr := r.Header.Get("X-Organization-ID")
+		tenantIDStr := r.Header.Get("X-Tenant-ID")
+		if tenantIDStr == "" {
+			tenantIDStr = r.Header.Get("X-Organization-ID")
+		}
+		if tenantIDStr == "" {
+			tenantIDStr = r.URL.Query().Get("tenantId")
+		}
 		if tenantIDStr == "" {
 			tenantIDStr = r.URL.Query().Get("orgId")
 		}
 		if tenantIDStr == "" {
-			http.Error(w, "MISSING_ORG_ID", http.StatusBadRequest)
+			http.Error(w, "MISSING_TENANT_ID", http.StatusBadRequest)
 			return
 		}
 		tenantID, err := uuid.Parse(tenantIDStr)
 		if err != nil {
-			http.Error(w, "INVALID_ORG_ID", http.StatusBadRequest)
+			http.Error(w, "INVALID_TENANT_ID", http.StatusBadRequest)
 			return
 		}
 		ctx := context.WithValue(r.Context(), tenantIDKey, tenantID)

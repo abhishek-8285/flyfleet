@@ -62,7 +62,7 @@ func (s *ais140Service) HandlePanicAlert(ctx context.Context, vehicleID uuid.UUI
 	// Elevate to unified compliance alert
 	compAlert := &models.ComplianceAlert{
 		ID:             uuid.New(),
-		OrganizationID: uuid.Nil, // Should be fetched from vehicle context in real app
+		TenantID: uuid.Nil, // Should be fetched from vehicle context in real app
 		Type:           models.AlertPanic,
 		EntityID:       alert.ID,
 		Severity:       models.AlertSeverityCritical,
@@ -89,7 +89,7 @@ func (s *ais140Service) HandleTamperAlert(ctx context.Context, deviceID, vehicle
 
 	compAlert := &models.ComplianceAlert{
 		ID:             uuid.New(),
-		OrganizationID: uuid.Nil,
+		TenantID: uuid.Nil,
 		Type:           models.AlertDeviceTamper,
 		EntityID:       deviceID,
 		Severity:       models.AlertSeverityHigh,

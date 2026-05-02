@@ -26,9 +26,9 @@ import (
 	vh "github.com/flyfleet/fleet-core/internal/domains/vehicle/handlers"
 	vrepo "github.com/flyfleet/fleet-core/internal/domains/vehicle/repository"
 	vs "github.com/flyfleet/fleet-core/internal/domains/vehicle/service"
-	orgHandlers "github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/handlers"
-	orgRepo "github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/repository"
-	orgSvc "github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/service"
+	tenantHandlers "github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/handlers"
+	tenantRepo "github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/repository"
+	tenantSvc "github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/service"
 	"github.com/flyfleet/fleet-core/internal/middleware"
 	th "github.com/flyfleet/fleet-core/internal/tracking/handlers"
 	tr "github.com/flyfleet/fleet-core/internal/tracking/repository"
@@ -78,6 +78,11 @@ func main() {
 		logger.Fatal("database connection failed", zap.Error(err))
 	}
 	defer pool.Close()
+
+	// --- DATABASE MIGRATIONS (Auto-apply on startup) ---
+	if err := database.RunMigrations(cfg.DatabaseURL, logger); err != nil {
+		logger.Fatal("database migrations failed", zap.Error(err))
+	}
 
 	// --- SYSTEM RESTORATION (Unified Schema Sync) ---
 	syncAllSchemas(ctx, pool, logger)
@@ -176,10 +181,10 @@ func main() {
 		logger,
 	)
 
-	// --- Organization Domain ---
-	organizationRepo := orgRepo.NewOrganizationRepository(pool, logger)
-	organizationService := orgSvc.NewOrganizationService(organizationRepo, logger)
-	organizationHandler := orgHandlers.NewOrganizationHandlers(organizationService, logger)
+	// --- Tenant Domain ---
+	tenantRepository := tenantRepo.NewTenantRepository(pool, logger)
+	tenantService := tenantSvc.NewTenantService(tenantRepository, logger)
+	tenantHandler := tenantHandlers.NewTenantHandlers(tenantService, logger)
 	
 	// --- Trip Domain ---
 	tRepo := tripRepo.NewTripRepository(pool)
@@ -341,8 +346,8 @@ func main() {
 					invoicingHandler.RegisterRoutes(r)
 				})
 
-				// Organization & Dashboard Intelligence (Registers /organizations, /branches, etc.)
-				organizationHandler.RegisterRoutes(r)
+				// Tenant & Dashboard Intelligence (Registers /tenants, /branches, etc.)
+				tenantHandler.RegisterRoutes(r)
 			})
 
 			// Billing Module
@@ -442,23 +447,35 @@ func syncAllSchemas(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger)
 
 func ensureIAMSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
 	logger.Info("Syncing IAM Schema...")
+ 
+	// 1. Migrate Tables (Organizations -> Tenants)
+	tableRenames := []string{
+		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'organizations') AND NOT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'tenants') THEN ALTER TABLE organizations RENAME TO tenants; END IF; END $$;",
+		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'user_organizations') AND NOT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'user_tenants') THEN ALTER TABLE user_organizations RENAME TO user_tenants; END IF; END $$;",
+		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'org_switch_events') AND NOT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'tenant_switch_events') THEN ALTER TABLE org_switch_events RENAME TO tenant_switch_events; END IF; END $$;",
+	}
+	for _, stmt := range tableRenames {
+		pool.Exec(ctx, stmt)
+	}
+ 
+	// 2. Add Columns
 	statements := []string{
 		"ALTER TABLE roles ADD COLUMN IF NOT EXISTS tenant_id UUID",
 		"ALTER TABLE roles ADD COLUMN IF NOT EXISTS permission_mask BIGINT DEFAULT 0",
 		"ALTER TABLE roles ADD COLUMN IF NOT EXISTS is_system BOOLEAN DEFAULT FALSE",
 		"ALTER TABLE user_roles ADD COLUMN IF NOT EXISTS tenant_id UUID",
-		"ALTER TABLE organizations ADD COLUMN IF NOT EXISTS tenant_id UUID",
+		"ALTER TABLE tenants ADD COLUMN IF NOT EXISTS tenant_id UUID",
 		"ALTER TABLE users ADD COLUMN IF NOT EXISTS must_reset_password BOOLEAN DEFAULT FALSE",
 	}
 	for _, stmt := range statements {
 		pool.Exec(ctx, stmt)
 	}
-
-	// Backfill tenant_id from org_id for IAM tables
+ 
+	// 3. Backfill tenant_id from org_id (for cross-domain compatibility)
 	backfills := []string{
-		"UPDATE roles SET tenant_id = org_id WHERE tenant_id IS NULL AND org_id IS NOT NULL",
-		"UPDATE user_roles SET tenant_id = org_id WHERE tenant_id IS NULL AND org_id IS NOT NULL",
-		"UPDATE organizations SET tenant_id = id WHERE tenant_id IS NULL",
+		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'roles' AND column_name = 'org_id') THEN UPDATE roles SET tenant_id = org_id WHERE tenant_id IS NULL AND org_id IS NOT NULL; END IF; END $$;",
+		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'user_roles' AND column_name = 'org_id') THEN UPDATE user_roles SET tenant_id = org_id WHERE tenant_id IS NULL AND org_id IS NOT NULL; END IF; END $$;",
+		"UPDATE tenants SET tenant_id = id WHERE tenant_id IS NULL",
 	}
 	for _, bf := range backfills {
 		pool.Exec(ctx, bf)
@@ -470,6 +487,7 @@ func ensureVehicleSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Lo
 	statements := []string{
 		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS tenant_id UUID",
 		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS registration_number VARCHAR(50)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS license_plate VARCHAR(50)",
 		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS vin_number VARCHAR(100)",
 		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS chassis_number VARCHAR(100)",
 		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS engine_number VARCHAR(100)",
@@ -478,6 +496,18 @@ func ensureVehicleSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Lo
 		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS year INTEGER",
 		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS color VARCHAR(50)",
 		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active'",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS vehicle_type VARCHAR(50)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS capacity_tonnage FLOAT8",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS fuel_type VARCHAR(50)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS fuel_tank_capacity FLOAT8",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS ownership_type VARCHAR(50)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS parent_vehicle_id UUID",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS branch_id UUID",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS cost_center_id UUID",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS speed_limit FLOAT8",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS gps_device_type VARCHAR(100)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS immobilizer_enabled BOOLEAN DEFAULT FALSE",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS ais140_compliant BOOLEAN DEFAULT FALSE",
 		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS current_odometer FLOAT8 DEFAULT 0",
 		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS last_service_date TIMESTAMP",
 		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS last_service_odometer FLOAT8 DEFAULT 0",
@@ -502,6 +532,11 @@ func ensureVehicleSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Lo
 	}
 	// Safely backfill tenant_id from org_id
 	pool.Exec(ctx, "DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicles' AND column_name = 'org_id') THEN UPDATE vehicles SET tenant_id = org_id WHERE tenant_id IS NULL; END IF; END $$;")
+
+	// HYPER-DEFENSIVE: Fix NULLs for mandatory scan fields
+	pool.Exec(ctx, "UPDATE vehicles SET vehicle_type = 'TRUCK' WHERE vehicle_type IS NULL")
+	pool.Exec(ctx, "UPDATE vehicles SET fuel_type = 'DIESEL' WHERE fuel_type IS NULL")
+	pool.Exec(ctx, "UPDATE vehicles SET ownership_type = 'OWNED' WHERE ownership_type IS NULL")
 }
 
 func ensureTripSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
@@ -523,6 +558,13 @@ func ensureTripSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logge
 		pool.Exec(ctx, stmt)
 	}
 	pool.Exec(ctx, "DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'trips' AND column_name = 'org_id') THEN UPDATE trips SET tenant_id = org_id WHERE tenant_id IS NULL; END IF; END $$;")
+
+	// HYPER-DEFENSIVE: Fix NULLs for mandatory scan fields
+	pool.Exec(ctx, "UPDATE trips SET planned_distance = 0 WHERE planned_distance IS NULL")
+	pool.Exec(ctx, "UPDATE trips SET total_distance = 0 WHERE total_distance IS NULL")
+	pool.Exec(ctx, "UPDATE trips SET actual_duration_min = 0 WHERE actual_duration_min IS NULL")
+	pool.Exec(ctx, "UPDATE trips SET fuel_used = 0 WHERE fuel_used IS NULL")
+	pool.Exec(ctx, "UPDATE trips SET version = 1 WHERE version IS NULL")
 }
 
 func ensureDriverSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
@@ -537,6 +579,14 @@ func ensureDriverSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Log
 		pool.Exec(ctx, stmt)
 	}
 	pool.Exec(ctx, "DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'drivers' AND column_name = 'org_id') THEN UPDATE drivers SET tenant_id = org_id WHERE tenant_id IS NULL; END IF; END $$;")
+
+	// HYPER-DEFENSIVE: Fix NULLs for mandatory scan fields
+	pool.Exec(ctx, "UPDATE drivers SET experience_years = 0 WHERE experience_years IS NULL")
+	pool.Exec(ctx, "UPDATE drivers SET rating = 5.0 WHERE rating IS NULL")
+	pool.Exec(ctx, "UPDATE drivers SET total_trips = 0 WHERE total_trips IS NULL")
+	pool.Exec(ctx, "UPDATE drivers SET total_distance_km = 0 WHERE total_distance_km IS NULL")
+	pool.Exec(ctx, "UPDATE drivers SET total_hours_driven = 0 WHERE total_hours_driven IS NULL")
+	pool.Exec(ctx, "UPDATE drivers SET behavior_score = 100 WHERE behavior_score IS NULL")
 }
 
 func ensureCustomerSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
@@ -550,6 +600,10 @@ func ensureCustomerSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.L
 		pool.Exec(ctx, stmt)
 	}
 	pool.Exec(ctx, "DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'customers' AND column_name = 'org_id') THEN UPDATE customers SET tenant_id = org_id WHERE tenant_id IS NULL; END IF; END $$;")
+
+	// HYPER-DEFENSIVE: Fix NULLs for mandatory scan fields
+	pool.Exec(ctx, "UPDATE customers SET status = 'ACTIVE' WHERE status IS NULL")
+	pool.Exec(ctx, "UPDATE customers SET is_deleted = FALSE WHERE is_deleted IS NULL")
 }
 
 func ensureInvoicingSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
@@ -595,6 +649,12 @@ func ensureInvoicingSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.
 		pool.Exec(ctx, stmt)
 	}
 	pool.Exec(ctx, "DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'invoices' AND column_name = 'org_id') THEN UPDATE invoices SET tenant_id = org_id WHERE tenant_id IS NULL; END IF; END $$;")
+
+	// HYPER-DEFENSIVE: Fix NULLs for mandatory scan fields
+	pool.Exec(ctx, "UPDATE invoices SET currency = 'INR' WHERE currency IS NULL")
+	pool.Exec(ctx, "UPDATE invoices SET reverse_charge = FALSE WHERE reverse_charge IS NULL")
+	pool.Exec(ctx, "UPDATE invoice_items SET is_deleted = FALSE WHERE is_deleted IS NULL")
+	pool.Exec(ctx, "UPDATE invoice_items SET list_price = 0 WHERE list_price IS NULL")
 }
 
 func ensureBillingSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {

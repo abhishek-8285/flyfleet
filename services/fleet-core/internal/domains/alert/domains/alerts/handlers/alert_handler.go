@@ -91,7 +91,7 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.errorJSON(w, "Organization ID required", http.StatusUnauthorized)
+		h.errorJSON(w, "Tenant ID required", http.StatusUnauthorized)
 		return
 	}
 
@@ -128,7 +128,7 @@ func (h *AlertHandler) GetRule(w http.ResponseWriter, r *http.Request) {
 func (h *AlertHandler) ListRules(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.errorJSON(w, "Organization ID required", http.StatusUnauthorized)
+		h.errorJSON(w, "Tenant ID required", http.StatusUnauthorized)
 		return
 	}
 
@@ -250,13 +250,13 @@ func (h *AlertHandler) ListAlerts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if tenantIDStr == "" {
-		h.errorJSON(w, "Organization ID required", http.StatusUnauthorized)
+		h.errorJSON(w, "Tenant ID required", http.StatusUnauthorized)
 		return
 	}
 
 	tenantID, err := uuid.Parse(tenantIDStr)
 	if err != nil {
-		h.errorJSON(w, "Invalid organization ID", http.StatusBadRequest)
+		h.errorJSON(w, "Invalid tenant ID", http.StatusBadRequest)
 		return
 	}
 
@@ -376,7 +376,7 @@ func (h *AlertHandler) ResolveAlert(w http.ResponseWriter, r *http.Request) {
 func (h *AlertHandler) GetAlertSummary(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.errorJSON(w, "Organization ID required", http.StatusUnauthorized)
+		h.errorJSON(w, "Tenant ID required", http.StatusUnauthorized)
 		return
 	}
 

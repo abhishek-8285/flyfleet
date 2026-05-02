@@ -12,7 +12,7 @@ import (
 
 type BillingService interface {
 	CheckLimit(ctx context.Context, tenantID uuid.UUID, metric string) (bool, error)
-	GetOrganizationPlan(ctx context.Context, tenantID uuid.UUID) (*models.Plan, error)
+	GetTenantPlan(ctx context.Context, tenantID uuid.UUID) (*models.Plan, error)
 }
 
 type billingService struct {
@@ -27,8 +27,8 @@ func NewBillingService(repo repository.BillingRepository, logger *zap.Logger) Bi
 	}
 }
 
-func (s *billingService) GetOrganizationPlan(ctx context.Context, tenantID uuid.UUID) (*models.Plan, error) {
-	sub, err := s.repo.GetSubscriptionByOrganization(ctx, tenantID)
+func (s *billingService) GetTenantPlan(ctx context.Context, tenantID uuid.UUID) (*models.Plan, error) {
+	sub, err := s.repo.GetSubscriptionByTenant(ctx, tenantID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get subscription: %w", err)
 	}
@@ -42,7 +42,7 @@ func (s *billingService) GetOrganizationPlan(ctx context.Context, tenantID uuid.
 }
 
 func (s *billingService) CheckLimit(ctx context.Context, tenantID uuid.UUID, metric string) (bool, error) {
-	plan, err := s.GetOrganizationPlan(ctx, tenantID)
+	plan, err := s.GetTenantPlan(ctx, tenantID)
 	if err != nil {
 		return false, err
 	}

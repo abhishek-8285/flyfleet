@@ -9,12 +9,12 @@ CREATE TABLE IF NOT EXISTS india_integration_logs (
     response_payload    JSONB,
     status              INTEGER NOT NULL, -- HTTP status or internal status
     error_message       TEXT,
-    organization_id     UUID,
+    tenant_id           UUID,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_india_integration_service_type ON india_integration_logs(service_type);
-CREATE INDEX IF NOT EXISTS idx_india_integration_org_id ON india_integration_logs(organization_id);
+CREATE INDEX IF NOT EXISTS idx_india_integration_tenant_id ON india_integration_logs(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_india_integration_created_at ON india_integration_logs(created_at DESC);
 
 COMMENT ON TABLE india_integration_logs IS 'Audit logs for India government system integrations';

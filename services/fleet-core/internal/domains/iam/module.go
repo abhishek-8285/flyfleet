@@ -44,7 +44,7 @@ type Module struct {
 	// Repositories (exposed for cross-domain calls)
 	UserRepo    *repository.UserRepository
 	RoleRepo    *repository.RoleRepository
-	OrgRepo     *repository.OrgRepository
+	TenantRepo  *repository.TenantRepository
 	SessionRepo *repository.SessionRepository
 }
 
@@ -52,7 +52,7 @@ type Module struct {
 func NewModule(pool *pgxpool.Pool, rdb *redis.Client, jwtSecret string, iamCfg config.IAMConfig, logger *zap.Logger) *Module {
 	// 1. Create repositories
 	userRepo := repository.NewUserRepository(pool)
-	orgRepo := repository.NewOrgRepository(pool)
+	tenantRepo := repository.NewTenantRepository(pool)
 	roleRepo := repository.NewRoleRepository(pool)
 	sessionRepo := repository.NewSessionRepository(pool)
 	passwordRepo := repository.NewPasswordHistoryRepository(pool)
@@ -69,12 +69,12 @@ func NewModule(pool *pgxpool.Pool, rdb *redis.Client, jwtSecret string, iamCfg c
 	secCfg := iamCfg.SecurityConfig()
 	passwordSvc := service.NewPasswordService(userRepo, passwordRepo, sessionRepo, secCfg, logger)
 	iamRedis := redis2.NewClient(rdb) // Wrap raw redis in IAM-specific client
-	authSvc := service.NewAuthService(userRepo, orgRepo, roleRepo, sessionRepo, passwordRepo, iamRedis, jwtManager, secCfg, logger, emailSvc, passwordSvc)
+	authSvc := service.NewAuthService(userRepo, tenantRepo, roleRepo, sessionRepo, passwordRepo, iamRedis, jwtManager, secCfg, logger, emailSvc, passwordSvc)
 	sessionSvc := service.NewSessionService(sessionRepo, iamRedis, logger)
 	rbacSvc := service.NewRBACService(roleRepo, logger)
-	userSvc := service.NewUserService(userRepo, orgRepo, roleRepo, auditRepo, logger)
+	userSvc := service.NewUserService(userRepo, tenantRepo, roleRepo, auditRepo, logger)
 	mfaSvc := service.NewMFAService(userRepo, iamRedis, logger)
-	inviteSvc := service.NewInvitationService(invitationRepo, userRepo, orgRepo, roleRepo, auditRepo, emailSvc, logger)
+	inviteSvc := service.NewInvitationService(invitationRepo, userRepo, tenantRepo, roleRepo, auditRepo, emailSvc, logger)
 
 	// 5. Create handlers
 	authHandler := handlers.NewAuthHandler(authSvc, passwordSvc, logger)
@@ -102,7 +102,7 @@ func NewModule(pool *pgxpool.Pool, rdb *redis.Client, jwtSecret string, iamCfg c
 		InviteService:   inviteSvc,
 		UserRepo:        userRepo,
 		RoleRepo:        roleRepo,
-		OrgRepo:         orgRepo,
+		TenantRepo:      tenantRepo,
 		SessionRepo:     sessionRepo,
 	}
 }
@@ -123,7 +123,7 @@ func (m *Module) RegisterPublicRoutes(r chi.Router, logger *zap.Logger) {
 	r.Post("/auth/invite/accept", m.InviteHandler.AcceptInvite)
 
 	// Frontend compatibility aliases
-	r.Post("/auth/resolve-orgs", m.AuthHandler.Identify)
+	r.Post("/auth/resolve-tenants", m.AuthHandler.Identify)
 }
 
 // RegisterAuthRoutes attaches all authenticated IAM endpoints to the given chi router.
@@ -135,8 +135,8 @@ func (m *Module) RegisterAuthRoutes(r chi.Router, logger *zap.Logger) {
 	r.Post("/auth/logout", m.AuthHandler.Logout)
 	r.Post("/auth/change-password", m.AuthHandler.ChangePassword)
 	r.Get("/auth/password-policy", m.AuthHandler.GetPolicy)
-	r.Post("/auth/orgs/{orgId}/switch", m.AuthHandler.SwitchOrg)
-	r.Get("/auth/orgs", m.AuthHandler.ListOrgs)
+	r.Post("/auth/tenants/{tenantId}/switch", m.AuthHandler.SwitchTenant)
+	r.Get("/auth/tenants", m.AuthHandler.ListTenants)
 	r.Post("/auth/reset-password-forced", m.AuthHandler.ResetPasswordForced)
 
 	// Profile

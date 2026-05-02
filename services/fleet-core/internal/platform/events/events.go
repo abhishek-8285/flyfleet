@@ -12,7 +12,7 @@ import (
 type Event struct {
 	EventID        uuid.UUID              `json:"event_id"`
 	EventType      string                 `json:"event_type"`
-	OrganizationID uuid.UUID              `json:"organization_id"`
+	TenantID       uuid.UUID              `json:"tenant_id"`
 	Source         string                 `json:"source"`
 	Payload        map[string]interface{} `json:"payload"`
 	Timestamp      int64                  `json:"timestamp"`

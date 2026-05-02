@@ -15,7 +15,7 @@ import (
 func (r *VideoRepositoryImpl) CreateVideoRecording(ctx context.Context, recording *models.VideoRecording) error {
 	query := `
 		INSERT INTO video_recordings (
-			id, stream_id, camera_id, vehicle_id, driver_id, organization_id,
+			id, stream_id, camera_id, vehicle_id, driver_id, tenant_id,
 			filename, filepath, file_size, duration, resolution, framerate, bitrate,
 			start_time, end_time, location_start, location_end, status, thumbnail_path,
 			tags, event_type, created_at, updated_at
@@ -42,7 +42,7 @@ func (r *VideoRepositoryImpl) CreateVideoRecording(ctx context.Context, recordin
 		recording.CameraID,
 		recording.VehicleID,
 		recording.DriverID,
-		recording.OrganizationID,
+		recording.TenantID,
 		recording.Filename,
 		recording.Filepath,
 		recording.FileSize,
@@ -68,7 +68,7 @@ func (r *VideoRepositoryImpl) CreateVideoRecording(ctx context.Context, recordin
 // GetVideoRecording retrieves a video recording by ID
 func (r *VideoRepositoryImpl) GetVideoRecording(ctx context.Context, id string) (*models.VideoRecording, error) {
 	query := `
-		SELECT id, stream_id, camera_id, vehicle_id, driver_id, organization_id,
+		SELECT id, stream_id, camera_id, vehicle_id, driver_id, tenant_id,
 		       filename, filepath, file_size, duration, resolution, framerate, bitrate,
 		       start_time, end_time, location_start, location_end, status, thumbnail_path,
 		       tags, event_type, created_at, updated_at
@@ -85,7 +85,7 @@ func (r *VideoRepositoryImpl) GetVideoRecording(ctx context.Context, id string) 
 		&recording.CameraID,
 		&recording.VehicleID,
 		&recording.DriverID,
-		&recording.OrganizationID,
+		&recording.TenantID,
 		&recording.Filename,
 		&recording.Filepath,
 		&recording.FileSize,
@@ -242,7 +242,7 @@ func (r *VideoRepositoryImpl) ListVideoRecordings(ctx context.Context, streamID 
 	}
 
 	query := fmt.Sprintf(`
-		SELECT id, stream_id, camera_id, vehicle_id, driver_id, organization_id,
+		SELECT id, stream_id, camera_id, vehicle_id, driver_id, tenant_id,
 		       filename, filepath, file_size, duration, resolution, framerate, bitrate,
 		       start_time, end_time, location_start, location_end, status, thumbnail_path,
 		       tags, event_type, created_at, updated_at
@@ -270,7 +270,7 @@ func (r *VideoRepositoryImpl) ListVideoRecordings(ctx context.Context, streamID 
 			&recording.CameraID,
 			&recording.VehicleID,
 			&recording.DriverID,
-			&recording.OrganizationID,
+			&recording.TenantID,
 			&recording.Filename,
 			&recording.Filepath,
 			&recording.FileSize,

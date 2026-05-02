@@ -50,20 +50,20 @@ func (h *ProfileHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		AvatarURL:     user.AvatarURL,
 		MFAEnabled:    user.MFAEnabled,
 		EmailVerified: user.EmailVerified,
-		Organizations: []models.OrgInfo{},
+		Tenants:       []models.TenantInfo{},
 		Permissions:   []string{},
 	}
-
-	// Fetch user's organizations (includes role per org)
-	orgs, err := h.userRepo.GetOrganizations(r.Context(), userID)
+ 
+	// Fetch user's tenants (includes role per tenant)
+	tenants, err := h.userRepo.GetTenants(r.Context(), userID)
 	if err != nil {
-		h.log.Warn("failed to get user organizations", zap.Error(err))
+		h.log.Warn("failed to get user tenants", zap.Error(err))
 	} else {
-		resp.Organizations = orgs
-		// Set current_org to first org and extract role
-		if len(orgs) > 0 {
-			resp.CurrentOrg = &orgs[0]
-			resp.Role = orgs[0].Role
+		resp.Tenants = tenants
+		// Set current_tenant to first tenant and extract role
+		if len(tenants) > 0 {
+			resp.CurrentTenant = &tenants[0]
+			resp.Role = tenants[0].Role
 		}
 	}
 

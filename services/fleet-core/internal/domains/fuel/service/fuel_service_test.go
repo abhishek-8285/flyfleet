@@ -25,7 +25,7 @@ func TestFuelLogStatusConstants(t *testing.T) {
 func TestFuelLogModel_Creation(t *testing.T) {
 	log := &models.FuelLog{
 		ID:              uuid.New(),
-		OrganizationID:  uuid.New(),
+		TenantID:  uuid.New(),
 		VehicleID:       uuid.New(),
 		DriverID:        uuid.New(),
 		StationName:     "Shell Station #42",
@@ -65,7 +65,7 @@ func TestCreateFuelLogRequest_Validation(t *testing.T) {
 
 func TestFuelSettingsModel(t *testing.T) {
 	settings := &models.FuelSettings{
-		OrganizationID:   uuid.New(),
+		TenantID:   uuid.New(),
 		DefaultCurrency:  "USD",
 		AllowedFuelTypes: []byte(`["diesel", "petrol-95"]`),
 		AutoSyncEnabled:  true,
@@ -123,7 +123,7 @@ func TestOdometerValidation(t *testing.T) {
 func TestFuelLogFilter(t *testing.T) {
 	vehicleID := uuid.New()
 	filter := models.FuelLogFilter{
-		OrganizationID: uuid.New(),
+		TenantID: uuid.New(),
 		VehicleID:      &vehicleID,
 		Status:         []models.FuelLogStatus{models.FuelLogStatusPending},
 		Search:         "shell",

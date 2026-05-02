@@ -5,8 +5,14 @@
 ALTER TABLE trips ADD COLUMN IF NOT EXISTS trip_type VARCHAR(50) DEFAULT 'standard';
 
 -- Add check constraint for valid trip types
-ALTER TABLE trips ADD CONSTRAINT chk_trips_trip_type 
-    CHECK (trip_type IN ('delivery', 'service', 'long_haul', 'standard', 'local', 'return'));
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.constraint_column_usage WHERE table_name = 'trips' AND constraint_name = 'chk_trips_trip_type') THEN
+        ALTER TABLE trips ADD CONSTRAINT chk_trips_trip_type 
+            CHECK (trip_type IN ('delivery', 'service', 'long_haul', 'standard', 'local', 'return'));
+    END IF;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
 -- Add index for filtering by trip_type
 CREATE INDEX IF NOT EXISTS idx_trips_type_status ON trips(trip_type, status);

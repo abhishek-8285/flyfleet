@@ -42,7 +42,7 @@ func (w *DeviceMonitorWorker) Run(ctx context.Context) error {
 		// Trigger Compliance Alert
 		alert := &models.ComplianceAlert{
 			ID:             uuid.New(),
-			OrganizationID: uuid.Nil, // In real app, fetch from vehicle association
+			TenantID: uuid.Nil, // In real app, fetch from vehicle association
 			Type:           models.AlertDeviceOffline,
 			EntityType:     models.EntityDevice,
 			EntityID:       device.ID,

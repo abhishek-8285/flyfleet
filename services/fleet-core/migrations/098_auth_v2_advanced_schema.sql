@@ -71,7 +71,7 @@ ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS device_id UUID REFERENCES de
 -- [6] Machine Identities & OAuth
 CREATE TABLE IF NOT EXISTS service_accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    org_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
     name TEXT,
     secret_hash TEXT NOT NULL,
     permissions JSONB DEFAULT '[]',
@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS auth_audit_logs (
     action TEXT NOT NULL,
     entity_type TEXT NOT NULL,
     entity_id TEXT NOT NULL,
-    org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    org_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
     metadata JSONB,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS auth_audit_logs (
 -- [8] API Keys
 CREATE TABLE IF NOT EXISTS api_keys (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    org_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     prefix TEXT NOT NULL, -- first part: fly_live_...
     secret_hash TEXT NOT NULL, -- hashed second part
@@ -135,13 +135,17 @@ CREATE TABLE IF NOT EXISTS api_keys (
 CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(prefix);
 
 -- [9] Organization States & Memberships
-ALTER TABLE organizations ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'; -- trial, active, suspended, billing_hold, deleted
-ALTER TABLE organizations ADD COLUMN IF NOT EXISTS max_users_limit INT DEFAULT 10;
-ALTER TABLE organizations ADD COLUMN IF NOT EXISTS max_api_keys_limit INT DEFAULT 5;
+DO $$ 
+BEGIN 
+    ALTER TABLE tenants ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'; -- trial, active, suspended, billing_hold, deleted
+    ALTER TABLE tenants ADD COLUMN IF NOT EXISTS max_users_limit INT DEFAULT 10;
+    ALTER TABLE tenants ADD COLUMN IF NOT EXISTS max_api_keys_limit INT DEFAULT 5;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS organization_memberships (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    org_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     role TEXT NOT NULL, -- OWNER, ADMIN, DISPATCHER, VIEWER
     created_at TIMESTAMPTZ DEFAULT NOW(),

@@ -201,8 +201,8 @@ func (s *RouteOptimizationServiceImpl) ListOptimizationJobs(ctx context.Context,
 
 // validateOptimizationRequest validates the optimization request
 func (s *RouteOptimizationServiceImpl) validateOptimizationRequest(request *models.RouteOptimizationRequest) error {
-	if request.OrganizationID == uuid.Nil {
-		return fmt.Errorf("organization_id is required")
+	if request.TenantID == uuid.Nil {
+		return fmt.Errorf("tenant_id is required")
 	}
 
 	if request.Name == "" {

@@ -51,7 +51,7 @@ func (w *PredictiveMaintenanceWorker) RunEvaluation(ctx context.Context) {
 	w.logger.Info("Running predictive maintenance evaluation")
 
 	// 1. Get all vehicles (simplified: get unique vehicle IDs from logs)
-	query := "SELECT DISTINCT vehicle_id, organization_id FROM maintenance_logs"
+	query := "SELECT DISTINCT vehicle_id, tenant_id FROM maintenance_logs"
 	rows, err := w.repo.GetDB().Query(ctx, query)
 	if err != nil {
 		w.logger.Error("Failed to fetch vehicles for prediction", zap.Error(err))

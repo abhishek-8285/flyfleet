@@ -17,7 +17,7 @@ func (r *AnalyticsRepositoryImpl) CreatePredictiveMaintenanceAnalytics(ctx conte
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := `
-		INSERT INTO predictive_maintenance_analytics (id, vehicle_id, organization_id, analysis_date, 
+		INSERT INTO predictive_maintenance_analytics (id, vehicle_id, tenant_id, analysis_date, 
 			next_service_due, service_priority, component_risks, failure_prediction, 
 			maintenance_schedule, parts_needed, cost_estimation, uptime_prediction, 
 			reliability_score, recommendations, generated_at, created_at, updated_at)
@@ -52,7 +52,7 @@ func (r *AnalyticsRepositoryImpl) CreatePredictiveMaintenanceAnalytics(ctx conte
 		return fmt.Errorf("failed to marshal recommendations: %w", err)
 	}
 
-	_, err = r.db.Exec(ctx, query, analytics.ID, analytics.VehicleID, analytics.OrganizationID,
+	_, err = r.db.Exec(ctx, query, analytics.ID, analytics.VehicleID, analytics.TenantID,
 		analytics.AnalysisDate, analytics.NextServiceDue, analytics.ServicePriority,
 		componentRisksJSON, failurePredictionJSON, maintenanceScheduleJSON, partsNeededJSON,
 		analytics.CostEstimation, analytics.UptimePrediction, analytics.ReliabilityScore,
@@ -69,18 +69,18 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveMaintenanceAnalytics(ctx context.
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := `
-		SELECT id, vehicle_id, organization_id, analysis_date, 
+		SELECT id, vehicle_id, tenant_id, analysis_date, 
 			next_service_due, service_priority, component_risks, failure_prediction, 
 			maintenance_schedule, parts_needed, cost_estimation, uptime_prediction, 
 			reliability_score, recommendations, generated_at, created_at, updated_at
-		FROM predictive_maintenance_analytics WHERE id = $1 AND organization_id = $2
+		FROM predictive_maintenance_analytics WHERE id = $1 AND tenant_id = $2
 	`
 
 	var analytics models.PredictiveMaintenanceAnalytics
 	var componentRisksJSON, failurePredictionJSON, maintenanceScheduleJSON, partsNeededJSON, recommendationsJSON []byte
 
 	err := r.db.QueryRow(ctx, query, id, tenantID).Scan(
-		&analytics.ID, &analytics.VehicleID, &analytics.OrganizationID, &analytics.AnalysisDate,
+		&analytics.ID, &analytics.VehicleID, &analytics.TenantID, &analytics.AnalysisDate,
 		&analytics.NextServiceDue, &analytics.ServicePriority, &componentRisksJSON,
 		&failurePredictionJSON, &maintenanceScheduleJSON, &partsNeededJSON, &analytics.CostEstimation,
 		&analytics.UptimePrediction, &analytics.ReliabilityScore, &recommendationsJSON,
@@ -130,7 +130,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveMaintenanceAnalyticsByVehicle(ctx
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	// Count query
-	countQuery := "SELECT COUNT(*) FROM predictive_maintenance_analytics WHERE vehicle_id = $1 AND organization_id = $2"
+	countQuery := "SELECT COUNT(*) FROM predictive_maintenance_analytics WHERE vehicle_id = $1 AND tenant_id = $2"
 	var totalCount int
 	err := r.db.QueryRow(ctx, countQuery, vehicleID, tenantID).Scan(&totalCount)
 	if err != nil {
@@ -139,12 +139,12 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveMaintenanceAnalyticsByVehicle(ctx
 
 	// Main query
 	query := `
-		SELECT id, vehicle_id, organization_id, analysis_date, 
+		SELECT id, vehicle_id, tenant_id, analysis_date, 
 			next_service_due, service_priority, component_risks, failure_prediction, 
 			maintenance_schedule, parts_needed, cost_estimation, uptime_prediction, 
 			reliability_score, recommendations, generated_at, created_at, updated_at
 		FROM predictive_maintenance_analytics 
-		WHERE vehicle_id = $1 AND organization_id = $2
+		WHERE vehicle_id = $1 AND tenant_id = $2
 		ORDER BY created_at DESC 
 		LIMIT $3 OFFSET $4
 	`
@@ -161,7 +161,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveMaintenanceAnalyticsByVehicle(ctx
 		var componentRisksJSON, failurePredictionJSON, maintenanceScheduleJSON, partsNeededJSON, recommendationsJSON []byte
 
 		err := rows.Scan(
-			&analytics.ID, &analytics.VehicleID, &analytics.OrganizationID, &analytics.AnalysisDate,
+			&analytics.ID, &analytics.VehicleID, &analytics.TenantID, &analytics.AnalysisDate,
 			&analytics.NextServiceDue, &analytics.ServicePriority, &componentRisksJSON,
 			&failurePredictionJSON, &maintenanceScheduleJSON, &partsNeededJSON, &analytics.CostEstimation,
 			&analytics.UptimePrediction, &analytics.ReliabilityScore, &recommendationsJSON,
@@ -229,7 +229,7 @@ func (r *AnalyticsRepositoryImpl) UpdatePredictiveMaintenanceAnalytics(ctx conte
 	}
 
 	args = append(args, id, tenantID)
-	query := fmt.Sprintf("UPDATE predictive_maintenance_analytics SET %s WHERE id = $%d AND organization_id = $%d",
+	query := fmt.Sprintf("UPDATE predictive_maintenance_analytics SET %s WHERE id = $%d AND tenant_id = $%d",
 		strings.Join(setParts, ", "), argIndex, argIndex+1)
 
 	_, err := r.db.Exec(ctx, query, args...)
@@ -243,7 +243,7 @@ func (r *AnalyticsRepositoryImpl) UpdatePredictiveMaintenanceAnalytics(ctx conte
 func (r *AnalyticsRepositoryImpl) DeletePredictiveMaintenanceAnalytics(ctx context.Context, id string, tenantID uuid.UUID) error {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
-	query := "DELETE FROM predictive_maintenance_analytics WHERE id = $1 AND organization_id = $2"
+	query := "DELETE FROM predictive_maintenance_analytics WHERE id = $1 AND tenant_id = $2"
 	_, err := r.db.Exec(ctx, query, id, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to delete predictive maintenance analytics %s: %w", id, err)
@@ -269,14 +269,14 @@ func (r *AnalyticsRepositoryImpl) ListPredictiveMaintenanceAnalytics(ctx context
 	// This method lists predictive maintenance analytics for an organization, optionally filtering by vehicle.
 	// The cursor is based on analysis_date (or created_at).
 	baseQuery := `
-		SELECT id, vehicle_id, organization_id, analysis_date, next_service_due,
+		SELECT id, vehicle_id, tenant_id, analysis_date, next_service_due,
 		       service_priority, component_risks, failure_prediction, maintenance_schedule,
 		       parts_needed, cost_estimation, uptime_prediction, reliability_score,
 		       recommendations, generated_at, created_at, updated_at
 		FROM predictive_maintenance_analytics
-		WHERE organization_id = $1
+		WHERE tenant_id = $1
 	`
-	countQuery := `SELECT COUNT(*) FROM predictive_maintenance_analytics WHERE organization_id = $1`
+	countQuery := `SELECT COUNT(*) FROM predictive_maintenance_analytics WHERE tenant_id = $1`
 
 	args := []interface{}{tenantID}
 	argIndex := 2
@@ -324,7 +324,7 @@ func (r *AnalyticsRepositoryImpl) ListPredictiveMaintenanceAnalytics(ctx context
 		var componentRisksJSON, failurePredictionJSON, maintenanceScheduleJSON, partsNeededJSON, recommendationsJSON []byte
 
 		err := rows.Scan(
-			&a.ID, &a.VehicleID, &a.OrganizationID, &a.AnalysisDate, &a.NextServiceDue,
+			&a.ID, &a.VehicleID, &a.TenantID, &a.AnalysisDate, &a.NextServiceDue,
 			&a.ServicePriority, &componentRisksJSON, &failurePredictionJSON, &maintenanceScheduleJSON,
 			&partsNeededJSON, &a.CostEstimation, &a.UptimePrediction, &a.ReliabilityScore,
 			&recommendationsJSON, &a.GeneratedAt, &a.CreatedAt, &a.UpdatedAt,

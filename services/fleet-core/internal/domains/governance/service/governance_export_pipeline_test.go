@@ -65,7 +65,7 @@ func TestExportService_ProcessExportRequest_Compliance(t *testing.T) {
 
 	req := &models.GovernanceRequest{
 		ID:             requestID,
-		OrganizationID: tenantID,
+		TenantID: tenantID,
 		RequesterID:    userID,
 		Status:         models.RequestStatusApproved,
 		Format:         "JSON",

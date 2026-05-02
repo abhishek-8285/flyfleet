@@ -30,7 +30,7 @@ func (h *FuelVendorHandler) CreateVendor(w http.ResponseWriter, r *http.Request)
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
+		http.Error(w, "Unauthorized: tenant context required", http.StatusUnauthorized)
 		return
 	}
 	var req models.CreateFuelVendorRequest
@@ -53,7 +53,7 @@ func (h *FuelVendorHandler) ListVendors(w http.ResponseWriter, r *http.Request) 
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
+		http.Error(w, "Unauthorized: tenant context required", http.StatusUnauthorized)
 		return
 	}
 	vendors, err := h.svc.ListVendors(r.Context(), tenantID)

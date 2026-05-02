@@ -52,7 +52,7 @@ func (s *dataDeletionService) ProcessDeletionRequest(ctx context.Context, reques
 	}
 	if onHold {
 		s.logger.Warn("skipping deletion request due to legal hold", zap.String("id", requestID.String()), zap.String("userID", req.RequesterID.String()))
-		s.repo.UpdateRequestStatus(ctx, requestID, req.OrganizationID, models.RequestStatusFailed, nil, nil) // We'll mark as FAILED for hold
+		s.repo.UpdateRequestStatus(ctx, requestID, req.TenantID, models.RequestStatusFailed, nil, nil) // We'll mark as FAILED for hold
 		return fmt.Errorf("legal hold active for user %s", req.RequesterID)
 	}
 
@@ -62,7 +62,7 @@ func (s *dataDeletionService) ProcessDeletionRequest(ctx context.Context, reques
 	if delCount > 1 && s.nats != nil {
 		payload, _ := json.Marshal(map[string]interface{}{
 			"alert_type":      "MULTIPLE_DELETIONS_DETECTED",
-			"tenant_id": req.OrganizationID.String(),
+			"tenant_id": req.TenantID.String(),
 			"user_id":         req.RequesterID.String(),
 			"timestamp":       time.Now().Unix(),
 		})
@@ -70,12 +70,12 @@ func (s *dataDeletionService) ProcessDeletionRequest(ctx context.Context, reques
 	}
 
 	// Update status to PROCESSING
-	s.repo.UpdateRequestStatus(ctx, requestID, req.OrganizationID, models.RequestStatusProcessing, nil, nil)
+	s.repo.UpdateRequestStatus(ctx, requestID, req.TenantID, models.RequestStatusProcessing, nil, nil)
 
 	// 1. Transaction is critical
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
-		s.repo.UpdateRequestStatus(ctx, requestID, req.OrganizationID, models.RequestStatusFailed, nil, nil)
+		s.repo.UpdateRequestStatus(ctx, requestID, req.TenantID, models.RequestStatusFailed, nil, nil)
 		return err
 	}
 	defer tx.Rollback(ctx)
@@ -124,21 +124,21 @@ func (s *dataDeletionService) ProcessDeletionRequest(ctx context.Context, reques
 	// 4. Check if any deletion errors occurred
 	if hadError {
 		// Rollback will be handled by defer, but we need to update status to FAILED
-		s.repo.UpdateRequestStatus(ctx, requestID, req.OrganizationID, models.RequestStatusFailed, nil, nil)
+		s.repo.UpdateRequestStatus(ctx, requestID, req.TenantID, models.RequestStatusFailed, nil, nil)
 		s.logger.Error("Deletion failed due to errors in one or more delete operations", zap.String("request_id", requestID.String()))
 		return fmt.Errorf("deletion failed due to database errors")
 	}
 
 	// 5. All deletions succeeded, commit transaction
 	if err := tx.Commit(ctx); err != nil {
-		s.repo.UpdateRequestStatus(ctx, requestID, req.OrganizationID, models.RequestStatusFailed, nil, nil)
+		s.repo.UpdateRequestStatus(ctx, requestID, req.TenantID, models.RequestStatusFailed, nil, nil)
 		return fmt.Errorf("failed to commit deletion transaction: %w", err)
 	}
 
 	// 6. Log successful completion
 	auditLog := &models.GovernanceAuditLog{
 		ID:             uuid.New(),
-		OrganizationID: req.OrganizationID,
+		TenantID: req.TenantID,
 		UserID:         req.RequesterID,
 		Action:         "DELETION_COMPLETED",
 		Module:         "DATA_REQUESTS",
@@ -147,7 +147,7 @@ func (s *dataDeletionService) ProcessDeletionRequest(ctx context.Context, reques
 	s.repo.CreateAuditLog(ctx, auditLog)
 
 	// 7. Update Status to COMPLETED
-	s.repo.UpdateRequestStatus(ctx, requestID, req.OrganizationID, models.RequestStatusCompleted, nil, nil)
+	s.repo.UpdateRequestStatus(ctx, requestID, req.TenantID, models.RequestStatusCompleted, nil, nil)
 
 	s.publishEvent("governance.deletion.completed", req)
 	metrics.GovernanceDeletionsTotal.Inc()
@@ -165,7 +165,7 @@ func (s *dataDeletionService) publishEvent(subject string, data interface{}) {
 
 // cleanupUserCache removes all Redis cache entries related to the deleted user and their vehicles
 func (s *dataDeletionService) cleanupUserCache(ctx context.Context, req *models.GovernanceRequest) {
-	tenantID := req.OrganizationID
+	tenantID := req.TenantID
 	userID := req.RequesterID
 
 	// Fetch all vehicles associated with this user to target vehicle-specific cache

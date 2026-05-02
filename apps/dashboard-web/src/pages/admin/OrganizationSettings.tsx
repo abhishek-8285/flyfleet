@@ -14,7 +14,7 @@ export const OrganizationSettings: React.FC = () => {
       try {
         // Fetch dynamic sections for the current organization
         const res = await fetch(
-          `${import.meta.env.VITE_API_URL || "/api/v1"}/organization/${id}/settings/sections`,
+          `${import.meta.env.VITE_API_URL || "/api/v1"}/tenants/${id}/settings/sections`,
         );
         if (res.ok) {
           const data = await res.json();
@@ -31,7 +31,7 @@ export const OrganizationSettings: React.FC = () => {
     <div className="p-8 max-w-4xl">
       <div className="mb-10">
         <h1 className="text-white text-3xl font-bold mb-2">
-          {uiStrings?.settings_title || "Organization Settings"}
+          {uiStrings?.settings_title || "Tenant Settings"}
         </h1>
         <p className="text-text-muted">
           {uiStrings?.settings_subtitle ||
@@ -84,11 +84,11 @@ export const OrganizationSettings: React.FC = () => {
         <div className="bg-red-500/5 border border-red-500/10 rounded-2xl p-6 flex items-center justify-between">
           <div>
             <h3 className="text-white font-bold mb-1">
-              {uiStrings?.archive_title || "Archive Organization"}
+              {uiStrings?.archive_title || "Archive Tenant"}
             </h3>
             <p className="text-slate-500 text-sm max-w-md">
               {uiStrings?.archive_desc ||
-                "This will restrict access for all users immediately. Organization data will be retained for 30 days."}
+                "This will restrict access for all users immediately. Tenant data will be retained for 30 days."}
             </p>
           </div>
           <button className="bg-red-500 text-white px-6 py-2 rounded-xl font-bold hover:bg-red-600 transition-colors">

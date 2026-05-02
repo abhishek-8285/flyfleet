@@ -21,7 +21,7 @@ type Trip struct {
 	FuelConsumed   float64    `json:"fuel_consumed_liters,omitempty"`
 	Route          []GeoPoint `json:"route,omitempty"`
 	Waypoints      []Waypoint `json:"waypoints,omitempty"`
-	TenantID       uuid.UUID  `json:"organization_id"`
+	TenantID       uuid.UUID  `json:"tenant_id"`
 	CreatedAt      time.Time  `json:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at"`
 }
@@ -56,7 +56,7 @@ type Telemetry struct {
 // TripSettings represents organization-level trip configuration
 type TripSettings struct {
 	ID              uuid.UUID              `json:"id"`
-	TenantID        uuid.UUID              `json:"organization_id"`
+	TenantID        uuid.UUID              `json:"tenant_id"`
 	RetentionPeriod int                    `json:"retention_period"`
 	Policies        map[string]interface{} `json:"policies"`
 	UpdatedAt       time.Time              `json:"updated_at"`

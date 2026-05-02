@@ -44,12 +44,12 @@ func (h *SupportCompatHandlers) canAccessUser(r *http.Request, targetUserID uuid
 		}
 
 		if targetUser.TenantID != authTenantID && role != "super_admin" {
-			h.logger.Warn("Access denied: Admin from different org attempted access",
+			h.logger.Warn("Access denied: Admin from different tenant attempted access",
 				zap.String("auth_user_id", authUserID.String()),
 				zap.String("auth_tenant_id", authTenantID.String()),
 				zap.String("target_user_id", targetUserID.String()),
 				zap.String("target_tenant_id", targetUser.TenantID.String()))
-			return false, errors.New("forbidden: user belongs to a different organization")
+			return false, errors.New("forbidden: user belongs to a different tenant")
 		}
 
 		h.logger.Debug("Admin access granted to user data",
@@ -70,15 +70,15 @@ func (h *SupportCompatHandlers) canAccessUser(r *http.Request, targetUserID uuid
 type SupportCompatHandlers struct {
 	logger      *zap.Logger
 	authSvc     *authservice.AuthService
-	orgSvc      orgservice.OrganizationService
+	tenantSvc   orgservice.TenantService
 	supportRepo repository.SupportRepository
 }
 
-func NewSupportCompatHandlers(logger *zap.Logger, authSvc *authservice.AuthService, orgSvc orgservice.OrganizationService, supportRepo repository.SupportRepository) *SupportCompatHandlers {
+func NewSupportCompatHandlers(logger *zap.Logger, authSvc *authservice.AuthService, tenantSvc orgservice.TenantService, supportRepo repository.SupportRepository) *SupportCompatHandlers {
 	return &SupportCompatHandlers{
 		logger:      logger,
 		authSvc:     authSvc,
-		orgSvc:      orgSvc,
+		tenantSvc:   tenantSvc,
 		supportRepo: supportRepo,
 	}
 }
@@ -422,7 +422,7 @@ func (h *SupportCompatHandlers) AddUserNote(w http.ResponseWriter, r *http.Reque
 	orgUID, _ := ctxkeys.GetTenantID(r.Context())
 
 	h.supportRepo.LogAudit(r.Context(), &repository.AuditLog{
-		OrganizationID: orgUID,
+		TenantID: orgUID,
 		UserID:         agentUID,
 		Action:         "ADD_USER_NOTE",
 		TargetUserID:   &userId,
@@ -485,7 +485,7 @@ func (h *SupportCompatHandlers) RevokeSession(w http.ResponseWriter, r *http.Req
 	orgUID, _ := ctxkeys.GetTenantID(r.Context())
 
 	h.supportRepo.LogAudit(r.Context(), &repository.AuditLog{
-		OrganizationID: orgUID,
+		TenantID: orgUID,
 		UserID:         agentUID,
 		Action:         "REVOKE_SESSION",
 		TargetUserID:   &userId,
@@ -532,7 +532,7 @@ func (h *SupportCompatHandlers) ResetPassword(w http.ResponseWriter, r *http.Req
 	orgUID, _ := ctxkeys.GetTenantID(r.Context())
 
 	h.supportRepo.LogAudit(r.Context(), &repository.AuditLog{
-		OrganizationID: orgUID,
+		TenantID: orgUID,
 		UserID:         agentUID,
 		Action:         "PASSWORD_RESET",
 		TargetUserID:   &userId,
@@ -577,7 +577,7 @@ func (h *SupportCompatHandlers) UnlockAccount(w http.ResponseWriter, r *http.Req
 	orgUID, _ := ctxkeys.GetTenantID(r.Context())
 
 	h.supportRepo.LogAudit(r.Context(), &repository.AuditLog{
-		OrganizationID: orgUID,
+		TenantID: orgUID,
 		UserID:         agentUID,
 		Action:         "UNLOCK_ACCOUNT",
 		TargetUserID:   &userId,
@@ -619,7 +619,7 @@ func (h *SupportCompatHandlers) ResetMFA(w http.ResponseWriter, r *http.Request)
 	orgUID, _ := ctxkeys.GetTenantID(r.Context())
 
 	h.supportRepo.LogAudit(r.Context(), &repository.AuditLog{
-		OrganizationID: orgUID,
+		TenantID: orgUID,
 		UserID:         agentUID,
 		Action:         "MFA_RESET",
 		TargetUserID:   &userId,
@@ -664,7 +664,7 @@ func (h *SupportCompatHandlers) ForceLogout(w http.ResponseWriter, r *http.Reque
 	orgUID, _ := ctxkeys.GetTenantID(r.Context())
 
 	h.supportRepo.LogAudit(r.Context(), &repository.AuditLog{
-		OrganizationID: orgUID,
+		TenantID:       orgUID,
 		UserID:         agentUID,
 		Action:         "FORCE_LOGOUT",
 		TargetUserID:   &userId,
@@ -714,7 +714,7 @@ func (h *SupportCompatHandlers) GetIncidentDetail(w http.ResponseWriter, r *http
 		"description":  ticket.Description,
 		"status":       ticket.Status,
 		"priority":     ticket.Priority,
-		"organization": "FlyFleet Core",
+		"tenant":       "FlyFleet Core",
 		"created_at":   ticket.CreatedAt.Format("Jan 02, 2006 15:04"),
 		"updates":      events,
 	})
@@ -814,7 +814,7 @@ func (h *UIHandlers) GetMenuById(w http.ResponseWriter, r *http.Request) {
 		items = append(items, map[string]interface{}{"label": "Dashboard", "title": "Dashboard", "icon": "dashboard", "path": "/admin/dashboard", "items": []any{}})
 
 		if role == "super_admin" || role == "org_admin" || role == "fleet_manager" {
-			items = append(items, map[string]interface{}{"label": "Organizations", "title": "Organizations", "icon": "business", "path": "/admin/organizations", "items": []any{}})
+			items = append(items, map[string]interface{}{"label": "Tenants", "title": "Tenants", "icon": "business", "path": "/admin/tenants", "items": []any{}})
 			items = append(items, map[string]interface{}{"label": "Users & Roles", "title": "Users & Roles", "icon": "people", "path": "/admin/users", "items": []any{}})
 			items = append(items, map[string]interface{}{"label": "Billing", "title": "Billing", "icon": "payments", "path": "/admin/billing", "items": []any{}})
 		}

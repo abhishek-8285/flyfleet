@@ -43,14 +43,14 @@ type Template struct {
 	Subject        string         `json:"subject,omitempty"`
 	Body           string         `json:"body"`
 	Metadata       map[string]any `json:"metadata,omitempty"`
-	OrganizationID uuid.UUID      `json:"organization_id"`
+	TenantID       uuid.UUID      `json:"tenant_id"`
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
 }
 
 type UserPreference struct {
 	UserID         uuid.UUID `json:"user_id"`
-	OrganizationID uuid.UUID `json:"organization_id"`
+	TenantID       uuid.UUID `json:"tenant_id"`
 	Channel        Channel   `json:"channel"`
 	Enabled        bool      `json:"enabled"`
 	UpdatedAt      time.Time `json:"updated_at"`
@@ -91,5 +91,5 @@ type AlertRequest struct {
 	Priority       AlertPriority  `json:"priority"`
 	Data           map[string]any `json:"data"`
 	Metadata       map[string]any `json:"metadata,omitempty"`
-	OrganizationID uuid.UUID      `json:"organization_id"`
+	TenantID       uuid.UUID      `json:"tenant_id"`
 }

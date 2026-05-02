@@ -73,7 +73,7 @@ func validatePredictionResult(result *models.PredictionResult) error {
 	if result.ModelID == "" {
 		return errors.New("model ID is required")
 	}
-	if result.OrganizationID == uuid.Nil {
+	if result.TenantID == uuid.Nil {
 		return errors.New("organization ID is required")
 	}
 	if result.ConfidenceScore < 0 || result.ConfidenceScore > 1 {
@@ -92,7 +92,7 @@ func validateAnalyticsJob(job *models.AnalyticsJob) error {
 	if job.Status == "" {
 		return errors.New("job status is required")
 	}
-	if job.OrganizationID == uuid.Nil {
+	if job.TenantID == uuid.Nil {
 		return errors.New("organization ID is required")
 	}
 	if job.CreatedBy == uuid.Nil {
@@ -102,7 +102,7 @@ func validateAnalyticsJob(job *models.AnalyticsJob) error {
 }
 
 func validateFleetAnalytics(analytics *models.FleetAnalytics) error {
-	if analytics.OrganizationID == uuid.Nil {
+	if analytics.TenantID == uuid.Nil {
 		return errors.New("organization ID is required")
 	}
 	if analytics.StartDate.IsZero() || analytics.EndDate.IsZero() {
@@ -118,7 +118,7 @@ func validateDriverBehaviorAnalytics(analytics *models.DriverBehaviorAnalytics) 
 	if analytics.DriverID == uuid.Nil {
 		return errors.New("driver ID is required")
 	}
-	if analytics.OrganizationID == uuid.Nil {
+	if analytics.TenantID == uuid.Nil {
 		return errors.New("organization ID is required")
 	}
 	if analytics.AnalysisPeriodStart.IsZero() || analytics.AnalysisPeriodEnd.IsZero() {
@@ -134,7 +134,7 @@ func validatePredictiveMaintenanceAnalytics(analytics *models.PredictiveMaintena
 	if analytics.VehicleID == uuid.Nil {
 		return errors.New("vehicle ID is required")
 	}
-	if analytics.OrganizationID == uuid.Nil {
+	if analytics.TenantID == uuid.Nil {
 		return errors.New("organization ID is required")
 	}
 	if analytics.AnalysisDate.IsZero() {

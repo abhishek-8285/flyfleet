@@ -61,7 +61,7 @@ func (s *DowntimeService) CalculateVehicleMetrics(ctx context.Context, vehicleID
 // RecordDowntime records a new downtime event for a vehicle
 func (s *DowntimeService) RecordDowntime(ctx context.Context, downtime *models.VehicleDowntime) error {
 	query := `
-		INSERT INTO vehicle_downtime (id, organization_id, vehicle_id, downtime_start, downtime_end, downtime_minutes, reason, created_at)
+		INSERT INTO vehicle_downtime (id, tenant_id, vehicle_id, downtime_start, downtime_end, downtime_minutes, reason, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`
 
 	if downtime.ID == uuid.Nil {

@@ -39,11 +39,11 @@ func (h *InviteHandler) CreateInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantID := GetOrgUUID(r)
+	tenantID := GetTenantUUID(r)
 	invitedBy := GetUserIDUUID(r)
 
 	if tenantID.String() == "00000000-0000-0000-0000-000000000000" {
-		h.writeError(w, http.StatusBadRequest, "missing_org", "Organization context is required", r)
+		h.writeError(w, http.StatusBadRequest, "missing_tenant", "Tenant context is required", r)
 		return
 	}
 

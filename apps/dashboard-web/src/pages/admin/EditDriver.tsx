@@ -48,6 +48,7 @@ export const EditDriver: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [form, setForm] = useState<FormState | null>(null);
+  const [initialForm, setInitialForm] = useState<FormState | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
@@ -58,7 +59,7 @@ export const EditDriver: React.FC = () => {
       try {
         const res = await api.getDriver(id);
         const data = res.data || res;
-        setForm({
+        const formData = {
           first_name: data.first_name || "",
           last_name: data.last_name || "",
           email: data.email || "",
@@ -87,7 +88,9 @@ export const EditDriver: React.FC = () => {
           shift_type: data.metadata?.shift_type || "MORNING",
           behavior_monitoring: data.metadata?.behavior_monitoring ?? true,
           notes: data.metadata?.notes || "",
-        });
+        };
+        setForm(formData);
+        setInitialForm(formData);
       } catch (err) {
         console.error("Failed to fetch driver", err);
       } finally {
@@ -105,32 +108,89 @@ export const EditDriver: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id || !form) return;
+    if (!id || !form || !initialForm) return;
     setSaving(true);
+
+    const payload: any = {};
+
+    if (form.first_name !== initialForm.first_name) payload.first_name = form.first_name;
+    if (form.last_name !== initialForm.last_name) payload.last_name = form.last_name;
+    if (form.email !== initialForm.email) payload.email = form.email;
+    if (form.phone !== initialForm.phone) payload.phone = form.phone;
+    if (form.employee_code !== initialForm.employee_code) payload.employee_code = form.employee_code;
+    if (form.aadhaar_number !== initialForm.aadhaar_number) payload.aadhaar_number = form.aadhaar_number;
+    if (form.pan_number !== initialForm.pan_number) payload.pan_number = form.pan_number;
+    if (form.license_number !== initialForm.license_number) payload.license_number = form.license_number;
+    if (form.license_type !== initialForm.license_type) payload.license_type = form.license_type;
+    if (form.license_authority !== initialForm.license_authority) payload.license_authority = form.license_authority;
+    if (form.employment_type !== initialForm.employment_type) payload.employment_type = form.employment_type;
+
+    if (form.experience_years !== initialForm.experience_years) {
+      payload.experience_years = parseInt(form.experience_years) || 0;
+    }
+
+    if (form.date_of_birth !== initialForm.date_of_birth) {
+      payload.date_of_birth = form.date_of_birth ? `${form.date_of_birth}T00:00:00Z` : null;
+    }
+    if (form.license_expiry !== initialForm.license_expiry) {
+      payload.license_expiry = form.license_expiry ? `${form.license_expiry}T00:00:00Z` : null;
+    }
+    if (form.license_issue_date !== initialForm.license_issue_date) {
+      payload.license_issue_date = form.license_issue_date ? `${form.license_issue_date}T00:00:00Z` : null;
+    }
+
+    if (
+      form.address_street !== initialForm.address_street ||
+      form.address_city !== initialForm.address_city ||
+      form.address_state !== initialForm.address_state ||
+      form.address_pincode !== initialForm.address_pincode ||
+      form.address_country !== initialForm.address_country
+    ) {
+      payload.address = {
+        street: form.address_street,
+        city: form.address_city,
+        state: form.address_state,
+        pincode: form.address_pincode,
+        country: form.address_country,
+      };
+    }
+
+    if (
+      form.emergency_name !== initialForm.emergency_name ||
+      form.emergency_phone !== initialForm.emergency_phone ||
+      form.emergency_relation !== initialForm.emergency_relation
+    ) {
+      payload.emergency_contact = {
+        name: form.emergency_name,
+        phone: form.emergency_phone,
+        relation: form.emergency_relation,
+      };
+    }
+
+    if (
+      form.blood_group !== initialForm.blood_group ||
+      form.shift_type !== initialForm.shift_type ||
+      form.behavior_monitoring !== initialForm.behavior_monitoring ||
+      form.notes !== initialForm.notes ||
+      form.joining_date !== initialForm.joining_date
+    ) {
+      payload.metadata = {
+        blood_group: form.blood_group,
+        shift_type: form.shift_type,
+        behavior_monitoring: form.behavior_monitoring,
+        notes: form.notes,
+        joining_date: form.joining_date,
+      };
+    }
+
+    if (Object.keys(payload).length === 0) {
+      setSaving(false);
+      navigate(`/admin/drivers/${id}`);
+      return;
+    }
+
     try {
-      await api.updateDriver(id, {
-        ...form,
-        experience_years: parseInt(form.experience_years) || 0,
-        address: { 
-          street: form.address_street, 
-          city: form.address_city, 
-          state: form.address_state, 
-          pincode: form.address_pincode, 
-          country: form.address_country 
-        },
-        emergency_contact: { 
-          name: form.emergency_name, 
-          phone: form.emergency_phone, 
-          relation: form.emergency_relation 
-        },
-        metadata: { 
-          blood_group: form.blood_group, 
-          shift_type: form.shift_type, 
-          behavior_monitoring: form.behavior_monitoring, 
-          notes: form.notes,
-          joining_date: form.joining_date
-        }
-      });
+      await api.updateDriver(id, payload);
       navigate(`/admin/drivers/${id}`);
     } catch (error) {
       console.error("Update failed:", error);

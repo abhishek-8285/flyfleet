@@ -11,8 +11,8 @@ import apiClient from "../../services/apiClient";
 export const AddOrganization: React.FC = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
-  const [orgName, setOrgName] = useState("");
-  const [orgDomain, setOrgDomain] = useState("");
+  const [tenantName, setTenantName] = useState("");
+  const [tenantDomain, setTenantDomain] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const { uiStrings } = useUIStrings("admin_orgs");
@@ -26,9 +26,9 @@ export const AddOrganization: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await apiClient.post("/admin/organizations", {
-        name: orgName,
-        domain: orgDomain,
+      await apiClient.post("/admin/tenants", {
+        name: tenantName,
+        domain: tenantDomain,
         default_theme: formData.default_theme,
         contact_email: formData.contact_email,
         subscription_tier: formData.subscription_tier,
@@ -36,7 +36,7 @@ export const AddOrganization: React.FC = () => {
       setSuccess(true); // Success step
       setStep(3);
     } catch (error) {
-      alert("Failed to create organization");
+      alert("Failed to create tenant");
     } finally {
       setLoading(false);
     }
@@ -45,11 +45,11 @@ export const AddOrganization: React.FC = () => {
   return (
     <div className="p-8 max-w-4xl mx-auto">
       <button
-        onClick={() => navigate("/admin/organizations")}
+        onClick={() => navigate("/admin/tenants")}
         className="flex items-center text-slate-500 hover:text-white transition-colors group mb-8"
       >
         <ArrowLeftIcon className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" />
-        {uiStrings?.add_back || "Back to Organizations"}
+        {uiStrings?.add_back || "Back to Tenants"}
       </button>
 
       <div className="bg-surface-dark border border-primary shadow-2xl rounded-3xl overflow-hidden">
@@ -59,7 +59,7 @@ export const AddOrganization: React.FC = () => {
             <div className="flex items-center gap-3 mb-2">
               <SparklesIcon className="h-8 w-8 text-primary" />
               <h1 className="text-4xl font-black text-white">
-                {uiStrings?.add_title || "Onboard New Organization"}
+                {uiStrings?.add_title || "Onboard New Tenant"}
               </h1>
             </div>
             <p className="text-slate-400 text-lg">
@@ -89,15 +89,15 @@ export const AddOrganization: React.FC = () => {
               <div className="grid grid-cols-2 gap-8">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-400 uppercase tracking-widest">
-                    {uiStrings?.label_org_name || "Organization Name"}
+                    {uiStrings?.label_org_name || "Tenant Name"}
                   </label>
                   <input
                     type="text"
                     placeholder={
                       uiStrings?.placeholder_org_name || "e.g. Acme Corp"
                     }
-                    value={orgName}
-                    onChange={(e) => setOrgName(e.target.value)}
+                    value={tenantName}
+                    onChange={(e) => setTenantName(e.target.value)}
                     className="w-full bg-slate-900 border border-white/5 rounded-2xl px-6 py-4 text-white placeholder:text-slate-700 outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                   />
                 </div>
@@ -110,8 +110,8 @@ export const AddOrganization: React.FC = () => {
                     placeholder={
                       uiStrings?.placeholder_domain || "acme.flyfleet.io"
                     }
-                    value={orgDomain}
-                    onChange={(e) => setOrgDomain(e.target.value)}
+                    value={tenantDomain}
+                    onChange={(e) => setTenantDomain(e.target.value)}
                     className="w-full bg-slate-900 border border-white/5 rounded-2xl px-6 py-4 text-white placeholder:text-slate-700 outline-none focus:ring-2 focus:ring-primary/50 transition-all font-mono"
                   />
                 </div>
@@ -119,7 +119,7 @@ export const AddOrganization: React.FC = () => {
               <div className="flex justify-end pt-8">
                 <button
                   onClick={() => setStep(2)}
-                  disabled={!orgName}
+                  disabled={!tenantName}
                   className="w-full bg-primary text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-primary/20 hover:bg-primary-hover disabled:opacity-50 transition-all"
                 >
                   {uiStrings?.btn_continue || "Continue to Settings"}
@@ -173,7 +173,7 @@ export const AddOrganization: React.FC = () => {
                 >
                   {loading
                     ? uiStrings?.btn_creating || "Creating..."
-                    : uiStrings?.btn_initialize || "Initialize Organization"}
+                    : uiStrings?.btn_initialize || "Initialize Tenant"}
                 </button>
               </div>
             </form>
@@ -188,7 +188,7 @@ export const AddOrganization: React.FC = () => {
                   </div>
                 </div>
                 <h1 className="text-5xl font-black text-white">
-                  {uiStrings?.success_title || "Organization Created!"}
+                  {uiStrings?.success_title || "Tenant Created!"}
                 </h1>
                 <p className="text-slate-400 text-xl">
                   {uiStrings?.success_desc ||
@@ -197,7 +197,7 @@ export const AddOrganization: React.FC = () => {
               </div>
               <div className="pt-8">
                 <button
-                  onClick={() => navigate("/admin/organizations")}
+                  onClick={() => navigate("/admin/tenants")}
                   className="bg-primary hover:bg-primary-dark text-white px-8 py-3 rounded-xl font-semibold shadow-lg transition-all border border-primary"
                 >
                   Back to Dashboard

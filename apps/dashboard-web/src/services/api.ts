@@ -297,39 +297,43 @@ class ApiService {
     return this.client.post("/admin/users/create", data);
   }
 
-  // Organizations
+  // Tenants
+  async getTenants(params?: any): Promise<any> {
+    return this.client.get("/admin/tenants", { params });
+  }
+
   async getOrganizations(params?: any): Promise<any> {
-    return this.client.get("/admin/organizations", { params });
+    return this.getTenants(params);
   }
 
-  async getOrganization(id: string): Promise<any> {
-    return this.client.get(`/admin/organizations/${id}`);
+  async getTenant(id: string): Promise<any> {
+    return this.client.get(`/admin/tenants/${id}`);
   }
 
-  async createOrganization(data: any): Promise<any> {
-    return this.client.post("/admin/organizations", data);
+  async createTenant(data: any): Promise<any> {
+    return this.client.post("/admin/tenants", data);
   }
 
-  async updateOrganization(id: string, data: any): Promise<any> {
-    return this.client.put(`/admin/organizations/${id}`, data);
+  async updateTenant(id: string, data: any): Promise<any> {
+    return this.client.put(`/admin/tenants/${id}`, data);
   }
 
-  async deleteOrganization(id: string) {
-    await this.client.delete(`/admin/organizations/${id}`);
+  async deleteTenant(id: string) {
+    await this.client.delete(`/admin/tenants/${id}`);
   }
 
-  async getOrganizationStats(): Promise<any> {
+  async getTenantStats(): Promise<any> {
     // Try to get stats, fallback to empty/default if backend doesn't support it yet
     try {
-      return await this.client.get("/admin/organizations/stats");
+      return await this.client.get("/admin/tenants/stats");
     } catch (error) {
-      console.warn("Organization stats API not available, using fallback");
+      console.warn("Tenant stats API not available, using fallback");
       return {
         data: {
-          total_orgs: 0,
-          active_orgs: 0,
-          pending_orgs: 0,
-          inactive_orgs: 0,
+          total_tenants: 0,
+          active_tenants: 0,
+          pending_tenants: 0,
+          inactive_tenants: 0,
           total_users: 0,
           total_vehicles: 0,
           total_devices: 0,
@@ -564,8 +568,16 @@ class ApiService {
     });
   }
 
-  async updateMFAOrgOverride(data: any): Promise<any> {
+  async getMFAOrgOverride(tenantId: string): Promise<any> {
+    return this.getMFATenantOverride(tenantId);
+  }
+
+  async updateMFATenantOverride(data: any): Promise<any> {
     return this.bffClient.put("/security/mfa/overrides", data);
+  }
+
+  async updateMFAOrgOverride(data: any): Promise<any> {
+    return this.updateMFATenantOverride(data);
   }
 
   // Audit Module

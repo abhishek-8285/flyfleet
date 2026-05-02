@@ -19,7 +19,7 @@ func (r *AnalyticsRepositoryImpl) CreateDriverBehaviorAnalytics(ctx context.Cont
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := `
-		INSERT INTO driver_behavior_analytics (id, driver_id, organization_id, analysis_period_start, analysis_period_end, 
+		INSERT INTO driver_behavior_analytics (id, driver_id, tenant_id, analysis_period_start, analysis_period_end, 
 			total_driving_hours, aggressive_acceleration_count, hard_braking_count, sharp_turn_count, 
 			over_speeding_count, idling_time, average_speed, max_speed, fuel_efficiency, 
 			safety_score, efficiency_score, comfort_score, ranking, improvement_suggestions, 
@@ -33,7 +33,7 @@ func (r *AnalyticsRepositoryImpl) CreateDriverBehaviorAnalytics(ctx context.Cont
 		return fmt.Errorf("failed to marshal improvement suggestions: %w", err)
 	}
 
-	_, err = r.db.Exec(ctx, query, analytics.ID, analytics.DriverID, analytics.OrganizationID,
+	_, err = r.db.Exec(ctx, query, analytics.ID, analytics.DriverID, analytics.TenantID,
 		analytics.AnalysisPeriodStart, analytics.AnalysisPeriodEnd, analytics.TotalDrivingHours,
 		analytics.AggressiveAccelerationCount, analytics.HardBrakingCount, analytics.SharpTurnCount,
 		analytics.OverSpeedingCount, analytics.IdlingTime, analytics.AverageSpeed,
@@ -52,19 +52,19 @@ func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalytics(ctx context.Context
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := `
-		SELECT id, driver_id, organization_id, analysis_period_start, analysis_period_end, 
+		SELECT id, driver_id, tenant_id, analysis_period_start, analysis_period_end, 
 			total_driving_hours, aggressive_acceleration_count, hard_braking_count, sharp_turn_count, 
 			over_speeding_count, idling_time, average_speed, max_speed, fuel_efficiency, 
 			safety_score, efficiency_score, comfort_score, ranking, improvement_suggestions, 
 			behavior_trend, generated_at, created_at, updated_at
-		FROM driver_behavior_analytics WHERE id = $1 AND organization_id = $2
+		FROM driver_behavior_analytics WHERE id = $1 AND tenant_id = $2
 	`
 
 	var analytics models.DriverBehaviorAnalytics
 	var improvementSuggestionsJSON []byte
 
 	err := r.db.QueryRow(ctx, query, id, tenantID).Scan(
-		&analytics.ID, &analytics.DriverID, &analytics.OrganizationID, &analytics.AnalysisPeriodStart,
+		&analytics.ID, &analytics.DriverID, &analytics.TenantID, &analytics.AnalysisPeriodStart,
 		&analytics.AnalysisPeriodEnd, &analytics.TotalDrivingHours, &analytics.AggressiveAccelerationCount,
 		&analytics.HardBrakingCount, &analytics.SharpTurnCount, &analytics.OverSpeedingCount,
 		&analytics.IdlingTime, &analytics.AverageSpeed, &analytics.MaxSpeed, &analytics.FuelEfficiency,
@@ -92,7 +92,7 @@ func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalyticsByDriver(ctx context
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	// Count query
-	countQuery := "SELECT COUNT(*) FROM driver_behavior_analytics WHERE driver_id = $1 AND organization_id = $2"
+	countQuery := "SELECT COUNT(*) FROM driver_behavior_analytics WHERE driver_id = $1 AND tenant_id = $2"
 	var totalCount int
 	err := r.db.QueryRow(ctx, countQuery, driverID, tenantID).Scan(&totalCount)
 	if err != nil {
@@ -101,13 +101,13 @@ func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalyticsByDriver(ctx context
 
 	// Main query
 	query := `
-		SELECT id, driver_id, organization_id, analysis_period_start, analysis_period_end, 
+		SELECT id, driver_id, tenant_id, analysis_period_start, analysis_period_end, 
 			total_driving_hours, aggressive_acceleration_count, hard_braking_count, sharp_turn_count, 
 			over_speeding_count, idling_time, average_speed, max_speed, fuel_efficiency, 
 			safety_score, efficiency_score, comfort_score, ranking, improvement_suggestions, 
 			behavior_trend, generated_at, created_at, updated_at
 		FROM driver_behavior_analytics 
-		WHERE driver_id = $1 AND organization_id = $2
+		WHERE driver_id = $1 AND tenant_id = $2
 		ORDER BY analysis_period_start DESC 
 		LIMIT $3 OFFSET $4
 	`
@@ -124,7 +124,7 @@ func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalyticsByDriver(ctx context
 		var improvementSuggestionsJSON []byte
 
 		err := rows.Scan(
-			&analytics.ID, &analytics.DriverID, &analytics.OrganizationID, &analytics.AnalysisPeriodStart,
+			&analytics.ID, &analytics.DriverID, &analytics.TenantID, &analytics.AnalysisPeriodStart,
 			&analytics.AnalysisPeriodEnd, &analytics.TotalDrivingHours, &analytics.AggressiveAccelerationCount,
 			&analytics.HardBrakingCount, &analytics.SharpTurnCount, &analytics.OverSpeedingCount,
 			&analytics.IdlingTime, &analytics.AverageSpeed, &analytics.MaxSpeed, &analytics.FuelEfficiency,
@@ -147,12 +147,12 @@ func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalyticsByDriver(ctx context
 	return analyticsList, totalCount, nil
 }
 
-// GetDriverBehaviorAnalyticsByOrg retrieves driver behavior analytics by organization
-func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalyticsByOrg(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.DriverBehaviorAnalytics, int, error) {
+// GetDriverBehaviorAnalyticsByTenant retrieves driver behavior analytics by organization
+func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalyticsByTenant(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.DriverBehaviorAnalytics, int, error) {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	// Count query
-	countQuery := "SELECT COUNT(*) FROM driver_behavior_analytics WHERE organization_id = $1"
+	countQuery := "SELECT COUNT(*) FROM driver_behavior_analytics WHERE tenant_id = $1"
 	var totalCount int
 	err := r.db.QueryRow(ctx, countQuery, tenantID).Scan(&totalCount)
 	if err != nil {
@@ -161,13 +161,13 @@ func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalyticsByOrg(ctx context.Co
 
 	// Main query
 	query := `
-		SELECT id, driver_id, organization_id, analysis_period_start, analysis_period_end, 
+		SELECT id, driver_id, tenant_id, analysis_period_start, analysis_period_end, 
 			total_driving_hours, aggressive_acceleration_count, hard_braking_count, sharp_turn_count, 
 			over_speeding_count, idling_time, average_speed, max_speed, fuel_efficiency, 
 			safety_score, efficiency_score, comfort_score, ranking, improvement_suggestions, 
 			behavior_trend, generated_at, created_at, updated_at
 		FROM driver_behavior_analytics 
-		WHERE organization_id = $1
+		WHERE tenant_id = $1
 		ORDER BY analysis_period_start DESC 
 		LIMIT $2 OFFSET $3
 	`
@@ -184,7 +184,7 @@ func (r *AnalyticsRepositoryImpl) GetDriverBehaviorAnalyticsByOrg(ctx context.Co
 		var improvementSuggestionsJSON []byte
 
 		err := rows.Scan(
-			&analytics.ID, &analytics.DriverID, &analytics.OrganizationID, &analytics.AnalysisPeriodStart,
+			&analytics.ID, &analytics.DriverID, &analytics.TenantID, &analytics.AnalysisPeriodStart,
 			&analytics.AnalysisPeriodEnd, &analytics.TotalDrivingHours, &analytics.AggressiveAccelerationCount,
 			&analytics.HardBrakingCount, &analytics.SharpTurnCount, &analytics.OverSpeedingCount,
 			&analytics.IdlingTime, &analytics.AverageSpeed, &analytics.MaxSpeed, &analytics.FuelEfficiency,
@@ -230,7 +230,7 @@ func (r *AnalyticsRepositoryImpl) UpdateDriverBehaviorAnalytics(ctx context.Cont
 	}
 
 	args = append(args, id, tenantID)
-	query := fmt.Sprintf("UPDATE driver_behavior_analytics SET %s WHERE id = $%d AND organization_id = $%d",
+	query := fmt.Sprintf("UPDATE driver_behavior_analytics SET %s WHERE id = $%d AND tenant_id = $%d",
 		strings.Join(setParts, ", "), argIndex, argIndex+1)
 
 	_, err := r.db.Exec(ctx, query, args...)
@@ -244,7 +244,7 @@ func (r *AnalyticsRepositoryImpl) UpdateDriverBehaviorAnalytics(ctx context.Cont
 func (r *AnalyticsRepositoryImpl) DeleteDriverBehaviorAnalytics(ctx context.Context, id string, tenantID uuid.UUID) error {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
-	query := "DELETE FROM driver_behavior_analytics WHERE id = $1 AND organization_id = $2"
+	query := "DELETE FROM driver_behavior_analytics WHERE id = $1 AND tenant_id = $2"
 	_, err := r.db.Exec(ctx, query, id, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to delete driver behavior analytics %s: %w", id, err)
@@ -257,11 +257,11 @@ func (r *AnalyticsRepositoryImpl) ListDriverBehaviorAnalytics(ctx context.Contex
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	// Count query
-	countQuery := "SELECT COUNT(*) FROM driver_behavior_analytics WHERE organization_id = $1"
+	countQuery := "SELECT COUNT(*) FROM driver_behavior_analytics WHERE tenant_id = $1"
 	countArgs := []interface{}{tenantID}
 
 	// Filter conditions
-	whereConditions := []string{"organization_id = $1"}
+	whereConditions := []string{"tenant_id = $1"}
 	argIndex := 2
 
 	if periodStart != nil {
@@ -289,13 +289,13 @@ func (r *AnalyticsRepositoryImpl) ListDriverBehaviorAnalytics(ctx context.Contex
 
 	// Main query
 	mainQuery := `
-		SELECT id, driver_id, organization_id, analysis_period_start, analysis_period_end, 
+		SELECT id, driver_id, tenant_id, analysis_period_start, analysis_period_end, 
 			total_driving_hours, aggressive_acceleration_count, hard_braking_count, sharp_turn_count, 
 			over_speeding_count, idling_time, average_speed, max_speed, fuel_efficiency, 
 			safety_score, efficiency_score, comfort_score, ranking, improvement_suggestions, 
 			behavior_trend, generated_at, created_at, updated_at
 		FROM driver_behavior_analytics 
-		WHERE organization_id = $1
+		WHERE tenant_id = $1
 	`
 
 	args := []interface{}{tenantID}
@@ -349,7 +349,7 @@ func (r *AnalyticsRepositoryImpl) ListDriverBehaviorAnalytics(ctx context.Contex
 		var improvementSuggestionsJSON []byte
 
 		err := rows.Scan(
-			&analytics.ID, &analytics.DriverID, &analytics.OrganizationID, &analytics.AnalysisPeriodStart,
+			&analytics.ID, &analytics.DriverID, &analytics.TenantID, &analytics.AnalysisPeriodStart,
 			&analytics.AnalysisPeriodEnd, &analytics.TotalDrivingHours, &analytics.AggressiveAccelerationCount,
 			&analytics.HardBrakingCount, &analytics.SharpTurnCount, &analytics.OverSpeedingCount,
 			&analytics.IdlingTime, &analytics.AverageSpeed, &analytics.MaxSpeed, &analytics.FuelEfficiency,

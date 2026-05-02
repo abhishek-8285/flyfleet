@@ -247,7 +247,7 @@ func TestRegisterDevice_WithOrganizationAndVehicle(t *testing.T) {
 		HardwareAttestation: "attestation-hash",
 		AndroidVersion:      "13",
 		DeviceModel:         "Fleet Tab Pro",
-		OrganizationID:      tenantID.String(),
+		TenantID:           tenantID.String(),
 		VehicleID:           vehicleID.String(),
 	}
 
@@ -258,7 +258,7 @@ func TestRegisterDevice_WithOrganizationAndVehicle(t *testing.T) {
 
 	storedDevice := mockRepo.Devices["DEV-002"]
 	assert.NotNil(t, storedDevice)
-	assert.Equal(t, tenantID, storedDevice.OrganizationID)
+	assert.Equal(t, tenantID, storedDevice.TenantID)
 	assert.Equal(t, vehicleID, storedDevice.VehicleID)
 }
 

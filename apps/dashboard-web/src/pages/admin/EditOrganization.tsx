@@ -26,7 +26,7 @@ export const EditOrganization: React.FC = () => {
     const fetchOrg = async () => {
       try {
         const res = (await apiClient.get(
-          `/admin/organizations?id=${id}`,
+          `/admin/tenants?id=${id}`,
         )) as any;
         const org = res.data;
         setFormData({
@@ -36,7 +36,7 @@ export const EditOrganization: React.FC = () => {
           status: org.status,
         });
       } catch (error) {
-        console.error("Failed to fetch org:", error);
+        console.error("Failed to fetch tenant:", error);
       } finally {
         setLoading(false);
       }
@@ -48,11 +48,11 @@ export const EditOrganization: React.FC = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      await apiClient.put(`/admin/organizations?id=${id}`, formData);
-      alert(uiStrings?.msg_success || "Organization updated successfully");
-      navigate(`/admin/organizations/${id}`);
+      await apiClient.put(`/admin/tenants?id=${id}`, formData);
+      alert(uiStrings?.msg_success || "Tenant updated successfully");
+      navigate(`/admin/tenants/${id}`);
     } catch (error) {
-      alert(uiStrings?.msg_error || "Failed to update organization");
+      alert(uiStrings?.msg_error || "Failed to update tenant");
     } finally {
       setSaving(false);
     }
@@ -68,7 +68,7 @@ export const EditOrganization: React.FC = () => {
   return (
     <div className="p-8 max-w-4xl mx-auto">
       <button
-        onClick={() => navigate(`/admin/organizations/${id}`)}
+        onClick={() => navigate(`/admin/tenants/${id}`)}
         className="flex items-center space-x-2 text-slate-500 hover:text-blue-600 transition-colors mb-8 group"
       >
         <ArrowLeftIcon className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
@@ -78,7 +78,7 @@ export const EditOrganization: React.FC = () => {
       <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
         <div className="px-10 py-8 border-b border-slate-100 bg-slate-50/50">
           <h1 className="text-2xl font-bold text-slate-800">
-            {uiStrings?.title_edit || "Edit Organization Profile"}
+            {uiStrings?.title_edit || "Edit Tenant Profile"}
           </h1>
           <p className="text-slate-500 text-sm mt-1">
             {uiStrings?.subtitle_edit ||
@@ -91,7 +91,7 @@ export const EditOrganization: React.FC = () => {
             <div className="space-y-4">
               <label className="text-sm font-semibold text-slate-700 flex items-center">
                 <BuildingOffice2Icon className="h-4 w-4 mr-2 text-blue-500" />
-                {uiStrings?.label_name || "Organization Name"}
+                {uiStrings?.label_name || "Tenant Name"}
               </label>
               <input
                 type="text"
@@ -146,7 +146,7 @@ export const EditOrganization: React.FC = () => {
           <div className="pt-8 border-t border-slate-100 flex justify-end space-x-4">
             <button
               type="button"
-              onClick={() => navigate(`/admin/organizations/${id}`)}
+              onClick={() => navigate(`/admin/tenants/${id}`)}
               className="px-6 py-3 text-slate-500 font-medium hover:text-slate-800"
             >
               {uiStrings?.btn_cancel || "Cancel"}

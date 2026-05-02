@@ -39,5 +39,5 @@ func (w *FinanceArchiveWorker) runRetentionCleanup(ctx context.Context) {
 	// 3. Delete or Move to archive table old fuel_logs and expense_reports
 
 	// Example query logic for repository:
-	// DELETE FROM fuel_logs WHERE organization_id = $1 AND transaction_date < $2
+	// DELETE FROM fuel_logs WHERE tenant_id = $1 AND transaction_date < $2
 }

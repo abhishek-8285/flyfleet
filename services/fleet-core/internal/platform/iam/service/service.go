@@ -34,14 +34,14 @@ type IAMClaims struct {
 
 type iamService struct {
 	repo      repository.IAMRepository
-	orgSvc    OrganizationService
+	tenantSvc TenantService
 	jwtSecret []byte
 }
 
-func NewIAMService(repo repository.IAMRepository, orgSvc OrganizationService, jwtSecret string) IAMService {
+func NewIAMService(repo repository.IAMRepository, tenantSvc TenantService, jwtSecret string) IAMService {
 	return &iamService{
 		repo:      repo,
-		orgSvc:    orgSvc,
+		tenantSvc: tenantSvc,
 		jwtSecret: []byte(jwtSecret),
 	}
 }
@@ -52,18 +52,18 @@ func (s *iamService) Register(ctx context.Context, email, password, fullName str
 		return nil, err
 	}
 
-	// If tenantID is empty, create a new organization for the user
+	// If tenantID is empty, create a new tenant for the user
 	if tenantID == uuid.Nil {
-		org, err := s.orgSvc.Onboard(ctx, fullName+"'s Fleet", "")
+		tenant, err := s.tenantSvc.Onboard(ctx, fullName+"'s Fleet", "")
 		if err != nil {
 			return nil, err
 		}
-		tenantID = org.ID
+		tenantID = tenant.ID
 	}
 
 	user := &models.User{
 		ID:             uuid.New(),
-		OrganizationID: tenantID,
+		TenantID:       tenantID,
 		Email:          email,
 		FullName:       fullName,
 		PasswordHash:   string(hashedPassword),
@@ -90,7 +90,7 @@ func (s *iamService) Login(ctx context.Context, email, password string) (string,
 
 	claims := &IAMClaims{
 		UserID: user.ID,
-		TenantID:  user.OrganizationID,
+		TenantID:  user.TenantID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

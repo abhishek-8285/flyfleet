@@ -42,10 +42,10 @@ func (r *PostgresRepository) CreateReport(ctx context.Context, report *models.Sc
 	}
 	defer tx.Rollback(ctx)
 
-	query := `INSERT INTO scheduled_reports (id, organization_id, name, report_type, format, frequency, cron_expression, delivery_time, timezone, filters, status, created_by, updated_by, created_at, updated_at)
+	query := `INSERT INTO scheduled_reports (id, tenant_id, name, report_type, format, frequency, cron_expression, delivery_time, timezone, filters, status, created_by, updated_by, created_at, updated_at)
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`
 
-	_, err = tx.Exec(ctx, query, report.ID, report.OrganizationID, report.Name, report.ReportType, report.Format, report.Frequency, report.CronExpression, report.DeliveryTime, report.Timezone, report.Filters, report.Status, report.CreatedBy, report.UpdatedBy, report.CreatedAt, report.UpdatedAt)
+	_, err = tx.Exec(ctx, query, report.ID, report.TenantID, report.Name, report.ReportType, report.Format, report.Frequency, report.CronExpression, report.DeliveryTime, report.Timezone, report.Filters, report.Status, report.CreatedBy, report.UpdatedBy, report.CreatedAt, report.UpdatedAt)
 	if err != nil {
 		return err
 	}
@@ -73,11 +73,11 @@ func (r *PostgresRepository) CreateReport(ctx context.Context, report *models.Sc
 
 func (r *PostgresRepository) GetReport(ctx context.Context, id uuid.UUID) (*models.ScheduledReport, error) {
 	var report models.ScheduledReport
-	query := `SELECT id, organization_id, name, report_type, format, frequency, cron_expression, delivery_time::text, timezone, filters, status, created_by, updated_by, created_at, updated_at
+	query := `SELECT id, tenant_id, name, report_type, format, frequency, cron_expression, delivery_time::text, timezone, filters, status, created_by, updated_by, created_at, updated_at
 	          FROM scheduled_reports WHERE id = $1`
 
 	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&report.ID, &report.OrganizationID, &report.Name, &report.ReportType, &report.Format, &report.Frequency, &report.CronExpression, &report.DeliveryTime, &report.Timezone, &report.Filters, &report.Status, &report.CreatedBy, &report.UpdatedBy, &report.CreatedAt, &report.UpdatedAt,
+		&report.ID, &report.TenantID, &report.Name, &report.ReportType, &report.Format, &report.Frequency, &report.CronExpression, &report.DeliveryTime, &report.Timezone, &report.Filters, &report.Status, &report.CreatedBy, &report.UpdatedBy, &report.CreatedAt, &report.UpdatedAt,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {

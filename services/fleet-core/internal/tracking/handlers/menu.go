@@ -65,7 +65,7 @@ func getMenuItems() []MenuItem {
 		{Label: "Maintenance", Path: "/admin/maintenance/work-orders", Icon: "build"},
 		{Label: "Finance", Path: "/admin/finance/fuel", Icon: "attach_money"},
 		{Label: "Reports", Path: "/dashboard/reports", Icon: "bar_chart"},
-		{Label: "Settings", Path: "/admin/organizations", Icon: "settings"},
+		{Label: "Settings", Path: "/admin/tenants", Icon: "settings"},
 	}
 }
 
@@ -78,7 +78,7 @@ func getMainSidebar() []MenuItem {
 		{Label: "Dispatch", Path: "/admin/dispatch", Icon: "send"},
 		{Label: "Maintenance", Path: "/admin/maintenance/work-orders", Icon: "build"},
 		{Label: "Fuel", Path: "/admin/finance/fuel", Icon: "local_gas_station"},
-		{Label: "Organizations", Path: "/admin/organizations", Icon: "business"},
+		{Label: "Tenants", Path: "/admin/tenants", Icon: "business"},
 		{Label: "Customers", Path: "/admin/customers", Icon: "person_search"},
 		{Label: "Users", Path: "/admin/users", Icon: "people"},
 		{Label: "Devices", Path: "/admin/devices", Icon: "devices"},

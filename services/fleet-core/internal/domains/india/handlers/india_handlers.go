@@ -151,7 +151,7 @@ func (h *IndiaIntegrationHandlers) GetFASTagTransaction(w http.ResponseWriter, r
 		h.writeErrorResponse(w, http.StatusInternalServerError, "Internal error", nil)
 		return
 	}
-	if transaction.OrganizationID != reqTenantID {
+	if transaction.TenantID != reqTenantID {
 		h.writeErrorResponse(w, http.StatusNotFound, "FASTag transaction not found or access denied", nil)
 		return
 	}

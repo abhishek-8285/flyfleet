@@ -22,7 +22,7 @@ func (m *MockBillingService) CheckLimit(ctx context.Context, tenantID uuid.UUID,
 	return args.Bool(0), args.Error(1)
 }
 
-func (m *MockBillingService) GetOrganizationPlan(ctx context.Context, tenantID uuid.UUID) (*models.Plan, error) {
+func (m *MockBillingService) GetTenantPlan(ctx context.Context, tenantID uuid.UUID) (*models.Plan, error) {
 	args := m.Called(ctx, tenantID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)

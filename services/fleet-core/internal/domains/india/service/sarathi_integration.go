@@ -60,7 +60,7 @@ func (s *SarathiIntegrationServiceImpl) VerifyDriver(ctx context.Context, tenant
 	verification := &models.DriverVerification{
 		ID:               uuid.New().String(),
 		DriverID:         driverID,
-		OrganizationID:   tenantID,
+		TenantID:   tenantID,
 		LicenseNumber:    licenseNumber,
 		Status:           "verified",
 		VerificationDate: time.Now(),
@@ -75,7 +75,7 @@ func (s *SarathiIntegrationServiceImpl) VerifyDriver(ctx context.Context, tenant
 		RequestPayload:  map[string]string{"license_number": licenseNumber, "dob": dob},
 		ResponsePayload: verification,
 		Status:          200,
-		OrganizationID:  &tenantID,
+		TenantID:  &tenantID,
 	}
 	_ = s.repo.CreateIntegrationLog(ctx, log)
 

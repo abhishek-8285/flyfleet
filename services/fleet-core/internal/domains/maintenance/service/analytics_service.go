@@ -23,7 +23,7 @@ func (s *AnalyticsService) GetCostPerVehicle(ctx context.Context, tenantID uuid.
 	query := `
 		SELECT vehicle_id, SUM(cost) as total_cost
 		FROM maintenance_logs
-		WHERE organization_id = $1
+		WHERE tenant_id = $1
 		GROUP BY vehicle_id
 		ORDER BY total_cost DESC`
 
@@ -51,7 +51,7 @@ func (s *AnalyticsService) GetVendorRepairComparison(ctx context.Context, tenant
 		SELECT v.id, v.name, SUM(l.cost) as total_cost, COUNT(l.id) as job_count, AVG(l.cost) as avg_cost
 		FROM maintenance_logs l
 		JOIN maintenance_vendors v ON l.performed_by = v.id
-		WHERE l.organization_id = $1
+		WHERE l.tenant_id = $1
 		GROUP BY v.id, v.name
 		ORDER BY avg_cost ASC`
 

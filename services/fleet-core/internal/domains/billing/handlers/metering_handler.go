@@ -34,7 +34,7 @@ func (h *BillingHandler) RecordUsage(w http.ResponseWriter, r *http.Request) {
 func (h *BillingHandler) GenerateDraftInvoice(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
+		h.errorJSON(w, r, "Invalid Tenant ID", http.StatusBadRequest)
 		return
 	}
 

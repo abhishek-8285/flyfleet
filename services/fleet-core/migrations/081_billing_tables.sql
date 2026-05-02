@@ -1,47 +1,60 @@
--- 081_billing_tables.sql
--- Billing and Subscription Tables
+-- Migration: 081_billing_tables
+-- Description: Billing and Subscription Tables (Harmonized with Go repository).
 
-CREATE TABLE IF NOT EXISTS plans (
+-- 1. Billing Plans (Static IDs for consistency)
+CREATE TABLE IF NOT EXISTS billing_plans (
     id UUID PRIMARY KEY,
     name TEXT NOT NULL,
-    monthly_price DECIMAL(12, 2) NOT NULL,
-    max_vehicles INTEGER NOT NULL,
-    max_drivers INTEGER NOT NULL,
-    features JSONB DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    description TEXT,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS subscriptions (
-    id UUID PRIMARY KEY,
-    organization_id UUID NOT NULL,
-    plan_id UUID REFERENCES plans(id),
-    status TEXT NOT NULL,
-    start_date TIMESTAMP WITH TIME ZONE NOT NULL,
-    end_date TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+-- 2. Pricing Components
+CREATE TABLE IF NOT EXISTS billing_pricing_components (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    plan_id UUID NOT NULL REFERENCES billing_plans(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    type VARCHAR(50) NOT NULL, -- FLAT, PER_UNIT, USAGE
+    unit_price DECIMAL(12, 4) NOT NULL DEFAULT 0,
+    currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+    meter_event_name VARCHAR(100),
+    frequency VARCHAR(50) NOT NULL DEFAULT 'MONTHLY',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS usage_records (
-    id BIGSERIAL PRIMARY KEY,
-    organization_id UUID NOT NULL,
-    metric TEXT NOT NULL,
-    value INTEGER NOT NULL,
-    recorded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+-- 3. Billing Subscriptions
+CREATE TABLE IF NOT EXISTS billing_subscriptions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid()
 );
 
-CREATE TABLE IF NOT EXISTS invoices (
-    id UUID PRIMARY KEY,
-    organization_id UUID NOT NULL,
-    amount DECIMAL(12, 2) NOT NULL,
-    currency TEXT DEFAULT 'USD',
-    status TEXT NOT NULL,
-    issued_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    paid_at TIMESTAMP WITH TIME ZONE
-);
+DO $$ 
+BEGIN 
+    ALTER TABLE billing_subscriptions ADD COLUMN IF NOT EXISTS tenant_id UUID NOT NULL REFERENCES tenants(id);
+    ALTER TABLE billing_subscriptions ADD COLUMN IF NOT EXISTS plan_id UUID NOT NULL REFERENCES billing_plans(id);
+    ALTER TABLE billing_subscriptions ADD COLUMN IF NOT EXISTS status VARCHAR(50) NOT NULL DEFAULT 'TRIAL';
+    ALTER TABLE billing_subscriptions ADD COLUMN IF NOT EXISTS current_period_start TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    ALTER TABLE billing_subscriptions ADD COLUMN IF NOT EXISTS current_period_end TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '30 days';
+    ALTER TABLE billing_subscriptions ADD COLUMN IF NOT EXISTS trial_end TIMESTAMPTZ;
+    ALTER TABLE billing_subscriptions ADD COLUMN IF NOT EXISTS cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE billing_subscriptions ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';
+    ALTER TABLE billing_subscriptions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
+    ALTER TABLE billing_subscriptions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
+    
+    -- Ensure unique constraint exists
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'billing_subscriptions' AND constraint_name = 'uq_billing_subscriptions_tenant') THEN
+        ALTER TABLE billing_subscriptions ADD CONSTRAINT uq_billing_subscriptions_tenant UNIQUE (tenant_id);
+    END IF;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
--- Seed Initial Plans
-INSERT INTO plans (id, name, monthly_price, max_vehicles, max_drivers, features) VALUES
-    (gen_random_uuid(), 'Starter', 49.00, 10, 5, '{"api_access": true, "reports": false}'),
-    (gen_random_uuid(), 'Professional', 149.00, 50, 25, '{"api_access": true, "reports": true, "geo_fencing": true}'),
-    (gen_random_uuid(), 'Enterprise', 499.00, 1000, 500, '{"api_access": true, "reports": true, "geo_fencing": true, "dedicated_support": true, "custom_integrations": true}')
-ON CONFLICT DO NOTHING;
+CREATE INDEX IF NOT EXISTS idx_billing_subs_tenant ON billing_subscriptions(tenant_id);
+
+-- 4. Seed Initial Plans
+INSERT INTO billing_plans (id, name, description) VALUES
+    ('11111111-1111-1111-1111-111111111111', 'Starter', 'Basic fleet tracking for up to 5 vehicles'),
+    ('22222222-2222-2222-2222-222222222222', 'Growth', 'Advanced features for growing fleets'),
+    ('33333333-3333-3333-3333-333333333333', 'Enterprise', 'Custom scale solutions with premium support')
+ON CONFLICT (id) DO NOTHING;

@@ -119,7 +119,7 @@ func (s *fuelService) CreateLog(ctx context.Context, tenantID uuid.UUID, userID 
 
 	log := &models.FuelLog{
 		ID:              uuid.New(),
-		OrganizationID:  tenantID,
+		TenantID:  tenantID,
 		VehicleID:       req.VehicleID,
 		DriverID:        req.DriverID,
 		StationName:     req.StationName,

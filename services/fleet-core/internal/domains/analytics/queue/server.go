@@ -73,17 +73,17 @@ func (ws *AnalyticsWorkerServer) HandleAnalyticsJobTask(ctx context.Context, t *
 	ws.logger.Info("Processing analytics job task", zap.String("job_id", jobID))
 
 	// 1. Fetch Job Details
-	job, err := ws.repo.GetAnalyticsJob(ctx, jobID, payload.OrganizationID)
+	job, err := ws.repo.GetAnalyticsJob(ctx, jobID, payload.TenantID)
 	if err != nil {
 		ws.logger.Error("Failed to fetch analytics job", zap.String("job_id", jobID), zap.Error(err))
 		return fmt.Errorf("failed to fetch job: %w", err)
 	}
 
 	// 1.1 Tenant Validation (Security Hardening)
-	if job.OrganizationID != payload.OrganizationID {
+	if job.TenantID != payload.TenantID {
 		ws.logger.Error("Tenant mismatch detected in analytics job",
-			zap.String("job_org", job.OrganizationID.String()),
-			zap.String("payload_org", payload.OrganizationID.String()))
+			zap.String("job_org", job.TenantID.String()),
+			zap.String("payload_org", payload.TenantID.String()))
 		return fmt.Errorf("tenant mismatch: %w", asynq.SkipRetry)
 	}
 
@@ -93,7 +93,7 @@ func (ws *AnalyticsWorkerServer) HandleAnalyticsJobTask(ctx context.Context, t *
 		"start_time": time.Now(),
 		"progress":   10.0,
 	}
-	if err := ws.repo.UpdateAnalyticsJob(ctx, jobID, payload.OrganizationID, updates); err != nil {
+	if err := ws.repo.UpdateAnalyticsJob(ctx, jobID, payload.TenantID, updates); err != nil {
 		ws.logger.Error("Failed to update analytics job status to RUNNING", zap.Error(err))
 	}
 
@@ -105,7 +105,7 @@ func (ws *AnalyticsWorkerServer) HandleAnalyticsJobTask(ctx context.Context, t *
 
 	// Milestone Progress 50%
 	updates["progress"] = 50.0
-	_ = ws.repo.UpdateAnalyticsJob(ctx, jobID, payload.OrganizationID, updates)
+	_ = ws.repo.UpdateAnalyticsJob(ctx, jobID, payload.TenantID, updates)
 
 	var resultData interface{}
 
@@ -115,7 +115,7 @@ func (ws *AnalyticsWorkerServer) HandleAnalyticsJobTask(ctx context.Context, t *
 			ws.logger.Error("Failed to process driver behavior job", zap.Error(err))
 			updates["status"] = "failed"
 			updates["error_details"] = err.Error()
-			_ = ws.repo.UpdateAnalyticsJob(ctx, jobID, payload.OrganizationID, updates)
+			_ = ws.repo.UpdateAnalyticsJob(ctx, jobID, payload.TenantID, updates)
 			return err
 		} else {
 			resultData = res
@@ -125,7 +125,7 @@ func (ws *AnalyticsWorkerServer) HandleAnalyticsJobTask(ctx context.Context, t *
 			ws.logger.Error("Failed to process predictive maintenance job", zap.Error(err))
 			updates["status"] = "failed"
 			updates["error_details"] = err.Error()
-			_ = ws.repo.UpdateAnalyticsJob(ctx, jobID, payload.OrganizationID, updates)
+			_ = ws.repo.UpdateAnalyticsJob(ctx, jobID, payload.TenantID, updates)
 			return err
 		} else {
 			resultData = res
@@ -134,13 +134,13 @@ func (ws *AnalyticsWorkerServer) HandleAnalyticsJobTask(ctx context.Context, t *
 		ws.logger.Warn("Unknown analytics job type", zap.String("type", job.Type))
 		updates["status"] = "failed"
 		updates["error_details"] = fmt.Errorf("unknown job type: %s", job.Type).Error()
-		_ = ws.repo.UpdateAnalyticsJob(ctx, jobID, payload.OrganizationID, updates)
+		_ = ws.repo.UpdateAnalyticsJob(ctx, jobID, payload.TenantID, updates)
 		return asynq.SkipRetry
 	}
 
 	// Milestone Progress 90% (Finalizing)
 	updates["progress"] = 90.0
-	_ = ws.repo.UpdateAnalyticsJob(ctx, jobID, payload.OrganizationID, updates)
+	_ = ws.repo.UpdateAnalyticsJob(ctx, jobID, payload.TenantID, updates)
 
 	// Compress and Store Result
 	if resultData != nil {
@@ -162,7 +162,7 @@ func (ws *AnalyticsWorkerServer) HandleAnalyticsJobTask(ctx context.Context, t *
 	updates["status"] = "completed"
 	updates["end_time"] = time.Now()
 	updates["progress"] = 100.0
-	if err := ws.repo.UpdateAnalyticsJob(ctx, jobID, payload.OrganizationID, updates); err != nil {
+	if err := ws.repo.UpdateAnalyticsJob(ctx, jobID, payload.TenantID, updates); err != nil {
 		ws.logger.Error("Failed to update analytics job status to COMPLETED", zap.Error(err))
 		return fmt.Errorf("failed to update status: %w", err)
 	}
@@ -172,18 +172,18 @@ func (ws *AnalyticsWorkerServer) HandleAnalyticsJobTask(ctx context.Context, t *
 	case "driver_behavior":
 		if dID, ok := params["driver_id"].(string); ok {
 			if id, err := uuid.Parse(dID); err == nil {
-				_ = ws.service.InvalidateDriverCache(ctx, id, payload.OrganizationID)
+				_ = ws.service.InvalidateDriverCache(ctx, id, payload.TenantID)
 			}
 		}
 	case "predictive_maintenance":
 		if vID, ok := params["vehicle_id"].(string); ok {
 			if id, err := uuid.Parse(vID); err == nil {
-				_ = ws.service.InvalidateVehicleCache(ctx, id, payload.OrganizationID)
+				_ = ws.service.InvalidateVehicleCache(ctx, id, payload.TenantID)
 			}
 		}
 	}
 	// Always invalidate fleet cache for aggregate dashboards
-	_ = ws.service.InvalidateFleetCache(ctx, payload.OrganizationID)
+	_ = ws.service.InvalidateFleetCache(ctx, payload.TenantID)
 
 	ws.logger.Info("Analytics job completed successfully and cache invalidated", zap.String("job_id", jobID))
 	return nil
@@ -198,7 +198,7 @@ func (ws *AnalyticsWorkerServer) HandleCacheInvalidateTask(ctx context.Context, 
 	}
 
 	ws.logger.Info("Processing cache invalidation task",
-		zap.String("tenant_id", payload.OrganizationID.String()),
+		zap.String("tenant_id", payload.TenantID.String()),
 		zap.String("pattern", payload.Pattern),
 		zap.String("type", payload.ResourceType))
 
@@ -226,7 +226,7 @@ func (ws *AnalyticsWorkerServer) processDriverBehaviorJob(ctx context.Context, j
 	// 1. Fetch historical stats for the last 30 days (default analysis window)
 	endDate := time.Now()
 	startDate := endDate.Add(-30 * 24 * time.Hour)
-	stats, _, err := ws.service.GetDriverDailyStats(ctx, driverID, job.OrganizationID, startDate, endDate, "", 1000)
+	stats, _, err := ws.service.GetDriverDailyStats(ctx, driverID, job.TenantID, startDate, endDate, "", 1000)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch daily stats: %w", err)
 	}
@@ -267,7 +267,7 @@ func (ws *AnalyticsWorkerServer) processDriverBehaviorJob(ctx context.Context, j
 	analytics := &models.DriverBehaviorAnalytics{
 		ID:                  uuid.New().String(),
 		DriverID:            driverID,
-		OrganizationID:      job.OrganizationID,
+		TenantID:      job.TenantID,
 		AnalysisPeriodStart: startDate,
 		AnalysisPeriodEnd:   endDate,
 		TotalDrivingHours:   totalHours,
@@ -296,7 +296,7 @@ func (ws *AnalyticsWorkerServer) processPredictiveMaintenanceJob(ctx context.Con
 	modelID, ok := params["model_id"].(string)
 	if !ok {
 		// Fallback to latest MAINTENANCE model
-		models, _, _ := ws.service.ListPredictiveModels(ctx, job.OrganizationID, utils.Ptr("MAINTENANCE"), utils.Ptr("active"), "", 1, 0)
+		models, _, _ := ws.service.ListPredictiveModels(ctx, job.TenantID, utils.Ptr("MAINTENANCE"), utils.Ptr("active"), "", 1, 0)
 		if len(models) > 0 {
 			modelID = models[0].ID
 		} else {
@@ -307,7 +307,7 @@ func (ws *AnalyticsWorkerServer) processPredictiveMaintenanceJob(ctx context.Con
 	// 1. Prepare Inference Input (Features from most recent stats)
 	endDate := time.Now()
 	startDate := endDate.Add(-7 * 24 * time.Hour)
-	vStats, _, err := ws.service.GetVehicleDailyStats(ctx, vehicleID, job.OrganizationID, startDate, endDate, "", 100)
+	vStats, _, err := ws.service.GetVehicleDailyStats(ctx, vehicleID, job.TenantID, startDate, endDate, "", 100)
 
 	features := map[string]interface{}{
 		"engine_temp":       95.0, // Mocked as we don't have direct points here, but would be avg from vStats
@@ -319,7 +319,7 @@ func (ws *AnalyticsWorkerServer) processPredictiveMaintenanceJob(ctx context.Con
 	}
 
 	// 2. Run Real Inference Engine
-	res, err := ws.service.RunInference(ctx, modelID, vehicleID, job.OrganizationID, features)
+	res, err := ws.service.RunInference(ctx, modelID, vehicleID, job.TenantID, features)
 	if err != nil {
 		return nil, fmt.Errorf("inference failed: %w", err)
 	}
@@ -332,7 +332,7 @@ func (ws *AnalyticsWorkerServer) processPredictiveMaintenanceJob(ctx context.Con
 	analytics := &models.PredictiveMaintenanceAnalytics{
 		ID:               uuid.New().String(),
 		VehicleID:        vehicleID,
-		OrganizationID:   job.OrganizationID,
+		TenantID:   job.TenantID,
 		AnalysisDate:     time.Now(),
 		ReliabilityScore: rulScore,
 		FailurePrediction: &models.FailurePrediction{

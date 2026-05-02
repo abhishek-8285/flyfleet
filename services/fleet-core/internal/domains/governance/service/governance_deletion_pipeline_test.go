@@ -31,7 +31,7 @@ func TestDeletionService_ProcessDeletionRequest_LegalHold(t *testing.T) {
 
 	req := &models.GovernanceRequest{
 		ID:             requestID,
-		OrganizationID: tenantID,
+		TenantID: tenantID,
 		RequesterID:    userID,
 		RequestType:    models.RequestTypeDeletion,
 		Status:         models.RequestStatusApproved,

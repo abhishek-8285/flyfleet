@@ -281,7 +281,7 @@ func (r *FinanceRepository) CreateFraudIncident(ctx context.Context, inc *models
 
 // GetRecentFuelLogsForFraud returns fuel logs updated since the given time.
 func (r *FinanceRepository) GetRecentFuelLogsForFraud(ctx context.Context, since time.Time) ([]fuelModels.FuelLog, error) {
-	query := `SELECT id, organization_id, vehicle_id, driver_id, station_name, fuel_type,
+	query := `SELECT id, tenant_id, vehicle_id, driver_id, station_name, fuel_type,
 	                 quantity, unit_price, total_cost, odometer, transaction_date,
 	                 status, gst_number, gst_rate, gst_amount, invoice_number, vendor_gstin,
 	                 receipt_url, notes, anomaly_flag, anomaly_reason, created_by, created_at, updated_at
@@ -297,7 +297,7 @@ func (r *FinanceRepository) GetRecentFuelLogsForFraud(ctx context.Context, since
 	for rows.Next() {
 		var log fuelModels.FuelLog
 		if err := rows.Scan(
-			&log.ID, &log.OrganizationID, &log.VehicleID, &log.DriverID, &log.StationName, &log.FuelType,
+			&log.ID, &log.TenantID, &log.VehicleID, &log.DriverID, &log.StationName, &log.FuelType,
 			&log.Quantity, &log.UnitPrice, &log.TotalCost, &log.Odometer, &log.TransactionDate,
 			&log.Status, &log.GSTNumber, &log.GSTRate, &log.GSTAmount, &log.InvoiceNumber, &log.VendorGSTIN,
 			&log.ReceiptURL, &log.Notes, &log.AnomalyFlag, &log.AnomalyReason, &log.CreatedBy, &log.CreatedAt, &log.UpdatedAt,

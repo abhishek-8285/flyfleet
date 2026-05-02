@@ -47,7 +47,7 @@ func (h *GovernanceHandler) CreateRequest(w http.ResponseWriter, r *http.Request
 		if userID == uuid.Nil {
 			h.logger.Warn("Missing user_id in context - request likely bypassed authentication middleware")
 		}
-		h.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized: valid organization and user context required")
+		h.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized: valid tenant and user context required")
 		return
 	}
 
@@ -70,7 +70,7 @@ func (h *GovernanceHandler) GetRequest(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		h.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized: organization context required")
+		h.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized: tenant context required")
 		return
 	}
 
@@ -97,13 +97,13 @@ func (h *GovernanceHandler) ListRequests(w http.ResponseWriter, r *http.Request)
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		h.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized: organization context required")
+		h.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized: tenant context required")
 		return
 	}
 
 	query := r.URL.Query()
 	filter := models.GovernanceRequestFilter{
-		OrganizationID: tenantID,
+		TenantID: tenantID,
 		Search:         query.Get("search"),
 	}
 
@@ -138,7 +138,7 @@ func (h *GovernanceHandler) ApproveRequest(w http.ResponseWriter, r *http.Reques
 		if userID == uuid.Nil {
 			h.logger.Warn("Missing user_id in context - request likely bypassed authentication middleware")
 		}
-		h.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized: valid organization and user context required")
+		h.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized: valid tenant and user context required")
 		return
 	}
 
@@ -185,7 +185,7 @@ func (h *GovernanceHandler) RejectRequest(w http.ResponseWriter, r *http.Request
 		if userID == uuid.Nil {
 			h.logger.Warn("Missing user_id in context - request likely bypassed authentication middleware")
 		}
-		h.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized: valid organization and user context required")
+		h.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized: valid tenant and user context required")
 		return
 	}
 
@@ -232,7 +232,7 @@ func (h *GovernanceHandler) VerifyRequest(w http.ResponseWriter, r *http.Request
 		if userID == uuid.Nil {
 			h.logger.Warn("Missing user_id in context - request likely bypassed authentication middleware")
 		}
-		h.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized: valid organization and user context required")
+		h.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized: valid tenant and user context required")
 		return
 	}
 
@@ -270,7 +270,7 @@ func (h *GovernanceHandler) GetSettings(w http.ResponseWriter, r *http.Request) 
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		h.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized: organization context required")
+		h.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized: tenant context required")
 		return
 	}
 
@@ -293,7 +293,7 @@ func (h *GovernanceHandler) UpdateSettings(w http.ResponseWriter, r *http.Reques
 		if userID == uuid.Nil {
 			h.logger.Warn("Missing user_id in context - request likely bypassed authentication middleware")
 		}
-		h.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized: valid organization and user context required")
+		h.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized: valid tenant and user context required")
 		return
 	}
 
@@ -315,7 +315,7 @@ func (h *GovernanceHandler) GetDownloadLink(w http.ResponseWriter, r *http.Reque
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		h.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized: organization context required")
+		h.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized: tenant context required")
 		return
 	}
 
@@ -389,7 +389,7 @@ func (h *GovernanceHandler) GenerateAccessReview(w http.ResponseWriter, r *http.
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		h.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized: organization context required")
+		h.writeErrorResponse(w, http.StatusUnauthorized, "unauthorized: tenant context required")
 		return
 	}
 

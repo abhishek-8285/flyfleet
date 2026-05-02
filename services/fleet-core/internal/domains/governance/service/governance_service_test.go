@@ -113,7 +113,7 @@ func TestExpireRequests(t *testing.T) {
 	svc := NewGovernanceService(mockRepo, nil, zap.NewNop())
 
 	expiredInfo := []models.ExpiredRequestInfo{
-		{ID: uuid.New(), OrganizationID: uuid.New()},
+		{ID: uuid.New(), TenantID: uuid.New()},
 	}
 
 	mockRepo.On("ExpireRequests", mock.Anything).Return(expiredInfo, nil)

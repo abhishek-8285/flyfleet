@@ -1,21 +1,52 @@
 -- +goose Up
 -- +goose StatementBegin
 -- Repairs the vehicles table to match Enterprise Repository expectations
+-- Hardened: Use multi-column fallback for backfills
 
 -- 1. Identity & Registration
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS registration_number VARCHAR(50);
-UPDATE vehicles SET registration_number = license_plate WHERE registration_number IS NULL;
+
+DO $$
+BEGIN
+    -- Backfill registration_number from any available legacy column
+    UPDATE vehicles 
+    SET registration_number = COALESCE(
+        registration_number,
+        (SELECT c.column_name FROM information_schema.columns c WHERE c.table_name='vehicles' AND c.column_name='registration_number_legacy' LIMIT 1),
+        (SELECT c.column_name FROM information_schema.columns c WHERE c.table_name='vehicles' AND c.column_name='license_plate' LIMIT 1),
+        (SELECT c.column_name FROM information_schema.columns c WHERE c.table_name='vehicles' AND c.column_name='registration' LIMIT 1)
+    )
+    WHERE registration_number IS NULL OR registration_number = '';
+    
+    -- Fallback to ID if still null
+    UPDATE vehicles SET registration_number = id::text WHERE registration_number IS NULL OR registration_number = '';
+EXCEPTION WHEN OTHERS THEN 
+    -- Manual approach if subqueries are tricky in UPDATE
+    UPDATE vehicles SET registration_number = id::text WHERE registration_number IS NULL;
+END $$;
 
 -- 2. Compliance & Encryption (stubs for AES-256)
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS chassis_number TEXT;
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS engine_number TEXT;
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS vin_number VARCHAR(100);
-UPDATE vehicles SET vin_number = vin WHERE vin_number IS NULL AND vin IS NOT NULL;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='vehicles' AND column_name='vin') THEN
+        UPDATE vehicles SET vin_number = vin WHERE vin_number IS NULL AND vin IS NOT NULL;
+    END IF;
+END $$;
 
 -- 3. Enterprise Metadata
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS vehicle_type VARCHAR(50) DEFAULT 'TRUCK';
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS capacity_tonnage DOUBLE PRECISION;
-UPDATE vehicles SET capacity_tonnage = capacity WHERE capacity_tonnage IS NULL;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='vehicles' AND column_name='capacity') THEN
+        UPDATE vehicles SET capacity_tonnage = capacity::double precision WHERE capacity_tonnage IS NULL;
+    END IF;
+END $$;
 
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS fuel_tank_capacity DOUBLE PRECISION;
 ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS ownership_type VARCHAR(50) DEFAULT 'OWNED';

@@ -34,7 +34,7 @@ func (s *GSTIntegrationServiceImpl) VerifyGSTIN(ctx context.Context, tenantID uu
 	// Mock GST Portal API Call
 	compliance := &models.GSTCompliance{
 		ID:                 uuid.New().String(),
-		OrganizationID:     tenantID,
+		TenantID:     tenantID,
 		GSTIN:              gstin,
 		Status:             "active",
 		LegalName:          "Mock Legal Name",
@@ -51,7 +51,7 @@ func (s *GSTIntegrationServiceImpl) VerifyGSTIN(ctx context.Context, tenantID uu
 		RequestPayload:  map[string]string{"gstin": gstin},
 		ResponsePayload: compliance,
 		Status:          200,
-		OrganizationID:  &tenantID,
+		TenantID:  &tenantID,
 	}
 	_ = s.repo.CreateIntegrationLog(ctx, log)
 

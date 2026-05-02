@@ -12,7 +12,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useUIStrings } from "../../hooks/useUIStrings";
 import apiClient from "../../services/apiClient";
 
-interface Organization {
+interface Tenant {
   id: string;
   name: string;
   domain: string;
@@ -22,7 +22,7 @@ interface Organization {
   nextBillingDate?: string;
 }
 
-interface OrgMetrics {
+interface TenantMetrics {
   total_users: number;
   total_vehicles: number;
   total_devices: number;
@@ -34,8 +34,8 @@ interface OrgMetrics {
 export const OrganizationDetail: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [org, setOrg] = useState<Organization | null>(null);
-  const [metrics, setMetrics] = useState<OrgMetrics | null>(null);
+  const [tenant, setTenant] = useState<Tenant | null>(null);
+  const [metrics, setMetrics] = useState<TenantMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [systemMeta, setSystemMeta] = useState<any>(null);
   const { uiStrings } = useUIStrings("admin_orgs");
@@ -51,11 +51,11 @@ export const OrganizationDetail: React.FC = () => {
     const fetchOrg = async () => {
       try {
         const res = (await apiClient.get(
-          `/admin/organizations?id=${id}`,
+          `/admin/tenants?id=${id}`,
         )) as any;
-        setOrg(res.data);
+        setTenant(res.data);
       } catch (error) {
-        console.error("Failed to fetch org:", error);
+        console.error("Failed to fetch tenant:", error);
       } finally {
         setLoading(false);
       }
@@ -63,7 +63,7 @@ export const OrganizationDetail: React.FC = () => {
 
     const fetchMetrics = async () => {
       try {
-        // Fetch real organization metrics from various services
+        // Fetch real tenant metrics from various services
         const [usersRes, vehiclesRes, devicesRes, tripsRes] =
           await Promise.allSettled([
             // Fetch total users for this organization
@@ -134,10 +134,10 @@ export const OrganizationDetail: React.FC = () => {
         {uiStrings?.detail_loading || "Loading workspace intelligence..."}
       </div>
     );
-  if (!org)
+  if (!tenant)
     return (
       <div className="p-12 text-center text-red-500">
-        {uiStrings?.detail_error || "Organization profile not found."}
+        {uiStrings?.detail_error || "Tenant profile not found."}
       </div>
     );
 
@@ -146,7 +146,7 @@ export const OrganizationDetail: React.FC = () => {
       {/* Action Bar */}
       <div className="flex justify-between items-center bg-white/50 backdrop-blur-md p-4 rounded-2xl border border-white/20 shadow-sm sticky top-4 z-10">
         <button
-          onClick={() => navigate("/admin/organizations")}
+          onClick={() => navigate("/admin/tenants")}
           className="flex items-center space-x-2 text-slate-500 hover:text-blue-600 transition-colors group"
         >
           <ArrowLeftIcon className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
@@ -156,14 +156,14 @@ export const OrganizationDetail: React.FC = () => {
         </button>
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => navigate(`/admin/organizations/${id}/settings`)}
+            onClick={() => navigate(`/admin/tenants/${id}/settings`)}
             className="p-2 text-slate-400 hover:text-slate-800 transition-colors"
             title="Configuration"
           >
             <Cog6ToothIcon className="h-6 w-6" />
           </button>
           <button
-            onClick={() => navigate(`/admin/organizations/${id}/edit`)}
+            onClick={() => navigate(`/admin/tenants/${id}/edit`)}
             className="flex items-center space-x-2 bg-slate-900 text-white px-5 py-2 rounded-xl hover:bg-black transition-all shadow-lg"
           >
             <PencilIcon className="h-4 w-4" />
@@ -178,9 +178,9 @@ export const OrganizationDetail: React.FC = () => {
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-10 text-white relative overflow-hidden shadow-2xl">
             <div className="relative z-10">
               <span className="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-xs font-bold uppercase tracking-widest border border-blue-500/30">
-                {org.status}
+                {tenant.status}
               </span>
-              <h1 className="text-5xl font-black mt-4">{org.name}</h1>
+              <h1 className="text-5xl font-black mt-4">{tenant.name}</h1>
               <p className="text-slate-400 mt-2 flex items-center">
                 <ShieldCheckIcon className="h-4 w-4 mr-2" />
                 {uiStrings?.detail_domain || "Custom Domain:"}{" "}
@@ -292,7 +292,7 @@ export const OrganizationDetail: React.FC = () => {
             </h3>
             <p className="text-xs text-blue-100 opacity-80">
               {uiStrings?.next_billing || "Next billing on"}{" "}
-              {org?.nextBillingDate || "--"}
+              {tenant?.nextBillingDate || "--"}
             </p>
             <div className="mt-4 pt-4 border-t border-white/10 flex justify-between items-center">
               <span className="text-sm font-semibold">
@@ -326,7 +326,7 @@ export const OrganizationDetail: React.FC = () => {
         </div>
         <div className="p-12 text-center text-slate-400 italic">
           {uiStrings?.tab_select_desc ||
-            "Select a tab to view detailed records for this organization."}
+            "Select a tab to view detailed records for this tenant."}
         </div>
       </div>
     </div>

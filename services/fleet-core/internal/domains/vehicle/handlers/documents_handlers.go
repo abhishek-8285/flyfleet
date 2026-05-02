@@ -43,7 +43,7 @@ func (h *DocumentHandlers) UploadDocument(w http.ResponseWriter, r *http.Request
 
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeError(w, http.StatusUnauthorized, "Organization ID required")
+		h.writeError(w, http.StatusUnauthorized, "Tenant ID required")
 		return
 	}
 
@@ -82,7 +82,7 @@ func (h *DocumentHandlers) ListDocuments(w http.ResponseWriter, r *http.Request)
 
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeError(w, http.StatusUnauthorized, "Organization ID required")
+		h.writeError(w, http.StatusUnauthorized, "Tenant ID required")
 		return
 	}
 
@@ -108,7 +108,7 @@ func (h *DocumentHandlers) VerifyDocumentHash(w http.ResponseWriter, r *http.Req
 
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeError(w, http.StatusUnauthorized, "Organization ID required")
+		h.writeError(w, http.StatusUnauthorized, "Tenant ID required")
 		return
 	}
 

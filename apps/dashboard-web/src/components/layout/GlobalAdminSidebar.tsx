@@ -78,8 +78,8 @@ export const GlobalAdminSidebar: React.FC = () => {
         items: [],
       },
       {
-        title: 'Organizations',
-        path: '/admin/organizations',
+        title: 'Tenants',
+        path: '/admin/tenants',
         icon: 'business',
         roles: ['super_admin'],
         items: [],

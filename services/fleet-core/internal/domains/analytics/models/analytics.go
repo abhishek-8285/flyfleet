@@ -9,7 +9,7 @@ import (
 // PredictiveModel represents a trained ML model for predictive analytics
 type PredictiveModel struct {
 	ID                string    `json:"id"`
-	OrganizationID    uuid.UUID `json:"organization_id" validate:"required"`
+	TenantID          uuid.UUID `json:"tenant_id" validate:"required"`
 	Name              string    `json:"name" validate:"required,min=3,max=100"`
 	Version           string    `json:"version" validate:"required,semver"`
 	ModelType         string    `json:"model_type" validate:"required,oneof=regression classification clustering"`
@@ -40,7 +40,7 @@ type PredictiveModel struct {
 
 // MLFeatureStore represents a reusable feature vector for ML (Phase 8: Versioned)
 type MLFeatureStore struct {
-	OrganizationID   uuid.UUID `json:"organization_id"`
+	TenantID         uuid.UUID `json:"tenant_id"`
 	EntityType       string    `json:"entity_type"` // VEHICLE, DRIVER
 	EntityID         uuid.UUID `json:"entity_id"`
 	FeatureName      string    `json:"feature_name"`
@@ -55,7 +55,7 @@ type MLFeatureStore struct {
 type ModelDeployment struct {
 	ID                 string    `json:"id"`
 	ModelID            string    `json:"model_id" validate:"required,uuid4"`
-	OrganizationID     uuid.UUID `json:"organization_id" validate:"required"`
+	TenantID           uuid.UUID `json:"tenant_id" validate:"required"`
 	DeploymentStrategy string    `json:"deployment_strategy" validate:"required,oneof=standard ab shadow"`
 	TrafficSplit       float64   `json:"traffic_split" validate:"gte=0,lte=100"` // Percentage for A/B
 	IsActive           bool      `json:"is_active"`
@@ -67,7 +67,7 @@ type ModelDeployment struct {
 type DriverRiskEvent struct {
 	ID             string    `json:"id"`
 	DriverID       uuid.UUID `json:"driver_id" validate:"required"`
-	OrganizationID uuid.UUID `json:"organization_id" validate:"required"`
+	TenantID       uuid.UUID `json:"tenant_id" validate:"required"`
 	RiskType       string    `json:"risk_type" validate:"required"` // HARSH_BRAKE, OVERSPEED, etc.
 	ScoreDelta     float64   `json:"score_delta"`
 	Metadata       string    `json:"metadata"` // JSON string for lat/long/trip_id
@@ -77,7 +77,7 @@ type DriverRiskEvent struct {
 
 // AnalyticsQuota tracks organization-level compute credits (ACU)
 type AnalyticsQuota struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
+	TenantID       uuid.UUID `json:"tenant_id"`
 	DailyLimit     int64     `json:"daily_limit"`
 	UsedCredits    int64     `json:"used_credits"`
 	LastResetAt    time.Time `json:"last_reset_at"`
@@ -95,7 +95,7 @@ type PredictionResult struct {
 	AnomalyDetected   bool                   `json:"anomaly_detected"`
 	AnomalyScore      *float64               `json:"anomaly_score,omitempty" validate:"omitempty,gte=0,lte=1"`
 	Explanation       string                 `json:"explanation,omitempty" validate:"max=1000"`
-	OrganizationID    uuid.UUID              `json:"organization_id" validate:"required"`
+	TenantID          uuid.UUID              `json:"tenant_id" validate:"required"`
 	RequestID         string                 `json:"request_id" validate:"omitempty,uuid4"`
 	PredictedAt       time.Time              `json:"predicted_at" validate:"required"`
 	CreatedAt         time.Time              `json:"created_at"`
@@ -105,7 +105,7 @@ type PredictionResult struct {
 // AnalyticsQueryPlan represents a slow query plan for optimization (Phase 10)
 type AnalyticsQueryPlan struct {
 	ID                string                 `json:"id"`
-	OrganizationID    uuid.UUID              `json:"organization_id"`
+	TenantID          uuid.UUID              `json:"tenant_id"`
 	QueryType         string                 `json:"query_type"`
 	QueryParams       map[string]interface{} `json:"query_params"`
 	ExecutionDuration int64                  `json:"execution_duration_ms"`
@@ -129,7 +129,7 @@ type AnalyticsJob struct {
 	Progress          float64                `json:"progress" validate:"gte=0,lte=100"`
 	ErrorDetails      *string                `json:"error_details,omitempty"`
 	ResultKey         *string                `json:"result_key,omitempty"` // Redis/Storage key for compressed results
-	OrganizationID    uuid.UUID              `json:"organization_id" validate:"required"`
+	TenantID          uuid.UUID              `json:"tenant_id" validate:"required"`
 	IdempotencyKey    string                 `json:"idempotency_key,omitempty"` // For Phase 9 deduplication
 	CreatedBy         uuid.UUID              `json:"created_by" validate:"required"`
 	CreatedAt         time.Time              `json:"created_at"`
@@ -139,7 +139,7 @@ type AnalyticsJob struct {
 // FleetAnalytics represents aggregated analytics for fleet operations
 type FleetAnalytics struct {
 	ID                    string    `json:"id"`
-	OrganizationID        uuid.UUID `json:"organization_id" validate:"required"`
+	TenantID              uuid.UUID `json:"tenant_id" validate:"required"`
 	StartDate             time.Time `json:"start_date" validate:"required,lte"`
 	EndDate               time.Time `json:"end_date" validate:"required,gtfield=StartDate"`
 	TotalVehicles         int       `json:"total_vehicles" validate:"gte=0"`
@@ -175,7 +175,7 @@ type FleetAnalytics struct {
 type DriverBehaviorAnalytics struct {
 	ID                          string    `json:"id"`
 	DriverID                    uuid.UUID `json:"driver_id" validate:"required"`
-	OrganizationID              uuid.UUID `json:"organization_id" validate:"required"`
+	TenantID                    uuid.UUID `json:"tenant_id" validate:"required"`
 	AnalysisPeriodStart         time.Time `json:"analysis_period_start" validate:"required"`
 	AnalysisPeriodEnd           time.Time `json:"analysis_period_end" validate:"required"`
 	TotalDrivingHours           float64   `json:"total_driving_hours" validate:"gte=0"`
@@ -205,7 +205,7 @@ type DriverBehaviorAnalytics struct {
 type PredictiveMaintenanceAnalytics struct {
 	ID                  string                     `json:"id"`
 	VehicleID           uuid.UUID                  `json:"vehicle_id" validate:"required"`
-	OrganizationID      uuid.UUID                  `json:"organization_id" validate:"required"`
+	TenantID            uuid.UUID                  `json:"tenant_id" validate:"required"`
 	AnalysisDate        time.Time                  `json:"analysis_date" validate:"required"`
 	NextServiceDue      time.Time                  `json:"next_service_due"`
 	ServicePriority     string                     `json:"service_priority" validate:"omitempty,oneof=high medium low"`
@@ -316,7 +316,7 @@ type UpdatePredictiveMaintenanceAnalyticsRequest struct {
 // VehicleDailyStats represents pre-aggregated daily metrics for a vehicle
 type VehicleDailyStats struct {
 	VehicleID              uuid.UUID `json:"vehicle_id"`
-	OrganizationID         uuid.UUID `json:"organization_id"`
+	TenantID               uuid.UUID `json:"tenant_id"`
 	Date                   time.Time `json:"date"`
 	TotalDistance          float64   `json:"total_distance"`
 	TotalFuelConsumed      float64   `json:"total_fuel_consumed"`
@@ -335,7 +335,7 @@ type VehicleDailyStats struct {
 // DriverDailyStats represents pre-aggregated daily metrics for a driver
 type DriverDailyStats struct {
 	DriverID          uuid.UUID `json:"driver_id"`
-	OrganizationID    uuid.UUID `json:"organization_id"`
+	TenantID          uuid.UUID `json:"tenant_id"`
 	Date              time.Time `json:"date"`
 	TotalDrivingHours float64   `json:"total_driving_hours"`
 	TotalDistance     float64   `json:"total_distance"`
@@ -350,7 +350,7 @@ type DriverDailyStats struct {
 
 // FleetHourlyStats represents pre-aggregated hourly metrics for the fleet
 type FleetHourlyStats struct {
-	OrganizationID     uuid.UUID `json:"organization_id"`
+	TenantID           uuid.UUID `json:"tenant_id"`
 	Timestamp          time.Time `json:"timestamp"`
 	ActiveVehicles     int       `json:"active_vehicles"`
 	TotalDistance      float64   `json:"total_distance"`
@@ -363,7 +363,7 @@ type FleetHourlyStats struct {
 // AnalyticsQueryLog represents an audit log entry for an analytics query
 type AnalyticsQueryLog struct {
 	ID             uuid.UUID              `json:"id"`
-	OrganizationID uuid.UUID              `json:"organization_id"`
+	TenantID       uuid.UUID              `json:"tenant_id"`
 	UserID         *uuid.UUID             `json:"user_id,omitempty"`
 	QueryType      string                 `json:"query_type"`
 	Parameters     map[string]interface{} `json:"parameters"`
@@ -377,7 +377,7 @@ type AnalyticsQueryLog struct {
 // AnalyticsAccessLog provides high-fidelity tracking of analytics usage (Phase 11)
 type AnalyticsAccessLog struct {
 	ID             uuid.UUID              `json:"id"`
-	OrganizationID uuid.UUID              `json:"organization_id"`
+	TenantID       uuid.UUID              `json:"tenant_id"`
 	UserID         uuid.UUID              `json:"user_id"`
 	ResourceID     string                 `json:"resource_id"`   // e.g., model_id, report_id
 	ResourceType   string                 `json:"resource_type"` // MODEL, REPORT, KPI
@@ -390,7 +390,7 @@ type AnalyticsAccessLog struct {
 // MaterializedFleetReport stores summarized data for executive dashboards (Phase 11)
 type MaterializedFleetReport struct {
 	ID             string    `json:"id"`
-	OrganizationID uuid.UUID `json:"organization_id"`
+	TenantID       uuid.UUID `json:"tenant_id"`
 	ReportType     string    `json:"report_type"` // MONTHLY_SUMMARY, QUARTERLY_RISK
 	MetricKey      string    `json:"metric_key"`
 	MetricValue    float64   `json:"metric_value"`

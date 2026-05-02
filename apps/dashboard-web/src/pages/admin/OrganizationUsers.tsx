@@ -33,7 +33,7 @@ export const OrganizationUsers: React.FC = () => {
   };
 
   const handleDelete = async (user: User) => {
-    if (!window.confirm(`Are you sure you want to remove ${user.name || user.email} from this organization?`)) {
+    if (!window.confirm(`Are you sure you want to remove ${user.name || user.email} from this tenant?`)) {
       return;
     }
     try {
@@ -128,7 +128,7 @@ export const OrganizationUsers: React.FC = () => {
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-white text-3xl font-bold mb-1 tracking-tight">
-          {uiStrings?.title || "Organization Identity"}
+          {uiStrings?.title || "Tenant Identity"}
         </h1>
         <p className="text-text-muted text-sm max-w-2xl leading-relaxed">
           {uiStrings?.subtitle || "Manage your mission control team. Add, remove, or modify user access across your fleet operations center."}

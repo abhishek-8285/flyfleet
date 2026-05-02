@@ -119,7 +119,7 @@ func (h *VehicleHandlers) CreateVehicle(w http.ResponseWriter, r *http.Request) 
 	// Get Organization ID from context (set by auth middleware)
 	tenantID := h.getTenantID(r.Context())
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found in context", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID not found in context", nil)
 		return
 	}
 
@@ -215,7 +215,7 @@ func (h *VehicleHandlers) ListVehicles(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if tenantID == uuid.Nil && role != "super_admin" {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization context required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant context required", nil)
 		return
 	}
 
@@ -312,7 +312,7 @@ func (h *VehicleHandlers) DeleteVehicle(w http.ResponseWriter, r *http.Request) 
 
 	tenantID := h.getTenantID(r.Context())
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return
 	}
 
@@ -340,7 +340,7 @@ func (h *VehicleHandlers) AssignDriver(w http.ResponseWriter, r *http.Request) {
 
 	tenantID := h.getTenantID(r.Context())
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return
 	}
 
@@ -370,7 +370,7 @@ func (h *VehicleHandlers) UnassignDriver(w http.ResponseWriter, r *http.Request)
 
 	tenantID := h.getTenantID(r.Context())
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return
 	}
 

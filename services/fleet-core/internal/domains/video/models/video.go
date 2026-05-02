@@ -12,7 +12,7 @@ type VideoStream struct {
 	CameraID         string     `json:"camera_id"`
 	VehicleID        uuid.UUID  `json:"vehicle_id"`
 	DriverID         uuid.UUID  `json:"driver_id"`
-	OrganizationID   uuid.UUID  `json:"organization_id"`
+	TenantID         uuid.UUID  `json:"tenant_id"`
 	URL              string     `json:"url"`
 	Status           string     `json:"status"`     // active, inactive, error
 	Resolution       string     `json:"resolution"` // e.g., "1080p", "720p"
@@ -34,7 +34,7 @@ type VideoRecording struct {
 	CameraID       string    `json:"camera_id"`
 	VehicleID      uuid.UUID `json:"vehicle_id"`
 	DriverID       uuid.UUID `json:"driver_id"`
-	OrganizationID uuid.UUID `json:"organization_id"`
+	TenantID       uuid.UUID `json:"tenant_id"`
 	Filename       string    `json:"filename"`
 	Filepath       string    `json:"filepath"`
 	FileSize       int64     `json:"file_size"` // in bytes
@@ -130,7 +130,7 @@ type Location struct {
 // VideoRetentionPolicy represents retention settings
 type VideoRetentionPolicy struct {
 	ID              string    `json:"id"`
-	OrganizationID  uuid.UUID `json:"organization_id"`
+	TenantID        uuid.UUID `json:"tenant_id"`
 	Name            string    `json:"name"`
 	Description     string    `json:"description"`
 	EventType       *string   `json:"event_type,omitempty"` // Apply only to specific events

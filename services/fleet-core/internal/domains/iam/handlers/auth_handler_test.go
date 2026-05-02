@@ -185,7 +185,7 @@ func TestResponse_AuthTokensResponse(t *testing.T) {
 		User: models.UserInfo{
 			Email:       "user@example.com",
 			Name:        "Test User",
-			OrgName:     "Acme Corp",
+			TenantName:  "Acme Corp",
 			Permissions: []string{"vehicle:read", "driver:read"},
 		},
 	}
@@ -201,13 +201,13 @@ func TestResponse_AuthTokensResponse(t *testing.T) {
 	assert.Len(t, parsed.User.Permissions, 2)
 }
 
-func TestResponse_OrgSwitchResponse(t *testing.T) {
-	resp := models.OrgSwitchResponse{
+func TestResponse_TenantSwitchResponse(t *testing.T) {
+	resp := models.TenantSwitchResponse{
 		Success:      true,
 		AccessToken:  "new-token",
 		RefreshToken: "new-refresh",
 		ExpiresIn:    3600,
-		Organization: models.OrgInfo{
+		Tenant: models.TenantInfo{
 			Name:         "Beta Fleet",
 			Role:         "fleet_manager",
 			VehicleCount: 12,
@@ -217,19 +217,19 @@ func TestResponse_OrgSwitchResponse(t *testing.T) {
 	data, err := json.Marshal(resp)
 	require.NoError(t, err)
 
-	var parsed models.OrgSwitchResponse
+	var parsed models.TenantSwitchResponse
 	err = json.Unmarshal(data, &parsed)
 	require.NoError(t, err)
 	assert.True(t, parsed.Success)
-	assert.Equal(t, "Beta Fleet", parsed.Organization.Name)
-	assert.Equal(t, 12, parsed.Organization.VehicleCount)
+	assert.Equal(t, "Beta Fleet", parsed.Tenant.Name)
+	assert.Equal(t, 12, parsed.Tenant.VehicleCount)
 }
 
 func TestResponse_IdentifyResponse(t *testing.T) {
 	resp := models.IdentifyResponse{
 		Exists:        true,
 		EmailVerified: true,
-		Organizations: []models.OrgInfo{
+		Tenants: []models.TenantInfo{
 			{Name: "Alpha Fleet", Role: "admin", VehicleCount: 45},
 			{Name: "Beta Fleet", Role: "fleet_manager", VehicleCount: 12},
 		},
@@ -247,8 +247,8 @@ func TestResponse_IdentifyResponse(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, parsed.Exists)
 	assert.True(t, parsed.EmailVerified)
-	assert.Len(t, parsed.Organizations, 2)
-	assert.Equal(t, "Alpha Fleet", parsed.Organizations[0].Name)
+	assert.Len(t, parsed.Tenants, 2)
+	assert.Equal(t, "Alpha Fleet", parsed.Tenants[0].Name)
 	assert.Len(t, parsed.MFAMethods, 2)
 }
 

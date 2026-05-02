@@ -22,13 +22,13 @@ var (
 )
 
 type Inviter interface {
-	SendInvitation(ctx context.Context, to, token, message, orgName, inviterName string) error
+	SendInvitation(ctx context.Context, to, token, message, tenantName, inviterName string) error
 }
 
 type InvitationService struct {
 	invitationRepo *repository.InvitationRepository
 	userRepo       *repository.UserRepository
-	orgRepo        *repository.OrgRepository
+	tenantRepo     *repository.TenantRepository
 	roleRepo       *repository.RoleRepository
 	auditRepo      *repository.AuditRepository
 	emailer        Inviter
@@ -38,7 +38,7 @@ type InvitationService struct {
 func NewInvitationService(
 	invitationRepo *repository.InvitationRepository,
 	userRepo *repository.UserRepository,
-	orgRepo *repository.OrgRepository,
+	tenantRepo *repository.TenantRepository,
 	roleRepo *repository.RoleRepository,
 	auditRepo *repository.AuditRepository,
 	emailer Inviter,
@@ -47,7 +47,7 @@ func NewInvitationService(
 	return &InvitationService{
 		invitationRepo: invitationRepo,
 		userRepo:       userRepo,
-		orgRepo:        orgRepo,
+		tenantRepo:     tenantRepo,
 		roleRepo:       roleRepo,
 		auditRepo:      auditRepo,
 		emailer:        emailer,
@@ -66,8 +66,8 @@ func (s *InvitationService) CreateInvite(ctx context.Context, tenantID, invitedB
 		return nil, ErrDuplicateInvite
 	}
 
-	// Get org info for email
-	org, err := s.orgRepo.GetOrgByID(ctx, tenantID)
+	// Get tenant info for email
+	tenant, err := s.tenantRepo.GetTenantByID(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (s *InvitationService) CreateInvite(ctx context.Context, tenantID, invitedB
 	go func() {
 		emailCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		if err := s.emailer.SendInvitation(emailCtx, email, inv.Token, message, org.Name, inviterName); err != nil {
+		if err := s.emailer.SendInvitation(emailCtx, email, inv.Token, message, tenant.Name, inviterName); err != nil {
 			s.log.Error("failed to send invitation email",
 				zap.String("email", email),
 				zap.Error(err),
@@ -214,10 +214,10 @@ func (s *InvitationService) ResendInvite(ctx context.Context, inviteID, actorID 
 	}
 
 	// Re-send email
-	org, err := s.orgRepo.GetOrgByID(ctx, found.TenantID)
-	orgName := ""
-	if err == nil && org != nil {
-		orgName = org.Name
+	tenant, err := s.tenantRepo.GetTenantByID(ctx, found.TenantID)
+	tenantName := ""
+	if err == nil && tenant != nil {
+		tenantName = tenant.Name
 	}
 
 	inviter, err := s.userRepo.GetByID(ctx, actorID)
@@ -229,7 +229,7 @@ func (s *InvitationService) ResendInvite(ctx context.Context, inviteID, actorID 
 	go func() {
 		emailCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		if err := s.emailer.SendInvitation(emailCtx, found.Email, found.Token, found.Message, orgName, inviterName); err != nil {
+		if err := s.emailer.SendInvitation(emailCtx, found.Email, found.Token, found.Message, tenantName, inviterName); err != nil {
 			s.log.Error("failed to resend invitation email", zap.Error(err))
 		}
 	}()

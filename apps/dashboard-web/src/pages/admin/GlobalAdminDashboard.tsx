@@ -22,12 +22,12 @@ interface AdminMetrics {
     integration_failures: number;
   };
   operational_metrics: {
-    active_orgs: number;
+    active_tenants: number;
     active_fleet: number;
     connected_devices: number;
     active_users_today: number;
-    total_orgs: number;
-    new_orgs_today: number;
+    total_tenants: number;
+    new_tenants_today: number;
     total_vehicles: number;
     vehicles_offline: number;
     devices_offline: number;
@@ -222,8 +222,8 @@ export const GlobalAdminDashboard: React.FC = () => {
         <div className="lg:col-span-2 grid grid-cols-2 gap-4">
           {[
             {
-              label: "Active Organizations",
-              val: metrics?.operational_metrics?.total_orgs,
+              label: "Active Tenants",
+              val: metrics?.operational_metrics?.total_tenants,
               icon: "corporate_fare",
               color: "blue",
             },

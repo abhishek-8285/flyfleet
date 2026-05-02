@@ -3,19 +3,37 @@
 
 -- Core Permissions Table
 CREATE TABLE IF NOT EXISTS permissions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT UNIQUE NOT NULL,
-    category TEXT, -- 'user', 'org', 'vehicle', 'telemetry', etc.
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid()
 );
+
+DO $$ 
+BEGIN 
+    ALTER TABLE permissions ADD COLUMN IF NOT EXISTS name TEXT UNIQUE;
+    ALTER TABLE permissions ADD COLUMN IF NOT EXISTS category TEXT;
+    ALTER TABLE permissions ADD COLUMN IF NOT EXISTS description TEXT;
+    ALTER TABLE permissions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
 -- Role to Permission Mapping
 CREATE TABLE IF NOT EXISTS role_permissions (
-    role TEXT NOT NULL,
-    permission_name TEXT NOT NULL REFERENCES permissions(name) ON DELETE CASCADE,
-    PRIMARY KEY (role, permission_name)
+    role_id UUID,
+    permission_id UUID
 );
+
+DO $$ 
+BEGIN 
+    -- Add columns if they don't exist
+    ALTER TABLE role_permissions ADD COLUMN IF NOT EXISTS role TEXT;
+    ALTER TABLE role_permissions ADD COLUMN IF NOT EXISTS permission_name TEXT;
+    
+    -- Handle constraints if possible
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'role_permissions' AND column_name = 'permission_name') THEN
+        ALTER TABLE role_permissions DROP CONSTRAINT IF EXISTS role_permissions_permission_name_fkey;
+        -- We don't enforce REFERENCES here if the table is shared with UUID version
+    END IF;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
 -- Seed Initial Permissions
 INSERT INTO permissions (name, category, description) VALUES

@@ -68,7 +68,7 @@ func (h *MaintenanceHandler) CreateSchedule(w http.ResponseWriter, r *http.Reque
 
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return
 	}
 
@@ -94,7 +94,7 @@ func (h *MaintenanceHandler) GetSchedule(w http.ResponseWriter, r *http.Request)
 
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return
 	}
 
@@ -112,7 +112,7 @@ func (h *MaintenanceHandler) GetSchedule(w http.ResponseWriter, r *http.Request)
 func (h *MaintenanceHandler) ListSchedules(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return
 	}
 
@@ -192,7 +192,7 @@ func (h *MaintenanceHandler) UpdateSchedule(w http.ResponseWriter, r *http.Reque
 
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return
 	}
 
@@ -219,7 +219,7 @@ func (h *MaintenanceHandler) DeleteSchedule(w http.ResponseWriter, r *http.Reque
 
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return
 	}
 
@@ -243,7 +243,7 @@ func (h *MaintenanceHandler) CreateLog(w http.ResponseWriter, r *http.Request) {
 
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return
 	}
 
@@ -263,7 +263,7 @@ func (h *MaintenanceHandler) GetLog(w http.ResponseWriter, r *http.Request) {
 
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return
 	}
 
@@ -281,7 +281,7 @@ func (h *MaintenanceHandler) GetLog(w http.ResponseWriter, r *http.Request) {
 func (h *MaintenanceHandler) ListLogs(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return
 	}
 
@@ -358,7 +358,7 @@ func (h *MaintenanceHandler) UpdateLog(w http.ResponseWriter, r *http.Request) {
 
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return
 	}
 
@@ -385,7 +385,7 @@ func (h *MaintenanceHandler) DeleteLog(w http.ResponseWriter, r *http.Request) {
 
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return
 	}
 
@@ -409,7 +409,7 @@ func (h *MaintenanceHandler) GetVehicleMaintenanceHistory(w http.ResponseWriter,
 
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return
 	}
 
@@ -434,7 +434,7 @@ func (h *MaintenanceHandler) GetVehicleMaintenanceHistory(w http.ResponseWriter,
 func (h *MaintenanceHandler) GetUpcomingMaintenance(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return
 	}
 
@@ -459,7 +459,7 @@ func (h *MaintenanceHandler) GetUpcomingMaintenance(w http.ResponseWriter, r *ht
 func (h *MaintenanceHandler) GetOverdueMaintenance(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return
 	}
 
@@ -477,7 +477,7 @@ func (h *MaintenanceHandler) GetOverdueMaintenance(w http.ResponseWriter, r *htt
 func (h *MaintenanceHandler) GetMaintenanceSummary(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return
 	}
 

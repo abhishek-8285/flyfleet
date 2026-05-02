@@ -1,8 +1,32 @@
 -- Migration: 255_maintenance_enterprise_upgrade.sql
 -- Description: Add enterprise maintenance capabilities including technician management, warranties, and procurement.
 
+-- Pre-flight: Ensure maintenance_logs table exists (missed in early migrations)
+CREATE TABLE IF NOT EXISTS maintenance_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL,
+    organization_id UUID, -- For enterprise support
+    vehicle_id UUID NOT NULL,
+    schedule_id TEXT,
+    type TEXT,
+    name TEXT,
+    description TEXT,
+    start_date TIMESTAMPTZ,
+    end_date TIMESTAMPTZ,
+    duration_minutes INT,
+    performed_by UUID,
+    cost DECIMAL(15, 2) DEFAULT 0.00,
+    total_cost DECIMAL(15, 2) DEFAULT 0.00,
+    actual_cost DECIMAL(15, 2) DEFAULT 0.00,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    completion_date TIMESTAMPTZ
+);
+
 -- Phase 1: Technician Management
-CREATE TYPE maintenance_technician_status AS ENUM ('AVAILABLE', 'BUSY', 'OFFLINE');
+DO $$ BEGIN
+    CREATE TYPE maintenance_technician_status AS ENUM ('AVAILABLE', 'BUSY', 'OFFLINE');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 CREATE TABLE IF NOT EXISTS maintenance_technicians (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -41,7 +65,9 @@ CREATE TABLE IF NOT EXISTS component_warranties (
 );
 
 -- Phase 3: Procurement
-CREATE TYPE purchase_order_status AS ENUM ('DRAFT', 'APPROVED', 'ORDERED', 'RECEIVED', 'CLOSED');
+DO $$ BEGIN
+    CREATE TYPE purchase_order_status AS ENUM ('DRAFT', 'APPROVED', 'ORDERED', 'RECEIVED', 'CLOSED');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 CREATE TABLE IF NOT EXISTS purchase_orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -88,18 +114,18 @@ CREATE TABLE IF NOT EXISTS vehicle_lifecycle_metrics (
 );
 
 -- Phase 5: Materialized view for cost analytics
+DROP MATERIALIZED VIEW IF EXISTS maintenance_cost_summary;
 CREATE MATERIALIZED VIEW maintenance_cost_summary AS
 SELECT 
-    organization_id,
+    COALESCE(organization_id, tenant_id) as organization_id,
     vehicle_id,
     DATE_TRUNC('month', created_at) as month,
     SUM(total_cost) as monthly_cost,
     COUNT(*) as maintenance_count
 FROM (
-    -- Assuming a common structure for costs, adjusting for parts cost in work orders if available
-    -- This is a placeholder for actual cost aggregation logic
-    SELECT organization_id, vehicle_id, created_at, actual_cost as total_cost FROM maintenance_logs
+    -- Combine maintenance_logs and potentially work_orders in future
+    SELECT organization_id, tenant_id, vehicle_id, created_at, actual_cost as total_cost FROM maintenance_logs
 ) as all_costs
-GROUP BY organization_id, vehicle_id, month;
+GROUP BY organization_id, tenant_id, vehicle_id, month;
 
-CREATE UNIQUE INDEX idx_maintenance_cost_summary_org_veh_month ON maintenance_cost_summary(organization_id, vehicle_id, month);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_maintenance_cost_summary_org_veh_month ON maintenance_cost_summary(organization_id, vehicle_id, month);

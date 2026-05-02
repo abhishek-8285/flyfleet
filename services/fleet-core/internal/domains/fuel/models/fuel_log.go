@@ -16,7 +16,7 @@ const (
 
 type FuelLog struct {
 	ID              uuid.UUID     `json:"id" db:"id" validate:"required,uuid"`
-	OrganizationID  uuid.UUID     `json:"organization_id" db:"organization_id" validate:"required,uuid"`
+	TenantID        uuid.UUID     `json:"tenant_id" db:"tenant_id" validate:"required,uuid"`
 	VehicleID       uuid.UUID     `json:"vehicle_id" db:"vehicle_id" validate:"required,uuid"`
 	DriverID        uuid.UUID     `json:"driver_id" db:"driver_id" validate:"required,uuid"`
 	StationName     string        `json:"station_name" db:"station_name" validate:"required,max=255"`
@@ -97,7 +97,7 @@ type ChangeFuelLogStatusRequest struct {
 }
 
 type FuelLogFilter struct {
-	OrganizationID uuid.UUID       `json:"organization_id" validate:"required,uuid"`
+	TenantID       uuid.UUID       `json:"tenant_id" validate:"required,uuid"`
 	VehicleID      *uuid.UUID      `json:"vehicle_id" validate:"omitempty,uuid"`
 	DriverID       *uuid.UUID      `json:"driver_id" validate:"omitempty,uuid"`
 	Status         []FuelLogStatus `json:"status"`

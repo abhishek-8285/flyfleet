@@ -63,25 +63,25 @@ func (s *exportService) ProcessExportRequest(ctx context.Context, requestID uuid
 	}
 
 	// Update status to PROCESSING
-	s.repo.UpdateRequestStatus(ctx, requestID, req.OrganizationID, models.RequestStatusProcessing, nil, nil)
+	s.repo.UpdateRequestStatus(ctx, requestID, req.TenantID, models.RequestStatusProcessing, nil, nil)
 
 	s.logger.Info("processing export request", zap.String("id", requestID.String()))
 
 	// 2. Aggregate Data
-	data, err := s.aggregator.AggregateData(ctx, req.RequesterID, req.OrganizationID)
+	data, err := s.aggregator.AggregateData(ctx, req.RequesterID, req.TenantID)
 	if err != nil {
-		s.repo.UpdateRequestStatus(ctx, requestID, req.OrganizationID, models.RequestStatusFailed, nil, nil)
+		s.repo.UpdateRequestStatus(ctx, requestID, req.TenantID, models.RequestStatusFailed, nil, nil)
 		return nil, err
 	}
 
 	// 3. Apply Masking
-	settings, _ := s.repo.GetSettings(ctx, req.OrganizationID)
+	settings, _ := s.repo.GetSettings(ctx, req.TenantID)
 	if settings != nil {
 		data = s.masker.MaskData(data, settings.MaskingRules)
 	}
 
 	// 4. Generate File
-	storagePath := fmt.Sprintf("/tmp/exports/%s/dsar_%s.%s", req.OrganizationID, requestID, strings.ToLower(req.Format))
+	storagePath := fmt.Sprintf("/tmp/exports/%s/dsar_%s.%s", req.TenantID, requestID, strings.ToLower(req.Format))
 	var size int64
 	var checksum string
 
@@ -97,7 +97,7 @@ func (s *exportService) ProcessExportRequest(ctx context.Context, requestID uuid
 	}
 
 	if err != nil {
-		s.repo.UpdateRequestStatus(ctx, requestID, req.OrganizationID, models.RequestStatusFailed, nil, nil)
+		s.repo.UpdateRequestStatus(ctx, requestID, req.TenantID, models.RequestStatusFailed, nil, nil)
 		return nil, err
 	}
 
@@ -143,7 +143,7 @@ func (s *exportService) ProcessExportRequest(ctx context.Context, requestID uuid
 	if size > 100*1024*1024 && s.nats != nil {
 		payload, _ := json.Marshal(map[string]interface{}{
 			"alert_type":      "LARGE_EXPORT_DETECTED",
-			"tenant_id": req.OrganizationID.String(),
+			"tenant_id": req.TenantID.String(),
 			"user_id":         req.RequesterID.String(),
 			"timestamp":       time.Now().Unix(),
 		})
@@ -151,7 +151,7 @@ func (s *exportService) ProcessExportRequest(ctx context.Context, requestID uuid
 	}
 
 	// Update Request Status to COMPLETED
-	s.repo.UpdateRequestStatus(ctx, requestID, req.OrganizationID, models.RequestStatusCompleted, nil, nil)
+	s.repo.UpdateRequestStatus(ctx, requestID, req.TenantID, models.RequestStatusCompleted, nil, nil)
 
 	s.publishEvent("governance.export.generated", export)
 

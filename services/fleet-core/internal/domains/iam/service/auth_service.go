@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"net"
 	"time"
 
@@ -37,7 +36,7 @@ type JWTManager interface {
 
 type AuthService struct {
 	userRepo     *repository.UserRepository
-	orgRepo      *repository.OrgRepository
+	tenantRepo   *repository.TenantRepository
 	roleRepo     *repository.RoleRepository
 	sessionRepo  *repository.SessionRepository
 	passwordRepo *repository.PasswordHistoryRepository
@@ -52,7 +51,7 @@ type AuthService struct {
 
 func NewAuthService(
 	userRepo *repository.UserRepository,
-	orgRepo *repository.OrgRepository,
+	tenantRepo *repository.TenantRepository,
 	roleRepo *repository.RoleRepository,
 	sessionRepo *repository.SessionRepository,
 	passwordRepo *repository.PasswordHistoryRepository,
@@ -65,7 +64,7 @@ func NewAuthService(
 	passwordSvc *PasswordService,
 ) *AuthService {
 	return &AuthService{
-		userRepo: userRepo, orgRepo: orgRepo, roleRepo: roleRepo,
+		userRepo: userRepo, tenantRepo: tenantRepo, roleRepo: roleRepo,
 		sessionRepo: sessionRepo, passwordRepo: passwordRepo,
 		redis: redis, jwtManager: jwtManager, config: cfg,
 		log: log, // publisher: publisher,
@@ -104,12 +103,12 @@ func (s *AuthService) Identify(ctx context.Context, email string) (*models.Ident
 		return resp, nil
 	}
 
-	// Get user's organizations
-	orgs, err := s.orgRepo.GetUserOrganizations(ctx, user.ID)
+	// Get user's tenants
+	tenants, err := s.tenantRepo.GetUserTenants(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
-	resp.Organizations = orgs
+	resp.Tenants = tenants
 
 	// MFA status
 	if user.MFAEnabled {
@@ -305,22 +304,22 @@ func (s *AuthService) handleFailedLogin(ctx context.Context, user *models.User, 
 }
 
 func (s *AuthService) generateLoginTokens(ctx context.Context, user *models.User, tenantID, ip, userAgent string, rememberDevice bool) (*models.AuthTokensResponse, error) {
-	// Get org info
-	orgs, err := s.orgRepo.GetUserOrganizations(ctx, user.ID)
+	// Get tenant info
+	tenants, err := s.tenantRepo.GetUserTenants(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
-
-	// If tenantID is empty, auto-select the user's first (or primary) organization
-	if tenantID == "" && len(orgs) > 0 {
-		tenantID = orgs[0].ID.String()
+ 
+	// If tenantID is empty, auto-select the user's first (or primary) tenant
+	if tenantID == "" && len(tenants) > 0 {
+		tenantID = tenants[0].ID.String()
 	}
 
-	var orgName string
+	var tenantName string
 	var userRole string
-	for _, o := range orgs {
+	for _, o := range tenants {
 		if o.ID.String() == tenantID {
-			orgName = o.Name
+			tenantName = o.Name
 			userRole = o.Role
 			break
 		}
@@ -328,8 +327,8 @@ func (s *AuthService) generateLoginTokens(ctx context.Context, user *models.User
 
 	// Compute permissions
 	if tenantID == "" {
-		s.log.Warn("no_organization_for_user", zap.String("user_id", user.ID.String()))
-		return nil, errors.New("no_organization")
+		s.log.Warn("no_tenant_for_user", zap.String("user_id", user.ID.String()))
+		return nil, errors.New("no_tenant")
 	}
 	orgUUID, err := uuid.Parse(tenantID)
 	if err != nil {
@@ -357,7 +356,7 @@ func (s *AuthService) generateLoginTokens(ctx context.Context, user *models.User
 
 	// Set user info
 	tokens.User.Role = userRole
-	tokens.User.OrgName = orgName
+	tokens.User.TenantName = tenantName
 	// Build permissions list
 	tokens.User.Permissions = s.resolvePermissions(ctx, mask)
 
@@ -374,9 +373,9 @@ func (s *AuthService) generateTokens(ctx context.Context, user *models.User, ten
 	if len(roles) > 0 {
 		role = roles[0].Name
 	}
-	// Fall back to the top-level org membership role (e.g., "org_admin")
+	// Fall back to the top-level tenant membership role (e.g., "org_admin")
 	if role == "viewer" {
-		if orgRole, _, orgErr := s.orgRepo.GetUserOrgRole(ctx, user.ID, orgUUID); orgErr == nil && orgRole != "" {
+		if orgRole, _, orgErr := s.tenantRepo.GetUserTenantRole(ctx, user.ID, orgUUID); orgErr == nil && orgRole != "" {
 			role = orgRole
 		}
 	}
@@ -533,9 +532,9 @@ func verifyTOTP(secret, code string) bool {
 	return VerifyTOTPCode(secret, code)
 }
 
-// GetUserOrganizations returns all organizations a user belongs to
-func (s *AuthService) GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]models.OrgInfo, error) {
-	return s.orgRepo.GetUserOrganizations(ctx, userID)
+// GetUserTenants returns all tenants a user belongs to
+func (s *AuthService) GetUserTenants(ctx context.Context, userID uuid.UUID) ([]models.TenantInfo, error) {
+	return s.tenantRepo.GetUserTenants(ctx, userID)
 }
 
 // Register creates a new user account with the given credentials
@@ -568,9 +567,9 @@ func (s *AuthService) Register(ctx context.Context, email, password, name string
 		return nil, err
 	}
 
-	// If tenantID provided, create user-org association
-	// Note: This would typically be done via a separate user_orgs repo method
-	// For now, generate tokens and let the user join org later
+	// If tenantID provided, create user-tenant association
+	// Note: This would typically be done via a separate user_tenants repo method
+	// For now, generate tokens and let the user join tenant later
 
 	// Generate tokens
 	return s.generateTokens(ctx, user, tenantID.String(), "", "", "register")
@@ -770,47 +769,42 @@ func (s *AuthService) ResetPasswordForced(ctx context.Context, userID uuid.UUID,
 	return nil
 }
 
-// SwitchOrg validates the user belongs to the target org and issues new tokens
-func (s *AuthService) SwitchOrg(ctx context.Context, userID uuid.UUID, targetTenantID uuid.UUID, ip, ua string) (*models.OrgSwitchResponse, error) {
-	// Verify user has access to target org
-	orgs, err := s.orgRepo.GetUserOrganizations(ctx, userID)
+// SwitchTenant validates the user belongs to the target tenant and issues new tokens
+func (s *AuthService) SwitchTenant(ctx context.Context, userID uuid.UUID, targetTenantID uuid.UUID, ip, ua string) (*models.TenantSwitchResponse, error) {
+	// Verify user has access to target tenant
+	tenants, err := s.tenantRepo.GetUserTenants(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-
+ 
 	var found bool
-	var orgInfo models.OrgInfo
+	var tenantInfo models.TenantInfo
 	var userRole string
-	for _, o := range orgs {
+	for _, o := range tenants {
 		if o.ID == targetTenantID {
 			found = true
-			orgInfo = o
+			tenantInfo = o
 			userRole = o.Role
 			break
 		}
 	}
 	if !found {
-		return nil, errors.New("org_switch_failed")
+		return nil, errors.New("tenant_switch_failed")
 	}
-
-	// Compute permissions for new org
+ 
+	// Compute permissions for new tenant
 	var mask int64
 	if userRole == "org_admin" || userRole == "system_admin" || userRole == "admin" {
 		// Grant full permissions to administrative roles
 		mask = 9223372036854775807
 	} else {
-		m, err := s.roleRepo.ComputeEffectivePermissionMask(ctx, userID, targetTenantID)
-		if err != nil {
-			s.log.Error("failed to compute permissions for org switch", zap.Error(err))
-			return nil, fmt.Errorf("failed to compute permissions for target organization: %w", err)
-		}
-		mask = m
+		mask, _ = s.roleRepo.ComputeEffectivePermissionMask(ctx, userID, targetTenantID)
 	}
-
+ 
 	// Cache new permissions
 	s.redis.CacheUserPermissions(ctx, userID.String(), targetTenantID.String(), mask, 5*time.Minute)
-
-	// Generate new JWT with new org context
+ 
+	// Generate new JWT with new tenant context
 	jti := uuid.New().String()
 	accessClaims := jwt.MapClaims{
 		"sub":              userID.String(),
@@ -824,12 +818,12 @@ func (s *AuthService) SwitchOrg(ctx context.Context, userID uuid.UUID, targetTen
 		"aud":              "flyfleet-api",
 		"device_fingerprint": deviceFingerprint(ip),
 	}
-
+ 
 	accessToken, err := s.jwtManager.GenerateToken(accessClaims, s.config.JWTAccessTTL)
 	if err != nil {
 		return nil, err
 	}
-
+ 
 	refreshJTI := uuid.New().String()
 	refreshClaims := jwt.MapClaims{
 		"sub":     userID.String(),
@@ -842,7 +836,7 @@ func (s *AuthService) SwitchOrg(ctx context.Context, userID uuid.UUID, targetTen
 	if err != nil {
 		return nil, err
 	}
-
+ 
 	// Update session cache
 	sessionData := redis2.SessionData{
 		UserID:     userID,
@@ -854,21 +848,21 @@ func (s *AuthService) SwitchOrg(ctx context.Context, userID uuid.UUID, targetTen
 		LastActive: time.Now(),
 	}
 	s.redis.SetSession(ctx, jti, sessionData, s.config.JWTAccessTTL)
-
+ 
 	// Log the switch
-	s.orgRepo.LogOrgSwitch(ctx, userID, uuid.Nil, targetTenantID, ip, ua)
-
-	s.log.Info("org_switched",
+	s.tenantRepo.LogTenantSwitch(ctx, userID, uuid.Nil, targetTenantID, ip, ua)
+ 
+	s.log.Info("tenant_switched",
 		zap.String("user_id", userID.String()),
 		zap.String("to_tenant_id", targetTenantID.String()),
 	)
-
-	return &models.OrgSwitchResponse{
+ 
+	return &models.TenantSwitchResponse{
 		Success:      true,
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresIn:    int(s.config.JWTAccessTTL.Seconds()),
-		Organization: orgInfo,
+		Tenant:       tenantInfo,
 	}, nil
 }
 

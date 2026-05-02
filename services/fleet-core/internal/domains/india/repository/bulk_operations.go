@@ -29,7 +29,7 @@ func (r *IndiaIntegrationRepositoryImpl) BulkCreateVehicleVerification(ctx conte
 				offset+1, offset+2, offset+3, offset+4, offset+5, offset+6, offset+7, offset+8, offset+9, offset+10,
 				offset+11, offset+12, offset+13, offset+14, offset+15, offset+16, offset+17, offset+18, offset+19, offset+20, offset+21))
 			args = append(args,
-				v.ID, v.VehicleID, v.OrganizationID, v.RegistrationNumber, v.Status, v.VerificationDate,
+				v.ID, v.VehicleID, v.TenantID, v.RegistrationNumber, v.Status, v.VerificationDate,
 				v.ChassisNumber, v.EngineNumber, v.Model, v.Manufacturer, v.FuelType, v.BodyType,
 				v.CubicCapacity, v.SeatingCapacity, v.Color, v.ManufacturingYear, v.OwnerName,
 				v.RCStatus, v.InsuranceExpiry, v.PUCExpiry, v.CreatedAt,
@@ -70,7 +70,7 @@ func (r *IndiaIntegrationRepositoryImpl) BulkCreateDriverVerification(ctx contex
 		for i, v := range verifications {
 			placeholders = append(placeholders, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)", i*10+1, i*10+2, i*10+3, i*10+4, i*10+5, i*10+6, i*10+7, i*10+8, i*10+9, i*10+10))
 			args = append(args,
-				v.ID, v.DriverID, v.OrganizationID, v.LicenseNumber, v.Status, v.VerificationDate,
+				v.ID, v.DriverID, v.TenantID, v.LicenseNumber, v.Status, v.VerificationDate,
 				v.Name, v.DateOfBirth, v.ValidityTo, v.CreatedAt,
 			)
 		}

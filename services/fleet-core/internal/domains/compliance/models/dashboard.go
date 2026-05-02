@@ -7,7 +7,7 @@ import (
 )
 
 type ComplianceDashboardMetrics struct {
-	OrganizationID          uuid.UUID `json:"organization_id" db:"organization_id"`
+	TenantID          uuid.UUID `json:"tenant_id" db:"tenant_id"`
 	DriversActive           int       `json:"drivers_active" db:"drivers_active"`
 	DriversOverLimit        int       `json:"drivers_over_limit" db:"drivers_over_limit"`
 	VehiclesWithExpiredDocs int       `json:"vehicles_with_expired_docs" db:"vehicles_with_expired_docs"`

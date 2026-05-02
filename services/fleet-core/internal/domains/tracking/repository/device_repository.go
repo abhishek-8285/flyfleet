@@ -48,12 +48,12 @@ func NewDeviceRepository(db *pgxpool.Pool, logger *zap.Logger) *PostgresDeviceRe
 func (r *PostgresDeviceRepository) Register(ctx context.Context, device *models.Device) error {
 	query := `
 		INSERT INTO devices (
-			id, device_id, organization_id, vehicle_id, hardware_attestation,
+			id, device_id, tenant_id, vehicle_id, hardware_attestation,
 			android_version, device_model, app_version, status, jwt_token,
 			refresh_token, token_expires_at, created_at, created_by, updated_at, updated_by
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), $13, NOW(), $14)
 		ON CONFLICT (device_id) DO UPDATE SET
-			organization_id = EXCLUDED.organization_id,
+			tenant_id = EXCLUDED.tenant_id,
 			vehicle_id = EXCLUDED.vehicle_id,
 			hardware_attestation = EXCLUDED.hardware_attestation,
 			android_version = EXCLUDED.android_version,
@@ -70,7 +70,7 @@ func (r *PostgresDeviceRepository) Register(ctx context.Context, device *models.
 	_, err := r.db.Exec(ctx, query,
 		device.ID,
 		device.DeviceID,
-		device.OrganizationID,
+		device.TenantID,
 		device.VehicleID,
 		device.HardwareAttestation,
 		device.AndroidVersion,
@@ -90,7 +90,7 @@ func (r *PostgresDeviceRepository) Register(ctx context.Context, device *models.
 // GetByDeviceID retrieves a device by device ID
 func (r *PostgresDeviceRepository) GetByDeviceID(ctx context.Context, deviceID string) (*models.Device, error) {
 	query := `
-		SELECT id, device_id, organization_id, vehicle_id, hardware_attestation,
+		SELECT id, device_id, tenant_id, vehicle_id, hardware_attestation,
 		       android_version, device_model, app_version, status, jwt_token,
 		       refresh_token, token_expires_at, last_heartbeat, created_at, created_by, updated_at, updated_by
 		FROM devices
@@ -101,7 +101,7 @@ func (r *PostgresDeviceRepository) GetByDeviceID(ctx context.Context, deviceID s
 	err := r.db.QueryRow(ctx, query, deviceID).Scan(
 		&device.ID,
 		&device.DeviceID,
-		&device.OrganizationID,
+		&device.TenantID,
 		&device.VehicleID,
 		&device.HardwareAttestation,
 		&device.AndroidVersion,

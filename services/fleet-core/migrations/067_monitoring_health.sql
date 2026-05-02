@@ -3,14 +3,19 @@
 
 -- 1. Create health_history table for tracking health check history
 CREATE TABLE IF NOT EXISTS health_history (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    timestamp TIMESTAMPTZ NOT NULL,
-    component VARCHAR(100) NOT NULL,
-    status VARCHAR(20) NOT NULL CHECK (status IN ('up', 'down', 'degraded', 'not_configured')),
-    response_time_ms INTEGER,
-    error TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4()
 );
+
+DO $$ 
+BEGIN 
+    ALTER TABLE health_history ADD COLUMN IF NOT EXISTS timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    ALTER TABLE health_history ADD COLUMN IF NOT EXISTS component VARCHAR(100) NOT NULL DEFAULT 'unknown';
+    ALTER TABLE health_history ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'up';
+    ALTER TABLE health_history ADD COLUMN IF NOT EXISTS response_time_ms INTEGER;
+    ALTER TABLE health_history ADD COLUMN IF NOT EXISTS error TEXT;
+    ALTER TABLE health_history ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_health_history_component ON health_history(component);
@@ -19,19 +24,24 @@ CREATE INDEX IF NOT EXISTS idx_health_history_component_timestamp ON health_hist
 
 -- 2. Create health_alerts table for active alerts
 CREATE TABLE IF NOT EXISTS health_alerts (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    alert_type VARCHAR(50) NOT NULL,
-    component VARCHAR(100) NOT NULL,
-    metric VARCHAR(100) NOT NULL,
-    current_value DOUBLE PRECISION NOT NULL,
-    threshold DOUBLE PRECISION NOT NULL,
-    severity VARCHAR(20) NOT NULL CHECK (severity IN ('critical', 'warning', 'info')),
-    message TEXT NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'acknowledged', 'resolved')),
-    triggered_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    acknowledged_at TIMESTAMPTZ,
-    resolved_at TIMESTAMPTZ
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4()
 );
+
+DO $$ 
+BEGIN 
+    ALTER TABLE health_alerts ADD COLUMN IF NOT EXISTS alert_type VARCHAR(50) NOT NULL DEFAULT 'SYSTEM';
+    ALTER TABLE health_alerts ADD COLUMN IF NOT EXISTS component VARCHAR(100) NOT NULL DEFAULT 'unknown';
+    ALTER TABLE health_alerts ADD COLUMN IF NOT EXISTS metric VARCHAR(100) NOT NULL DEFAULT 'health';
+    ALTER TABLE health_alerts ADD COLUMN IF NOT EXISTS current_value DOUBLE PRECISION NOT NULL DEFAULT 0;
+    ALTER TABLE health_alerts ADD COLUMN IF NOT EXISTS threshold DOUBLE PRECISION NOT NULL DEFAULT 0;
+    ALTER TABLE health_alerts ADD COLUMN IF NOT EXISTS severity VARCHAR(20) NOT NULL DEFAULT 'info';
+    ALTER TABLE health_alerts ADD COLUMN IF NOT EXISTS message TEXT NOT NULL DEFAULT '';
+    ALTER TABLE health_alerts ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active';
+    ALTER TABLE health_alerts ADD COLUMN IF NOT EXISTS triggered_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP;
+    ALTER TABLE health_alerts ADD COLUMN IF NOT EXISTS acknowledged_at TIMESTAMPTZ;
+    ALTER TABLE health_alerts ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
 -- Indexes for alerts
 CREATE INDEX IF NOT EXISTS idx_health_alerts_status ON health_alerts(status);
@@ -43,16 +53,20 @@ CREATE INDEX IF NOT EXISTS idx_health_alerts_triggered_at ON health_alerts(trigg
 CREATE TABLE IF NOT EXISTS alert_thresholds (
     component VARCHAR(100) NOT NULL,
     metric VARCHAR(100) NOT NULL,
-    threshold DOUBLE PRECISION NOT NULL,
-    operator VARCHAR(10) NOT NULL CHECK (operator IN ('gt', 'lt', 'gte', 'lte', 'eq')),
-    severity VARCHAR(20) NOT NULL CHECK (severity IN ('critical', 'warning', 'info')),
-    enabled BOOLEAN DEFAULT TRUE,
-    notification_channels TEXT[] DEFAULT '{}',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    
     PRIMARY KEY (component, metric)
 );
+
+DO $$ 
+BEGIN 
+    ALTER TABLE alert_thresholds ADD COLUMN IF NOT EXISTS threshold DOUBLE PRECISION NOT NULL DEFAULT 0;
+    ALTER TABLE alert_thresholds ADD COLUMN IF NOT EXISTS operator VARCHAR(10) NOT NULL DEFAULT 'gt';
+    ALTER TABLE alert_thresholds ADD COLUMN IF NOT EXISTS severity VARCHAR(20) NOT NULL DEFAULT 'warning';
+    ALTER TABLE alert_thresholds ADD COLUMN IF NOT EXISTS enabled BOOLEAN DEFAULT TRUE;
+    ALTER TABLE alert_thresholds ADD COLUMN IF NOT EXISTS notification_channels TEXT[] DEFAULT '{}';
+    ALTER TABLE alert_thresholds ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
+    ALTER TABLE alert_thresholds ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
 -- Comments
 COMMENT ON TABLE health_history IS 'Historical health check results for trend analysis';

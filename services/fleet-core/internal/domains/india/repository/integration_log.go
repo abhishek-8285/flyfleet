@@ -32,7 +32,7 @@ func (r *IndiaIntegrationRepositoryImpl) CreateIntegrationLog(ctx context.Contex
 		resJSON,
 		log.Status,
 		log.ErrorMessage,
-		log.OrganizationID,
+		log.TenantID,
 		log.CreatedAt,
 	)
 

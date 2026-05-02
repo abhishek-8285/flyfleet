@@ -98,8 +98,8 @@ func validateFASTagTransaction(transaction *models.FASTagTransaction) error {
 	if transaction.DriverID == uuid.Nil {
 		return errors.New("driver ID is required")
 	}
-	if transaction.OrganizationID == uuid.Nil {
-		return errors.New("organization ID is required")
+	if transaction.TenantID == uuid.Nil {
+		return errors.New("tenant ID is required")
 	}
 	if transaction.Amount <= 0 {
 		return errors.New("amount must be greater than zero")
@@ -148,8 +148,8 @@ func validateVehicleVerification(verification *models.VehicleVerification) error
 	if verification.VehicleID == uuid.Nil {
 		return errors.New("vehicle ID is required")
 	}
-	if verification.OrganizationID == uuid.Nil {
-		return errors.New("organization ID is required")
+	if verification.TenantID == uuid.Nil {
+		return errors.New("tenant ID is required")
 	}
 	if verification.Status == "" {
 		return errors.New("status is required")
@@ -164,8 +164,8 @@ func validateDriverVerification(verification *models.DriverVerification) error {
 	if verification.DriverID == uuid.Nil {
 		return errors.New("driver ID is required")
 	}
-	if verification.OrganizationID == uuid.Nil {
-		return errors.New("organization ID is required")
+	if verification.TenantID == uuid.Nil {
+		return errors.New("tenant ID is required")
 	}
 	if verification.Status == "" {
 		return errors.New("status is required")
@@ -186,8 +186,8 @@ func validateLocalPermit(permit *models.LocalPermit) error {
 	if permit.DriverID == uuid.Nil {
 		return errors.New("driver ID is required")
 	}
-	if permit.OrganizationID == uuid.Nil {
-		return errors.New("organization ID is required")
+	if permit.TenantID == uuid.Nil {
+		return errors.New("tenant ID is required")
 	}
 	if permit.ValidFrom.IsZero() || permit.ValidTo.IsZero() {
 		return errors.New("valid from and valid to dates are required")
@@ -205,8 +205,8 @@ func validateGSTCompliance(compliance *models.GSTCompliance) error {
 	if compliance.GSTIN == "" {
 		return errors.New("GSTIN is required")
 	}
-	if compliance.OrganizationID == uuid.Nil {
-		return errors.New("organization ID is required")
+	if compliance.TenantID == uuid.Nil {
+		return errors.New("tenant ID is required")
 	}
 	if compliance.Status == "" {
 		return errors.New("status is required")
@@ -221,8 +221,8 @@ func validateIntegrationConfig(config *models.IntegrationConfig) error {
 	if config.ServiceType == "" {
 		return errors.New("service type is required")
 	}
-	if config.OrganizationID == uuid.Nil {
-		return errors.New("organization ID is required")
+	if config.TenantID == uuid.Nil {
+		return errors.New("tenant ID is required")
 	}
 	if config.APIEndpoint == "" {
 		return errors.New("API endpoint is required")
@@ -737,7 +737,7 @@ func (s *IndiaIntegrationServiceImpl) GetIntegrationConfig(ctx context.Context, 
 // GetIntegrationConfigByServiceType retrieves an integration configuration by service type and organization
 func (s *IndiaIntegrationServiceImpl) GetIntegrationConfigByServiceType(ctx context.Context, tenantID uuid.UUID, serviceType string) (*models.IntegrationConfig, error) {
 	if tenantID == uuid.Nil {
-		return nil, errors.New("organization ID is required")
+		return nil, errors.New("tenant ID is required")
 	}
 	if serviceType == "" {
 		return nil, errors.New("service type is required")
@@ -773,7 +773,7 @@ func (s *IndiaIntegrationServiceImpl) DeleteIntegrationConfig(ctx context.Contex
 // ListIntegrationConfigs retrieves integration configurations with filtering
 func (s *IndiaIntegrationServiceImpl) ListIntegrationConfigs(ctx context.Context, tenantID uuid.UUID, serviceType *string, active *bool, limit, offset int) ([]*models.IntegrationConfig, int, error) {
 	if tenantID == uuid.Nil {
-		return nil, 0, errors.New("organization ID is required")
+		return nil, 0, errors.New("tenant ID is required")
 	}
 	if limit <= 0 {
 		limit = 10

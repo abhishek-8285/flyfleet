@@ -55,7 +55,7 @@ func (s *FastagIntegrationServiceImpl) FetchTransactions(ctx context.Context, te
 		},
 		ResponsePayload: mockTransactions,
 		Status:          200,
-		OrganizationID:  &tenantID,
+		TenantID:  &tenantID,
 	}
 	if err := s.repo.CreateIntegrationLog(ctx, log); err != nil {
 		s.logger.Error("failed to create integration log", zap.Error(err))
@@ -102,7 +102,7 @@ func (s *FastagIntegrationServiceImpl) getMockNPCITransactions(tenantID uuid.UUI
 			TagNumber:       tagNumber,
 			VehicleID:       uuid.New(), // In real case, link to actual vehicle
 			DriverID:        uuid.New(), // In real case, link to actual driver
-			OrganizationID:  tenantID,
+			TenantID:  tenantID,
 			TransactionID:   fmt.Sprintf("TXN-%d", time.Now().UnixNano()),
 			TransactionType: "debit",
 			Amount:          150.00,

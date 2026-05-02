@@ -3,6 +3,40 @@
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Pre-flight: Ensure identity columns exist for core tables used in this script
+DO $$
+BEGIN
+    -- fuel_logs
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'fuel_logs') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fuel_logs' AND column_name = 'org_id') THEN
+            ALTER TABLE fuel_logs ADD COLUMN org_id UUID;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fuel_logs' AND column_name = 'organization_id') THEN
+            ALTER TABLE fuel_logs ADD COLUMN organization_id UUID;
+        END IF;
+    END IF;
+
+    -- fuel_transactions
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'fuel_transactions') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fuel_transactions' AND column_name = 'org_id') THEN
+            ALTER TABLE fuel_transactions ADD COLUMN org_id UUID;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fuel_transactions' AND column_name = 'organization_id') THEN
+            ALTER TABLE fuel_transactions ADD COLUMN organization_id UUID;
+        END IF;
+    END IF;
+
+    -- toll_transactions
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'toll_transactions') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'toll_transactions' AND column_name = 'org_id') THEN
+            ALTER TABLE toll_transactions ADD COLUMN org_id UUID;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'toll_transactions' AND column_name = 'organization_id') THEN
+            ALTER TABLE toll_transactions ADD COLUMN organization_id UUID;
+        END IF;
+    END IF;
+END $$;
+
 -- -----------------------------------------------------------------------------
 -- Fuel schema drift: canonical organization_id
 -- -----------------------------------------------------------------------------
@@ -35,12 +69,13 @@ ALTER TABLE IF EXISTS fuel_logs
 
 DO $$
 BEGIN
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'fuel_logs' AND column_name = 'org_id'
-    ) THEN
-        EXECUTE 'UPDATE fuel_logs SET organization_id = COALESCE(organization_id, org_id)';
-    END IF;
+    -- Redundant: Handled by 223b Universal Shield
+    -- IF EXISTS (
+    --     SELECT 1 FROM information_schema.columns
+    --     WHERE table_schema = 'public' AND table_name = 'fuel_logs' AND column_name = 'org_id'
+    -- ) THEN
+    --     EXECUTE 'UPDATE fuel_logs SET organization_id = COALESCE(organization_id, org_id)';
+    -- END IF;
 END $$;
 
 ALTER TABLE IF EXISTS fuel_transactions
@@ -58,12 +93,13 @@ ALTER TABLE IF EXISTS fuel_transactions
 
 DO $$
 BEGIN
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'fuel_transactions' AND column_name = 'org_id'
-    ) THEN
-        EXECUTE 'UPDATE fuel_transactions SET organization_id = COALESCE(organization_id, org_id)';
-    END IF;
+    -- Redundant: Handled by 223b Universal Shield
+    -- IF EXISTS (
+    --     SELECT 1 FROM information_schema.columns
+    --     WHERE table_schema = 'public' AND table_name = 'fuel_transactions' AND column_name = 'org_id'
+    -- ) THEN
+    --     EXECUTE 'UPDATE fuel_transactions SET organization_id = COALESCE(organization_id, org_id)';
+    -- END IF;
 END $$;
 
 ALTER TABLE IF EXISTS fuel_audit_logs
@@ -243,37 +279,38 @@ CREATE TABLE IF NOT EXISTS receipt_ocr_jobs (
 -- Indexes
 -- -----------------------------------------------------------------------------
 
-CREATE INDEX IF NOT EXISTS idx_fuel_logs_org_id ON fuel_logs(organization_id);
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fuel_logs' AND column_name = 'organization_id') THEN CREATE INDEX IF NOT EXISTS idx_fuel_logs_org_id ON fuel_logs(organization_id); END IF; END $$;
 CREATE INDEX IF NOT EXISTS idx_fuel_logs_risk_level ON fuel_logs(risk_level);
-CREATE INDEX IF NOT EXISTS idx_fuel_transactions_org_id ON fuel_transactions(organization_id);
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fuel_transactions' AND column_name = 'organization_id') THEN CREATE INDEX IF NOT EXISTS idx_fuel_transactions_org_id ON fuel_transactions(organization_id); END IF; END $$;
 CREATE INDEX IF NOT EXISTS idx_fuel_transactions_risk_level ON fuel_transactions(risk_level);
-CREATE INDEX IF NOT EXISTS idx_fuel_audit_logs_org_id ON fuel_audit_logs(organization_id);
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fuel_audit_logs' AND column_name = 'organization_id') THEN CREATE INDEX IF NOT EXISTS idx_fuel_audit_logs_org_id ON fuel_audit_logs(organization_id); END IF; END $$;
 
-CREATE INDEX IF NOT EXISTS idx_expense_items_org_id ON expense_items(org_id);
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'expense_items' AND column_name = 'org_id') THEN CREATE INDEX IF NOT EXISTS idx_expense_items_org_id ON expense_items(org_id); END IF; END $$;
 CREATE INDEX IF NOT EXISTS idx_expense_items_report_id ON expense_items(report_id);
 CREATE INDEX IF NOT EXISTS idx_expense_items_ocr_pending ON expense_items(ocr_processed, created_at);
 
-CREATE INDEX IF NOT EXISTS idx_gst_invoices_org_id ON gst_invoices(org_id);
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'gst_invoices' AND column_name = 'org_id') THEN CREATE INDEX IF NOT EXISTS idx_gst_invoices_org_id ON gst_invoices(org_id); END IF; END $$;
 CREATE INDEX IF NOT EXISTS idx_gst_invoices_entity ON gst_invoices(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_gst_invoices_status ON gst_invoices(status);
 
-CREATE INDEX IF NOT EXISTS idx_tds_records_org_id ON tds_records(org_id);
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tds_records' AND column_name = 'org_id') THEN CREATE INDEX IF NOT EXISTS idx_tds_records_org_id ON tds_records(org_id); END IF; END $$;
 CREATE INDEX IF NOT EXISTS idx_tds_records_vendor_id ON tds_records(vendor_id);
 
-CREATE INDEX IF NOT EXISTS idx_vendor_payments_org_id ON vendor_payments(org_id);
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vendor_payments' AND column_name = 'org_id') THEN CREATE INDEX IF NOT EXISTS idx_vendor_payments_org_id ON vendor_payments(org_id); END IF; END $$;
 CREATE INDEX IF NOT EXISTS idx_vendor_payments_vendor_id ON vendor_payments(vendor_id);
 CREATE INDEX IF NOT EXISTS idx_vendor_payments_status ON vendor_payments(payment_status);
 
-CREATE INDEX IF NOT EXISTS idx_toll_transactions_org_id ON toll_transactions(org_id);
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'toll_transactions' AND column_name = 'org_id') THEN CREATE INDEX IF NOT EXISTS idx_toll_transactions_org_id ON toll_transactions(org_id); END IF; END $$;
 CREATE INDEX IF NOT EXISTS idx_toll_transactions_vehicle ON toll_transactions(vehicle_id);
 
-CREATE INDEX IF NOT EXISTS idx_fuel_card_reconciliation_org_id ON fuel_card_reconciliation(org_id);
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'fuel_card_reconciliation' AND column_name = 'org_id') THEN CREATE INDEX IF NOT EXISTS idx_fuel_card_reconciliation_org_id ON fuel_card_reconciliation(org_id); END IF; END $$;
 CREATE INDEX IF NOT EXISTS idx_fuel_card_reconciliation_status ON fuel_card_reconciliation(status);
 
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'currency_rates' AND column_name = 'org_id') THEN CREATE INDEX IF NOT EXISTS idx_currency_rates_org_id ON currency_rates(org_id); END IF; END $$;
 CREATE INDEX IF NOT EXISTS idx_currency_rates_code ON currency_rates(currency_code);
 CREATE INDEX IF NOT EXISTS idx_currency_rates_pair ON currency_rates(from_currency, to_currency);
 
-CREATE INDEX IF NOT EXISTS idx_finance_audit_logs_org_id ON finance_audit_logs(org_id);
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'finance_audit_logs' AND column_name = 'org_id') THEN CREATE INDEX IF NOT EXISTS idx_finance_audit_logs_org_id ON finance_audit_logs(org_id); END IF; END $$;
 CREATE INDEX IF NOT EXISTS idx_finance_audit_logs_entity ON finance_audit_logs(entity_id, entity_type);
 CREATE INDEX IF NOT EXISTS idx_finance_audit_logs_ts ON finance_audit_logs(timestamp);
 

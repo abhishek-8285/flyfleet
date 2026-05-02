@@ -17,7 +17,7 @@ func (r *AnalyticsRepositoryImpl) CreateFleetAnalytics(ctx context.Context, anal
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := `
-		INSERT INTO fleet_analytics (id, organization_id, start_date, end_date, 
+		INSERT INTO fleet_analytics (id, tenant_id, start_date, end_date, 
 			total_vehicles, active_vehicles, total_distance, average_speed, total_fuel_consumption, 
 			average_fuel_efficiency, total_trips, completed_trips, cancelled_trips, 
 			average_trip_duration, idle_time_percentage, routing_efficiency, fuel_cost, 
@@ -28,7 +28,7 @@ func (r *AnalyticsRepositoryImpl) CreateFleetAnalytics(ctx context.Context, anal
 			$18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)
 	`
 
-	_, err := r.db.Exec(ctx, query, analytics.ID, analytics.OrganizationID, analytics.StartDate,
+	_, err := r.db.Exec(ctx, query, analytics.ID, analytics.TenantID, analytics.StartDate,
 		analytics.EndDate, analytics.TotalVehicles, analytics.ActiveVehicles, analytics.TotalDistance,
 		analytics.AverageSpeed, analytics.TotalFuelConsumption, analytics.AverageFuelEfficiency,
 		analytics.TotalTrips, analytics.CompletedTrips, analytics.CancelledTrips,
@@ -50,20 +50,20 @@ func (r *AnalyticsRepositoryImpl) GetFleetAnalytics(ctx context.Context, id stri
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := `
-		SELECT id, organization_id, start_date, end_date, 
+		SELECT id, tenant_id, start_date, end_date, 
 			total_vehicles, active_vehicles, total_distance, average_speed, total_fuel_consumption, 
 			average_fuel_efficiency, total_trips, completed_trips, cancelled_trips, 
 			average_trip_duration, idle_time_percentage, routing_efficiency, fuel_cost, 
 			maintenance_cost, revenue, profit_margin, safety_score, accidents_count, 
 			incidents_count, emergency_stops, geofence_violations, alerts_triggered, 
 			data_points_collected, processing_time, generated_at, created_at, updated_at
-		FROM fleet_analytics WHERE id = $1 AND organization_id = $2
+		FROM fleet_analytics WHERE id = $1 AND tenant_id = $2
 	`
 
 	var analytics models.FleetAnalytics
 
 	err := r.db.QueryRow(ctx, query, id, tenantID).Scan(
-		&analytics.ID, &analytics.OrganizationID, &analytics.StartDate, &analytics.EndDate,
+		&analytics.ID, &analytics.TenantID, &analytics.StartDate, &analytics.EndDate,
 		&analytics.TotalVehicles, &analytics.ActiveVehicles, &analytics.TotalDistance,
 		&analytics.AverageSpeed, &analytics.TotalFuelConsumption, &analytics.AverageFuelEfficiency,
 		&analytics.TotalTrips, &analytics.CompletedTrips, &analytics.CancelledTrips,
@@ -89,7 +89,7 @@ func (r *AnalyticsRepositoryImpl) GetFleetAnalyticsByPeriod(ctx context.Context,
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := `
-		SELECT id, organization_id, start_date, end_date, 
+		SELECT id, tenant_id, start_date, end_date, 
 			total_vehicles, active_vehicles, total_distance, average_speed, total_fuel_consumption, 
 			average_fuel_efficiency, total_trips, completed_trips, cancelled_trips, 
 			average_trip_duration, idle_time_percentage, routing_efficiency, fuel_cost, 
@@ -97,13 +97,13 @@ func (r *AnalyticsRepositoryImpl) GetFleetAnalyticsByPeriod(ctx context.Context,
 			incidents_count, emergency_stops, geofence_violations, alerts_triggered, 
 			data_points_collected, processing_time, generated_at, created_at, updated_at
 		FROM fleet_analytics 
-		WHERE organization_id = $1 AND start_date >= $2 AND end_date <= $3
+		WHERE tenant_id = $1 AND start_date >= $2 AND end_date <= $3
 	`
 
 	var analytics models.FleetAnalytics
 
 	err := r.db.QueryRow(ctx, query, tenantID, startDate, endDate).Scan(
-		&analytics.ID, &analytics.OrganizationID, &analytics.StartDate, &analytics.EndDate,
+		&analytics.ID, &analytics.TenantID, &analytics.StartDate, &analytics.EndDate,
 		&analytics.TotalVehicles, &analytics.ActiveVehicles, &analytics.TotalDistance,
 		&analytics.AverageSpeed, &analytics.TotalFuelConsumption, &analytics.AverageFuelEfficiency,
 		&analytics.TotalTrips, &analytics.CompletedTrips, &analytics.CancelledTrips,
@@ -147,7 +147,7 @@ func (r *AnalyticsRepositoryImpl) UpdateFleetAnalytics(ctx context.Context, id s
 	}
 
 	args = append(args, id, tenantID)
-	query := fmt.Sprintf("UPDATE fleet_analytics SET %s WHERE id = $%d AND organization_id = $%d",
+	query := fmt.Sprintf("UPDATE fleet_analytics SET %s WHERE id = $%d AND tenant_id = $%d",
 		strings.Join(setParts, ", "), argIndex, argIndex+1)
 
 	_, err := r.db.Exec(ctx, query, args...)
@@ -161,7 +161,7 @@ func (r *AnalyticsRepositoryImpl) UpdateFleetAnalytics(ctx context.Context, id s
 func (r *AnalyticsRepositoryImpl) DeleteFleetAnalytics(ctx context.Context, id string, tenantID uuid.UUID) error {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
-	query := "DELETE FROM fleet_analytics WHERE id = $1 AND organization_id = $2"
+	query := "DELETE FROM fleet_analytics WHERE id = $1 AND tenant_id = $2"
 	_, err := r.db.Exec(ctx, query, id, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to delete fleet analytics %s: %w", id, err)
@@ -185,7 +185,7 @@ func (r *AnalyticsRepositoryImpl) ListFleetAnalytics(ctx context.Context, tenant
 	}
 
 	baseQuery := `
-		SELECT id, organization_id, start_date, end_date,
+		SELECT id, tenant_id, start_date, end_date,
 			total_vehicles, active_vehicles, total_distance, average_speed, total_fuel_consumption,
 			average_fuel_efficiency, total_trips, completed_trips, cancelled_trips,
 			average_trip_duration, idle_time_percentage, routing_efficiency, fuel_cost,
@@ -193,9 +193,9 @@ func (r *AnalyticsRepositoryImpl) ListFleetAnalytics(ctx context.Context, tenant
 			incidents_count, emergency_stops, geofence_violations, alerts_triggered,
 			data_points_collected, processing_time, generated_at, created_at, updated_at
 		FROM fleet_analytics
-		WHERE organization_id = $1
+		WHERE tenant_id = $1
 	`
-	countQuery := `SELECT COUNT(*) FROM fleet_analytics WHERE organization_id = $1`
+	countQuery := `SELECT COUNT(*) FROM fleet_analytics WHERE tenant_id = $1`
 
 	args := []interface{}{tenantID}
 	argIndex := 2
@@ -247,7 +247,7 @@ func (r *AnalyticsRepositoryImpl) ListFleetAnalytics(ctx context.Context, tenant
 	for rows.Next() {
 		var a models.FleetAnalytics
 		err := rows.Scan(
-			&a.ID, &a.OrganizationID, &a.StartDate, &a.EndDate,
+			&a.ID, &a.TenantID, &a.StartDate, &a.EndDate,
 			&a.TotalVehicles, &a.ActiveVehicles, &a.TotalDistance, &a.AverageSpeed, &a.TotalFuelConsumption,
 			&a.AverageFuelEfficiency, &a.TotalTrips, &a.CompletedTrips, &a.CancelledTrips,
 			&a.AverageTripDuration, &a.IdleTimePercentage, &a.RoutingEfficiency, &a.FuelCost,

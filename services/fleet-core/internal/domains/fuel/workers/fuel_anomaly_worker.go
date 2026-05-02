@@ -50,7 +50,7 @@ func (w *FuelAnomalyWorker) runDetection(ctx context.Context) {
 	// Group logs by org+vehicle to preserve tenant isolation.
 	vehicleLogs := make(map[string][]models.FuelLog)
 	for _, log := range logs {
-		key := log.OrganizationID.String() + ":" + log.VehicleID.String()
+		key := log.TenantID.String() + ":" + log.VehicleID.String()
 		vehicleLogs[key] = append(vehicleLogs[key], log)
 	}
 
@@ -70,7 +70,7 @@ func (w *FuelAnomalyWorker) runDetection(ctx context.Context) {
 					zap.String("vehicle_id", vehicleID),
 					zap.String("log_id", curr.ID.String()),
 					zap.Duration("time_diff", timeDiff))
-				_ = w.repo.MarkAsAnomalous(ctx, curr.ID, curr.OrganizationID, "Frequent fill-up (< 4h)")
+				_ = w.repo.MarkAsAnomalous(ctx, curr.ID, curr.TenantID, "Frequent fill-up (< 4h)")
 			}
 
 			// Pattern 2: Abnormal efficiency (km per liter)
@@ -82,11 +82,11 @@ func (w *FuelAnomalyWorker) runDetection(ctx context.Context) {
 					w.logger.Warn("Low fuel efficiency detected (suspicion of theft)",
 						zap.String("vehicle_id", vehicleID),
 						zap.Float64("efficiency", efficiency))
-					_ = w.repo.MarkAsAnomalous(ctx, curr.ID, curr.OrganizationID, fmt.Sprintf("Suspiciously low efficiency: %.2f km/l", efficiency))
+					_ = w.repo.MarkAsAnomalous(ctx, curr.ID, curr.TenantID, fmt.Sprintf("Suspiciously low efficiency: %.2f km/l", efficiency))
 				}
 			} else if dist < 0 {
 				// Odometer tampered or error
-				_ = w.repo.MarkAsAnomalous(ctx, curr.ID, curr.OrganizationID, "Odometer reversal detected")
+				_ = w.repo.MarkAsAnomalous(ctx, curr.ID, curr.TenantID, "Odometer reversal detected")
 			}
 		}
 	}

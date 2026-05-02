@@ -46,7 +46,7 @@ func (s *violationEscalationServiceImpl) CheckAndEscalate(ctx context.Context, d
 	if count >= 3 && count < 5 {
 		alert := &models.ComplianceAlert{
 			ID:             uuid.New(),
-			OrganizationID: uuid.Nil, // In real app, associate from driver context
+			TenantID: uuid.Nil, // In real app, associate from driver context
 			Type:           models.AlertDriverViolation,
 			EntityType:     models.EntityDriver,
 			EntityID:       driverID,
@@ -67,7 +67,7 @@ func (s *violationEscalationServiceImpl) CheckAndEscalate(ctx context.Context, d
 
 		alert := &models.ComplianceAlert{
 			ID:             uuid.New(),
-			OrganizationID: uuid.Nil,
+			TenantID: uuid.Nil,
 			Type:           models.AlertDriverViolation,
 			EntityType:     models.EntityDriver,
 			EntityID:       driverID,

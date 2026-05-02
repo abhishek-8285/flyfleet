@@ -14,17 +14,18 @@ import (
 func (r *IndiaIntegrationRepositoryImpl) CreateEWayBill(ctx context.Context, bill *models.EWayBill) error {
 	query := `
 		INSERT INTO e_way_bills (
-			id, eway_bill_number, eway_bill_date, eway_bill_valid_till, document_number, document_date, 
+			id, tenant_id, eway_bill_number, eway_bill_date, eway_bill_valid_till, document_number, document_date, 
 			document_type, goods_description, goods_value, goods_tax_rate, goods_unit, goods_quantity,
 			from_place, from_pincode, from_state_code, to_place, to_pincode, to_state_code,
 			transporter_id, transporter_name, transport_mode, transport_document_number, 
 			transport_document_date, transit_type, vehicle_number, vehicle_type, remaining_distance,
 			user_gstin, recipient_gstin, generated_by, generated_at, cancelled, cancelled_by, 
 			cancelled_on, cancelled_reason, created_by, updated_by, updated_at, created_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39)`
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40)`
 
 	_, err := r.db.Exec(ctx, query,
 		bill.ID,
+		bill.TenantID,
 		bill.EWayBillNumber,
 		bill.EWayBillDate,
 		bill.EWayBillValidTill,
@@ -71,7 +72,7 @@ func (r *IndiaIntegrationRepositoryImpl) CreateEWayBill(ctx context.Context, bil
 // GetEWayBill retrieves an E-Way Bill by ID
 func (r *IndiaIntegrationRepositoryImpl) GetEWayBill(ctx context.Context, id string) (*models.EWayBill, error) {
 	query := `
-		SELECT id, eway_bill_number, eway_bill_date, eway_bill_valid_till, document_number, document_date,
+		SELECT id, tenant_id, eway_bill_number, eway_bill_date, eway_bill_valid_till, document_number, document_date,
 		       document_type, goods_description, goods_value, goods_tax_rate, goods_unit, goods_quantity,
 		       from_place, from_pincode, from_state_code, to_place, to_pincode, to_state_code,
 		       transporter_id, transporter_name, transport_mode, transport_document_number,
@@ -86,6 +87,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetEWayBill(ctx context.Context, id str
 	row := r.db.QueryRow(ctx, query, id)
 	err := row.Scan(
 		&bill.ID,
+		&bill.TenantID,
 		&bill.EWayBillNumber,
 		&bill.EWayBillDate,
 		&bill.EWayBillValidTill,
@@ -139,7 +141,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetEWayBill(ctx context.Context, id str
 // GetEWayBillByNumber retrieves an E-Way Bill by its number
 func (r *IndiaIntegrationRepositoryImpl) GetEWayBillByNumber(ctx context.Context, number string) (*models.EWayBill, error) {
 	query := `
-		SELECT id, eway_bill_number, eway_bill_date, eway_bill_valid_till, document_number, document_date,
+		SELECT id, tenant_id, eway_bill_number, eway_bill_date, eway_bill_valid_till, document_number, document_date,
 		       document_type, goods_description, goods_value, goods_tax_rate, goods_unit, goods_quantity,
 		       from_place, from_pincode, from_state_code, to_place, to_pincode, to_state_code,
 		       transporter_id, transporter_name, transport_mode, transport_document_number,
@@ -154,6 +156,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetEWayBillByNumber(ctx context.Context
 	row := r.db.QueryRow(ctx, query, number)
 	err := row.Scan(
 		&bill.ID,
+		&bill.TenantID,
 		&bill.EWayBillNumber,
 		&bill.EWayBillDate,
 		&bill.EWayBillValidTill,
@@ -293,7 +296,7 @@ func (r *IndiaIntegrationRepositoryImpl) ListEWayBills(ctx context.Context, vehi
 	}
 
 	query := fmt.Sprintf(`
-		SELECT id, eway_bill_number, eway_bill_date, eway_bill_valid_till, document_number, document_date,
+		SELECT id, tenant_id, eway_bill_number, eway_bill_date, eway_bill_valid_till, document_number, document_date,
 		       document_type, goods_description, goods_value, goods_tax_rate, goods_unit, goods_quantity,
 		       from_place, from_pincode, from_state_code, to_place, to_pincode, to_state_code,
 		       transporter_id, transporter_name, transport_mode, transport_document_number,
@@ -319,6 +322,7 @@ func (r *IndiaIntegrationRepositoryImpl) ListEWayBills(ctx context.Context, vehi
 
 		err := rows.Scan(
 			&bill.ID,
+			&bill.TenantID,
 			&bill.EWayBillNumber,
 			&bill.EWayBillDate,
 			&bill.EWayBillValidTill,

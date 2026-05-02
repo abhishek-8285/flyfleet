@@ -20,8 +20,8 @@ type authService interface {
 	ForgotPassword(ctx context.Context, email string) error
 	ResetPasswordWithToken(ctx context.Context, token, newPassword string) error
 	Logout(ctx context.Context, userID uuid.UUID, tokenJTI string) error
-	SwitchOrg(ctx context.Context, userID uuid.UUID, targetTenantID uuid.UUID, ip, ua string) (*models.OrgSwitchResponse, error)
-	GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]models.OrgInfo, error)
+	SwitchTenant(ctx context.Context, userID uuid.UUID, targetTenantID uuid.UUID, ip, ua string) (*models.TenantSwitchResponse, error)
+	GetUserTenants(ctx context.Context, userID uuid.UUID) ([]models.TenantInfo, error)
 	VerifyEmail(ctx context.Context, token string) error
 	ResetPasswordForced(ctx context.Context, userID uuid.UUID, newPassword string) error
 }
@@ -85,7 +85,7 @@ type userRepo interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	UpdateProfile(ctx context.Context, id uuid.UUID, name, phone, avatarURL string) error
 	UpdatePreferences(ctx context.Context, id, tenantID uuid.UUID, sidebarCollapsed *bool, language *string) error
-	GetOrganizations(ctx context.Context, id uuid.UUID) ([]models.OrgInfo, error)
+	GetTenants(ctx context.Context, id uuid.UUID) ([]models.TenantInfo, error)
 }
 
 // Compile-time: real services satisfy interfaces

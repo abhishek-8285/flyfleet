@@ -15,7 +15,7 @@ import (
 func (r *VideoRepositoryImpl) CreateVideoStream(ctx context.Context, stream *models.VideoStream) error {
 	query := `
 		INSERT INTO video_streams (
-			id, camera_id, vehicle_id, driver_id, organization_id, url, status,
+			id, camera_id, vehicle_id, driver_id, tenant_id, url, status,
 			resolution, framerate, bitrate, protocol, location, started_at, ended_at,
 			created_at, updated_at, analytics_enabled
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`
@@ -30,7 +30,7 @@ func (r *VideoRepositoryImpl) CreateVideoStream(ctx context.Context, stream *mod
 		stream.CameraID,
 		stream.VehicleID,
 		stream.DriverID,
-		stream.OrganizationID,
+		stream.TenantID,
 		stream.URL,
 		stream.Status,
 		stream.Resolution,
@@ -51,7 +51,7 @@ func (r *VideoRepositoryImpl) CreateVideoStream(ctx context.Context, stream *mod
 // GetVideoStream retrieves a video stream by ID
 func (r *VideoRepositoryImpl) GetVideoStream(ctx context.Context, id string) (*models.VideoStream, error) {
 	query := `
-		SELECT id, camera_id, vehicle_id, driver_id, organization_id, url, status,
+		SELECT id, camera_id, vehicle_id, driver_id, tenant_id, url, status,
 		       resolution, framerate, bitrate, protocol, location, started_at, ended_at,
 		       created_at, updated_at, analytics_enabled
 		FROM video_streams
@@ -66,7 +66,7 @@ func (r *VideoRepositoryImpl) GetVideoStream(ctx context.Context, id string) (*m
 		&stream.CameraID,
 		&stream.VehicleID,
 		&stream.DriverID,
-		&stream.OrganizationID,
+		&stream.TenantID,
 		&stream.URL,
 		&stream.Status,
 		&stream.Resolution,
@@ -185,7 +185,7 @@ func (r *VideoRepositoryImpl) ListVideoStreams(ctx context.Context, vehicleID *u
 	}
 
 	query := fmt.Sprintf(`
-		SELECT id, camera_id, vehicle_id, driver_id, organization_id, url, status,
+		SELECT id, camera_id, vehicle_id, driver_id, tenant_id, url, status,
 		       resolution, framerate, bitrate, protocol, location, started_at, ended_at,
 		       created_at, updated_at, analytics_enabled
 		FROM video_streams
@@ -211,7 +211,7 @@ func (r *VideoRepositoryImpl) ListVideoStreams(ctx context.Context, vehicleID *u
 			&stream.CameraID,
 			&stream.VehicleID,
 			&stream.DriverID,
-			&stream.OrganizationID,
+			&stream.TenantID,
 			&stream.URL,
 			&stream.Status,
 			&stream.Resolution,

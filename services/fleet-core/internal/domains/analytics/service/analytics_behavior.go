@@ -102,8 +102,8 @@ func (s *AnalyticsServiceImpl) GetDriverBehaviorAnalyticsByDriver(ctx context.Co
 	return data, total, err
 }
 
-// GetDriverBehaviorAnalyticsByOrg retrieves driver behavior analytics by organization
-func (s *AnalyticsServiceImpl) GetDriverBehaviorAnalyticsByOrg(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.DriverBehaviorAnalytics, int, error) {
+// GetDriverBehaviorAnalyticsByTenant retrieves driver behavior analytics by tenant
+func (s *AnalyticsServiceImpl) GetDriverBehaviorAnalyticsByTenant(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.DriverBehaviorAnalytics, int, error) {
 	start := time.Now()
 	var err error
 	var data []*models.DriverBehaviorAnalytics
@@ -116,11 +116,11 @@ func (s *AnalyticsServiceImpl) GetDriverBehaviorAnalyticsByOrg(ctx context.Conte
 			"limit":  limit,
 			"offset": offset,
 		}
-		s.logQuery(ctx, tenantID, "get_driver_behavior_by_org", params, time.Since(start), rowCount, cacheHit, err)
+		s.logQuery(ctx, tenantID, "get_driver_behavior_by_tenant", params, time.Since(start), rowCount, cacheHit, err)
 	}()
 
 	if tenantID == uuid.Nil {
-		err = errors.New("organization ID is required")
+		err = errors.New("tenant ID is required")
 		return nil, 0, err
 	}
 	if limit <= 0 {
@@ -133,7 +133,7 @@ func (s *AnalyticsServiceImpl) GetDriverBehaviorAnalyticsByOrg(ctx context.Conte
 		offset = 0
 	}
 
-	data, total, err = s.repo.GetDriverBehaviorAnalyticsByOrg(ctx, tenantID, limit, offset)
+	data, total, err = s.repo.GetDriverBehaviorAnalyticsByTenant(ctx, tenantID, limit, offset)
 	return data, total, err
 }
 
@@ -182,7 +182,7 @@ func (s *AnalyticsServiceImpl) ListDriverBehaviorAnalytics(ctx context.Context, 
 	}()
 
 	if tenantID == uuid.Nil {
-		err = errors.New("organization ID is required")
+		err = errors.New("tenant ID is required")
 		return nil, 0, err
 	}
 	if limit <= 0 {
@@ -364,7 +364,7 @@ func (s *AnalyticsServiceImpl) ListPredictiveMaintenanceAnalytics(ctx context.Co
 	}()
 
 	if tenantID == uuid.Nil {
-		err = errors.New("organization ID is required")
+		err = errors.New("tenant ID is required")
 		return nil, 0, err
 	}
 	if limit <= 0 {

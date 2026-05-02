@@ -1,39 +1,32 @@
 -- Migration: 044_emergency_commands
--- Description: Add persistence for emergency halt commands and audit trail
+-- Description: Add persistence for emergency halt commands and audit trail with tenant isolation.
 
--- Create emergency_commands table for tracking halt/clear commands
+-- 1. Create emergency_commands table
 CREATE TABLE IF NOT EXISTS emergency_commands (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id),
     command_id VARCHAR(64) NOT NULL UNIQUE,
-    command_type TEXT NOT NULL, -- GLOBAL_HALT, CLEAR_HALT
+    command_type TEXT NOT NULL,
     reason TEXT,
     issued_by TEXT NOT NULL,
     cleared_by TEXT,
     issued_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     cleared_at TIMESTAMP WITH TIME ZONE,
-    status TEXT NOT NULL DEFAULT 'ACTIVE', -- ACTIVE, CLEARED, EXPIRED
+    status TEXT NOT NULL DEFAULT 'ACTIVE',
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_emergency_commands_command_id 
-    ON emergency_commands(command_id);
+CREATE INDEX IF NOT EXISTS idx_emergency_commands_tenant_id ON emergency_commands(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_emergency_commands_command_id ON emergency_commands(command_id);
 
-CREATE INDEX IF NOT EXISTS idx_emergency_commands_type 
-    ON emergency_commands(command_type);
-
-CREATE INDEX IF NOT EXISTS idx_emergency_commands_status 
-    ON emergency_commands(status);
-
-CREATE INDEX IF NOT EXISTS idx_emergency_commands_issued_at 
-    ON emergency_commands(issued_at);
-
--- Create emergency_audit_log for detailed audit trail
+-- 2. Create emergency_audit_log
 CREATE TABLE IF NOT EXISTS emergency_audit_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id),
     command_id UUID NOT NULL REFERENCES emergency_commands(id) ON DELETE CASCADE,
-    action TEXT NOT NULL, -- HALT_ISSUED, HALT_CLEARED, HALT_ACKNOWLEDGED
+    action TEXT NOT NULL,
     actor TEXT NOT NULL,
     details TEXT,
     ip_address TEXT,
@@ -41,15 +34,12 @@ CREATE TABLE IF NOT EXISTS emergency_audit_log (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_emergency_audit_log_command_id 
-    ON emergency_audit_log(command_id);
+CREATE INDEX IF NOT EXISTS idx_emergency_audit_log_tenant_id ON emergency_audit_log(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_emergency_audit_log_command_id ON emergency_audit_log(command_id);
 
-CREATE INDEX IF NOT EXISTS idx_emergency_audit_log_created_at 
-    ON emergency_audit_log(created_at);
-
--- Create emergency_status table for current state (single row)
+-- 3. Create emergency_status table (Multi-tenant)
 CREATE TABLE IF NOT EXISTS emergency_status (
-    id INTEGER PRIMARY KEY CHECK (id = 1), -- Enforce single row
+    tenant_id UUID PRIMARY KEY REFERENCES tenants(id),
     is_active BOOLEAN DEFAULT FALSE,
     current_command_id UUID REFERENCES emergency_commands(id),
     last_halt_at TIMESTAMP WITH TIME ZONE,
@@ -60,7 +50,7 @@ CREATE TABLE IF NOT EXISTS emergency_status (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Initialize with default status
-INSERT INTO emergency_status (id, is_active) 
-VALUES (1, FALSE)
-ON CONFLICT (id) DO NOTHING;
+-- Seed System Tenant status
+INSERT INTO emergency_status (tenant_id, is_active) 
+VALUES ('00000000-0000-0000-0000-000000000000', FALSE)
+ON CONFLICT (tenant_id) DO NOTHING;

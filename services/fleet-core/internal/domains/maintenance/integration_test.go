@@ -88,7 +88,7 @@ func (s *MaintenanceIntegrationTestSuite) SetupSuite() {
 		);
 		CREATE TABLE IF NOT EXISTS users (
 			id UUID PRIMARY KEY,
-			organization_id UUID,
+			tenant_id UUID,
 			email TEXT UNIQUE,
 			full_name TEXT
 		);
@@ -110,7 +110,7 @@ func (s *MaintenanceIntegrationTestSuite) SetupSuite() {
 		);
 		CREATE TABLE IF NOT EXISTS maintenance_logs (
 			id UUID PRIMARY KEY,
-			organization_id UUID,
+			tenant_id UUID,
 			vehicle_id UUID,
 			schedule_id TEXT,
 			type TEXT,
@@ -128,11 +128,11 @@ func (s *MaintenanceIntegrationTestSuite) SetupSuite() {
 			completion_date TIMESTAMPTZ
 		);
 		-- Placeholder tables for FK constraints in migrations
-		CREATE TABLE IF NOT EXISTS subscriptions (id UUID PRIMARY KEY, organization_id UUID);
-		CREATE TABLE IF NOT EXISTS roles (id UUID PRIMARY KEY, organization_id UUID);
+		CREATE TABLE IF NOT EXISTS subscriptions (id UUID PRIMARY KEY, tenant_id UUID);
+		CREATE TABLE IF NOT EXISTS roles (id UUID PRIMARY KEY, tenant_id UUID);
 		CREATE TABLE IF NOT EXISTS maintenance_vendors (
 			id UUID PRIMARY KEY,
-			organization_id UUID,
+			tenant_id UUID,
 			name TEXT,
 			status TEXT
 		);
@@ -237,7 +237,7 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase1_TechnicianManagement() {
 		id := uuid.New()
 		err := s.maintenanceService.CreateTechnician(s.ctx, &models.Technician{
 			ID:                 id,
-			OrganizationID:     s.tenantID,
+			TenantID:     s.tenantID,
 			Name:               t.name,
 			Specialization:     t.skill,
 			AvailabilityStatus: models.TechnicianStatusAvailable,
@@ -281,7 +281,7 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase2_WarrantyManagement() {
 	partNumber := "ENG-001"
 
 	err := s.maintenanceService.CreateWarranty(s.ctx, &models.ComponentWarranty{
-		OrganizationID:   s.tenantID,
+		TenantID:   s.tenantID,
 		VehicleID:        vehicleID,
 		PartNumber:       partNumber,
 		WarrantyProvider: "FleetParts Corp",
@@ -300,7 +300,7 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase2_WarrantyManagement() {
 	s.Len(alerts, 0)
 
 	err = s.maintenanceService.CreateWarranty(s.ctx, &models.ComponentWarranty{
-		OrganizationID: s.tenantID,
+		TenantID: s.tenantID,
 		VehicleID:      vehicleID,
 		PartNumber:     "EXP-001",
 		WarrantyEnd:    time.Now().AddDate(0, 0, 5),
@@ -317,7 +317,7 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase3_ProcurementFlow() {
 	partID := uuid.New()
 
 	err := s.pool.QueryRow(s.ctx, `
-		INSERT INTO inventory_parts (id, organization_id, part_number, name, quantity_available, reorder_level, unit_cost)
+		INSERT INTO inventory_parts (id, tenant_id, part_number, name, quantity_available, reorder_level, unit_cost)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id`,
 		partID, s.tenantID, "PART-LOW-001", "Low Stock Part", 3, 5, 100.0).Scan(&partID)
@@ -328,7 +328,7 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase3_ProcurementFlow() {
 
 	var poStatus string
 	var poID uuid.UUID
-	err = s.pool.QueryRow(s.ctx, "SELECT id, status FROM purchase_orders WHERE organization_id = $1 ORDER BY created_at DESC LIMIT 1", s.tenantID).Scan(&poID, &poStatus)
+	err = s.pool.QueryRow(s.ctx, "SELECT id, status FROM purchase_orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 1", s.tenantID).Scan(&poID, &poStatus)
 	s.NoError(err)
 	s.Equal("DRAFT", poStatus)
 
@@ -350,7 +350,7 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase4_PredictiveMaintenance() {
 
 	for i := 0; i < 5; i++ {
 		_, err := s.pool.Exec(s.ctx, `
-			INSERT INTO maintenance_logs (id, organization_id, vehicle_id, type, start_date, completion_date, cost, total_cost, created_at)
+			INSERT INTO maintenance_logs (id, tenant_id, vehicle_id, type, start_date, completion_date, cost, total_cost, created_at)
 			VALUES ($1, $2, $3, 'corrective', NOW() - INTERVAL '5 days', NOW() - INTERVAL '4 days', 100.0, 100.0, NOW())`,
 			uuid.New(), s.tenantID, vehicleID)
 		s.NoError(err)
@@ -391,7 +391,7 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase5_DowntimeTracking() {
 	start := time.Now().Add(-2 * time.Hour)
 	end := time.Now()
 	err = s.downtimeService.RecordDowntime(s.ctx, &models.VehicleDowntime{
-		OrganizationID: s.tenantID,
+		TenantID: s.tenantID,
 		VehicleID:      vehicleID,
 		DowntimeStart:  start,
 		DowntimeEnd:    &end,
@@ -413,9 +413,9 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase6_AnalyticsEndpoints() {
 
 	_, err = s.pool.Exec(s.ctx, `INSERT INTO vehicles (id, tenant_id, registration_number) VALUES ($1, $2, $3)`, vehicleID, s.tenantID, "ANALYTIC-001")
 	s.NoError(err)
-	_, _ = s.pool.Exec(s.ctx, `INSERT INTO maintenance_vendors (id, organization_id, name, status) VALUES ($1, $2, $3, $4)`, uuid.New(), s.tenantID, "Main Vendor", "active")
+	_, _ = s.pool.Exec(s.ctx, `INSERT INTO maintenance_vendors (id, tenant_id, name, status) VALUES ($1, $2, $3, $4)`, uuid.New(), s.tenantID, "Main Vendor", "active")
 
-	_, _ = s.pool.Exec(s.ctx, `INSERT INTO maintenance_logs (id, organization_id, vehicle_id, cost, total_cost, type, start_date) VALUES ($1, $2, $3, 500.0, 500.0, 'routine', NOW())`, uuid.New(), s.tenantID, vehicleID)
+	_, _ = s.pool.Exec(s.ctx, `INSERT INTO maintenance_logs (id, tenant_id, vehicle_id, cost, total_cost, type, start_date) VALUES ($1, $2, $3, 500.0, 500.0, 'routine', NOW())`, uuid.New(), s.tenantID, vehicleID)
 
 	req := httptest.NewRequest("GET", "/analytics/costs", nil)
 	// Inject org ID into context
@@ -435,7 +435,7 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase7_AssetLifecycle() {
 	s.NoError(err)
 
 	for i := 0; i < 10; i++ {
-		_, err = s.pool.Exec(s.ctx, `INSERT INTO maintenance_logs (id, organization_id, vehicle_id, cost, type, start_date) VALUES ($1, $2, $3, 15000.0, 'corrective', NOW())`, uuid.New(), s.tenantID, vehicleID)
+		_, err = s.pool.Exec(s.ctx, `INSERT INTO maintenance_logs (id, tenant_id, vehicle_id, cost, type, start_date) VALUES ($1, $2, $3, 15000.0, 'corrective', NOW())`, uuid.New(), s.tenantID, vehicleID)
 		s.NoError(err)
 	}
 
@@ -457,8 +457,8 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase8_InventoryWOIntegration() {
 	_, err = s.pool.Exec(s.ctx, `INSERT INTO vehicles (id, tenant_id, registration_number) VALUES ($1, $2, $3)`, vehicleID, s.tenantID, "INV-001")
 	s.NoError(err)
 
-	_, _ = s.pool.Exec(s.ctx, "INSERT INTO work_orders (id, organization_id, vehicle_id, title, maintenance_type, priority, created_by) VALUES ($1, $2, $3, 'INV TEST', 'routine', 'LOW', $4)", woID, s.tenantID, vehicleID, uuid.New())
-	_, _ = s.pool.Exec(s.ctx, "INSERT INTO inventory_parts (id, organization_id, part_number, name, quantity_available, unit_cost) VALUES ($1, $2, 'PART-INV-001', 'Inv Test Part', 10, 50.0)", partID, s.tenantID)
+	_, _ = s.pool.Exec(s.ctx, "INSERT INTO work_orders (id, tenant_id, vehicle_id, title, maintenance_type, priority, created_by) VALUES ($1, $2, $3, 'INV TEST', 'routine', 'LOW', $4)", woID, s.tenantID, vehicleID, uuid.New())
+	_, _ = s.pool.Exec(s.ctx, "INSERT INTO inventory_parts (id, tenant_id, part_number, name, quantity_available, unit_cost) VALUES ($1, $2, 'PART-INV-001', 'Inv Test Part', 10, 50.0)", partID, s.tenantID)
 
 	_, err = s.woService.AssignPart(s.ctx, woID, &models.AssignPartRequest{PartID: partID, Quantity: 2})
 	s.NoError(err)
@@ -497,7 +497,7 @@ func (s *MaintenanceIntegrationTestSuite) TestPhase10_LoadTest() {
 
 	for i := 0; i < techCount; i++ {
 		_ = s.maintenanceService.CreateTechnician(s.ctx, &models.Technician{
-			OrganizationID:     s.tenantID,
+			TenantID:     s.tenantID,
 			Name:               fmt.Sprintf("Tech %d", i),
 			Specialization:     "engine",
 			AvailabilityStatus: models.TechnicianStatusAvailable,

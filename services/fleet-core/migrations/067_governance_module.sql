@@ -1,151 +1,72 @@
--- Migration: 067_governance_module.sql
--- Description: Creates tables for governance requests, settings, and audit logging
--- Created: 2026-03-03
+-- Migration: 067_governance_module
+-- Description: Creates tables for governance requests with tenant isolation.
 
--- Enable UUID extension if not already enabled
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Create governance request status enum
+-- 1. Governance request type enum
 DO $$ BEGIN
-    CREATE TYPE governance_request_status AS ENUM (
-        'PENDING',
-        'APPROVED',
-        'REJECTED',
-        'EXPIRED',
-        'COMPLETED'
-    );
-EXCEPTION
-    WHEN duplicate_object THEN null;
+    CREATE TYPE governance_request_status AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'EXPIRED', 'COMPLETED');
+EXCEPTION WHEN duplicate_object THEN null;
 END $$;
 
--- Create governance request type enum
 DO $$ BEGIN
-    CREATE TYPE governance_request_type AS ENUM (
-        'EXPORT',
-        'DELETION',
-        'ACCESS_REVIEW'
-    );
-EXCEPTION
-    WHEN duplicate_object THEN null;
+    CREATE TYPE governance_request_type AS ENUM ('EXPORT', 'DELETION', 'ACCESS_REVIEW');
+EXCEPTION WHEN duplicate_object THEN null;
 END $$;
 
--- Governance Requests Table
--- Stores data governance requests (export, deletion, access review)
+-- 2. Governance Requests Table
 CREATE TABLE IF NOT EXISTS governance_requests (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL,
-    requester_id    UUID NOT NULL,
-    request_type    governance_request_type NOT NULL,
-    data_scope      TEXT NOT NULL,
-    purpose         TEXT NOT NULL,
-    format          TEXT NOT NULL DEFAULT 'CSV',
-    delivery_method TEXT NOT NULL DEFAULT 'DIRECT',
-    status          governance_request_status NOT NULL DEFAULT 'PENDING',
-    expiry_date     TIMESTAMPTZ,
-    comments        TEXT,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
-    -- Indexes for common queries
-    CONSTRAINT fk_governance_requests_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid()
 );
 
--- Indexes for governance_requests
-CREATE INDEX IF NOT EXISTS idx_governance_requests_org_id ON governance_requests(organization_id);
-CREATE INDEX IF NOT EXISTS idx_governance_requests_status ON governance_requests(status);
-CREATE INDEX IF NOT EXISTS idx_governance_requests_type ON governance_requests(request_type);
-CREATE INDEX IF NOT EXISTS idx_governance_requests_requester ON governance_requests(requester_id);
-CREATE INDEX IF NOT EXISTS idx_governance_requests_created_at ON governance_requests(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_governance_requests_expiry ON governance_requests(expiry_date) WHERE status = 'APPROVED';
+DO $$ 
+BEGIN 
+    ALTER TABLE governance_requests ADD COLUMN IF NOT EXISTS tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE;
+    ALTER TABLE governance_requests ADD COLUMN IF NOT EXISTS requester_id UUID NOT NULL;
+    ALTER TABLE governance_requests ADD COLUMN IF NOT EXISTS request_type governance_request_type NOT NULL DEFAULT 'ACCESS_REVIEW';
+    ALTER TABLE governance_requests ADD COLUMN IF NOT EXISTS data_scope TEXT NOT NULL DEFAULT '';
+    ALTER TABLE governance_requests ADD COLUMN IF NOT EXISTS purpose TEXT NOT NULL DEFAULT '';
+    ALTER TABLE governance_requests ADD COLUMN IF NOT EXISTS format TEXT NOT NULL DEFAULT 'CSV';
+    ALTER TABLE governance_requests ADD COLUMN IF NOT EXISTS delivery_method TEXT NOT NULL DEFAULT 'DIRECT';
+    ALTER TABLE governance_requests ADD COLUMN IF NOT EXISTS status governance_request_status NOT NULL DEFAULT 'PENDING';
+    ALTER TABLE governance_requests ADD COLUMN IF NOT EXISTS expiry_date TIMESTAMPTZ;
+    ALTER TABLE governance_requests ADD COLUMN IF NOT EXISTS comments TEXT;
+    ALTER TABLE governance_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    ALTER TABLE governance_requests ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
--- Governance Settings Table
--- Stores organization-level governance configuration
+CREATE INDEX IF NOT EXISTS idx_governance_requests_tenant ON governance_requests(tenant_id);
+
+-- 3. Governance Settings Table
 CREATE TABLE IF NOT EXISTS governance_settings (
-    organization_id     UUID PRIMARY KEY,
-    retention_policies  JSONB NOT NULL DEFAULT '{}',
-    masking_rules       JSONB NOT NULL DEFAULT '{}',
-    auto_expiry_enabled BOOLEAN NOT NULL DEFAULT true,
-    download_ttl_hours  INTEGER NOT NULL DEFAULT 48,
-    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    created_by          UUID,
-    updated_by          UUID,
-    
-    -- Indexes for common queries
-    CONSTRAINT fk_governance_settings_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+    tenant_id UUID PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE
 );
 
--- Governance Audit Logs Table
--- Tracks all governance-related actions for compliance
+DO $$ 
+BEGIN 
+    ALTER TABLE governance_settings ADD COLUMN IF NOT EXISTS retention_policies JSONB NOT NULL DEFAULT '{}';
+    ALTER TABLE governance_settings ADD COLUMN IF NOT EXISTS masking_rules JSONB NOT NULL DEFAULT '{}';
+    ALTER TABLE governance_settings ADD COLUMN IF NOT EXISTS auto_expiry_enabled BOOLEAN NOT NULL DEFAULT true;
+    ALTER TABLE governance_settings ADD COLUMN IF NOT EXISTS download_ttl_hours INTEGER NOT NULL DEFAULT 48;
+    ALTER TABLE governance_settings ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    ALTER TABLE governance_settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+-- 4. Governance Audit Logs Table
 CREATE TABLE IF NOT EXISTS governance_audit_logs (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID NOT NULL,
-    user_id         UUID NOT NULL,
-    action          TEXT NOT NULL,
-    module          TEXT NOT NULL,
-    change_detail   TEXT,
-    ip_address      INET,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
-    -- Indexes for common queries
-    CONSTRAINT fk_governance_audit_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid()
 );
 
--- Indexes for governance_audit_logs
-CREATE INDEX IF NOT EXISTS idx_governance_audit_org_id ON governance_audit_logs(organization_id);
-CREATE INDEX IF NOT EXISTS idx_governance_audit_user_id ON governance_audit_logs(user_id);
-CREATE INDEX IF NOT EXISTS idx_governance_audit_action ON governance_audit_logs(action);
-CREATE INDEX IF NOT EXISTS idx_governance_audit_created_at ON governance_audit_logs(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_governance_audit_module ON governance_audit_logs(module);
+DO $$ 
+BEGIN 
+    ALTER TABLE governance_audit_logs ADD COLUMN IF NOT EXISTS tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE;
+    ALTER TABLE governance_audit_logs ADD COLUMN IF NOT EXISTS user_id UUID NOT NULL;
+    ALTER TABLE governance_audit_logs ADD COLUMN IF NOT EXISTS action TEXT NOT NULL;
+    ALTER TABLE governance_audit_logs ADD COLUMN IF NOT EXISTS module TEXT NOT NULL;
+    ALTER TABLE governance_audit_logs ADD COLUMN IF NOT EXISTS change_detail TEXT;
+    ALTER TABLE governance_audit_logs ADD COLUMN IF NOT EXISTS ip_address INET;
+    ALTER TABLE governance_audit_logs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
--- Insert default settings for existing organizations (if any)
--- This will be handled by the application on first access
-
--- Add trigger to auto-update updated_at timestamp for governance_requests
-CREATE OR REPLACE FUNCTION update_governance_requests_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trigger_update_governance_requests ON governance_requests;
-CREATE TRIGGER trigger_update_governance_requests
-    BEFORE UPDATE ON governance_requests
-    FOR EACH ROW
-    EXECUTE FUNCTION update_governance_requests_updated_at();
-
--- Add trigger to auto-update updated_at timestamp for governance_settings
-CREATE OR REPLACE FUNCTION update_governance_settings_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trigger_update_governance_settings ON governance_settings;
-CREATE TRIGGER trigger_update_governance_settings
-    BEFORE UPDATE ON governance_settings
-    FOR EACH ROW
-    EXECUTE FUNCTION update_governance_settings_updated_at();
-
--- Comments for documentation
-COMMENT ON TABLE governance_requests IS 'Stores data governance requests for export, deletion, and access review workflows';
-COMMENT ON TABLE governance_settings IS 'Organization-level governance configuration including retention policies and masking rules';
-COMMENT ON TABLE governance_audit_logs IS 'Audit trail for all governance-related actions for compliance reporting';
-
-COMMENT ON COLUMN governance_requests.request_type IS 'Type of governance request: EXPORT, DELETION, or ACCESS_REVIEW';
-COMMENT ON COLUMN governance_requests.status IS 'Current status: PENDING, APPROVED, REJECTED, EXPIRED, or COMPLETED';
-COMMENT ON COLUMN governance_requests.expiry_date IS 'Date when approved request expires and data should be deleted';
-COMMENT ON COLUMN governance_requests.data_scope IS 'Description of data covered by the request';
-COMMENT ON COLUMN governance_requests.purpose IS 'Business justification for the request';
-
-COMMENT ON COLUMN governance_settings.retention_policies IS 'JSON configuration for data retention rules';
-COMMENT ON COLUMN governance_settings.masking_rules IS 'JSON configuration for data masking requirements';
-COMMENT ON COLUMN governance_settings.download_ttl_hours IS 'Hours before approved export links expire (default: 48)';
-
-COMMENT ON COLUMN governance_audit_logs.action IS 'Action performed: CREATE_REQUEST, APPROVE_REQUEST, REJECT_REQUEST, UPDATE_SETTINGS, etc.';
-COMMENT ON COLUMN governance_audit_logs.module IS 'Module affected: DATA_REQUESTS, GOVERNANCE_SETTINGS, etc.';
-COMMENT ON COLUMN governance_audit_logs.change_detail IS 'Details of what changed (e.g., approval notes)';
+CREATE INDEX IF NOT EXISTS idx_governance_audit_tenant ON governance_audit_logs(tenant_id);

@@ -20,7 +20,7 @@ type DashboardHandlers struct {
 	logger      *zap.Logger
 	authSvc     *authservice.AuthService
 	vehicleSvc  *vehicleservice.VehicleService
-	orgSvc      service.OrganizationService
+	tenantSvc   service.TenantService
 	pulseSvc    monitoringservice.PulseService
 	supportRepo repository.SupportRepository
 }
@@ -29,7 +29,7 @@ func NewDashboardHandlers(
 	logger *zap.Logger,
 	authSvc *authservice.AuthService,
 	vehicleSvc *vehicleservice.VehicleService,
-	orgSvc service.OrganizationService,
+	tenantSvc service.TenantService,
 	pulseSvc monitoringservice.PulseService,
 	supportRepo repository.SupportRepository,
 ) *DashboardHandlers {
@@ -37,7 +37,7 @@ func NewDashboardHandlers(
 		logger:      logger,
 		authSvc:     authSvc,
 		vehicleSvc:  vehicleSvc,
-		orgSvc:      orgSvc,
+		tenantSvc:   tenantSvc,
 		pulseSvc:    pulseSvc,
 		supportRepo: supportRepo,
 	}
@@ -47,9 +47,9 @@ func (h *DashboardHandlers) GetGlobalStats(w http.ResponseWriter, r *http.Reques
 	ctx := r.Context()
 
 	// In a real implementation, we'd aggregate from all services.
-	// For now, we'll leverage the existing OrganizationService.GetDashboardStats
+	// For now, we'll leverage the existing TenantService.GetDashboardStats
 	// which seems to be the intended aggregation point in this core service.
-	stats, err := h.orgSvc.GetDashboardStats(ctx)
+	stats, err := h.tenantSvc.GetDashboardStats(ctx)
 	if err != nil {
 		h.logger.Error("failed to get dashboard stats", zap.Error(err))
 		http.Error(w, "failed to get stats", http.StatusInternalServerError)
@@ -66,16 +66,16 @@ func (h *DashboardHandlers) GetGlobalStats(w http.ResponseWriter, r *http.Reques
 func (h *DashboardHandlers) GetAdminDashboardData(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	stats, err := h.orgSvc.GetDashboardStats(ctx)
+	stats, err := h.tenantSvc.GetDashboardStats(ctx)
 	if err != nil {
 		h.logger.Error("failed to get dashboard stats for admin", zap.Error(err))
 		http.Error(w, "failed to get stats", http.StatusInternalServerError)
 		return
 	}
 
-	orgStats, err := h.orgSvc.GetOrganizationStats(ctx)
+	tenantStats, err := h.tenantSvc.GetTenantStats(ctx)
 	if err != nil {
-		h.logger.Warn("failed to get organization stats", zap.Error(err))
+		h.logger.Warn("failed to get tenant stats", zap.Error(err))
 	}
 
 	// Real-time Health
@@ -111,18 +111,18 @@ func (h *DashboardHandlers) GetAdminDashboardData(w http.ResponseWriter, r *http
 			"integration_failures": 0,
 		},
 		"operational_metrics": map[string]interface{}{
-			"active_orgs":        orgStats.ActiveOrgs,
+			"active_tenants":     tenantStats.ActiveTenants,
 			"active_fleet":       stats.ActiveVehicles,
 			"connected_devices":  stats.ActiveVehicles,
 			"active_users_today": stats.TotalDrivers,
-			"total_orgs":         orgStats.TotalOrgs,
+			"total_tenants":      tenantStats.TotalTenants,
 			"new_orgs_today":     0,
 			"total_vehicles":     stats.TotalVehicles,
 			"vehicles_offline":   stats.TotalVehicles - stats.ActiveVehicles,
 			"devices_offline":    stats.TotalVehicles - stats.ActiveVehicles,
 			"users_yesterday":    stats.TotalDrivers,
 		},
-		"pending_approvals": orgStats.PendingOrgs,
+		"pending_approvals": tenantStats.PendingTenants,
 		"recent_activity":   activity,
 	}
 
@@ -203,13 +203,13 @@ func (h *DashboardHandlers) GetProfile(w http.ResponseWriter, r *http.Request) {
 	tenantID := user.TenantID
 	permissions, _ := h.authSvc.GetUserPermissions(ctx, userID, tenantID)
 
-	// Use orgSvc to get organizations
-	orgs, _, _ := h.orgSvc.GetOrganizations(ctx, 1, 100, "")
+	// Use tenantSvc to get tenants
+	tenants, _, _ := h.tenantSvc.GetTenants(ctx, 1, 100, "")
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"user":        user,
 		"permissions": permissions,
-		"orgs":        orgs,
+		"tenants":     tenants,
 	})
 }

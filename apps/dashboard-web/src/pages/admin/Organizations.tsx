@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useUIStrings } from "../../hooks/useUIStrings";
 import { api } from "../../services/api";
-import { Organization } from "../../types";
+import { Tenant } from "../../types";
 
 export const Organizations: React.FC = () => {
   const navigate = useNavigate();
@@ -20,12 +20,12 @@ export const Organizations: React.FC = () => {
   const { uiStrings } = useUIStrings("admin_orgs");
 
   // Data State
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [stats, setStats] = useState({
-    total_orgs: 0,
-    active_orgs: 0,
-    pending_orgs: 0,
-    inactive_orgs: 0,
+    total_tenants: 0,
+    active_tenants: 0,
+    pending_tenants: 0,
+    inactive_tenants: 0,
     total_users: 0,
     total_vehicles: 0,
     total_devices: 0,
@@ -47,13 +47,13 @@ export const Organizations: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      // Fetch Stats and Orgs in parallel
-      const [orgStats, orgsResponse, globalStats] = await Promise.all([
-        api.getOrganizationStats().catch((err) => {
-          console.warn("Failed to fetch org stats", err);
+      // Fetch Stats and Tenants in parallel
+      const [orgStats, tenantsResponse, globalStats] = await Promise.all([
+        api.getTenantStats().catch((err) => {
+          console.warn("Failed to fetch tenant stats", err);
           return {}; // Fallback
         }),
-        api.getOrganizations({ page, limit: pageSize, search: searchQuery }),
+        api.getTenants({ page, limit: pageSize, search: searchQuery }),
         api.getStatistics().catch((err) => {
           console.warn("Failed to fetch global stats", err);
           return {};
@@ -61,18 +61,17 @@ export const Organizations: React.FC = () => {
       ]);
 
       // Normalize Stats
-      // Both getOrganizationStats and getStatistics now return { data: ... }
       const statsData = (orgStats as any)?.data || (globalStats as any)?.data;
-      const orgsMeta = (orgsResponse as any)?.meta;
-      const orgsList =
-        (orgsResponse as any)?.data ||
-        (Array.isArray(orgsResponse) ? orgsResponse : []);
+      const tenantsMeta = (tenantsResponse as any)?.meta;
+      const tenantsList =
+        (tenantsResponse as any)?.data ||
+        (Array.isArray(tenantsResponse) ? tenantsResponse : []);
 
       setStats({
-        total_orgs: statsData?.total_orgs || orgsMeta?.total || 0,
-        active_orgs: statsData?.active_orgs || 0,
-        pending_orgs: statsData?.pending_orgs || 0,
-        inactive_orgs: statsData?.inactive_orgs || 0,
+        total_tenants: statsData?.total_tenants || tenantsMeta?.total || 0,
+        active_tenants: statsData?.active_tenants || 0,
+        pending_tenants: statsData?.pending_tenants || 0,
+        inactive_tenants: statsData?.inactive_tenants || 0,
         total_users: statsData?.total_users || statsData?.total_drivers || 0,
         total_vehicles: statsData?.total_vehicles || 0,
         total_devices: statsData?.total_devices || 0,
@@ -80,16 +79,16 @@ export const Organizations: React.FC = () => {
         active_alerts: statsData?.active_alerts || statsData?.alerts_count || 0,
       });
 
-      // Normalize Organizations Data
+      // Normalize Tenants Data
       const total =
-        orgsMeta?.total || (orgsResponse as any)?.total || orgsList.length;
+        tenantsMeta?.total || (tenantsResponse as any)?.total || tenantsList.length;
 
-      setOrganizations(Array.isArray(orgsList) ? orgsList : []);
+      setTenants(Array.isArray(tenantsList) ? tenantsList : []);
       setTotalItems(total);
     } catch (err: any) {
-      console.error("Failed to fetch organization data", err);
+      console.error("Failed to fetch tenant data", err);
       setError({
-        message: err.message || "Failed to load organization data",
+        message: err.message || "Failed to load tenant data",
         code: err.code || "UNKNOWN_ERROR",
         traceId: err.traceId || "N/A",
       });
@@ -111,18 +110,18 @@ export const Organizations: React.FC = () => {
 
   // Handlers
   const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this organization?")) {
+    if (window.confirm("Are you sure you want to delete this tenant?")) {
       try {
-        await api.deleteOrganization(id);
+        await api.deleteTenant(id);
         setRefreshTrigger((prev) => prev + 1);
       } catch (error) {
-        alert("Failed to delete organization");
+        alert("Failed to delete tenant");
       }
     }
   };
 
-  const toggleDropdown = (orgId: string) => {
-    setDropdownOpen(dropdownOpen === orgId ? null : orgId);
+  const toggleDropdown = (tenantId: string) => {
+    setDropdownOpen(dropdownOpen === tenantId ? null : tenantId);
   };
 
   const handlePageChange = (newPage: number) => {
@@ -147,16 +146,16 @@ export const Organizations: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  if (loading && !organizations.length) {
+  if (loading && !tenants.length) {
     return (
       <div className="p-8">
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-white text-2xl font-bold mb-2">
-              {uiStrings?.title || "Organizations"}
+              {uiStrings?.title || "Tenants"}
             </h1>
             <p className="text-text-muted">
-              {uiStrings?.loading || "Loading organization data..."}
+              {uiStrings?.loading || "Loading tenant data..."}
             </p>
           </div>
         </div>
@@ -172,7 +171,7 @@ export const Organizations: React.FC = () => {
       <div className="p-8 max-w-4xl mx-auto">
         <div className="bg-red-900/20 border border-red-500/50 rounded-xl p-6">
           <h3 className="text-white text-lg font-bold mb-2">
-            Failed to Load Organizations
+            Failed to Load Tenants
           </h3>
           <p className="text-text-muted mb-4">{error.message}</p>
           <button
@@ -190,18 +189,18 @@ export const Organizations: React.FC = () => {
     <div className="w-full">
       <div className="mb-6">
         <h1 className="text-white text-2xl font-bold mb-1">
-          {uiStrings?.title || "Organization Management"}
+          {uiStrings?.title || "Tenant Management"}
         </h1>
         <p className="text-text-muted text-sm">
           {uiStrings?.subtitle ||
-            "Manage tenant organizations and their configurations"}
+            "Manage platform tenants and their configurations"}
         </p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
         <div
-          onClick={() => navigate("/admin/organizations?status=all")}
+          onClick={() => navigate("/admin/tenants?status=all")}
           className="bg-surface-dark rounded-xl border border-border-color p-4 hover:border-blue-500/50 transition-all cursor-pointer group"
         >
           <div className="flex items-center justify-between mb-2">
@@ -209,11 +208,11 @@ export const Organizations: React.FC = () => {
               corporate_fare
             </span>
             <span className="text-xs font-bold text-blue-400 bg-blue-400/20 px-2 py-1 rounded">
-              {uiStrings?.stat_total || "ORGANIZATIONS"}
+              {uiStrings?.stat_total || "TENANTS"}
             </span>
           </div>
           <p className="text-2xl font-bold text-white">
-            {stats.total_orgs?.toLocaleString()}
+            {stats.total_tenants?.toLocaleString()}
           </p>
         </div>
         <div
@@ -288,15 +287,15 @@ export const Organizations: React.FC = () => {
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-6 whitespace-nowrap">
               <button className="text-sm font-semibold text-white border-b-2 border-primary pb-2">
-                {uiStrings?.tab_all || "All Organizations"}
+                {uiStrings?.tab_all || "All Tenants"}
               </button>
             </div>
             <button
-              onClick={() => navigate("/admin/organizations/new")}
+              onClick={() => navigate("/admin/tenants/new")}
               className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-sm font-semibold rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-primary/20"
             >
               <span className="material-symbols-outlined text-base">add</span>
-              {uiStrings?.btn_new_org || "New Organization"}
+              {uiStrings?.btn_new_org || "New Tenant"}
             </button>
           </div>
 
@@ -308,7 +307,7 @@ export const Organizations: React.FC = () => {
               <input
                 type="text"
                 placeholder={
-                  uiStrings?.placeholder_search || "Search organizations..."
+                  uiStrings?.placeholder_search || "Search tenants..."
                 }
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -333,7 +332,7 @@ export const Organizations: React.FC = () => {
             <thead className="bg-surface-darker border-b border-border-color">
               <tr>
                 <th className="p-4 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">
-                  {uiStrings?.th_name || "Org Name"}
+                  {uiStrings?.th_name || "Tenant Name"}
                 </th>
                 <th className="p-4 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">
                   {uiStrings?.th_domain || "Domain"}
@@ -350,50 +349,50 @@ export const Organizations: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border-color">
-              {organizations.length === 0 ? (
+              {tenants.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="p-8 text-center text-text-muted">
                     <div className="flex flex-col items-center gap-2">
                       <span className="material-symbols-outlined text-4xl text-border-color">
                         corporate_fare
                       </span>
-                      <p>{uiStrings?.no_orgs || "No organizations found"}</p>
+                      <p>{uiStrings?.no_orgs || "No tenants found"}</p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                organizations.map((org) => (
+                tenants.map((tenant) => (
                   <tr
-                    key={org.id}
+                    key={tenant.id}
                     className="hover:text-amber-200 hover:bg-surface-dark/10 transition-colors"
                   >
                     <td className="p-4">
-                      <div className="font-medium text-white">{org.name}</div>
+                      <div className="font-medium text-white">{tenant.name}</div>
                     </td>
-                    <td className="p-4 text-text-muted">{org.domain}</td>
+                    <td className="p-4 text-text-muted">{tenant.domain}</td>
                     <td className="p-4">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-semibold border 
                         ${
-                          org.status?.toLowerCase() === "active"
+                          tenant.status?.toLowerCase() === "active"
                             ? "bg-success/20 text-success border-success/30"
-                            : org.status?.toLowerCase() === "suspended"
+                            : tenant.status?.toLowerCase() === "suspended"
                               ? "bg-red-500/20 text-red-400 border-red-500/30"
                               : "bg-gray-500/20 text-gray-400 border-gray-500/30"
                         }`}
                       >
-                        {(org.status || "UNKNOWN").toUpperCase()}
+                        {(tenant.status || "UNKNOWN").toUpperCase()}
                       </span>
                     </td>
                     <td className="p-4 text-text-muted">
-                      {org.created_at
-                        ? new Date(org.created_at).toLocaleDateString()
+                      {tenant.created_at
+                        ? new Date(tenant.created_at).toLocaleDateString()
                         : "N/A"}
                     </td>
                     <td className="p-4 relative">
                       <div ref={dropdownRef}>
                         <button
-                          onClick={() => toggleDropdown(org.id)}
+                          onClick={() => toggleDropdown(tenant.id)}
                           className="p-2 hover:bg-border-color rounded text-text-muted hover:text-white transition-colors"
                         >
                           <span className="material-symbols-outlined text-[16px]">
@@ -401,11 +400,11 @@ export const Organizations: React.FC = () => {
                           </span>
                         </button>
 
-                        {dropdownOpen === org.id && (
+                        {dropdownOpen === tenant.id && (
                           <div className="absolute right-0 mt-2 w-48 bg-surface-dark border border-border-color rounded-lg shadow-lg z-50">
                             <button
                               onClick={() =>
-                                navigate(`/admin/organizations/${org.id}`)
+                                navigate(`/admin/tenants/${tenant.id}`)
                               }
                               className="w-full px-4 py-3 text-left text-white hover:text-amber-200 hover:bg-surface-dark flex items-center gap-3 text-sm font-medium transition-colors"
                             >
@@ -415,7 +414,7 @@ export const Organizations: React.FC = () => {
                               {uiStrings?.btn_view || "View Details"}
                             </button>
                             <button
-                              onClick={() => handleDelete(org.id)}
+                              onClick={() => handleDelete(tenant.id)}
                               className="w-full px-4 py-3 text-left text-red-400 hover:bg-red-500/20 flex items-center gap-3 text-sm font-medium transition-colors"
                             >
                               <span className="material-symbols-outlined text-base">

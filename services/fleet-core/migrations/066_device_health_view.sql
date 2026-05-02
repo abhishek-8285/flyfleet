@@ -8,6 +8,15 @@ CREATE TABLE IF NOT EXISTS device_auth_tokens (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Ensure device_telemetry has required columns for the view
+DO $$ 
+BEGIN 
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'device_telemetry') THEN
+        ALTER TABLE device_telemetry ADD COLUMN IF NOT EXISTS battery_voltage DOUBLE PRECISION;
+        ALTER TABLE device_telemetry ADD COLUMN IF NOT EXISTS timestamp TIMESTAMP WITH TIME ZONE;
+    END IF;
+END $$;
+
 -- Device Fleet Health View
 CREATE OR REPLACE VIEW device_health_summary AS
 SELECT

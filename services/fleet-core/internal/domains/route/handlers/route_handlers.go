@@ -61,7 +61,7 @@ func (h *RouteOptimizationHandler) getTenantID(r *http.Request) uuid.UUID {
 func (h *RouteOptimizationHandler) requireResourceOwnership(w http.ResponseWriter, r *http.Request, resourceTenantID uuid.UUID) bool {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return false
 	}
 	if resourceTenantID != tenantID {
@@ -127,7 +127,7 @@ func (h *RouteOptimizationHandler) RecalculateRoute(w http.ResponseWriter, r *ht
 		return
 	}
 
-	if !h.requireResourceOwnership(w, r, result.OrganizationID) {
+	if !h.requireResourceOwnership(w, r, result.TenantID) {
 		return
 	}
 
@@ -195,7 +195,7 @@ func (h *RouteOptimizationHandler) GetOptimizationRequest(w http.ResponseWriter,
 	}
 
 	// SECURITY: Verify request belongs to authenticated organization
-	if !h.requireResourceOwnership(w, r, request.OrganizationID) {
+	if !h.requireResourceOwnership(w, r, request.TenantID) {
 		return
 	}
 
@@ -218,7 +218,7 @@ func (h *RouteOptimizationHandler) UpdateOptimizationRequest(w http.ResponseWrit
 	}
 
 	// SECURITY: Verify ownership before update
-	if !h.requireResourceOwnership(w, r, request.OrganizationID) {
+	if !h.requireResourceOwnership(w, r, request.TenantID) {
 		return
 	}
 
@@ -228,9 +228,9 @@ func (h *RouteOptimizationHandler) UpdateOptimizationRequest(w http.ResponseWrit
 		return
 	}
 
-	// Prevent organization_id tampering
-	if _, ok := updates["organization_id"]; ok {
-		h.writeErrorResponse(w, http.StatusBadRequest, "Cannot change organization_id", nil)
+	// Prevent tenant_id tampering
+	if _, ok := updates["tenant_id"]; ok {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Cannot change tenant_id", nil)
 		return
 	}
 
@@ -257,7 +257,7 @@ func (h *RouteOptimizationHandler) DeleteOptimizationRequest(w http.ResponseWrit
 		return
 	}
 
-	if !h.requireResourceOwnership(w, r, request.OrganizationID) {
+	if !h.requireResourceOwnership(w, r, request.TenantID) {
 		return
 	}
 
@@ -276,7 +276,7 @@ func (h *RouteOptimizationHandler) ListOptimizationRequests(w http.ResponseWrite
 	// SECURITY: Always use org from authenticated context, ignore any tenant_id query parameter
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return
 	}
 
@@ -324,7 +324,7 @@ func (h *RouteOptimizationHandler) GetOptimizationResult(w http.ResponseWriter, 
 	}
 
 	// SECURITY: Verify result belongs to authenticated organization
-	if !h.requireResourceOwnership(w, r, result.OrganizationID) {
+	if !h.requireResourceOwnership(w, r, result.TenantID) {
 		return
 	}
 
@@ -346,7 +346,7 @@ func (h *RouteOptimizationHandler) GetOptimizationResultByRequestID(w http.Respo
 	}
 
 	// SECURITY: Verify result belongs to authenticated organization
-	if !h.requireResourceOwnership(w, r, result.OrganizationID) {
+	if !h.requireResourceOwnership(w, r, result.TenantID) {
 		return
 	}
 

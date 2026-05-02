@@ -134,6 +134,7 @@ type TripEvent struct {
 
 // TelemetryPoint represents a single GPS/IoT data point
 type TelemetryPoint struct {
+	TenantID       string    `json:"tenant_id" db:"tenant_id"`
 	TripID         string    `json:"trip_id" db:"trip_id"`
 	Latitude       float64   `json:"lat" db:"lat"`
 	Longitude      float64   `json:"lng" db:"lng"`

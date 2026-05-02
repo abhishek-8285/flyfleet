@@ -46,7 +46,7 @@ func (s *AlertsService) TriggerAlert(ctx context.Context, req models.AlertReques
 
 	// 2. Filter by user preferences
 	if req.UserID != nil {
-		prefs, err := s.repo.GetUserPreferences(ctx, *req.UserID, req.OrganizationID)
+		prefs, err := s.repo.GetUserPreferences(ctx, *req.UserID, req.TenantID)
 		if err != nil {
 			s.logger.Error("Failed to fetch user preferences", zap.Error(err), zap.String("user_id", req.UserID.String()))
 		} else {
@@ -62,7 +62,7 @@ func (s *AlertsService) TriggerAlert(ctx context.Context, req models.AlertReques
 	// 3. For each channel, render and queue
 	for _, channel := range channels {
 		// a. Get Template
-		tmpl, err := s.repo.GetTemplate(ctx, req.AlertType, channel, "en", req.OrganizationID) // TODO: Support user language
+		tmpl, err := s.repo.GetTemplate(ctx, req.AlertType, channel, "en", req.TenantID) // TODO: Support user language
 		if err != nil {
 			s.logger.Error("Failed to fetch template", zap.Error(err),
 				zap.String("type", req.AlertType), zap.String("channel", string(channel)))

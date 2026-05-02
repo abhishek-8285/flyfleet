@@ -50,25 +50,25 @@ func (w *FraudRiskWorker) scanForFraud(ctx context.Context) {
 	w.logger.Info("Scanning fuel logs for fraud", zap.Int("count", len(logs)))
 
 	for _, log := range logs {
-		score, level, signals, err := w.fraudSvc.ScoreFuelLog(ctx, log.ID, log.OrganizationID)
+		score, level, signals, err := w.fraudSvc.ScoreFuelLog(ctx, log.ID, log.TenantID)
 		if err != nil {
 			w.logger.Warn("Failed to score fuel log", zap.String("id", log.ID.String()), zap.Error(err))
 			continue
 		}
 
 		if score > 0 {
-			_, err := w.fraudSvc.CreateFraudIncident(ctx, "fuel_log", log.ID, log.OrganizationID, score, level, signals)
+			_, err := w.fraudSvc.CreateFraudIncident(ctx, "fuel_log", log.ID, log.TenantID, score, level, signals)
 			if err != nil {
 				w.logger.Error("Failed to create fraud incident", zap.Error(err))
 				continue
 			}
 
 			w.metrics.FraudIncidentsTotal.WithLabelValues(
-				log.OrganizationID.String(),
+				log.TenantID.String(),
 				string(level),
 			).Inc()
 			if w.alertSvc != nil {
-				_ = w.alertSvc.Publish(ctx, "fuel.theft.detected", log.OrganizationID, map[string]interface{}{
+				_ = w.alertSvc.Publish(ctx, "fuel.theft.detected", log.TenantID, map[string]interface{}{
 					"fuel_log_id": log.ID.String(),
 					"fraud_score": score,
 					"risk_level":  string(level),

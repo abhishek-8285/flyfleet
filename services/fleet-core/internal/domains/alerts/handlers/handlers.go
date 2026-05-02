@@ -43,7 +43,7 @@ func (h *AlertsHandlers) getTenantID(c *gin.Context) uuid.UUID {
 func (h *AlertsHandlers) requireOrgAccess(c *gin.Context, resourceTenantID uuid.UUID) bool {
 	tenantID := h.getTenantID(c)
 	if tenantID == uuid.Nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Organization ID required"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tenant ID required"})
 		return false
 	}
 	if resourceTenantID != tenantID {
@@ -61,7 +61,7 @@ func (h *AlertsHandlers) requireOrgAccess(c *gin.Context, resourceTenantID uuid.
 func (h *AlertsHandlers) TriggerAlert(c *gin.Context) {
 	tenantID := h.getTenantID(c)
 	if tenantID == uuid.Nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Organization context required"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tenant context required"})
 		return
 	}
 
@@ -104,7 +104,7 @@ func (h *AlertsHandlers) GetPreferences(c *gin.Context) {
 
 	tenantID := h.getTenantID(c)
 	if tenantID == uuid.Nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Organization ID required"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tenant ID required"})
 		return
 	}
 
@@ -139,7 +139,7 @@ func (h *AlertsHandlers) UpdatePreference(c *gin.Context) {
 
 	tenantID := h.getTenantID(c)
 	if tenantID == uuid.Nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Organization ID required"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tenant ID required"})
 		return
 	}
 
@@ -170,7 +170,7 @@ func (h *AlertsHandlers) UpdatePreference(c *gin.Context) {
 func (h *AlertsHandlers) CreateTemplate(c *gin.Context) {
 	tenantID := h.getTenantID(c)
 	if tenantID == uuid.Nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Organization ID required"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Tenant ID required"})
 		return
 	}
 

@@ -63,7 +63,7 @@ func (s *VahanIntegrationServiceImpl) VerifyVehicle(ctx context.Context, tenantI
 	verification := &models.VehicleVerification{
 		ID:                 uuid.New().String(),
 		VehicleID:          vehicleID,
-		OrganizationID:     tenantID,
+		TenantID:     tenantID,
 		RegistrationNumber: regNumber,
 		Status:             "verified",
 		VerificationDate:   time.Now(),
@@ -79,7 +79,7 @@ func (s *VahanIntegrationServiceImpl) VerifyVehicle(ctx context.Context, tenantI
 		RequestPayload:  map[string]string{"reg_number": regNumber},
 		ResponsePayload: verification,
 		Status:          200,
-		OrganizationID:  &tenantID,
+		TenantID:  &tenantID,
 	}
 	_ = s.repo.CreateIntegrationLog(ctx, log)
 

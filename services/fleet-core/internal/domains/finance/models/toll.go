@@ -8,6 +8,7 @@ import (
 
 type TollTransaction struct {
 	ID                    uuid.UUID      `json:"id" db:"id"`
+	TenantID              uuid.UUID      `json:"tenant_id" db:"tenant_id"`
 	VehicleID             uuid.UUID      `json:"vehicle_id" db:"vehicle_id"`
 	FASTagID              string         `json:"fastag_id" db:"fastag_id"`
 	TollPlaza             string         `json:"toll_plaza" db:"toll_plaza"`

@@ -349,7 +349,7 @@ func (h *AnalyticsHandler) CreatePredictionResult(w http.ResponseWriter, r *http
 	}
 
 	// Ensure organization ID matches the one from context
-	result.OrganizationID = tenantID
+	result.TenantID = tenantID
 
 	// Set ID and timestamps
 	result.ID = uuid.New().String()
@@ -501,7 +501,7 @@ func (h *AnalyticsHandler) CreateAnalyticsJob(w http.ResponseWriter, r *http.Req
 	}
 
 	// Ensure organization ID matches context
-	job.OrganizationID = tenantID
+	job.TenantID = tenantID
 
 	// Set ID and timestamps
 	job.ID = uuid.New().String()
@@ -867,7 +867,7 @@ func (h *AnalyticsHandler) CreateDriverBehaviorAnalytics(w http.ResponseWriter, 
 	}
 
 	// Ensure organization ID matches context
-	analytics.OrganizationID = tenantID
+	analytics.TenantID = tenantID
 
 	// Set ID and timestamps
 	analytics.ID = uuid.New().String()

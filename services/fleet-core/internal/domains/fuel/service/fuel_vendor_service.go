@@ -21,7 +21,7 @@ func NewFuelVendorService(repo repository.FuelLogRepository, logger *zap.Logger)
 func (s *FuelVendorService) CreateVendor(ctx context.Context, tenantID uuid.UUID, req models.CreateFuelVendorRequest) (*models.FuelVendor, error) {
 	vendor := &models.FuelVendor{
 		ID:             uuid.New(),
-		OrganizationID: tenantID,
+		TenantID: tenantID,
 		Name:           req.Name,
 		GSTIN:          req.GSTIN,
 		Address:        req.Address,

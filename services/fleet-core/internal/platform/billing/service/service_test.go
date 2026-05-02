@@ -15,7 +15,7 @@ type MockBillingRepository struct {
 	mock.Mock
 }
 
-func (m *MockBillingRepository) GetSubscriptionByOrganization(ctx context.Context, tenantID uuid.UUID) (*models.Subscription, error) {
+func (m *MockBillingRepository) GetSubscriptionByTenant(ctx context.Context, tenantID uuid.UUID) (*models.Subscription, error) {
 	args := m.Called(ctx, tenantID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -49,7 +49,7 @@ func TestBillingService_CheckLimit(t *testing.T) {
 	tenantID := uuid.New()
 	planID := uuid.New()
 
-	repo.On("GetSubscriptionByOrganization", mock.Anything, tenantID).Return(&models.Subscription{PlanID: planID}, nil)
+	repo.On("GetSubscriptionByTenant", mock.Anything, tenantID).Return(&models.Subscription{PlanID: planID}, nil)
 	repo.On("GetPlanByID", mock.Anything, planID).Return(&models.Plan{MaxVehicles: 10, MaxDrivers: 5}, nil)
 
 	// Case: Under limit

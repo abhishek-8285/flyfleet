@@ -29,7 +29,7 @@ func (r *pgGovernanceRepository) CreateRequest(ctx context.Context, req *models.
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`
 	_, err := r.db.Exec(ctx, query,
-		req.ID, req.OrganizationID, req.RequesterID, req.RequestType, req.DataScope,
+		req.ID, req.TenantID, req.RequesterID, req.RequestType, req.DataScope,
 		req.Purpose, req.Format, req.DeliveryMethod, req.Status, req.ExpiryDate, req.Comments,
 		req.CreatedBy, req.UpdatedBy,
 	)
@@ -47,7 +47,7 @@ func (r *pgGovernanceRepository) GetRequestByID(ctx context.Context, id uuid.UUI
 	`
 	var req models.GovernanceRequest
 	err := r.db.QueryRow(ctx, query, id, tenantID).Scan(
-		&req.ID, &req.OrganizationID, &req.RequesterID, &req.RequestType, &req.DataScope,
+		&req.ID, &req.TenantID, &req.RequesterID, &req.RequestType, &req.DataScope,
 		&req.Purpose, &req.Format, &req.DeliveryMethod, &req.Status, &req.ExpiryDate, &req.Comments,
 		&req.CreatedAt, &req.CreatedBy, &req.UpdatedAt, &req.UpdatedBy,
 	)
@@ -71,7 +71,7 @@ func (r *pgGovernanceRepository) GetRequestByIDInternal(ctx context.Context, id 
 	`
 	var req models.GovernanceRequest
 	err := r.db.QueryRow(ctx, query, id).Scan(
-		&req.ID, &req.OrganizationID, &req.RequesterID, &req.RequestType, &req.DataScope,
+		&req.ID, &req.TenantID, &req.RequesterID, &req.RequestType, &req.DataScope,
 		&req.Purpose, &req.Format, &req.DeliveryMethod, &req.Status, &req.ExpiryDate, &req.Comments,
 		&req.CreatedAt, &req.CreatedBy, &req.UpdatedAt, &req.UpdatedBy,
 	)
@@ -86,7 +86,7 @@ func (r *pgGovernanceRepository) GetRequestByIDInternal(ctx context.Context, id 
 
 func (r *pgGovernanceRepository) ListRequests(ctx context.Context, filter models.GovernanceRequestFilter) (*models.GovernanceRequestListResponse, error) {
 	where := []string{"tenant_id = $1"}
-	args := []interface{}{filter.OrganizationID}
+	args := []interface{}{filter.TenantID}
 	argIdx := 2
 
 	if filter.Type != nil {
@@ -141,7 +141,7 @@ func (r *pgGovernanceRepository) ListRequests(ctx context.Context, filter models
 	for rows.Next() {
 		var req models.GovernanceRequest
 		err := rows.Scan(
-			&req.ID, &req.OrganizationID, &req.RequesterID, &req.RequestType, &req.DataScope,
+			&req.ID, &req.TenantID, &req.RequesterID, &req.RequestType, &req.DataScope,
 			&req.Purpose, &req.Format, &req.DeliveryMethod, &req.Status, &req.ExpiryDate, &req.Comments,
 			&req.CreatedAt, &req.CreatedBy, &req.UpdatedAt, &req.UpdatedBy,
 		)
@@ -189,7 +189,7 @@ func (r *pgGovernanceRepository) GetSettings(ctx context.Context, tenantID uuid.
 	`
 	var s models.GovernanceSettings
 	err := r.db.QueryRow(ctx, query, tenantID).Scan(
-		&s.OrganizationID, &s.RetentionPolicies, &s.MaskingRules, &s.AutoExpiryEnabled, &s.DownloadTTLHours, &s.CreatedAt, &s.UpdatedAt,
+		&s.TenantID, &s.RetentionPolicies, &s.MaskingRules, &s.AutoExpiryEnabled, &s.DownloadTTLHours, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -215,7 +215,7 @@ func (r *pgGovernanceRepository) UpsertSettings(ctx context.Context, s *models.G
 			updated_by = EXCLUDED.updated_by
 	`
 	_, err := r.db.Exec(ctx, query,
-		s.OrganizationID, s.RetentionPolicies, s.MaskingRules, s.AutoExpiryEnabled, s.DownloadTTLHours,
+		s.TenantID, s.RetentionPolicies, s.MaskingRules, s.AutoExpiryEnabled, s.DownloadTTLHours,
 		s.CreatedBy, s.UpdatedBy,
 	)
 	return err
@@ -228,7 +228,7 @@ func (r *pgGovernanceRepository) CreateAuditLog(ctx context.Context, log *models
 		) VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 	_, err := r.db.Exec(ctx, query,
-		log.ID, log.OrganizationID, log.UserID, log.Action, log.Module, log.ChangeDetail, log.IPAddress,
+		log.ID, log.TenantID, log.UserID, log.Action, log.Module, log.ChangeDetail, log.IPAddress,
 	)
 	return err
 }
@@ -269,7 +269,7 @@ func (r *pgGovernanceRepository) ListAuditLogs(ctx context.Context, tenantID uui
 	for rows.Next() {
 		var log models.GovernanceAuditLog
 		err := rows.Scan(
-			&log.ID, &log.OrganizationID, &log.UserID, &log.Action, &log.Module, &log.ChangeDetail, &log.IPAddress, &log.CreatedAt,
+			&log.ID, &log.TenantID, &log.UserID, &log.Action, &log.Module, &log.ChangeDetail, &log.IPAddress, &log.CreatedAt,
 		)
 		if err != nil {
 			return nil, 0, err
@@ -302,7 +302,7 @@ func (r *pgGovernanceRepository) ExpireRequests(ctx context.Context) ([]models.E
 	var expired []models.ExpiredRequestInfo
 	for rows.Next() {
 		var info models.ExpiredRequestInfo
-		if err := rows.Scan(&info.ID, &info.OrganizationID); err != nil {
+		if err := rows.Scan(&info.ID, &info.TenantID); err != nil {
 			return expired, err
 		}
 		expired = append(expired, info)
@@ -399,7 +399,7 @@ func (r *pgGovernanceRepository) ListAllSettings(ctx context.Context) ([]models.
 	var settings []models.GovernanceSettings
 	for rows.Next() {
 		var s models.GovernanceSettings
-		if err := rows.Scan(&s.OrganizationID, &s.RetentionPolicies, &s.AutoExpiryEnabled, &s.DownloadTTLHours); err != nil {
+		if err := rows.Scan(&s.TenantID, &s.RetentionPolicies, &s.AutoExpiryEnabled, &s.DownloadTTLHours); err != nil {
 			return nil, err
 		}
 		settings = append(settings, s)

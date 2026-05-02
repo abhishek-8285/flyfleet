@@ -29,7 +29,7 @@ func (h *AccountingHandler) ExportLedger(w http.ResponseWriter, r *http.Request)
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		h.errorJSON(w, r, "Unauthorized: organization context required", http.StatusUnauthorized)
+		h.errorJSON(w, r, "Unauthorized: tenant context required", http.StatusUnauthorized)
 		return
 	}
 	userID := h.getUserID(r)
@@ -63,7 +63,7 @@ func (h *AccountingHandler) ExportInvoices(w http.ResponseWriter, r *http.Reques
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		h.errorJSON(w, r, "Unauthorized: organization context required", http.StatusUnauthorized)
+		h.errorJSON(w, r, "Unauthorized: tenant context required", http.StatusUnauthorized)
 		return
 	}
 	userID := h.getUserID(r)
@@ -97,7 +97,7 @@ func (h *AccountingHandler) GetExportHistory(w http.ResponseWriter, r *http.Requ
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		h.errorJSON(w, r, "Unauthorized: organization context required", http.StatusUnauthorized)
+		h.errorJSON(w, r, "Unauthorized: tenant context required", http.StatusUnauthorized)
 		return
 	}
 	history, err := h.accountingServ.GetExportHistory(r.Context(), tenantID)

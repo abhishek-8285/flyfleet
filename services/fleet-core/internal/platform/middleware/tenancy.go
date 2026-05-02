@@ -61,18 +61,3 @@ func TenantContextMiddleware(logger *zap.Logger) func(http.Handler) http.Handler
 	}
 }
 
-// GetOrganizationID retrieves the organization ID from the context.
-// Returns uuid.Nil if not found.
-func GetOrganizationID(ctx context.Context) uuid.UUID {
-	if tenantIDVal := ctx.Value(ctxkeys.TenantIDKey); tenantIDVal != nil {
-		if id, ok := tenantIDVal.(uuid.UUID); ok {
-			return id
-		}
-		if idStr, ok := tenantIDVal.(string); ok {
-			if id, err := uuid.Parse(idStr); err == nil {
-				return id
-			}
-		}
-	}
-	return uuid.Nil
-}

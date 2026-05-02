@@ -59,7 +59,7 @@ func clearRefreshCookie(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Identify checks if a user exists and returns org info + MFA status.
+// Identify checks if a user exists and returns tenant info + MFA status.
 // POST /api/v1/auth/identify
 func (h *AuthHandler) Identify(w http.ResponseWriter, r *http.Request) {
 	var req models.IdentifyRequest
@@ -249,39 +249,39 @@ func (h *AuthHandler) GetPolicy(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, http.StatusOK, policy)
 }
 
-// SwitchOrg switches the user's active organization.
-// POST /api/v1/auth/orgs/{orgId}/switch
-func (h *AuthHandler) SwitchOrg(w http.ResponseWriter, r *http.Request) {
-	tenantIDStr := chi.URLParam(r, "orgId")
+// SwitchTenant switches the user's active tenant.
+// POST /api/v1/auth/tenants/{tenantId}/switch
+func (h *AuthHandler) SwitchTenant(w http.ResponseWriter, r *http.Request) {
+	tenantIDStr := chi.URLParam(r, "tenantId")
 	if tenantIDStr == "" {
-		h.writeError(w, http.StatusBadRequest, "missing_org", "Organization ID is required", r)
+		h.writeError(w, http.StatusBadRequest, "missing_tenant", "Tenant ID is required", r)
 		return
 	}
-
+ 
 	userID := GetUserIDUUID(r)
 	if userID.String() == "00000000-0000-0000-0000-000000000000" {
 		h.writeError(w, http.StatusUnauthorized, "unauthenticated", "Authentication required", r)
 		return
 	}
-
+ 
 	tenantID, err := uuid.Parse(tenantIDStr)
 	if err != nil {
-		h.writeError(w, http.StatusBadRequest, "invalid_tenant_id", "Invalid organization ID", r)
+		h.writeError(w, http.StatusBadRequest, "invalid_tenant_id", "Invalid tenant ID", r)
 		return
 	}
-
-	resp, err := h.authSvc.SwitchOrg(r.Context(), userID, tenantID, r.RemoteAddr, r.UserAgent())
+ 
+	resp, err := h.authSvc.SwitchTenant(r.Context(), userID, tenantID, r.RemoteAddr, r.UserAgent())
 	if err != nil {
 		switch {
-		case err.Error() == "org_switch_failed":
-			h.writeError(w, http.StatusBadRequest, "org_switch_failed", "You do not have access to this organization", r)
+		case err.Error() == "tenant_switch_failed":
+			h.writeError(w, http.StatusBadRequest, "tenant_switch_failed", "You do not have access to this tenant", r)
 		default:
-			h.log.Error("org switch failed", zap.Error(err))
+			h.log.Error("tenant switch failed", zap.Error(err))
 			h.writeError(w, http.StatusInternalServerError, "internal_error", "An internal error occurred", r)
 		}
 		return
 	}
-
+ 
 	h.writeJSON(w, http.StatusOK, resp)
 }
 
@@ -483,23 +483,23 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ListOrgs returns the user's organizations.
-// GET /api/v1/auth/orgs
-func (h *AuthHandler) ListOrgs(w http.ResponseWriter, r *http.Request) {
+// ListTenants returns the user's tenants.
+// GET /api/v1/auth/tenants
+func (h *AuthHandler) ListTenants(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserIDUUID(r)
 	if userID.String() == "00000000-0000-0000-0000-000000000000" {
 		h.writeError(w, http.StatusUnauthorized, "unauthenticated", "Authentication required", r)
 		return
 	}
-
-	orgs, err := h.authSvc.GetUserOrganizations(r.Context(), userID)
+ 
+	tenants, err := h.authSvc.GetUserTenants(r.Context(), userID)
 	if err != nil {
-		h.log.Error("failed to list orgs", zap.Error(err), zap.String("user_id", userID.String()))
-		h.writeError(w, http.StatusInternalServerError, "internal_error", "Failed to fetch organizations", r)
+		h.log.Error("failed to list tenants", zap.Error(err), zap.String("user_id", userID.String()))
+		h.writeError(w, http.StatusInternalServerError, "internal_error", "Failed to fetch tenants", r)
 		return
 	}
-
-	h.writeJSON(w, http.StatusOK, orgs)
+ 
+	h.writeJSON(w, http.StatusOK, tenants)
 }
 
 // Health returns the service health status.

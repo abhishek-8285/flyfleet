@@ -13,7 +13,7 @@ type IAMRepository interface {
 	CreateUser(ctx context.Context, user *models.User) error
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 	GetUserByID(ctx context.Context, userID uuid.UUID) (*models.User, error)
-	GetRolesByOrganization(ctx context.Context, tenantID uuid.UUID) ([]*models.Role, error)
+	GetRolesByTenant(ctx context.Context, tenantID uuid.UUID) ([]*models.Role, error)
 	AssignRole(ctx context.Context, userID, roleID uuid.UUID) error
 	GetPermissionsForUser(ctx context.Context, userID uuid.UUID) ([]*models.Permission, error)
 }
@@ -41,10 +41,10 @@ func (r *iamRepository) CreateUser(ctx context.Context, user *models.User) error
 		return err
 	}
 
-	// 2. Insert into user_organizations
-	queryLink := `INSERT INTO user_organizations (id, user_id, tenant_id, role, status, created_at)
+	// 2. Insert into user_tenants
+	queryLink := `INSERT INTO user_tenants (id, user_id, tenant_id, role, status, created_at)
 	              VALUES ($1, $2, $3, $4, $5, $6)`
-	_, err = tx.Exec(ctx, queryLink, uuid.New(), user.ID, user.OrganizationID, "admin", "active", time.Now())
+	_, err = tx.Exec(ctx, queryLink, uuid.New(), user.ID, user.TenantID, "admin", "active", time.Now())
 	if err != nil {
 		return err
 	}
@@ -57,10 +57,10 @@ func (r *iamRepository) GetUserByEmail(ctx context.Context, email string) (*mode
 	query := `
 		SELECT u.id, u.email, u.password_hash, u.name, u.status, u.created_at, uo.tenant_id
 		FROM users u
-		LEFT JOIN user_organizations uo ON u.id = uo.user_id
+		LEFT JOIN user_tenants uo ON u.id = uo.user_id
 		WHERE u.email = $1
 	`
-	err := r.db.QueryRow(ctx, query, email).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.FullName, &user.Status, &user.CreatedAt, &user.OrganizationID)
+	err := r.db.QueryRow(ctx, query, email).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.FullName, &user.Status, &user.CreatedAt, &user.TenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -72,17 +72,17 @@ func (r *iamRepository) GetUserByID(ctx context.Context, userID uuid.UUID) (*mod
 	query := `
 		SELECT u.id, u.email, u.password_hash, u.name, u.status, u.created_at, uo.tenant_id
 		FROM users u
-		LEFT JOIN user_organizations uo ON u.id = uo.user_id
+		LEFT JOIN user_tenants uo ON u.id = uo.user_id
 		WHERE u.id = $1
 	`
-	err := r.db.QueryRow(ctx, query, userID).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.FullName, &user.Status, &user.CreatedAt, &user.OrganizationID)
+	err := r.db.QueryRow(ctx, query, userID).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.FullName, &user.Status, &user.CreatedAt, &user.TenantID)
 	if err != nil {
 		return nil, err
 	}
 	return user, nil
 }
 
-func (r *iamRepository) GetRolesByOrganization(ctx context.Context, tenantID uuid.UUID) ([]*models.Role, error) {
+func (r *iamRepository) GetRolesByTenant(ctx context.Context, tenantID uuid.UUID) ([]*models.Role, error) {
 	query := `SELECT id, name, tenant_id, description FROM roles WHERE tenant_id = $1 OR tenant_id IS NULL`
 	rows, err := r.db.Query(ctx, query, tenantID)
 	if err != nil {
@@ -93,7 +93,7 @@ func (r *iamRepository) GetRolesByOrganization(ctx context.Context, tenantID uui
 	var roles []*models.Role
 	for rows.Next() {
 		role := &models.Role{}
-		if err := rows.Scan(&role.ID, &role.Name, &role.OrganizationID, &role.Description); err != nil {
+		if err := rows.Scan(&role.ID, &role.Name, &role.TenantID, &role.Description); err != nil {
 			return nil, err
 		}
 		roles = append(roles, role)

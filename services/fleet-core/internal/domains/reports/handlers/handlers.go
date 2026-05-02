@@ -67,10 +67,10 @@ func (h *ReportHandler) CreateReport(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		h.writeErrorResponse(w, http.StatusUnauthorized, "organization context required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "tenant context required", nil)
 		return
 	}
-	req.OrganizationID = tenantID
+	req.TenantID = tenantID
 
 	userID := middleware.GetUserID(r.Context())
 	if userID == uuid.Nil {

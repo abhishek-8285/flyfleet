@@ -37,7 +37,7 @@ const (
 
 type ComplianceAlert struct {
 	ID             uuid.UUID     `json:"id" db:"id"`
-	OrganizationID uuid.UUID     `json:"organization_id" db:"organization_id"`
+	TenantID uuid.UUID     `json:"tenant_id" db:"tenant_id"`
 	Type           AlertType     `json:"alert_type" db:"alert_type"`
 	EntityType     EntityType    `json:"entity_type" db:"entity_type"`
 	EntityID       uuid.UUID     `json:"entity_id" db:"entity_id"`

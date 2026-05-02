@@ -127,14 +127,14 @@ func (r *postgresRepository) ListPendingLogs(ctx context.Context, limit int) ([]
 
 func (r *postgresRepository) GetTemplate(ctx context.Context, name string, channel models.Channel, language string, tenantID uuid.UUID) (*models.Template, error) {
 	query := `
-		SELECT id, name, channel, language, subject, body, metadata, organization_id, created_at, updated_at
+		SELECT id, name, channel, language, subject, body, metadata, tenant_id, created_at, updated_at
 		FROM alerts_v2_templates
-		WHERE name = $1 AND channel = $2 AND language = $3 AND organization_id = $4
+		WHERE name = $1 AND channel = $2 AND language = $3 AND tenant_id = $4
 	`
 	row := r.db.QueryRowContext(ctx, query, name, channel, language, tenantID)
 	var t models.Template
 	var metadataJSON []byte
-	err := row.Scan(&t.ID, &t.Name, &t.Channel, &t.Language, &t.Subject, &t.Body, &metadataJSON, &t.OrganizationID, &t.CreatedAt, &t.UpdatedAt)
+	err := row.Scan(&t.ID, &t.Name, &t.Channel, &t.Language, &t.Subject, &t.Body, &metadataJSON, &t.TenantID, &t.CreatedAt, &t.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -147,7 +147,7 @@ func (r *postgresRepository) GetTemplate(ctx context.Context, name string, chann
 
 func (r *postgresRepository) CreateTemplate(ctx context.Context, t *models.Template) error {
 	query := `
-		INSERT INTO alerts_v2_templates (id, name, channel, language, subject, body, metadata, organization_id, created_at, updated_at)
+		INSERT INTO alerts_v2_templates (id, name, channel, language, subject, body, metadata, tenant_id, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 	if t.ID == uuid.Nil {
@@ -159,12 +159,12 @@ func (r *postgresRepository) CreateTemplate(ctx context.Context, t *models.Templ
 	t.UpdatedAt = t.CreatedAt
 	metadataJSON, _ := json.Marshal(t.Metadata)
 
-	_, err := r.db.ExecContext(ctx, query, t.ID, t.Name, t.Channel, t.Language, t.Subject, t.Body, metadataJSON, t.OrganizationID, t.CreatedAt, t.UpdatedAt)
+	_, err := r.db.ExecContext(ctx, query, t.ID, t.Name, t.Channel, t.Language, t.Subject, t.Body, metadataJSON, t.TenantID, t.CreatedAt, t.UpdatedAt)
 	return err
 }
 
 func (r *postgresRepository) GetUserPreferences(ctx context.Context, userID, tenantID uuid.UUID) ([]models.UserPreference, error) {
-	query := `SELECT user_id, organization_id, channel, enabled, updated_at FROM alerts_v2_user_preferences WHERE user_id = $1 AND organization_id = $2`
+	query := `SELECT user_id, tenant_id, channel, enabled, updated_at FROM alerts_v2_user_preferences WHERE user_id = $1 AND tenant_id = $2`
 	rows, err := r.db.QueryContext(ctx, query, userID, tenantID)
 	if err != nil {
 		return nil, err
@@ -174,7 +174,7 @@ func (r *postgresRepository) GetUserPreferences(ctx context.Context, userID, ten
 	var prefs []models.UserPreference
 	for rows.Next() {
 		var p models.UserPreference
-		if err := rows.Scan(&p.UserID, &p.OrganizationID, &p.Channel, &p.Enabled, &p.UpdatedAt); err != nil {
+		if err := rows.Scan(&p.UserID, &p.TenantID, &p.Channel, &p.Enabled, &p.UpdatedAt); err != nil {
 			return nil, err
 		}
 		prefs = append(prefs, p)
@@ -184,14 +184,14 @@ func (r *postgresRepository) GetUserPreferences(ctx context.Context, userID, ten
 
 func (r *postgresRepository) UpsertUserPreference(ctx context.Context, pref *models.UserPreference) error {
 	query := `
-		INSERT INTO alerts_v2_user_preferences (user_id, channel, enabled, updated_at)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (user_id, channel) DO UPDATE SET
+		INSERT INTO alerts_v2_user_preferences (user_id, tenant_id, channel, enabled, updated_at)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (user_id, tenant_id, channel) DO UPDATE SET
 			enabled = EXCLUDED.enabled,
 			updated_at = EXCLUDED.updated_at
 	`
 	pref.UpdatedAt = time.Now()
-	_, err := r.db.ExecContext(ctx, query, pref.UserID, pref.Channel, pref.Enabled, pref.UpdatedAt)
+	_, err := r.db.ExecContext(ctx, query, pref.UserID, pref.TenantID, pref.Channel, pref.Enabled, pref.UpdatedAt)
 	return err
 }
 

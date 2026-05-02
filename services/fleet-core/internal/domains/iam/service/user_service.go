@@ -16,24 +16,24 @@ var (
 )
 
 type UserService struct {
-	userRepo *repository.UserRepository
-	orgRepo  *repository.OrgRepository
-	roleRepo *repository.RoleRepository
+	userRepo   *repository.UserRepository
+	tenantRepo *repository.TenantRepository
+	roleRepo   *repository.RoleRepository
 	auditRepo *repository.AuditRepository
 	log      *zap.Logger
 }
 
 func NewUserService(
 	userRepo *repository.UserRepository,
-	orgRepo *repository.OrgRepository,
+	tenantRepo *repository.TenantRepository,
 	roleRepo *repository.RoleRepository,
 	auditRepo *repository.AuditRepository,
 	log *zap.Logger,
 ) *UserService {
 	return &UserService{
-		userRepo:  userRepo,
-		orgRepo:   orgRepo,
-		roleRepo:  roleRepo,
+		userRepo:   userRepo,
+		tenantRepo: tenantRepo,
+		roleRepo:   roleRepo,
 		auditRepo: auditRepo,
 		log:       log,
 	}

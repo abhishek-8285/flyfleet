@@ -46,7 +46,7 @@ func (h *ComplianceHandlers) VerifyCompliance(w http.ResponseWriter, r *http.Req
 
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeError(w, http.StatusUnauthorized, "Organization ID required")
+		h.writeError(w, http.StatusUnauthorized, "Tenant ID required")
 		return
 	}
 
@@ -83,7 +83,7 @@ func (h *ComplianceHandlers) GetCompliance(w http.ResponseWriter, r *http.Reques
 
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeError(w, http.StatusUnauthorized, "Organization ID required")
+		h.writeError(w, http.StatusUnauthorized, "Tenant ID required")
 		return
 	}
 

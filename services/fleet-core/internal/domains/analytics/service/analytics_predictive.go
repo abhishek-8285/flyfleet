@@ -189,7 +189,7 @@ func (s *AnalyticsServiceImpl) RunInference(ctx context.Context, modelID string,
 	// 1. Compliance Audit (Phase 11)
 	s.LogAccess(ctx, &models.AnalyticsAccessLog{
 		ID:             uuid.New(),
-		OrganizationID: tenantID,
+		TenantID: tenantID,
 		UserID:         uuid.Nil, // Should be extracted from context in real implementation
 		ResourceID:     modelID,
 		ResourceType:   "MODEL",
@@ -293,7 +293,7 @@ func (s *AnalyticsServiceImpl) executeInference(ctx context.Context, model *mode
 	result := &models.PredictionResult{
 		ID:              uuid.New().String(),
 		ModelID:         model.ID,
-		OrganizationID:  tenantID,
+		TenantID:  tenantID,
 		PredictionInput: input,
 		PredictedValue:  predictedValue,
 		ConfidenceScore: confidence,
@@ -469,8 +469,8 @@ func (s *AnalyticsServiceImpl) GetPredictionResultsByModel(ctx context.Context, 
 	return data, total, err
 }
 
-// GetPredictionResultsByOrg retrieves prediction results by organization
-func (s *AnalyticsServiceImpl) GetPredictionResultsByOrg(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.PredictionResult, int, error) {
+// GetPredictionResultsByTenant retrieves prediction results by tenant
+func (s *AnalyticsServiceImpl) GetPredictionResultsByTenant(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.PredictionResult, int, error) {
 	start := time.Now()
 	var err error
 	var data []*models.PredictionResult
@@ -478,11 +478,11 @@ func (s *AnalyticsServiceImpl) GetPredictionResultsByOrg(ctx context.Context, te
 
 	defer func() {
 		params := map[string]interface{}{"limit": limit, "offset": offset}
-		s.logQuery(ctx, tenantID, "get_prediction_results_org", params, time.Since(start), len(data), false, err)
+		s.logQuery(ctx, tenantID, "get_prediction_results_tenant", params, time.Since(start), len(data), false, err)
 	}()
 
 	if tenantID == uuid.Nil {
-		err = errors.New("organization ID is required")
+		err = errors.New("tenant ID is required")
 		return nil, 0, err
 	}
 	if limit <= 0 {
@@ -495,7 +495,7 @@ func (s *AnalyticsServiceImpl) GetPredictionResultsByOrg(ctx context.Context, te
 		offset = 0
 	}
 
-	data, total, err = s.repo.GetPredictionResultsByOrg(ctx, tenantID, limit, offset)
+	data, total, err = s.repo.GetPredictionResultsByTenant(ctx, tenantID, limit, offset)
 	return data, total, err
 }
 
@@ -539,7 +539,7 @@ func (s *AnalyticsServiceImpl) ListPredictionResults(ctx context.Context, tenant
 	}()
 
 	if tenantID == uuid.Nil {
-		err = errors.New("organization ID is required")
+		err = errors.New("tenant ID is required")
 		return nil, 0, err
 	}
 	if limit <= 0 {

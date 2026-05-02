@@ -66,7 +66,7 @@ func (s *accessReviewService) GenerateReport(ctx context.Context, tenantID uuid.
 	// Log audit log
 	s.repo.CreateAuditLog(ctx, &models.GovernanceAuditLog{
 		ID:             uuid.New(),
-		OrganizationID: tenantID,
+		TenantID: tenantID,
 		Action:         "GENERATE_ACCESS_REVIEW",
 		Module:         "SECURITY_REPORTING",
 		CreatedAt:      time.Now(),

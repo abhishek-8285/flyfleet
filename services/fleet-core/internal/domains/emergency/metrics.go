@@ -9,48 +9,48 @@ var (
 	IncidentsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "emergency_incidents_total",
 		Help: "The total number of emergency SOS incidents triggered",
-	}, []string{"organization_id", "incident_type", "severity"})
+	}, []string{"tenant_id", "incident_type", "severity"})
 
 	ActiveIncidents = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "emergency_active_incidents",
 		Help: "The current number of active (triggered or acknowledged) emergency incidents",
-	}, []string{"organization_id"})
+	}, []string{"tenant_id"})
 
 	EscalationsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "emergency_escalations_total",
 		Help: "The total number of emergency contact escalations attempted",
-	}, []string{"organization_id", "channel"})
+	}, []string{"tenant_id", "channel"})
 
 	NotificationsSent = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "emergency_notifications_sent",
 		Help: "The total number of emergency notifications sent via various channels",
-	}, []string{"organization_id", "channel", "status"})
+	}, []string{"tenant_id", "channel", "status"})
 
 	ResponseTimeSeconds = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "emergency_response_time_seconds",
 		Help:    "Histogram of emergency response times (trigger to acknowledgment)",
 		Buckets: prometheus.ExponentialBuckets(60, 2, 8), // Start at 1 min, double up to 128 mins
-	}, []string{"organization_id", "incident_type"})
+	}, []string{"tenant_id", "incident_type"})
 
 	SMSSentTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "emergency_sms_sent_total",
 		Help: "The total number of emergency SMS alerts sent",
-	}, []string{"organization_id"})
+	}, []string{"tenant_id"})
 
 	CallAlertsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "emergency_call_alerts_total",
 		Help: "The total number of emergency voice call alerts sent",
-	}, []string{"organization_id"})
+	}, []string{"tenant_id"})
 
 	SLABreachesTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "emergency_sla_breaches_total",
 		Help: "The total number of emergency SLA breaches detected",
-	}, []string{"organization_id", "severity"})
+	}, []string{"tenant_id", "severity"})
 
 	NotificationFailuresTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "emergency_notification_failures_total",
 		Help: "The total number of emergency notifications that failed after all retries",
-	}, []string{"organization_id", "channel"})
+	}, []string{"tenant_id", "channel"})
 
 	// Phase 8: Additional Prometheus Metrics
 	AuthorityNotificationsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
@@ -71,7 +71,7 @@ var (
 	DrillEventsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "emergency_drill_events_total",
 		Help: "Total number of emergency drill simulations triggered",
-	}, []string{"organization_id"})
+	}, []string{"tenant_id"})
 
 	// Phase 3 Metrics
 	ProviderFailuresTotal = promauto.NewCounterVec(prometheus.CounterOpts{

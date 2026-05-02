@@ -8,7 +8,7 @@ import (
 
 type ScheduledReport struct {
 	ID             uuid.UUID      `json:"id" db:"id"`
-	OrganizationID uuid.UUID      `json:"organization_id" db:"organization_id"`
+	TenantID uuid.UUID      `json:"tenant_id" db:"tenant_id"`
 	Name           string         `json:"name" db:"name"`
 	ReportType     string         `json:"report_type" db:"report_type"`
 	Format         string         `json:"format" db:"format"`

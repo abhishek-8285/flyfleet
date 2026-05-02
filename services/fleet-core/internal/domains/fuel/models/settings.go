@@ -8,7 +8,7 @@ import (
 )
 
 type FuelSettings struct {
-	OrganizationID   uuid.UUID       `json:"organization_id" db:"organization_id" validate:"required,uuid"`
+	TenantID   uuid.UUID       `json:"tenant_id" db:"tenant_id" validate:"required,uuid"`
 	DefaultCurrency  string          `json:"default_currency" db:"default_currency" validate:"required,len=3"`
 	AllowedFuelTypes json.RawMessage `json:"allowed_fuel_types" db:"allowed_fuel_types"`
 	ValidationRules  json.RawMessage `json:"validation_rules" db:"validation_rules"`

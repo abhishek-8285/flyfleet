@@ -12,7 +12,7 @@ func (h *BillingHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		h.errorJSON(w, r, "Unauthorized: organization context required", http.StatusUnauthorized)
+		h.errorJSON(w, r, "Unauthorized: tenant context required", http.StatusUnauthorized)
 		return
 	}
 	currency := r.URL.Query().Get("currency")
@@ -34,7 +34,7 @@ func (h *BillingHandler) ApplyCredit(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		h.errorJSON(w, r, "Unauthorized: organization context required", http.StatusUnauthorized)
+		h.errorJSON(w, r, "Unauthorized: tenant context required", http.StatusUnauthorized)
 		return
 	}
 

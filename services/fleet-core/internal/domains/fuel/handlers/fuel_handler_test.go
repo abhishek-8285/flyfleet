@@ -29,17 +29,17 @@ var _ service.FuelService = (*mockFuelService)(nil)
 func (m *mockFuelService) CreateLog(_ context.Context, tenantID uuid.UUID, userID uuid.UUID, req models.CreateFuelLogRequest) (*models.FuelLog, error) {
 	m.lastTenantID = tenantID
 	m.lastUserID = userID
-	return &models.FuelLog{ID: uuid.New(), OrganizationID: tenantID, VehicleID: req.VehicleID, DriverID: req.DriverID, Status: models.FuelLogStatusPending}, nil
+	return &models.FuelLog{ID: uuid.New(), TenantID: tenantID, VehicleID: req.VehicleID, DriverID: req.DriverID, Status: models.FuelLogStatusPending}, nil
 }
 func (m *mockFuelService) GetLog(_ context.Context, _ uuid.UUID, tenantID uuid.UUID) (*models.FuelLog, error) {
-	return &models.FuelLog{ID: uuid.New(), OrganizationID: tenantID}, nil
+	return &models.FuelLog{ID: uuid.New(), TenantID: tenantID}, nil
 }
 func (m *mockFuelService) ListLogs(_ context.Context, filter models.FuelLogFilter) (*models.FuelLogListResponse, error) {
 	m.lastFilter = filter
 	return &models.FuelLogListResponse{Total: 0, Page: 1, PageSize: 20, Logs: []models.FuelLog{}}, nil
 }
 func (m *mockFuelService) UpdateLog(_ context.Context, _ uuid.UUID, tenantID uuid.UUID, _ models.UpdateFuelLogRequest) (*models.FuelLog, error) {
-	return &models.FuelLog{ID: uuid.New(), OrganizationID: tenantID}, nil
+	return &models.FuelLog{ID: uuid.New(), TenantID: tenantID}, nil
 }
 func (m *mockFuelService) DeleteLog(_ context.Context, _ uuid.UUID, _ uuid.UUID) error { return nil }
 func (m *mockFuelService) ChangeStatus(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ models.ChangeFuelLogStatusRequest) error {
@@ -49,10 +49,10 @@ func (m *mockFuelService) GetStats(_ context.Context, _ uuid.UUID, _ models.Fuel
 	return &models.FuelLogStats{}, nil
 }
 func (m *mockFuelService) GetSettings(_ context.Context, tenantID uuid.UUID) (*models.FuelSettings, error) {
-	return &models.FuelSettings{OrganizationID: tenantID, DefaultCurrency: "USD"}, nil
+	return &models.FuelSettings{TenantID: tenantID, DefaultCurrency: "USD"}, nil
 }
 func (m *mockFuelService) UpdateSettings(_ context.Context, tenantID uuid.UUID, _ models.UpdateFuelSettingsRequest) (*models.FuelSettings, error) {
-	return &models.FuelSettings{OrganizationID: tenantID, DefaultCurrency: "USD"}, nil
+	return &models.FuelSettings{TenantID: tenantID, DefaultCurrency: "USD"}, nil
 }
 
 func setupHandlerRouter(svc service.FuelService) chi.Router {
@@ -85,7 +85,7 @@ func TestContextUUIDExtraction(t *testing.T) {
 
 	r.ServeHTTP(res, req)
 	require.Equal(t, http.StatusOK, res.Code)
-	require.Equal(t, tenantID, m.lastFilter.OrganizationID)
+	require.Equal(t, tenantID, m.lastFilter.TenantID)
 }
 
 func TestCreateLogValidationErrorReturnsBadRequest(t *testing.T) {

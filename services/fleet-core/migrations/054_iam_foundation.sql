@@ -6,7 +6,7 @@
 -- ───────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS roles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     name VARCHAR(100) NOT NULL,
     description TEXT,
     is_system BOOLEAN DEFAULT false,
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS roles (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP WITH TIME ZONE,
-    UNIQUE(org_id, name)
+    UNIQUE(tenant_id, name)
 );
 
 -- ───────────────────────────────────────────────────────────────────
@@ -47,10 +47,10 @@ CREATE TABLE IF NOT EXISTS user_roles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
-    org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     assigned_by UUID REFERENCES users(id),
     assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, role_id, org_id)
+    UNIQUE(user_id, role_id, tenant_id)
 );
 
 -- ───────────────────────────────────────────────────────────────────
@@ -58,13 +58,13 @@ CREATE TABLE IF NOT EXISTS user_roles (
 -- ───────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS mfa_policies (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     require_mfa BOOLEAN DEFAULT false,
     allowed_methods TEXT[] DEFAULT '{totp,sms}',
     remember_device_days INT DEFAULT 30,
     enforced_for_roles TEXT[] DEFAULT '{org_admin,fleet_manager}',
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(org_id)
+    UNIQUE(tenant_id)
 );
 
 -- ───────────────────────────────────────────────────────────────────
@@ -83,15 +83,15 @@ CREATE TABLE IF NOT EXISTS mfa_events (
 -- ───────────────────────────────────────────────────────────────────
 -- INDEXES
 -- ───────────────────────────────────────────────────────────────────
-CREATE INDEX IF NOT EXISTS idx_roles_org_id ON roles(org_id);
-CREATE INDEX IF NOT EXISTS idx_roles_org_deleted ON roles(org_id, deleted_at);
+CREATE INDEX IF NOT EXISTS idx_roles_tenant_id ON roles(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_roles_tenant_deleted ON roles(tenant_id, deleted_at);
 CREATE INDEX IF NOT EXISTS idx_permissions_resource_action ON permissions(resource, action);
 CREATE INDEX IF NOT EXISTS idx_role_permissions_role_id ON role_permissions(role_id);
 CREATE INDEX IF NOT EXISTS idx_role_permissions_permission_id ON role_permissions(permission_id);
 CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON user_roles(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles(role_id);
-CREATE INDEX IF NOT EXISTS idx_user_roles_org_id ON user_roles(org_id);
-CREATE INDEX IF NOT EXISTS idx_mfa_policies_org_id ON mfa_policies(org_id);
+CREATE INDEX IF NOT EXISTS idx_user_roles_tenant_id ON user_roles(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_mfa_policies_tenant_id ON mfa_policies(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_mfa_events_user_id ON mfa_events(user_id);
 CREATE INDEX IF NOT EXISTS idx_mfa_events_type ON mfa_events(event_type);
 
@@ -101,10 +101,10 @@ CREATE INDEX IF NOT EXISTS idx_mfa_events_type ON mfa_events(event_type);
 ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY org_isolation_roles ON roles
-    USING (org_id = current_setting('app.current_org_id', true)::uuid
+CREATE POLICY tenant_isolation_roles ON roles
+    USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid
            OR current_setting('app.is_super_admin', true)::boolean = true);
 
-CREATE POLICY org_isolation_user_roles ON user_roles
-    USING (org_id = current_setting('app.current_org_id', true)::uuid
+CREATE POLICY tenant_isolation_user_roles ON user_roles
+    USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid
            OR current_setting('app.is_super_admin', true)::boolean = true);

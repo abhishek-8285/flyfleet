@@ -116,6 +116,7 @@ CREATE TABLE IF NOT EXISTS driver_mobile_sync_queue (
 );
 
 -- 8. Analytics Views
+DROP VIEW IF EXISTS driver_performance_summary;
 CREATE OR REPLACE VIEW driver_performance_summary AS
 SELECT
     driver_id,
@@ -127,6 +128,7 @@ GROUP BY driver_id;
 
 -- Note: driver_behavior_scores table might come from previous migrations or is assumed as current state
 -- We will use the safety_score from the driver_v2_behavior_scores logic if it exists, or drivers table if renamed
+DROP VIEW IF EXISTS driver_safety_leaderboard;
 CREATE OR REPLACE VIEW driver_safety_leaderboard AS
 SELECT
     id AS driver_id,

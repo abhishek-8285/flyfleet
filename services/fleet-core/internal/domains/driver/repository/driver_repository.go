@@ -118,11 +118,11 @@ func (r *DriverRepository) GetByID(ctx context.Context, id string) (*models.Driv
 	query := `
 		SELECT d.id, d.tenant_id, d.first_name, d.last_name, d.full_name, d.email, d.phone,
 		       d.employee_code, d.aadhaar_number, d.pan_number,
-		       d.license_number, d.license_type, d.license_issue_date, d.license_expiry, d.license_authority,
-		       d.date_of_birth, d.address, d.emergency_contact, d.status, d.employment_type, d.current_vehicle_id,
-		       d.current_trip_id, d.joining_date, d.resignation_date, d.experience_years,
-		       d.rating, d.total_trips, d.total_distance_km, d.total_hours_driven,
-		       d.behavior_score, d.documents, d.metadata, d.created_at, d.updated_at, d.deleted_at,
+		       COALESCE(d.license_number, '') as license_number, d.license_type, d.license_issue_date, d.license_expiry, d.license_authority,
+		       d.date_of_birth, d.address, d.emergency_contact, COALESCE(d.status, 'active') as status, d.employment_type, d.current_vehicle_id,
+		       d.current_trip_id, COALESCE(d.joining_date, '1970-01-01') as joining_date, d.resignation_date, COALESCE(d.experience_years, 0) as experience_years,
+		       COALESCE(d.rating, 5.0) as rating, COALESCE(d.total_trips, 0) as total_trips, COALESCE(d.total_distance_km, 0) as total_distance_km, COALESCE(d.total_hours_driven, 0) as total_hours_driven,
+		       COALESCE(d.behavior_score, 100) as behavior_score, d.documents, d.metadata, d.created_at, d.updated_at, d.deleted_at,
 		       v.registration_number as current_vehicle_registration
 		FROM drivers d
 		LEFT JOIN vehicles v ON d.current_vehicle_id::uuid = v.id
@@ -424,8 +424,8 @@ func (r *DriverRepository) GetSchedules(ctx context.Context, driverID string) ([
 func (r *DriverRepository) List(ctx context.Context, filter models.DriverListFilter) ([]*models.Driver, int, error) {
 	baseQuery := `
 		SELECT d.id, d.tenant_id, d.first_name, d.last_name, d.full_name, d.email, d.phone,
-		       d.license_number, d.license_type, d.status, d.current_vehicle_id,
-		       d.rating, d.total_trips, d.behavior_score, d.created_at, d.updated_at,
+		       COALESCE(d.license_number, '') as license_number, d.license_type, COALESCE(d.status, 'active') as status, d.current_vehicle_id,
+		       COALESCE(d.rating, 5.0) as rating, COALESCE(d.total_trips, 0) as total_trips, COALESCE(d.behavior_score, 100) as behavior_score, d.created_at, d.updated_at,
 		       v.registration_number as current_vehicle_registration
 		FROM drivers d
 		LEFT JOIN vehicles v ON d.current_vehicle_id::uuid = v.id
@@ -583,6 +583,9 @@ func (r *DriverRepository) Update(ctx context.Context, id string, updates map[st
 	argIndex := 1
 
 	for key, value := range updates {
+		if key == "updated_at" {
+			continue
+		}
 		// Security check against SQL injection
 		if !regexp.MustCompile(`^[a-zA-Z0-9_]+$`).MatchString(key) {
 			continue
@@ -603,7 +606,7 @@ func (r *DriverRepository) Update(ctx context.Context, id string, updates map[st
 		argIndex++
 	}
 
-	args = append(args, id)
+	args = append(args, time.Now(), id)
 	query := fmt.Sprintf("UPDATE drivers SET %s, updated_at = $%d WHERE id = $%d AND deleted_at IS NULL",
 		strings.Join(setParts, ", "), argIndex, argIndex+1)
 

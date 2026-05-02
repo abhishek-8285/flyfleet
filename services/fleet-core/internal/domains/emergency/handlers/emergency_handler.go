@@ -99,7 +99,7 @@ func (h *EmergencyHandlers) Export(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	tenantID := middleware.GetTenantID(ctx)
 	if tenantID == uuid.Nil {
-		http.Error(w, "Unauthorized: missing organization context", http.StatusUnauthorized)
+		http.Error(w, "Unauthorized: missing tenant context", http.StatusUnauthorized)
 		return
 	}
 
@@ -190,7 +190,7 @@ func (h *EmergencyHandlers) TriggerAIS140SOS(w http.ResponseWriter, r *http.Requ
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
+		http.Error(w, "Unauthorized: tenant context required", http.StatusUnauthorized)
 		return
 	}
 	h.logger.Info("Triggering AIS140 SOS", zap.String("tenant_id", tenantID.String()))
@@ -237,7 +237,7 @@ func (h *EmergencyHandlers) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
+		http.Error(w, "Unauthorized: tenant context required", http.StatusUnauthorized)
 		return
 	}
 	incident, err := h.service.TriggerSOS(r.Context(), req)
@@ -258,7 +258,7 @@ func (h *EmergencyHandlers) ListActiveIncidents(w http.ResponseWriter, r *http.R
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
+		http.Error(w, "Unauthorized: tenant context required", http.StatusUnauthorized)
 		return
 	}
 	incidents, err := h.service.ListActiveIncidents(r.Context(), tenantID)
@@ -342,7 +342,7 @@ func (h *EmergencyHandlers) GetIncident(w http.ResponseWriter, r *http.Request) 
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
+		http.Error(w, "Unauthorized: tenant context required", http.StatusUnauthorized)
 		return
 	}
 	incident, err := h.service.GetIncident(r.Context(), id, tenantID)
@@ -375,7 +375,7 @@ func (h *EmergencyHandlers) MarkAsFalseAlarm(w http.ResponseWriter, r *http.Requ
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
+		http.Error(w, "Unauthorized: tenant context required", http.StatusUnauthorized)
 		return
 	}
 	userID := middleware.GetUserID(r.Context())
@@ -692,7 +692,7 @@ func (h *EmergencyHandlers) TriggerDrill(w http.ResponseWriter, r *http.Request)
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		http.Error(w, "Unauthorized: organization context required", http.StatusUnauthorized)
+		http.Error(w, "Unauthorized: tenant context required", http.StatusUnauthorized)
 		return
 	}
 
@@ -719,7 +719,7 @@ func (h *EmergencyHandlers) TriggerDrill(w http.ResponseWriter, r *http.Request)
 		"status":       "drill_triggered",
 		"incident_id":  incident.ID,
 		"simulation":   true,
-		"organization": tenantID.String(),
+		"tenant": tenantID.String(),
 	})
 }
 
@@ -734,7 +734,7 @@ func (h *EmergencyHandlers) GetIncidentTimeline(w http.ResponseWriter, r *http.R
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		h.respondWithError(w, http.StatusUnauthorized, "Organization ID required")
+		h.respondWithError(w, http.StatusUnauthorized, "Tenant ID required")
 		return
 	}
 

@@ -17,7 +17,7 @@ func TestEvent_Serialization(t *testing.T) {
 	event := &Event{
 		EventID:        eventID,
 		EventType:      "fleet.vehicle.created",
-		OrganizationID: tenantID,
+		TenantID:  tenantID,
 		Source:         "vehicle-service",
 		Payload:        map[string]interface{}{"id": "123"},
 		Timestamp:      timestamp,
@@ -31,7 +31,7 @@ func TestEvent_Serialization(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, eventID, decoded.EventID)
-	assert.Equal(t, tenantID, decoded.OrganizationID)
+	assert.Equal(t, tenantID, decoded.TenantID)
 	assert.Equal(t, "fleet.vehicle.created", decoded.EventType)
 	assert.Equal(t, "123", decoded.Payload["id"])
 }

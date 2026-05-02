@@ -10,7 +10,7 @@ import (
 // ========== REQUEST DTOs ==========
 
 // AlertRequestDTO is the request payload for triggering an alert
-// Note: OrganizationID is injected from context, not from client
+// Note: TenantID is injected from context, not from client
 type AlertRequestDTO struct {
 	UserID    *uuid.UUID           `json:"user_id,omitempty"`
 	Recipient string               `json:"recipient,omitempty"` // For non-user alerts
@@ -29,7 +29,7 @@ func (r AlertRequestDTO) ToModel(tenantID uuid.UUID) models.AlertRequest {
 		Priority:       r.Priority,
 		Data:           r.Data,
 		Metadata:       r.Metadata,
-		OrganizationID: tenantID, // Injected from context, never from client
+		TenantID: tenantID, // Injected from context, never from client
 	}
 }
 
@@ -43,7 +43,7 @@ type UserPreferenceUpdateDTO struct {
 func (r UserPreferenceUpdateDTO) ToModel(userID, tenantID uuid.UUID) models.UserPreference {
 	return models.UserPreference{
 		UserID:         userID,
-		OrganizationID: tenantID,
+		TenantID: tenantID,
 		Channel:        r.Channel,
 		Enabled:        r.Enabled,
 	}
@@ -68,7 +68,7 @@ func (r CreateTemplateRequestDTO) ToModel(tenantID uuid.UUID) models.Template {
 		Subject:        r.Subject,
 		Body:           r.Body,
 		Metadata:       r.Metadata,
-		OrganizationID: tenantID, // Injected from context
+		TenantID: tenantID, // Injected from context
 	}
 }
 
@@ -102,7 +102,7 @@ type TemplateResponseDTO struct {
 	Subject        string         `json:"subject,omitempty"`
 	Body           string         `json:"body"`
 	Metadata       map[string]any `json:"metadata,omitempty"`
-	OrganizationID uuid.UUID      `json:"organization_id"`
+	TenantID uuid.UUID      `json:"tenant_id"`
 	CreatedAt      string         `json:"created_at"`
 	UpdatedAt      string         `json:"updated_at"`
 }
@@ -117,7 +117,7 @@ func ToTemplateResponseDTO(t models.Template) TemplateResponseDTO {
 		Subject:        t.Subject,
 		Body:           t.Body,
 		Metadata:       t.Metadata,
-		OrganizationID: t.OrganizationID,
+		TenantID: t.TenantID,
 		CreatedAt:      t.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:      t.UpdatedAt.Format(time.RFC3339),
 	}

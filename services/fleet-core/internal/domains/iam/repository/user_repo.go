@@ -142,7 +142,7 @@ func (r *UserRepository) UpdatePreferences(ctx context.Context, id, tenantID uui
 				sidebar_collapsed = COALESCE($1, sidebar_collapsed),
 				language = COALESCE($2, language),
 				updated_at = NOW()
-			WHERE id = $3 AND id IN (SELECT user_id FROM user_organizations WHERE organization_id = $4)`,
+			WHERE id = $3 AND id IN (SELECT user_id FROM user_tenants WHERE tenant_id = $4)`,
 			sidebarCollapsed, language, id, tenantID,
 		)
 	} else {
@@ -163,7 +163,7 @@ func (r *UserRepository) UpdateStatus(ctx context.Context, id, tenantID uuid.UUI
 	if tenantID != uuid.Nil {
 		_, err = r.pool.Exec(ctx, `
 			UPDATE users SET status = $1, updated_at = NOW() 
-			WHERE id = $2 AND id IN (SELECT user_id FROM user_organizations WHERE organization_id = $3)`,
+			WHERE id = $2 AND id IN (SELECT user_id FROM user_tenants WHERE tenant_id = $3)`,
 			status, id, tenantID,
 		)
 	} else {
@@ -204,8 +204,8 @@ func (r *UserRepository) ListUsers(ctx context.Context, params models.ListUsersP
 	argCount := 1
 
 	if params.TenantID != uuid.Nil {
-		query += " JOIN user_organizations uo ON u.id = uo.user_id"
-		countQuery += " JOIN user_organizations uo ON u.id = uo.user_id"
+		query += " JOIN user_tenants uo ON u.id = uo.user_id"
+		countQuery += " JOIN user_tenants uo ON u.id = uo.user_id"
 			whereClause += " AND uo.tenant_id = $" + strconv.Itoa(argCount)
 		args = append(args, params.TenantID)
 		argCount++
@@ -271,7 +271,7 @@ func (r *UserRepository) SoftDelete(ctx context.Context, id, tenantID uuid.UUID)
 	if tenantID != uuid.Nil {
 		_, err = r.pool.Exec(ctx, `
 			UPDATE users SET status = 'disabled', updated_at = NOW() 
-			WHERE id = $1 AND id IN (SELECT user_id FROM user_organizations WHERE organization_id = $2)`,
+			WHERE id = $1 AND id IN (SELECT user_id FROM user_tenants WHERE tenant_id = $2)`,
 			id, tenantID,
 		)
 	} else {
@@ -291,12 +291,12 @@ func (r *UserRepository) MarkEmailVerified(ctx context.Context, id uuid.UUID) er
 	return err
 }
 
-// GetOrganizations returns all organizations the user belongs to.
-func (r *UserRepository) GetOrganizations(ctx context.Context, userID uuid.UUID) ([]models.OrgInfo, error) {
+// GetTenants returns all tenants the user belongs to.
+func (r *UserRepository) GetTenants(ctx context.Context, userID uuid.UUID) ([]models.TenantInfo, error) {
 	rows, err := r.pool.Query(ctx, `
 		SELECT o.id, o.name, uo.role
-		FROM user_organizations uo
-		JOIN organizations o ON uo.tenant_id = o.id
+		FROM user_tenants uo
+		JOIN tenants o ON uo.tenant_id = o.id
 		WHERE uo.user_id = $1 AND uo.is_active = true
 	`, userID)
 	if err != nil {
@@ -304,13 +304,13 @@ func (r *UserRepository) GetOrganizations(ctx context.Context, userID uuid.UUID)
 	}
 	defer rows.Close()
 
-	var orgs []models.OrgInfo
+	var tenants []models.TenantInfo
 	for rows.Next() {
-		var org models.OrgInfo
-		if err := rows.Scan(&org.ID, &org.Name, &org.Role); err != nil {
+		var tenant models.TenantInfo
+		if err := rows.Scan(&tenant.ID, &tenant.Name, &tenant.Role); err != nil {
 			continue
 		}
-		orgs = append(orgs, org)
+		tenants = append(tenants, tenant)
 	}
-	return orgs, nil
+	return tenants, nil
 }

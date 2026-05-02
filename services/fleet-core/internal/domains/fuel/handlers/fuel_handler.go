@@ -161,8 +161,8 @@ func (h *FuelHandler) ListLogs(w http.ResponseWriter, r *http.Request) {
 
 	query := r.URL.Query()
 	filter := models.FuelLogFilter{
-		OrganizationID: tenantID,
-		Search:         query.Get("search"),
+		TenantID: tenantID,
+		Search:   query.Get("search"),
 	}
 
 	if vID := query.Get("vehicle_id"); vID != "" {

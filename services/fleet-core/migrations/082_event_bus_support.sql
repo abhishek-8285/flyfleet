@@ -5,13 +5,13 @@
 CREATE TABLE IF NOT EXISTS platform_events (
     id UUID PRIMARY KEY,
     event_type TEXT NOT NULL,
-    organization_id UUID,
+    tenant_id UUID,
     source TEXT NOT NULL,
     payload JSONB NOT NULL,
     timestamp BIGINT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_events_org ON platform_events(organization_id);
-CREATE INDEX idx_events_type ON platform_events(event_type);
-CREATE INDEX idx_events_timestamp ON platform_events(timestamp);
+CREATE INDEX IF NOT EXISTS idx_events_tenant ON platform_events(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_events_type ON platform_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_events_timestamp ON platform_events(timestamp);

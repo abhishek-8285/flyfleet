@@ -39,7 +39,7 @@ func (h *AnalyticsHandler) RegisterRoutes(r chi.Router) {
 func (h *AnalyticsHandler) GetMaintenanceSummary(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return
 	}
 
@@ -57,7 +57,7 @@ func (h *AnalyticsHandler) GetMaintenanceSummary(w http.ResponseWriter, r *http.
 func (h *AnalyticsHandler) GetCostAnalytics(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return
 	}
 
@@ -73,7 +73,7 @@ func (h *AnalyticsHandler) GetCostAnalytics(w http.ResponseWriter, r *http.Reque
 func (h *AnalyticsHandler) GetVendorComparison(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID required", nil)
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
 		return
 	}
 

@@ -213,7 +213,7 @@ func (h *BillingHandler) readInt(r *http.Request, name string, defaultValue int)
 func (h *BillingHandler) ListInvoices(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
+		h.errorJSON(w, r, "Invalid Tenant ID", http.StatusBadRequest)
 		return
 	}
 
@@ -245,7 +245,7 @@ func (h *BillingHandler) ListInvoices(w http.ResponseWriter, r *http.Request) {
 func (h *BillingHandler) CreateInvoice(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
+		h.errorJSON(w, r, "Invalid Tenant ID", http.StatusBadRequest)
 		return
 	}
 
@@ -382,7 +382,7 @@ func (h *BillingHandler) RecordPayment(w http.ResponseWriter, r *http.Request) {
 func (h *BillingHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
+		h.errorJSON(w, r, "Invalid Tenant ID", http.StatusBadRequest)
 		return
 	}
 
@@ -403,7 +403,7 @@ func (h *BillingHandler) GetSettings(w http.ResponseWriter, r *http.Request) {
 func (h *BillingHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
+		h.errorJSON(w, r, "Invalid Tenant ID", http.StatusBadRequest)
 		return
 	}
 
@@ -426,7 +426,7 @@ func (h *BillingHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) 
 func (h *BillingHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
+		h.errorJSON(w, r, "Invalid Tenant ID", http.StatusBadRequest)
 		return
 	}
 
@@ -556,7 +556,7 @@ func (h *BillingHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 func (h *BillingHandler) GetUsageSummary(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
+		h.errorJSON(w, r, "Invalid Tenant ID", http.StatusBadRequest)
 		return
 	}
 

@@ -26,7 +26,7 @@ func NewSessionHandler(sessionSvc sessionService, log *zap.Logger) *SessionHandl
 // GET /api/v1/auth/sessions
 func (h *SessionHandler) ListSessions(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserIDUUID(r)
-	tenantID := GetOrgUUID(r)
+	tenantID := GetTenantUUID(r)
 
 	if userID.String() == "00000000-0000-0000-0000-000000000000" {
 		h.writeError(w, http.StatusUnauthorized, "unauthenticated", "Authentication required", r)
@@ -57,7 +57,7 @@ func (h *SessionHandler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := GetUserIDUUID(r)
-	tenantID := GetOrgUUID(r)
+	tenantID := GetTenantUUID(r)
 
 	if err := h.sessionSvc.RevokeSession(r.Context(), userID, tenantID, sessionID); err != nil {
 		h.log.Error("failed to revoke session", zap.Error(err), zap.String("session_id", sessionID))

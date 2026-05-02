@@ -33,13 +33,13 @@ func newFakeFuelRepo() *fakeFuelRepo {
 func (f *fakeFuelRepo) Create(_ context.Context, log *models.FuelLog) error {
 	cpy := *log
 	f.logs[log.ID] = &cpy
-	f.lastOdometers[log.VehicleID.String()+":"+log.OrganizationID.String()] = log.Odometer
+	f.lastOdometers[log.VehicleID.String()+":"+log.TenantID.String()] = log.Odometer
 	return nil
 }
 
 func (f *fakeFuelRepo) GetByID(_ context.Context, id uuid.UUID, tenantID uuid.UUID) (*models.FuelLog, error) {
 	log, ok := f.logs[id]
-	if !ok || log.OrganizationID != tenantID {
+	if !ok || log.TenantID != tenantID {
 		return nil, nil
 	}
 	cpy := *log
@@ -49,7 +49,7 @@ func (f *fakeFuelRepo) GetByID(_ context.Context, id uuid.UUID, tenantID uuid.UU
 func (f *fakeFuelRepo) List(_ context.Context, filter models.FuelLogFilter) (*models.FuelLogListResponse, error) {
 	logs := make([]models.FuelLog, 0)
 	for _, l := range f.logs {
-		if l.OrganizationID == filter.OrganizationID {
+		if l.TenantID == filter.TenantID {
 			logs = append(logs, *l)
 		}
 	}
@@ -144,7 +144,7 @@ func (f *fakeSettingsRepo) Upsert(_ context.Context, _ *models.FuelSettings) err
 
 func (f *fakeSettingsRepo) GetOrDefault(_ context.Context, tenantID uuid.UUID) (*models.FuelSettings, error) {
 	return &models.FuelSettings{
-		OrganizationID:   tenantID,
+		TenantID:   tenantID,
 		DefaultCurrency:  "USD",
 		AllowedFuelTypes: json.RawMessage(`["diesel"]`),
 		ValidationRules:  json.RawMessage(`{"odometer_check":true}`),
@@ -218,7 +218,7 @@ func TestRejectedLogsAreImmutable(t *testing.T) {
 	logID := uuid.New()
 	repo.logs[logID] = &models.FuelLog{
 		ID:             logID,
-		OrganizationID: tenantID,
+		TenantID: tenantID,
 		Status:         models.FuelLogStatusRejected,
 		CreatedBy:      uuid.New(),
 	}
@@ -235,7 +235,7 @@ func TestStatusWorkflowOnlyPendingAllowed(t *testing.T) {
 	svc := newTestFuelService(repo)
 	tenantID := uuid.New()
 	logID := uuid.New()
-	repo.logs[logID] = &models.FuelLog{ID: logID, OrganizationID: tenantID, Status: models.FuelLogStatusPending, CreatedBy: uuid.New()}
+	repo.logs[logID] = &models.FuelLog{ID: logID, TenantID: tenantID, Status: models.FuelLogStatusPending, CreatedBy: uuid.New()}
 
 	err := svc.ChangeStatus(context.Background(), logID, tenantID, models.ChangeFuelLogStatusRequest{Status: models.FuelLogStatusApproved})
 	require.NoError(t, err)

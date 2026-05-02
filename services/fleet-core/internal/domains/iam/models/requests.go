@@ -138,7 +138,7 @@ type DisableMFARequest struct {
 	Password string `json:"password"`
 }
 
-type SwitchOrgRequest struct {
+type SwitchTenantRequest struct {
 	TenantID string `json:"tenant_id"`
 }
 
@@ -164,7 +164,7 @@ type ListUsersParams struct {
 type IdentifyResponse struct {
 	Exists          bool         `json:"exists"`
 	EmailVerified   bool         `json:"email_verified"`
-	Organizations   []OrgInfo    `json:"organizations"`
+	Tenants         []TenantInfo `json:"tenants"`
 	MFARequired     bool         `json:"mfa_required"`
 	MFAMethods      []string     `json:"mfa_methods"`
 	MFARemembered   bool         `json:"mfa_remembered"`
@@ -195,7 +195,7 @@ type UserInfo struct {
 	AvatarURL         string    `json:"avatar_url,omitempty"`
 	Role              string    `json:"role"`
 	TenantID          uuid.UUID `json:"tenant_id"`
-	OrgName           string    `json:"org_name"`
+	TenantName        string    `json:"tenant_name"`
 	Permissions       []string  `json:"permissions"`
 	MustResetPassword bool      `json:"must_reset_password"`
 }
@@ -209,18 +209,18 @@ type ProfileResponse struct {
 	AvatarURL     string      `json:"avatar_url,omitempty"`
 	MFAEnabled    bool        `json:"mfa_enabled"`
 	EmailVerified bool        `json:"email_verified"`
-	CurrentOrg    *OrgInfo    `json:"current_org,omitempty"`
-	Organizations []OrgInfo   `json:"organizations"`
+	CurrentTenant *TenantInfo `json:"current_tenant,omitempty"`
+	Tenants       []TenantInfo `json:"tenants"`
 	Permissions   []string    `json:"permissions"`
 	LastLoginAt   *string     `json:"last_login_at,omitempty"`
 }
 
-type OrgSwitchResponse struct {
-	Success      bool     `json:"success"`
-	AccessToken  string   `json:"access_token"`
-	RefreshToken string   `json:"refresh_token"`
-	ExpiresIn    int      `json:"expires_in"`
-	Organization OrgInfo  `json:"organization"`
+type TenantSwitchResponse struct {
+	Success      bool       `json:"success"`
+	AccessToken  string     `json:"access_token"`
+	RefreshToken string     `json:"refresh_token"`
+	ExpiresIn    int        `json:"expires_in"`
+	Tenant       TenantInfo `json:"tenant"`
 }
 
 type InviteResponse struct {

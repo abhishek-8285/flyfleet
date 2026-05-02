@@ -27,7 +27,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetExpiringVehicleVerifications(ctx con
 	for rows.Next() {
 		var v models.VehicleVerification
 		err := rows.Scan(
-			&v.ID, &v.VehicleID, &v.OrganizationID, &v.RegistrationNumber, &v.Status, &v.VerificationDate,
+			&v.ID, &v.VehicleID, &v.TenantID, &v.RegistrationNumber, &v.Status, &v.VerificationDate,
 			&v.ChassisNumber, &v.EngineNumber, &v.Model, &v.Manufacturer, &v.FuelType, &v.BodyType,
 			&v.CubicCapacity, &v.SeatingCapacity, &v.Color, &v.ManufacturingYear, &v.OwnerName,
 			&v.RCStatus, &v.InsuranceExpiry, &v.PUCExpiry, &v.CreatedAt,
@@ -59,7 +59,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetExpiringDriverVerifications(ctx cont
 	for rows.Next() {
 		var d models.DriverVerification
 		err := rows.Scan(
-			&d.ID, &d.DriverID, &d.OrganizationID, &d.LicenseNumber, &d.Status, &d.VerificationDate,
+			&d.ID, &d.DriverID, &d.TenantID, &d.LicenseNumber, &d.Status, &d.VerificationDate,
 			&d.Name, &d.DateOfBirth, &d.ValidityTo, &d.CreatedAt,
 		)
 		if err != nil {
@@ -91,7 +91,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetExpiringLocalPermits(ctx context.Con
 	for rows.Next() {
 		var p models.LocalPermit
 		err := rows.Scan(
-			&p.ID, &p.VehicleID, &p.DriverID, &p.OrganizationID, &p.PermitNumber, &p.PermitType, &p.PermitCategory,
+			&p.ID, &p.VehicleID, &p.DriverID, &p.TenantID, &p.PermitNumber, &p.PermitType, &p.PermitCategory,
 			&p.PermitSubCategory, &p.ValidFrom, &p.ValidTo, &p.IssuingAuthority, &p.Jurisdiction, &p.RouteDetails,
 			&p.NumberOfTrips, &p.MaxLoadCapacity, &p.NumberOfSeats, &p.Fare, &p.Status, &p.Remarks,
 			&p.CreatedAt,
@@ -124,7 +124,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetNonCompliantGSTRecords(ctx context.C
 	for rows.Next() {
 		var g models.GSTCompliance
 		err := rows.Scan(
-			&g.ID, &g.OrganizationID, &g.GSTIN, &g.Status, &g.LegalName, &g.TradeName, &g.Address,
+			&g.ID, &g.TenantID, &g.GSTIN, &g.Status, &g.LegalName, &g.TradeName, &g.Address,
 			&g.CentreJurisdiction, &g.StateJurisdiction, &g.DateOfRegistration, &g.DateOfCancellation,
 			&g.LastUpdated, &g.ReturnFilingFrequency, &g.ReturnFilingStatus, &g.PaymentStatus,
 			&g.CreatedAt,

@@ -11,7 +11,7 @@ import (
 
 type SupportTicket struct {
 	ID             uuid.UUID  `json:"id"`
-	OrganizationID uuid.UUID  `json:"organization_id"`
+	TenantID uuid.UUID  `json:"tenant_id"`
 	Subject        string     `json:"subject"`
 	Description    string     `json:"description"`
 	Status         string     `json:"status"`
@@ -81,7 +81,7 @@ type SupportRepository interface {
 }
 
 type AuditLog struct {
-	OrganizationID uuid.UUID              `json:"organization_id"`
+	TenantID uuid.UUID              `json:"tenant_id"`
 	UserID         uuid.UUID              `json:"user_id"`
 	Action         string                 `json:"action"`
 	TargetUserID   *uuid.UUID             `json:"target_user_id"`
@@ -102,8 +102,8 @@ func NewSupportRepository(db *pgxpool.Pool, logger *zap.Logger) SupportRepositor
 }
 
 func (r *supportRepository) GetTickets(ctx context.Context, tenantID uuid.UUID) ([]*SupportTicket, error) {
-	query := `SELECT id, organization_id, subject, status, priority, reporter_name, created_at, assigned_to 
-	          FROM support_tickets WHERE organization_id = $1 ORDER BY created_at DESC`
+	query := `SELECT id, tenant_id, subject, status, priority, reporter_name, created_at, assigned_to 
+	          FROM support_tickets WHERE tenant_id = $1 ORDER BY created_at DESC`
 	rows, err := r.db.Query(ctx, query, tenantID)
 	if err != nil {
 		return nil, err
@@ -113,7 +113,7 @@ func (r *supportRepository) GetTickets(ctx context.Context, tenantID uuid.UUID) 
 	var tickets []*SupportTicket
 	for rows.Next() {
 		t := &SupportTicket{}
-		err := rows.Scan(&t.ID, &t.OrganizationID, &t.Subject, &t.Status, &t.Priority, &t.ReporterName, &t.CreatedAt, &t.AssignedTo)
+		err := rows.Scan(&t.ID, &t.TenantID, &t.Subject, &t.Status, &t.Priority, &t.ReporterName, &t.CreatedAt, &t.AssignedTo)
 		if err != nil {
 			return nil, err
 		}
@@ -124,8 +124,8 @@ func (r *supportRepository) GetTickets(ctx context.Context, tenantID uuid.UUID) 
 
 func (r *supportRepository) GetTicketDetail(ctx context.Context, ticketID uuid.UUID) (*SupportTicket, []*TicketEvent, error) {
 	t := &SupportTicket{}
-	err := r.db.QueryRow(ctx, "SELECT id, organization_id, subject, description, status, priority, assigned_to, reporter_name, created_at FROM support_tickets WHERE id = $1", ticketID).
-		Scan(&t.ID, &t.OrganizationID, &t.Subject, &t.Description, &t.Status, &t.Priority, &t.AssignedTo, &t.ReporterName, &t.CreatedAt)
+	err := r.db.QueryRow(ctx, "SELECT id, tenant_id, subject, description, status, priority, assigned_to, reporter_name, created_at FROM support_tickets WHERE id = $1", ticketID).
+		Scan(&t.ID, &t.TenantID, &t.Subject, &t.Description, &t.Status, &t.Priority, &t.AssignedTo, &t.ReporterName, &t.CreatedAt)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -156,7 +156,7 @@ func (r *supportRepository) GetDashboardMetrics(ctx context.Context, tenantID uu
 		err = r.db.QueryRow(ctx, "SELECT COUNT(*), COUNT(*) FILTER (WHERE status = 'OPEN'), COUNT(*) FILTER (WHERE status = 'RESOLVED' AND resolved_at >= CURRENT_DATE) FROM support_tickets").
 			Scan(&total, &open, &resolvedToday)
 	} else {
-		err = r.db.QueryRow(ctx, "SELECT COUNT(*), COUNT(*) FILTER (WHERE status = 'OPEN'), COUNT(*) FILTER (WHERE status = 'RESOLVED' AND resolved_at >= CURRENT_DATE) FROM support_tickets WHERE organization_id = $1", tenantID).
+		err = r.db.QueryRow(ctx, "SELECT COUNT(*), COUNT(*) FILTER (WHERE status = 'OPEN'), COUNT(*) FILTER (WHERE status = 'RESOLVED' AND resolved_at >= CURRENT_DATE) FROM support_tickets WHERE tenant_id = $1", tenantID).
 			Scan(&total, &open, &resolvedToday)
 	}
 
@@ -182,9 +182,9 @@ func (r *supportRepository) AddTicketEvent(ctx context.Context, event *TicketEve
 }
 
 func (r *supportRepository) LogAudit(ctx context.Context, l *AuditLog) error {
-	query := `INSERT INTO system_audit_logs (organization_id, user_id, action, target_user_id, ip_address, user_agent, status, error_message, metadata) 
+	query := `INSERT INTO system_audit_logs (tenant_id, user_id, action, target_user_id, ip_address, user_agent, status, error_message, metadata) 
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
-	_, err := r.db.Exec(ctx, query, l.OrganizationID, l.UserID, l.Action, l.TargetUserID, l.IPAddress, l.UserAgent, l.Status, l.ErrorMessage, l.Metadata)
+	_, err := r.db.Exec(ctx, query, l.TenantID, l.UserID, l.Action, l.TargetUserID, l.IPAddress, l.UserAgent, l.Status, l.ErrorMessage, l.Metadata)
 	return err
 }
 

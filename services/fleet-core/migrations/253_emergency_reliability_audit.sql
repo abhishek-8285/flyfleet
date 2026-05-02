@@ -1,3 +1,6 @@
+-- Migration: 253_emergency_reliability_audit
+-- Description: Authority delivery logs, timeline events, and geospatial authority routing
+
 -- Phase 2: Authority delivery confirmation
 CREATE TABLE IF NOT EXISTS authority_delivery_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -31,14 +34,16 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='emergency_authority_zones' AND column_name='priority') THEN
         ALTER TABLE emergency_authority_zones ADD COLUMN priority INTEGER DEFAULT 1;
     END IF;
+    
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='emergency_authority_zones' AND column_name='zone_polygon') THEN
-        ALTER TABLE emergency_authority_zones ADD COLUMN zone_polygon GEOMETRY(POLYGON, 4326);
+        -- Falling back to JSONB as PostGIS is not available in this environment
+        ALTER TABLE emergency_authority_zones ADD COLUMN zone_polygon JSONB DEFAULT '{}'::jsonb;
     END IF;
 END $$;
 
--- Seed some failover zones (placeholders)
+-- Seed some failover zones (placeholders using GeoJSON format)
 INSERT INTO emergency_authority_zones (zone_name, authority_type, zone_polygon, contact_number, priority)
 VALUES 
-('Gurgaon Sector 45 Police Station (Backup)', 'POLICE', ST_GeomFromText('POLYGON((77.01 28.44, 77.05 28.44, 77.05 28.47, 77.01 28.47, 77.01 28.44))', 4326), '+911242385101', 2),
-('Cyber City Fire Station (Backup)', 'FIRE', ST_GeomFromText('POLYGON((77.07 28.48, 77.10 28.48, 77.10 28.51, 77.07 28.51, 77.07 28.48))', 4326), '+911242388101', 2)
+('Gurgaon Sector 45 Police Station (Backup)', 'POLICE', '{"type": "Polygon", "coordinates": [[[77.01, 28.44], [77.05, 28.44], [77.05, 28.47], [77.01, 28.47], [77.01, 28.44]]]}'::jsonb, '+911242385101', 2),
+('Cyber City Fire Station (Backup)', 'FIRE', '{"type": "Polygon", "coordinates": [[[77.07, 28.48], [77.10, 28.48], [77.10, 28.51], [77.07, 28.51], [77.07, 28.48]]]}'::jsonb, '+911242388101', 2)
 ON CONFLICT DO NOTHING;

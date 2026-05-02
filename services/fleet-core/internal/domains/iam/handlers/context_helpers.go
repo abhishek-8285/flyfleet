@@ -32,7 +32,7 @@ func GetTenantID(r *http.Request) string {
 	return id.String()
 }
 
-func GetOrgUUID(r *http.Request) uuid.UUID {
+func GetTenantUUID(r *http.Request) uuid.UUID {
 	id, ok := ctxkeys.GetTenantID(r.Context())
 	if !ok {
 		return uuid.Nil

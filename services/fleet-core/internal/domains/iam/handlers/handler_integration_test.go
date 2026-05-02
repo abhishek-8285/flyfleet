@@ -33,10 +33,10 @@ type mockAuthService struct {
 	forgotErr       error
 	resetErr        error
 	logoutErr       error
-	switchOrgResp   *models.OrgSwitchResponse
-	switchOrgErr    error
-	orgs            []models.OrgInfo
-	orgsErr         error
+	switchTenantResp *models.TenantSwitchResponse
+	switchTenantErr  error
+	tenants          []models.TenantInfo
+	tenantsErr       error
 }
 
 func (m *mockAuthService) Identify(ctx context.Context, email string) (*models.IdentifyResponse, error) {
@@ -63,11 +63,11 @@ func (m *mockAuthService) ResetPasswordWithToken(ctx context.Context, token, new
 func (m *mockAuthService) Logout(ctx context.Context, userID uuid.UUID, tokenJTI string) error {
 	return m.logoutErr
 }
-func (m *mockAuthService) SwitchOrg(ctx context.Context, userID uuid.UUID, targetTenantID uuid.UUID, ip, ua string) (*models.OrgSwitchResponse, error) {
-	return m.switchOrgResp, m.switchOrgErr
+func (m *mockAuthService) SwitchTenant(ctx context.Context, userID uuid.UUID, targetTenantID uuid.UUID, ip, ua string) (*models.TenantSwitchResponse, error) {
+	return m.switchTenantResp, m.switchTenantErr
 }
-func (m *mockAuthService) GetUserOrganizations(ctx context.Context, userID uuid.UUID) ([]models.OrgInfo, error) {
-	return m.orgs, m.orgsErr
+func (m *mockAuthService) GetUserTenants(ctx context.Context, userID uuid.UUID) ([]models.TenantInfo, error) {
+	return m.tenants, m.tenantsErr
 }
 func (m *mockAuthService) VerifyEmail(ctx context.Context, token string) error { return nil }
 func (m *mockAuthService) ResetPasswordForced(ctx context.Context, userID uuid.UUID, newPassword string) error {
@@ -271,7 +271,7 @@ func (m *mockUserRepo) UpdateProfile(ctx context.Context, id uuid.UUID, name, ph
 func (m *mockUserRepo) UpdatePreferences(ctx context.Context, id, tenantID uuid.UUID, sidebarCollapsed *bool, language *string) error {
 	return nil
 }
-func (m *mockUserRepo) GetOrganizations(ctx context.Context, id uuid.UUID) ([]models.OrgInfo, error) {
+func (m *mockUserRepo) GetTenants(ctx context.Context, id uuid.UUID) ([]models.TenantInfo, error) {
 	return nil, nil
 }
 
@@ -324,7 +324,7 @@ func TestAuthHandler_Identify_Success(t *testing.T) {
 		identifyResp: &models.IdentifyResponse{
 			Exists:        true,
 			EmailVerified: true,
-			Organizations: []models.OrgInfo{{Name: "Test Org", Role: "admin"}},
+			Tenants:       []models.TenantInfo{{Name: "Test Org", Role: "admin"}},
 		},
 	}
 	h := newTestAuthHandler(mockAuth, nil)
@@ -336,7 +336,7 @@ func TestAuthHandler_Identify_Success(t *testing.T) {
 	var resp models.IdentifyResponse
 	decodeResp(t, w, &resp)
 	assert.True(t, resp.Exists)
-	assert.Len(t, resp.Organizations, 1)
+	assert.Len(t, resp.Tenants, 1)
 }
 
 func TestAuthHandler_Identify_MissingEmail_400(t *testing.T) {

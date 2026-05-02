@@ -18,7 +18,7 @@ func (r *AnalyticsRepositoryImpl) CreatePredictiveModel(ctx context.Context, mod
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := `
-		INSERT INTO predictive_models (id, organization_id, name, description, model_type, algorithm, input_features, output_variable, 
+		INSERT INTO predictive_models (id, tenant_id, name, description, model_type, algorithm, input_features, output_variable, 
 			training_data_start, training_data_end, accuracy, precision, recall, f1_score, 
 			status, version, trained_at, expires_at, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
@@ -45,7 +45,7 @@ func (r *AnalyticsRepositoryImpl) CreatePredictiveModel(ctx context.Context, mod
 		f1Score = model.F1Score
 	}
 
-	_, err = r.db.Exec(ctx, query, model.ID, model.OrganizationID, model.Name, model.Description, model.ModelType, model.Algorithm,
+	_, err = r.db.Exec(ctx, query, model.ID, model.TenantID, model.Name, model.Description, model.ModelType, model.Algorithm,
 		inputFeaturesJSON, model.OutputVariable, model.TrainingDataStart, model.TrainingDataEnd,
 		model.Accuracy, precision, recall, f1Score, model.Status, model.Version,
 		model.TrainedAt, model.ExpiresAt, model.CreatedAt, model.UpdatedAt)
@@ -60,10 +60,10 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveModel(ctx context.Context, id str
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := `
-		SELECT id, organization_id, name, description, model_type, algorithm, input_features, output_variable,
+		SELECT id, tenant_id, name, description, model_type, algorithm, input_features, output_variable,
 			training_data_start, training_data_end, accuracy, precision, recall, f1_score,
 			status, version, trained_at, expires_at, created_at, updated_at
-		FROM predictive_models WHERE id = $1 AND organization_id = $2
+		FROM predictive_models WHERE id = $1 AND tenant_id = $2
 	`
 
 	var model models.PredictiveModel
@@ -71,7 +71,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveModel(ctx context.Context, id str
 	var precision, recall, f1Score *float64
 
 	err := r.db.QueryRow(ctx, query, id, tenantID).Scan(
-		&model.ID, &model.OrganizationID, &model.Name, &model.Description, &model.ModelType, &model.Algorithm,
+		&model.ID, &model.TenantID, &model.Name, &model.Description, &model.ModelType, &model.Algorithm,
 		&inputFeaturesJSON, &model.OutputVariable, &model.TrainingDataStart, &model.TrainingDataEnd,
 		&model.Accuracy, &precision, &recall, &f1Score, &model.Status, &model.Version,
 		&model.TrainedAt, &model.ExpiresAt, &model.CreatedAt, &model.UpdatedAt,
@@ -101,10 +101,10 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveModelByVersion(ctx context.Contex
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	query := `
-		SELECT id, organization_id, name, description, model_type, algorithm, input_features, output_variable, 
+		SELECT id, tenant_id, name, description, model_type, algorithm, input_features, output_variable, 
 			training_data_start, training_data_end, accuracy, precision, recall, f1_score, 
 			status, version, trained_at, expires_at, created_at, updated_at
-		FROM predictive_models WHERE name = $1 AND version = $2 AND organization_id = $3
+		FROM predictive_models WHERE name = $1 AND version = $2 AND tenant_id = $3
 	`
 
 	var model models.PredictiveModel
@@ -112,7 +112,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictiveModelByVersion(ctx context.Contex
 	var precision, recall, f1Score *float64
 
 	err := r.db.QueryRow(ctx, query, name, version, tenantID).Scan(
-		&model.ID, &model.OrganizationID, &model.Name, &model.Description, &model.ModelType, &model.Algorithm,
+		&model.ID, &model.TenantID, &model.Name, &model.Description, &model.ModelType, &model.Algorithm,
 		&inputFeaturesJSON, &model.OutputVariable, &model.TrainingDataStart, &model.TrainingDataEnd,
 		&model.Accuracy, &precision, &recall, &f1Score, &model.Status, &model.Version,
 		&model.TrainedAt, &model.ExpiresAt, &model.CreatedAt, &model.UpdatedAt,
@@ -160,7 +160,7 @@ func (r *AnalyticsRepositoryImpl) UpdatePredictiveModel(ctx context.Context, id 
 	}
 
 	args = append(args, id, tenantID)
-	query := fmt.Sprintf("UPDATE predictive_models SET %s WHERE id = $%d AND organization_id = $%d",
+	query := fmt.Sprintf("UPDATE predictive_models SET %s WHERE id = $%d AND tenant_id = $%d",
 		strings.Join(setParts, ", "), argIndex, argIndex+1)
 
 	_, err := r.db.Exec(ctx, query, args...)
@@ -174,7 +174,7 @@ func (r *AnalyticsRepositoryImpl) UpdatePredictiveModel(ctx context.Context, id 
 func (r *AnalyticsRepositoryImpl) DeletePredictiveModel(ctx context.Context, id string, tenantID uuid.UUID) error {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
-	query := "DELETE FROM predictive_models WHERE id = $1 AND organization_id = $2"
+	query := "DELETE FROM predictive_models WHERE id = $1 AND tenant_id = $2"
 	_, err := r.db.Exec(ctx, query, id, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to delete predictive model %s: %w", id, err)
@@ -187,11 +187,11 @@ func (r *AnalyticsRepositoryImpl) ListPredictiveModels(ctx context.Context, tena
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 	// Count query
-	countQuery := "SELECT COUNT(*) FROM predictive_models WHERE organization_id = $1"
+	countQuery := "SELECT COUNT(*) FROM predictive_models WHERE tenant_id = $1"
 	countArgs := []interface{}{tenantID}
 
 	// Filter conditions
-	whereConditions := []string{"organization_id = $1"}
+	whereConditions := []string{"tenant_id = $1"}
 	argIndex := 2
 
 	if modelType != nil {
@@ -218,10 +218,10 @@ func (r *AnalyticsRepositoryImpl) ListPredictiveModels(ctx context.Context, tena
 	}
 
 	// Main query
-	mainQuery := "SELECT id, organization_id, name, description, model_type, algorithm, input_features, output_variable, " +
+	mainQuery := "SELECT id, tenant_id, name, description, model_type, algorithm, input_features, output_variable, " +
 		"training_data_start, training_data_end, accuracy, precision, recall, f1_score, " +
 		"status, version, trained_at, expires_at, created_at, updated_at " +
-		"FROM predictive_models WHERE organization_id = $1"
+		"FROM predictive_models WHERE tenant_id = $1"
 
 	args := []interface{}{tenantID}
 	argIndex = 2
@@ -275,7 +275,7 @@ func (r *AnalyticsRepositoryImpl) ListPredictiveModels(ctx context.Context, tena
 		var precision, recall, f1Score *float64
 
 		err := rows.Scan(
-			&model.ID, &model.OrganizationID, &model.Name, &model.Description, &model.ModelType, &model.Algorithm,
+			&model.ID, &model.TenantID, &model.Name, &model.Description, &model.ModelType, &model.Algorithm,
 			&inputFeaturesJSON, &model.OutputVariable, &model.TrainingDataStart, &model.TrainingDataEnd,
 			&model.Accuracy, &precision, &recall, &f1Score, &model.Status, &model.Version,
 			&model.TrainedAt, &model.ExpiresAt, &model.CreatedAt, &model.UpdatedAt,

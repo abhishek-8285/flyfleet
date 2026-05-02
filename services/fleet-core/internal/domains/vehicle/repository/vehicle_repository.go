@@ -63,11 +63,15 @@ func (r *VehicleRepository) Create(ctx context.Context, vehicle *models.Vehicle)
 
 func (r *VehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Vehicle, error) {
 	query := `
-		SELECT v.id, v.tenant_id, COALESCE(v.registration_number, '') as registration_number, COALESCE(v.license_plate, '') as license_plate, v.chassis_number, v.engine_number, v.vin_number,
-		       v.vehicle_type, v.capacity_tonnage, v.fuel_type, v.fuel_tank_capacity, v.ownership_type,
-		       v.parent_vehicle_id, v.branch_id, v.cost_center_id, v.status,
-		       v.gps_device_id, v.gps_enabled, v.gps_device_type, v.immobilizer_enabled, v.ais140_compliant,
-		       v.make, v.model, v.year, v.color, v.odometer, v.current_driver_id, v.speed_limit,
+		SELECT v.id, v.tenant_id, COALESCE(v.registration_number, '') as registration_number, COALESCE(v.license_plate, '') as license_plate, 
+		       COALESCE(v.chassis_number, '') as chassis_number, COALESCE(v.engine_number, '') as engine_number, COALESCE(v.vin_number, '') as vin_number,
+		       COALESCE(v.vehicle_type, 'TRUCK') as vehicle_type, COALESCE(v.capacity_tonnage, 0) as capacity_tonnage, 
+		       COALESCE(v.fuel_type, 'DIESEL') as fuel_type, COALESCE(v.fuel_tank_capacity, 0) as fuel_tank_capacity, 
+		       COALESCE(v.ownership_type, 'OWNED') as ownership_type,
+		       v.parent_vehicle_id, v.branch_id, v.cost_center_id, COALESCE(v.status, 'active') as status,
+		       v.gps_device_id, COALESCE(v.gps_enabled, FALSE) as gps_enabled, v.gps_device_type, 
+		       COALESCE(v.immobilizer_enabled, FALSE) as immobilizer_enabled, COALESCE(v.ais140_compliant, FALSE) as ais140_compliant,
+		       v.make, v.model, v.year, v.color, v.odometer, v.current_driver_id, COALESCE(v.speed_limit, 0) as speed_limit,
 		       v.created_at, v.updated_at, v.deleted_at, v.version,
 		       d.full_name as current_driver_name
 		FROM vehicles v
@@ -117,11 +121,14 @@ func (r *VehicleRepository) GetByTenantID(ctx context.Context, tenantID uuid.UUI
 
 	query := `
 		SELECT v.id, v.tenant_id, COALESCE(v.registration_number, '') as registration_number, COALESCE(v.license_plate, '') as license_plate,
-		       v.chassis_number, v.engine_number, v.vin_number,
-		       v.vehicle_type, v.capacity_tonnage, v.fuel_type, v.fuel_tank_capacity, v.ownership_type,
-		       v.parent_vehicle_id, v.branch_id, v.cost_center_id, v.status,
-		       v.gps_device_id, v.gps_enabled, v.gps_device_type, v.immobilizer_enabled, v.ais140_compliant,
-		       v.make, v.model, v.year, v.color, v.odometer, v.current_driver_id, v.speed_limit,
+		       COALESCE(v.chassis_number, '') as chassis_number, COALESCE(v.engine_number, '') as engine_number, COALESCE(v.vin_number, '') as vin_number,
+		       COALESCE(v.vehicle_type, 'TRUCK') as vehicle_type, COALESCE(v.capacity_tonnage, 0) as capacity_tonnage, 
+		       COALESCE(v.fuel_type, 'DIESEL') as fuel_type, COALESCE(v.fuel_tank_capacity, 0) as fuel_tank_capacity, 
+		       COALESCE(v.ownership_type, 'OWNED') as ownership_type,
+		       v.parent_vehicle_id, v.branch_id, v.cost_center_id, COALESCE(v.status, 'active') as status,
+		       v.gps_device_id, COALESCE(v.gps_enabled, FALSE) as gps_enabled, v.gps_device_type, 
+		       COALESCE(v.immobilizer_enabled, FALSE) as immobilizer_enabled, COALESCE(v.ais140_compliant, FALSE) as ais140_compliant,
+		       v.make, v.model, v.year, v.color, v.odometer, v.current_driver_id, COALESCE(v.speed_limit, 0) as speed_limit,
 		       v.created_at, v.updated_at, v.deleted_at, v.version,
 		       d.full_name as current_driver_name
 		FROM vehicles v
@@ -432,11 +439,16 @@ func (r *VehicleRepository) Search(ctx context.Context, params models.VehicleSea
 	offset := (params.Page - 1) * params.Limit
 	args = append(args, params.Limit, offset)
 	query := fmt.Sprintf(`
-		SELECT v.id, v.tenant_id, COALESCE(v.registration_number, '') as registration_number, v.chassis_number, v.engine_number, v.vin_number,
-		       v.vehicle_type, v.capacity_tonnage, v.fuel_type, v.fuel_tank_capacity, v.ownership_type,
-		       v.parent_vehicle_id, v.branch_id, v.cost_center_id, v.status,
-		       v.gps_device_id, v.gps_enabled, v.gps_device_type, v.immobilizer_enabled, v.ais140_compliant,
-		       v.make, v.model, v.year, v.color, v.odometer, v.current_driver_id, v.speed_limit, v.created_at, v.updated_at, v.deleted_at, v.version,
+		SELECT v.id, v.tenant_id, COALESCE(v.registration_number, '') as registration_number, 
+		       COALESCE(v.chassis_number, '') as chassis_number, COALESCE(v.engine_number, '') as engine_number, COALESCE(v.vin_number, '') as vin_number,
+		       COALESCE(v.vehicle_type, 'TRUCK') as vehicle_type, COALESCE(v.capacity_tonnage, 0) as capacity_tonnage, 
+		       COALESCE(v.fuel_type, 'DIESEL') as fuel_type, COALESCE(v.fuel_tank_capacity, 0) as fuel_tank_capacity, 
+		       COALESCE(v.ownership_type, 'OWNED') as ownership_type,
+		       v.parent_vehicle_id, v.branch_id, v.cost_center_id, COALESCE(v.status, 'active') as status,
+		       v.gps_device_id, COALESCE(v.gps_enabled, FALSE) as gps_enabled, v.gps_device_type, 
+		       COALESCE(v.immobilizer_enabled, FALSE) as immobilizer_enabled, COALESCE(v.ais140_compliant, FALSE) as ais140_compliant,
+		       v.make, v.model, v.year, v.color, v.odometer, v.current_driver_id, COALESCE(v.speed_limit, 0) as speed_limit,
+		       v.created_at, v.updated_at, v.deleted_at, v.version,
 		       d.full_name as current_driver_name
 		FROM vehicles v
 		LEFT JOIN drivers d ON v.current_driver_id = d.id::uuid

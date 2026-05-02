@@ -716,7 +716,7 @@ func (r *AuthRepository) DeleteServiceAccount(ctx context.Context, id uuid.UUID)
 	return err
 }
 func (r *AuthRepository) CreateRole(ctx context.Context, role *models.Role) error {
-	query := `INSERT INTO roles (id, name, organization_id, description, is_system, created_at, updated_at)
+	query := `INSERT INTO roles (id, name, tenant_id, description, is_system, created_at, updated_at)
 			  VALUES ($1, $2, $3, $4, $5, $6, $7)`
 	start := time.Now()
 	_, err := r.db.Exec(ctx, query, role.ID, role.Name, role.TenantID, role.Description, role.IsSystem, role.CreatedAt, role.UpdatedAt)
@@ -725,7 +725,7 @@ func (r *AuthRepository) CreateRole(ctx context.Context, role *models.Role) erro
 }
 
 func (r *AuthRepository) AssignRoleToUser(ctx context.Context, userID uuid.UUID, roleID uuid.UUID, tenantID uuid.UUID) error {
-	query := `INSERT INTO user_roles (user_id, role_id, organization_id, granted_at)
+	query := `INSERT INTO user_roles (user_id, role_id, tenant_id, granted_at)
 			  VALUES ($1, $2, $3, NOW()) ON CONFLICT DO NOTHING`
 	start := time.Now()
 	_, err := r.db.Exec(ctx, query, userID, roleID, tenantID)

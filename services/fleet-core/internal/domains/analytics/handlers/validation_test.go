@@ -51,7 +51,7 @@ func TestCreatePredictionResultValidation(t *testing.T) {
 			name: "Valid payload",
 			payload: models.PredictionResult{
 				ModelID:         uuid.New().String(),
-				OrganizationID:  uuid.New(),
+				TenantID:  uuid.New(),
 				PredictedValue:  10.5,
 				ConfidenceScore: 0.95,
 				PredictionInput: map[string]interface{}{"feature": 1},

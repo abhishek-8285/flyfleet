@@ -23,7 +23,7 @@ func (r *IndiaIntegrationRepositoryImpl) CreateGSTCompliance(ctx context.Context
 
 	_, err := r.db.Exec(ctx, query,
 		compliance.ID,
-		compliance.OrganizationID,
+		compliance.TenantID,
 		compliance.GSTIN,
 		compliance.Status,
 		compliance.LegalName,
@@ -61,7 +61,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetGSTCompliance(ctx context.Context, i
 	row := r.db.QueryRow(ctx, query, id)
 	err := row.Scan(
 		&compliance.ID,
-		&compliance.OrganizationID,
+		&compliance.TenantID,
 		&compliance.GSTIN,
 		&compliance.Status,
 		&compliance.LegalName,
@@ -106,7 +106,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetGSTComplianceByGSTIN(ctx context.Con
 	row := r.db.QueryRow(ctx, query, gstin)
 	err := row.Scan(
 		&compliance.ID,
-		&compliance.OrganizationID,
+		&compliance.TenantID,
 		&compliance.GSTIN,
 		&compliance.Status,
 		&compliance.LegalName,
@@ -233,7 +233,7 @@ func (r *IndiaIntegrationRepositoryImpl) ListGSTCompliances(ctx context.Context,
 
 		err := rows.Scan(
 			&compliance.ID,
-			&compliance.OrganizationID,
+			&compliance.TenantID,
 			&compliance.GSTIN,
 			&compliance.Status,
 			&compliance.LegalName,

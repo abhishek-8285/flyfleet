@@ -311,8 +311,8 @@ func (s *VideoServiceImpl) validateVideoStream(stream *models.VideoStream) error
 		return fmt.Errorf("vehicle_id is required")
 	}
 
-	if stream.OrganizationID == uuid.Nil {
-		return fmt.Errorf("organization_id is required")
+	if stream.TenantID == uuid.Nil {
+		return fmt.Errorf("tenant_id is required")
 	}
 
 	if stream.URL == "" {
@@ -359,8 +359,8 @@ func (s *VideoServiceImpl) validateVideoRecording(recording *models.VideoRecordi
 		return fmt.Errorf("vehicle_id is required")
 	}
 
-	if recording.OrganizationID == uuid.Nil {
-		return fmt.Errorf("organization_id is required")
+	if recording.TenantID == uuid.Nil {
+		return fmt.Errorf("tenant_id is required")
 	}
 
 	if recording.Filename == "" {
@@ -419,8 +419,8 @@ func (s *VideoServiceImpl) validateVideoAnalytics(analytics *models.VideoAnalyti
 
 // validateRetentionPolicy validates a retention policy
 func (s *VideoServiceImpl) validateRetentionPolicy(policy *models.VideoRetentionPolicy) error {
-	if policy.OrganizationID == uuid.Nil {
-		return fmt.Errorf("organization_id is required")
+	if policy.TenantID == uuid.Nil {
+		return fmt.Errorf("tenant_id is required")
 	}
 
 	if policy.Name == "" {

@@ -79,7 +79,7 @@ func (h *EnterpriseFinanceHandlers) GenerateEInvoice(w http.ResponseWriter, r *h
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
+		http.Error(w, `{"error":"unauthorized: tenant context required"}`, http.StatusUnauthorized)
 		return
 	}
 	var req models.GenerateEInvoiceRequest
@@ -124,7 +124,7 @@ func (h *EnterpriseFinanceHandlers) DeductTDS(w http.ResponseWriter, r *http.Req
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
+		http.Error(w, `{"error":"unauthorized: tenant context required"}`, http.StatusUnauthorized)
 		return
 	}
 	var req models.DeductTDSRequest
@@ -150,7 +150,7 @@ func (h *EnterpriseFinanceHandlers) GetTDSReport(w http.ResponseWriter, r *http.
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
+		http.Error(w, `{"error":"unauthorized: tenant context required"}`, http.StatusUnauthorized)
 		return
 	}
 	fy := r.URL.Query().Get("fy")
@@ -174,7 +174,7 @@ func (h *EnterpriseFinanceHandlers) CreateVendorPayment(w http.ResponseWriter, r
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
+		http.Error(w, `{"error":"unauthorized: tenant context required"}`, http.StatusUnauthorized)
 		return
 	}
 	createdBy := tenantID // simplified; in production use JWT claims
@@ -201,7 +201,7 @@ func (h *EnterpriseFinanceHandlers) ListVendorPayments(w http.ResponseWriter, r 
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
+		http.Error(w, `{"error":"unauthorized: tenant context required"}`, http.StatusUnauthorized)
 		return
 	}
 
@@ -236,7 +236,7 @@ func (h *EnterpriseFinanceHandlers) GetTripProfit(w http.ResponseWriter, r *http
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
+		http.Error(w, `{"error":"unauthorized: tenant context required"}`, http.StatusUnauthorized)
 		return
 	}
 
@@ -255,7 +255,7 @@ func (h *EnterpriseFinanceHandlers) GetFinanceDashboard(w http.ResponseWriter, r
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
+		http.Error(w, `{"error":"unauthorized: tenant context required"}`, http.StatusUnauthorized)
 		return
 	}
 
@@ -274,7 +274,7 @@ func (h *EnterpriseFinanceHandlers) RunReconciliation(w http.ResponseWriter, r *
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
+		http.Error(w, `{"error":"unauthorized: tenant context required"}`, http.StatusUnauthorized)
 		return
 	}
 
@@ -310,7 +310,7 @@ func (h *EnterpriseFinanceHandlers) ManualMatch(w http.ResponseWriter, r *http.R
 	tenantID := middleware.GetTenantID(r.Context())
 	if tenantID == uuid.Nil {
 		h.logger.Warn("Missing tenant_id in context - request likely bypassed authentication middleware")
-		http.Error(w, `{"error":"unauthorized: organization context required"}`, http.StatusUnauthorized)
+		http.Error(w, `{"error":"unauthorized: tenant context required"}`, http.StatusUnauthorized)
 		return
 	}
 	userID := middleware.GetUserID(r.Context())

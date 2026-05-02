@@ -51,7 +51,7 @@ func (s *AnalyticsServiceImpl) CreateAnalyticsJob(ctx context.Context, job *mode
 	}
 
 	if s.queue != nil {
-		if err := s.queue.EnqueueAnalyticsJob(job.ID, job.OrganizationID, job.CreatedBy); err != nil {
+		if err := s.queue.EnqueueAnalyticsJob(job.ID, job.TenantID, job.CreatedBy); err != nil {
 			s.logger.Error("Failed to enqueue analytics job", zap.String("job_id", job.ID), zap.Error(err))
 		}
 	}

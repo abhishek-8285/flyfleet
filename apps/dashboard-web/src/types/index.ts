@@ -1,6 +1,6 @@
-export interface UserOrganization {
+export interface UserTenant {
   tenant_id: string;
-  org_name: string;
+  tenant_name: string;
   role: string;
   vehicle_count?: number;
   theme_color?: string;
@@ -20,7 +20,7 @@ export interface User {
   language?: string;
   sidebar_collapsed?: boolean;
   must_reset_password?: boolean;
-  organizations?: UserOrganization[]; // Organizations the user is authorized for
+  tenants?: UserTenant[]; // Tenants the user is authorized for
 }
 
 
@@ -163,7 +163,7 @@ export interface TimelineEvent {
   metadata: Record<string, any>;
 }
 
-export interface Organization {
+export interface Tenant {
   id: string;
   name: string;
   domain: string;

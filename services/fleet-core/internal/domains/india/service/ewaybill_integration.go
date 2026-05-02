@@ -45,7 +45,7 @@ func (s *EWayBillIntegrationServiceImpl) GenerateEWayBill(ctx context.Context, b
 		RequestPayload:  bill,
 		ResponsePayload: bill,
 		Status:          200,
-		OrganizationID:  &bill.OrganizationID,
+		TenantID:  &bill.TenantID,
 	}
 	_ = s.repo.CreateIntegrationLog(ctx, log)
 
@@ -68,7 +68,7 @@ func (s *EWayBillIntegrationServiceImpl) CancelEWayBill(ctx context.Context, ten
 		},
 		ResponsePayload: map[string]string{"status": "cancelled"},
 		Status:          200,
-		OrganizationID:  &tenantID,
+		TenantID:  &tenantID,
 	}
 	_ = s.repo.CreateIntegrationLog(ctx, log)
 
@@ -94,7 +94,7 @@ func (s *EWayBillIntegrationServiceImpl) FetchEWayBillStatus(ctx context.Context
 		RequestPayload:  map[string]string{"action": "get_status", "number": number},
 		ResponsePayload: bill,
 		Status:          200,
-		OrganizationID:  &tenantID,
+		TenantID:  &tenantID,
 	}
 	_ = s.repo.CreateIntegrationLog(ctx, log)
 

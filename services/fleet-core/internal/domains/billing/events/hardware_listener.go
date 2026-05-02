@@ -27,7 +27,7 @@ func (l *HardwareListener) Start() error {
 	_, err := l.nc.Subscribe("fleet.device.registered", func(m *nats.Msg) {
 		var event struct {
 			DeviceID       string `json:"device_id"`
-			OrganizationID string `json:"organization_id"`
+			TenantID string `json:"organization_id"`
 			VehicleID      string `json:"vehicle_id"`
 			Timestamp      int64  `json:"timestamp"`
 		}

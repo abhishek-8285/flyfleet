@@ -24,7 +24,7 @@ const OrgSelection: React.FC = () => {
     const fetchOrgs = async () => {
       try {
         if (isSuperAdmin) {
-          const payload = await api.getOrganizations();
+          const payload = await api.getTenants();
           // Defensive check for payload format
           const rawOrgs = payload?.data || payload || [];
           setOrgs(Array.isArray(rawOrgs) ? rawOrgs : []);
@@ -93,7 +93,7 @@ const OrgSelection: React.FC = () => {
 
   return (
     <EnterpriseAuthLayout
-      title={uiStrings?.org_title || "Select Organization"}
+      title={uiStrings?.org_title || "Select Tenant"}
       subtitle={uiStrings?.org_subtitle || "Choose an active fleet context"}
     >
       <div className="space-y-6">

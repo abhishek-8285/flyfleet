@@ -38,7 +38,7 @@ func (s *AnalyticsServiceImpl) logQuery(ctx context.Context, tenantID uuid.UUID,
 
 	logEntry := &models.AnalyticsQueryLog{
 		ID:             uuid.New(),
-		OrganizationID: tenantID,
+		TenantID: tenantID,
 		QueryType:      queryType,
 		Parameters:     params,
 		DurationMs:     duration.Milliseconds(),
@@ -62,7 +62,7 @@ func (s *AnalyticsServiceImpl) logQuery(ctx context.Context, tenantID uuid.UUID,
 			s.logger.Warn("Slow query detected, capturing plan", zap.String("type", queryType), zap.Duration("duration", duration))
 			plan := &models.AnalyticsQueryPlan{
 				ID:                uuid.New().String(),
-				OrganizationID:    tenantID,
+				TenantID:    tenantID,
 				QueryType:         queryType,
 				QueryParams:       params,
 				ExecutionDuration: duration.Milliseconds(),
@@ -267,7 +267,7 @@ func (s *AnalyticsServiceImpl) SetRaw(ctx context.Context, key string, data []by
 
 // DeployModel sets up a model deployment strategy (A/B, Shadow)
 func (s *AnalyticsServiceImpl) DeployModel(ctx context.Context, deployment *models.ModelDeployment) error {
-	if deployment.ModelID == "" || deployment.OrganizationID == uuid.Nil {
+	if deployment.ModelID == "" || deployment.TenantID == uuid.Nil {
 		return errors.New("model ID and organization ID are required")
 	}
 	if deployment.DeployedAt.IsZero() {
@@ -283,7 +283,7 @@ func (s *AnalyticsServiceImpl) DeployModel(ctx context.Context, deployment *mode
 
 // CreateDriverRiskEvent logs a specific risk event for coaching
 func (s *AnalyticsServiceImpl) CreateDriverRiskEvent(ctx context.Context, event *models.DriverRiskEvent) error {
-	if event.DriverID == uuid.Nil || event.OrganizationID == uuid.Nil || event.RiskType == "" {
+	if event.DriverID == uuid.Nil || event.TenantID == uuid.Nil || event.RiskType == "" {
 		return errors.New("missing required fields for driver risk event")
 	}
 	if event.EventTime.IsZero() {
@@ -350,7 +350,7 @@ func (s *AnalyticsServiceImpl) CreateVersionedFeatureVector(ctx context.Context,
 		// Invalidate cache for the entities in the vector
 		processed := make(map[string]bool)
 		for _, f := range vector {
-			cacheKey := fmt.Sprintf("feature:%s:%s:%s", f.OrganizationID.String(), f.EntityType, f.EntityID.String())
+			cacheKey := fmt.Sprintf("feature:%s:%s:%s", f.TenantID.String(), f.EntityType, f.EntityID.String())
 			if !processed[cacheKey] {
 				_ = s.cache.InvalidateByPattern(ctx, cacheKey)
 				processed[cacheKey] = true

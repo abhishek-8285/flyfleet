@@ -406,7 +406,7 @@ func (h *Handlers) CheckPermission(w http.ResponseWriter, r *http.Request) {
 	}
 	tenantID, ok := ctxkeys.GetTenantID(r.Context())
 	if !ok {
-		h.errorJSON(w, http.StatusBadRequest, "organization context required")
+		h.errorJSON(w, http.StatusBadRequest, "tenant context required")
 		return
 	}
 
@@ -472,12 +472,12 @@ func (h *Handlers) GetUser(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) GetOrganization(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		h.errorJSON(w, http.StatusBadRequest, "invalid organization id")
+		h.errorJSON(w, http.StatusBadRequest, "invalid tenant id")
 		return
 	}
 	org, err := h.svc.GetOrganizationByID(r.Context(), id)
 	if err != nil {
-		h.errorJSON(w, http.StatusNotFound, "organization not found")
+		h.errorJSON(w, http.StatusNotFound, "tenant not found")
 		return
 	}
 	h.json(w, http.StatusOK, org)

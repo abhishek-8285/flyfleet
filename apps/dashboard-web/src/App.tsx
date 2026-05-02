@@ -9,7 +9,7 @@ import SupportLayout from "./components/support/SupportLayout";
 import { AuthProvider } from "./context/AuthProvider";
 import { RBACProvider } from "./context/RBACProvider";
 import AddFuelLog from "./pages/AddFuelLog";
-import { AddOrganization } from "./pages/admin/AddOrganization";
+import { AddTenant } from "./pages/admin/AddTenant";
 import BillingDashboard from "./pages/admin/billing/BillingDashboard";
 import BillingSettingsPage from "./pages/admin/billing/BillingSettings";
 import InvoiceDetail from "./pages/admin/billing/InvoiceDetail";
@@ -33,7 +33,7 @@ import { DriverDetail } from "./pages/admin/DriverDetail";
 import AddDriver from "./pages/admin/Drivers/AddDriver";
 import { EditDriver } from "./pages/admin/EditDriver";
 import { Drivers as AdminDrivers } from "./pages/admin/Drivers";
-import { EditOrganization } from "./pages/admin/EditOrganization";
+import { EditTenant } from "./pages/admin/EditTenant";
 import FleetAddVehicle from "./pages/admin/FleetCommand/AddVehicle";
 import FleetEditVehicle from "./pages/admin/FleetCommand/EditVehicle";
 import FleetVehicleDetail from "./pages/admin/FleetCommand/VehicleDetail";
@@ -45,11 +45,11 @@ import NotificationLogs from "./pages/admin/notifications/NotificationLogs";
 import NotificationSettings from "./pages/admin/notifications/NotificationSettings";
 import UserPreferenceDetail from "./pages/admin/notifications/UserPreferenceDetail";
 import UserPreferencesList from "./pages/admin/notifications/UserPreferencesList";
-import { OrganizationDetail } from "./pages/admin/OrganizationDetail";
-import { Organizations } from "./pages/admin/Organizations";
-import { OrganizationSettings } from "./pages/admin/OrganizationSettings";
-import { OrganizationUsers } from "./pages/admin/OrganizationUsers";
-import { OrganizationVehicles } from "./pages/admin/OrganizationVehicles";
+import { TenantDetail } from "./pages/admin/TenantDetail";
+import { Tenants } from "./pages/admin/Tenants";
+import { TenantSettings } from "./pages/admin/TenantSettings";
+import { TenantUsers } from "./pages/admin/TenantUsers";
+import { TenantVehicles } from "./pages/admin/TenantVehicles";
 import { RoleMatrix } from "./pages/admin/rbac/RoleMatrix";
 import { Roles } from "./pages/admin/rbac/Roles";
 import { SecurityLogs } from "./pages/admin/rbac/SecurityLogs";
@@ -130,7 +130,7 @@ import Signup from "./pages/Signup";
 import SSOCallback from "./pages/SSOCallback";
 import IncidentDetail from "./pages/support/IncidentDetail";
 import IncidentManagement from "./pages/support/IncidentManagement";
-import OrganizationHub from "./pages/support/OrganizationHub";
+import TenantHub from "./pages/support/TenantHub";
 import SLAReports from "./pages/support/SLAReports";
 import SupportDashboard from "./pages/support/SupportDashboard";
 import TroubleshootingLogs from "./pages/support/TroubleshootingLogs";
@@ -457,34 +457,34 @@ function App() {
                 <Route index element={<GlobalAdminDashboard />} />
                 <Route path="dashboard" element={<GlobalAdminDashboard />} />
                 {/* Admin-only: org management, user management */}
-                <Route path="organizations" element={
-                  <RoleGuard allowed={["super_admin"]}><Organizations /></RoleGuard>
+                <Route path="tenants" element={
+                  <RoleGuard allowed={["super_admin"]}><Tenants /></RoleGuard>
                 } />
-                <Route path="organizations/new" element={
-                  <RoleGuard allowed={["super_admin"]}><AddOrganization /></RoleGuard>
+                <Route path="tenants/new" element={
+                  <RoleGuard allowed={["super_admin"]}><AddTenant /></RoleGuard>
                 } />
                 <Route
-                  path="organizations/:id"
-                  element={<RoleGuard allowed={["super_admin"]}><OrganizationDetail /></RoleGuard>}
+                  path="tenants/:id"
+                  element={<RoleGuard allowed={["super_admin"]}><TenantDetail /></RoleGuard>}
                 />
                 <Route
-                  path="organizations/:id/edit"
-                  element={<RoleGuard allowed={["super_admin"]}><EditOrganization /></RoleGuard>}
+                  path="tenants/:id/edit"
+                  element={<RoleGuard allowed={["super_admin"]}><EditTenant /></RoleGuard>}
                 />
                 <Route
-                  path="organizations/:id/settings"
-                  element={<RoleGuard allowed={["super_admin"]}><OrganizationSettings /></RoleGuard>}
+                  path="tenants/:id/settings"
+                  element={<RoleGuard allowed={["super_admin"]}><TenantSettings /></RoleGuard>}
                 />
                 <Route
-                  path="organizations/:id/users"
-                  element={<RoleGuard allowed={["super_admin"]}><OrganizationUsers /></RoleGuard>}
+                  path="tenants/:id/users"
+                  element={<RoleGuard allowed={["super_admin"]}><TenantUsers /></RoleGuard>}
                 />
                 <Route
-                  path="organizations/:id/vehicles"
-                  element={<RoleGuard allowed={["super_admin"]}><OrganizationVehicles /></RoleGuard>}
+                  path="tenants/:id/vehicles"
+                  element={<RoleGuard allowed={["super_admin"]}><TenantVehicles /></RoleGuard>}
                 />
                 <Route path="users" element={
-                  <RoleGuard allowed={["admin", "super_admin", "org_admin", "fleet_manager"]}><OrganizationUsers /></RoleGuard>
+                  <RoleGuard allowed={["admin", "super_admin", "org_admin", "fleet_manager"]}><TenantUsers /></RoleGuard>
                 } />
                 <Route path="vehicles" element={<FleetVehicleList />} />
                 <Route path="vehicles/new" element={<FleetAddVehicle />} />
@@ -744,7 +744,7 @@ function App() {
                 <Route path="incidents/:id" element={<IncidentDetail />} />
                 <Route path="logs" element={<TroubleshootingLogs />} />
                 <Route path="user-console" element={<UserConsole />} />
-                <Route path="org-console/:id" element={<OrganizationHub />} />
+                <Route path="tenant-console/:id" element={<TenantHub />} />
                 <Route path="reports" element={<SLAReports />} />
               </Route>
 

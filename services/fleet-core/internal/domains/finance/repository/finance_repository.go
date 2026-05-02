@@ -25,17 +25,17 @@ func NewFinanceRepository(db *pgxpool.Pool) *FinanceRepository {
 func (r *FinanceRepository) CreateFuelTransaction(ctx context.Context, tx *models.FuelTransaction) error {
 	query := `
 		INSERT INTO fuel_transactions (
-			id, vehicle_id, driver_id, card_id, station_location, liters, amount,
+			id, tenant_id, vehicle_id, driver_id, card_id, station_location, liters, amount,
 			currency, odometer_reading, efficiency_calculation, anomaly_flag,
 			transaction_date, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING id, created_at, updated_at`
 
 	id := uuid.New().String()
 	now := time.Now()
 
 	err := r.db.QueryRow(ctx, query,
-		id, tx.VehicleID, tx.DriverID, tx.CardID, tx.StationLocation,
+		id, tx.TenantID, tx.VehicleID, tx.DriverID, tx.CardID, tx.StationLocation,
 		tx.Liters, tx.Amount, tx.Currency, tx.OdometerReading,
 		tx.EfficiencyCalculation, tx.AnomalyFlag, tx.TransactionDate,
 		now, now,
@@ -133,18 +133,6 @@ func (r *FinanceRepository) CreateExpenseReport(ctx context.Context, report *mod
 
 	id := uuid.New().String()
 	now := time.Now()
-	// Metadata is kept as map[string]interface{} in model, assumes driver handles JSONB or we encode it
-	// For pgx, we can pass map directly if driver supports it, or json.Marshal
-	// Let's assume basic map support or handled by higher layers, but for safety with basic pgxscan we'd Marshal
-	// Reverting to basic scan implies we need to handle JSONB.
-	// For simplicity, we'll let pgx handle map -> jsonb conversion if registered, otherwise we might need an explicit Marshal.
-	// However, updated model might treat it as []byte or similar.
-	// To match previous sqlx logic which did Marshal:
-
-	// Check model definition in separate view if needed, but assuming standard struct.
-	// Verify if models.ExpenseReport Metadata is []byte or map.
-	// Previous code: metaJSON, _ := json.Marshal(report.Metadata)
-	// We will follow suit for safety.
 
 	err := r.db.QueryRow(ctx, query,
 		id, report.TenantID, report.SubmitterID, report.PeriodStart,
@@ -345,7 +333,7 @@ func (r *FinanceRepository) GetFuelLogForMatching(ctx context.Context, tenantID 
 	query := `
 		SELECT id, total_cost, transaction_date
 		FROM fuel_logs
-		WHERE organization_id = $1
+		WHERE tenant_id = $1
 		  AND status = 'APPROVED'
 		  AND total_cost BETWEEN $2 - 10 AND $2 + 10
 		  AND transaction_date BETWEEN $3 - interval '24 hours' AND $3 + interval '24 hours'
@@ -443,8 +431,8 @@ func (r *FinanceRepository) GetExchangeRate(ctx context.Context, from, to string
 // --- Toll stubs ---
 
 func (r *FinanceRepository) CreateTollTransaction(ctx context.Context, toll *models.TollTransaction) error {
-	query := `INSERT INTO toll_transactions (id, vehicle_id, fastag_id, toll_plaza, amount, currency, transaction_time, external_transaction_id, metadata, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`
-	_, err := r.db.Exec(ctx, query, toll.ID, toll.VehicleID, toll.FASTagID, toll.TollPlaza, toll.Amount, toll.Currency, toll.TransactionTime, toll.ExternalTransactionID, toll.Metadata, time.Now())
+	query := `INSERT INTO toll_transactions (id, tenant_id, vehicle_id, fastag_id, toll_plaza, amount, currency, transaction_time, external_transaction_id, metadata, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`
+	_, err := r.db.Exec(ctx, query, toll.ID, toll.TenantID, toll.VehicleID, toll.FASTagID, toll.TollPlaza, toll.Amount, toll.Currency, toll.TransactionTime, toll.ExternalTransactionID, toll.Metadata, time.Now())
 	return err
 }
 

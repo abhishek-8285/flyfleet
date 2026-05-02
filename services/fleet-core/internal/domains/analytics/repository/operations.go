@@ -23,11 +23,11 @@ func (r *AnalyticsRepositoryImpl) GetVehicleDailyStats(ctx context.Context, vehi
 	}
 
 	query := `
-		SELECT vehicle_id, organization_id, date, total_distance, total_fuel_consumed, 
+		SELECT vehicle_id, tenant_id, date, total_distance, total_fuel_consumed, 
 			total_engine_hours, total_idle_hours, max_speed, avg_speed,
 			harsh_braking_count, rapid_acceleration_count, sharp_turn_count, overspeeding_count, updated_at
 		FROM vehicle_daily_stats
-		WHERE vehicle_id = $1 AND organization_id = $2 AND date >= $3 AND date <= $4
+		WHERE vehicle_id = $1 AND tenant_id = $2 AND date >= $3 AND date <= $4
 	`
 	params := []interface{}{vehicleID, tenantID, startDate, endDate}
 
@@ -53,7 +53,7 @@ func (r *AnalyticsRepositoryImpl) GetVehicleDailyStats(ctx context.Context, vehi
 	for rows.Next() {
 		s := &models.VehicleDailyStats{}
 		err := rows.Scan(
-			&s.VehicleID, &s.OrganizationID, &s.Date, &s.TotalDistance, &s.TotalFuelConsumed,
+			&s.VehicleID, &s.TenantID, &s.Date, &s.TotalDistance, &s.TotalFuelConsumed,
 			&s.TotalEngineHours, &s.TotalIdleHours, &s.MaxSpeed, &s.AvgSpeed,
 			&s.HarshBrakingCount, &s.RapidAccelerationCount, &s.SharpTurnCount, &s.OverspeedingCount, &s.UpdatedAt,
 		)
@@ -85,10 +85,10 @@ func (r *AnalyticsRepositoryImpl) GetDriverDailyStats(ctx context.Context, drive
 	}
 
 	query := `
-		SELECT driver_id, organization_id, date, total_driving_hours, total_distance, 
+		SELECT driver_id, tenant_id, date, total_driving_hours, total_distance, 
 			total_idle_hours, safety_score, eco_score, violation_count, updated_at
 		FROM driver_daily_stats
-		WHERE driver_id = $1 AND organization_id = $2 AND date >= $3 AND date <= $4
+		WHERE driver_id = $1 AND tenant_id = $2 AND date >= $3 AND date <= $4
 	`
 	params := []interface{}{driverID, tenantID, startDate, endDate}
 
@@ -114,7 +114,7 @@ func (r *AnalyticsRepositoryImpl) GetDriverDailyStats(ctx context.Context, drive
 	for rows.Next() {
 		s := &models.DriverDailyStats{}
 		err := rows.Scan(
-			&s.DriverID, &s.OrganizationID, &s.Date, &s.TotalDrivingHours, &s.TotalDistance,
+			&s.DriverID, &s.TenantID, &s.Date, &s.TotalDrivingHours, &s.TotalDistance,
 			&s.TotalIdleHours, &s.SafetyScore, &s.EcoScore, &s.ViolationCount, &s.UpdatedAt,
 		)
 		if err != nil {
@@ -145,10 +145,10 @@ func (r *AnalyticsRepositoryImpl) GetFleetHourlyStats(ctx context.Context, tenan
 	} // Max 1 week hourly at once
 
 	query := `
-		SELECT organization_id, timestamp, active_vehicles, total_distance, total_fuel_consumed, 
+		SELECT tenant_id, timestamp, active_vehicles, total_distance, total_fuel_consumed, 
 			average_utilization, updated_at
 		FROM fleet_hourly_stats
-		WHERE organization_id = $1 AND timestamp >= $2 AND timestamp <= $3
+		WHERE tenant_id = $1 AND timestamp >= $2 AND timestamp <= $3
 	`
 	params := []interface{}{tenantID, startDate, endDate}
 
@@ -177,7 +177,7 @@ func (r *AnalyticsRepositoryImpl) GetFleetHourlyStats(ctx context.Context, tenan
 	for rows.Next() {
 		s := &models.FleetHourlyStats{}
 		err := rows.Scan(
-			&s.OrganizationID, &s.Timestamp, &s.ActiveVehicles, &s.TotalDistance, &s.TotalFuelConsumed,
+			&s.TenantID, &s.Timestamp, &s.ActiveVehicles, &s.TotalDistance, &s.TotalFuelConsumed,
 			&s.AverageUtilization, &s.UpdatedAt,
 		)
 		if err != nil {
@@ -209,13 +209,13 @@ func (r *AnalyticsRepositoryImpl) CreateQueryLog(ctx context.Context, log *model
 
 	query := `
 		INSERT INTO analytics_query_logs (
-			id, organization_id, user_id, query_type, parameters, 
+			id, tenant_id, user_id, query_type, parameters, 
 			duration_ms, row_count, cache_hit, error_message, created_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 
 	_, err := r.db.Exec(ctx, query,
-		log.ID, log.OrganizationID, log.UserID, log.QueryType, log.Parameters,
+		log.ID, log.TenantID, log.UserID, log.QueryType, log.Parameters,
 		log.DurationMs, log.RowCount, log.CacheHit, log.ErrorMessage, log.CreatedAt,
 	)
 	if err != nil {
@@ -233,7 +233,7 @@ func (r *AnalyticsRepositoryImpl) RefreshVehicleDailyStats(ctx context.Context) 
 	// High-fidelity aggregation from telemetry_points
 	query := `
 		INSERT INTO vehicle_daily_stats (
-			vehicle_id, organization_id, date,
+			vehicle_id, tenant_id, date,
 			total_distance, total_fuel_consumed, max_speed, avg_speed,
 			harsh_braking_count, rapid_acceleration_count, sharp_turn_count, overspeeding_count,
 			updated_at, last_refreshed_at
@@ -285,7 +285,7 @@ func (r *AnalyticsRepositoryImpl) RefreshDriverDailyStats(ctx context.Context) e
 
 	query := `
 		INSERT INTO driver_daily_stats (
-			driver_id, organization_id, date,
+			driver_id, tenant_id, date,
 			total_driving_hours, total_distance, total_idle_hours,
 			violation_count, updated_at, last_refreshed_at
 		)
@@ -330,7 +330,7 @@ func (r *AnalyticsRepositoryImpl) RefreshFleetHourlyStats(ctx context.Context) e
 
 	query := `
 		INSERT INTO fleet_hourly_stats (
-			organization_id, timestamp,
+			tenant_id, timestamp,
 			active_vehicles, total_distance, average_utilization,
 			updated_at, last_refreshed_at
 		)
@@ -345,7 +345,7 @@ func (r *AnalyticsRepositoryImpl) RefreshFleetHourlyStats(ctx context.Context) e
 		FROM telemetry_points
 		WHERE recorded_at >= NOW() - INTERVAL '48 hours'
 		GROUP BY tenant_id, date_trunc('hour', recorded_at)
-		ON CONFLICT (organization_id, timestamp) DO UPDATE SET
+		ON CONFLICT (tenant_id, timestamp) DO UPDATE SET
 			active_vehicles = EXCLUDED.active_vehicles,
 			total_distance = EXCLUDED.total_distance,
 			average_utilization = EXCLUDED.average_utilization,
@@ -383,10 +383,10 @@ func (r *AnalyticsRepositoryImpl) CreateFeatureVector(ctx context.Context, vecto
 		var placeholders []string
 		for i, f := range vector {
 			placeholders = append(placeholders, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d)", i*6+1, i*6+2, i*6+3, i*6+4, i*6+5, i*6+6))
-			args = append(args, f.OrganizationID, f.EntityType, f.EntityID, f.FeatureName, f.FeatureValue, f.FeatureTimestamp)
+			args = append(args, f.TenantID, f.EntityType, f.EntityID, f.FeatureName, f.FeatureValue, f.FeatureTimestamp)
 		}
 		batchQuery := fmt.Sprintf(
-			"INSERT INTO ml_feature_store (organization_id, entity_type, entity_id, feature_name, feature_value, feature_timestamp) VALUES %s",
+			"INSERT INTO ml_feature_store (tenant_id, entity_type, entity_id, feature_name, feature_value, feature_timestamp) VALUES %s",
 			strings.Join(placeholders, ", "),
 		)
 		_, err = tx.Exec(ctx, batchQuery, args...)
@@ -402,9 +402,9 @@ func (r *AnalyticsRepositoryImpl) GetLatestFeatures(ctx context.Context, tenantI
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 
-	query := `SELECT organization_id, entity_type, entity_id, feature_name, feature_value, feature_timestamp
+	query := `SELECT tenant_id, entity_type, entity_id, feature_name, feature_value, feature_timestamp
 	          FROM ml_feature_store
-	          WHERE organization_id = $1 AND entity_type = $2 AND entity_id = $3
+	          WHERE tenant_id = $1 AND entity_type = $2 AND entity_id = $3
 	          ORDER BY feature_name, feature_timestamp DESC
 	          LIMIT 100` // Fetch recent features
 
@@ -417,7 +417,7 @@ func (r *AnalyticsRepositoryImpl) GetLatestFeatures(ctx context.Context, tenantI
 	var features []*models.MLFeatureStore
 	for rows.Next() {
 		f := &models.MLFeatureStore{}
-		if err := rows.Scan(&f.OrganizationID, &f.EntityType, &f.EntityID, &f.FeatureName, &f.FeatureValue, &f.FeatureTimestamp); err != nil {
+		if err := rows.Scan(&f.TenantID, &f.EntityType, &f.EntityID, &f.FeatureName, &f.FeatureValue, &f.FeatureTimestamp); err != nil {
 			return nil, err
 		}
 		features = append(features, f)
@@ -479,7 +479,7 @@ func (r *AnalyticsRepositoryImpl) SaveModelDeployment(ctx context.Context, deplo
 	defer cancel()
 
 	query := `
-		INSERT INTO model_deployments (id, model_id, organization_id, deployment_strategy, traffic_split, is_active, deployed_at, created_at)
+		INSERT INTO model_deployments (id, model_id, tenant_id, deployment_strategy, traffic_split, is_active, deployed_at, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT (id) DO UPDATE SET
 			deployment_strategy = EXCLUDED.deployment_strategy,
@@ -487,7 +487,7 @@ func (r *AnalyticsRepositoryImpl) SaveModelDeployment(ctx context.Context, deplo
 			is_active = EXCLUDED.is_active,
 			deployed_at = EXCLUDED.deployed_at
 	`
-	_, err := r.db.Exec(ctx, query, deployment.ID, deployment.ModelID, deployment.OrganizationID,
+	_, err := r.db.Exec(ctx, query, deployment.ID, deployment.ModelID, deployment.TenantID,
 		deployment.DeploymentStrategy, deployment.TrafficSplit, deployment.IsActive, deployment.DeployedAt, deployment.CreatedAt)
 	return err
 }
@@ -498,14 +498,14 @@ func (r *AnalyticsRepositoryImpl) GetActiveModelDeployment(ctx context.Context, 
 	defer cancel()
 
 	query := `
-		SELECT id, model_id, organization_id, deployment_strategy, traffic_split, is_active, deployed_at, created_at
+		SELECT id, model_id, tenant_id, deployment_strategy, traffic_split, is_active, deployed_at, created_at
 		FROM model_deployments
-		WHERE model_id = $1 AND organization_id = $2 AND is_active = true
+		WHERE model_id = $1 AND tenant_id = $2 AND is_active = true
 		LIMIT 1
 	`
 	var d models.ModelDeployment
 	err := r.db.QueryRow(ctx, query, modelID, tenantID).Scan(
-		&d.ID, &d.ModelID, &d.OrganizationID, &d.DeploymentStrategy, &d.TrafficSplit, &d.IsActive, &d.DeployedAt, &d.CreatedAt,
+		&d.ID, &d.ModelID, &d.TenantID, &d.DeploymentStrategy, &d.TrafficSplit, &d.IsActive, &d.DeployedAt, &d.CreatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -519,10 +519,10 @@ func (r *AnalyticsRepositoryImpl) SaveDriverRiskEvent(ctx context.Context, event
 	defer cancel()
 
 	query := `
-		INSERT INTO driver_risk_events (id, driver_id, organization_id, risk_type, score_delta, metadata, event_time, created_at)
+		INSERT INTO driver_risk_events (id, driver_id, tenant_id, risk_type, score_delta, metadata, event_time, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
-	_, err := r.db.Exec(ctx, query, event.ID, event.DriverID, event.OrganizationID,
+	_, err := r.db.Exec(ctx, query, event.ID, event.DriverID, event.TenantID,
 		event.RiskType, event.ScoreDelta, event.Metadata, event.EventTime, event.CreatedAt)
 	return err
 }
@@ -533,9 +533,9 @@ func (r *AnalyticsRepositoryImpl) GetDriverRiskEvents(ctx context.Context, drive
 	defer cancel()
 
 	query := `
-		SELECT id, driver_id, organization_id, risk_type, score_delta, metadata, event_time, created_at
+		SELECT id, driver_id, tenant_id, risk_type, score_delta, metadata, event_time, created_at
 		FROM driver_risk_events
-		WHERE driver_id = $1 AND organization_id = $2 AND event_time BETWEEN $3 AND $4
+		WHERE driver_id = $1 AND tenant_id = $2 AND event_time BETWEEN $3 AND $4
 		ORDER BY event_time DESC
 	`
 	rows, err := r.db.Query(ctx, query, driverID, tenantID, startDate, endDate)
@@ -547,7 +547,7 @@ func (r *AnalyticsRepositoryImpl) GetDriverRiskEvents(ctx context.Context, drive
 	var events []*models.DriverRiskEvent
 	for rows.Next() {
 		var e models.DriverRiskEvent
-		if err := rows.Scan(&e.ID, &e.DriverID, &e.OrganizationID, &e.RiskType, &e.ScoreDelta, &e.Metadata, &e.EventTime, &e.CreatedAt); err != nil {
+		if err := rows.Scan(&e.ID, &e.DriverID, &e.TenantID, &e.RiskType, &e.ScoreDelta, &e.Metadata, &e.EventTime, &e.CreatedAt); err != nil {
 			return nil, err
 		}
 		events = append(events, &e)
@@ -560,9 +560,9 @@ func (r *AnalyticsRepositoryImpl) GetAnalyticsQuota(ctx context.Context, tenantI
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 
-	query := `SELECT organization_id, daily_limit, used_credits, last_reset_at FROM analytics_quotas WHERE organization_id = $1`
+	query := `SELECT tenant_id, daily_limit, used_credits, last_reset_at FROM analytics_quotas WHERE tenant_id = $1`
 	var q models.AnalyticsQuota
-	err := r.db.QueryRow(ctx, query, tenantID).Scan(&q.OrganizationID, &q.DailyLimit, &q.UsedCredits, &q.LastResetAt)
+	err := r.db.QueryRow(ctx, query, tenantID).Scan(&q.TenantID, &q.DailyLimit, &q.UsedCredits, &q.LastResetAt)
 	if err != nil {
 		return nil, err
 	}
@@ -574,7 +574,7 @@ func (r *AnalyticsRepositoryImpl) UpdateUsedCredits(ctx context.Context, tenantI
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
 
-	query := `UPDATE analytics_quotas SET used_credits = used_credits + $1, last_reset_at = NOW() WHERE organization_id = $2`
+	query := `UPDATE analytics_quotas SET used_credits = used_credits + $1, last_reset_at = NOW() WHERE tenant_id = $2`
 	_, err := r.db.Exec(ctx, query, credits, tenantID)
 	return err
 }
@@ -590,10 +590,10 @@ func (r *AnalyticsRepositoryImpl) CreateVersionedFeatureVector(ctx context.Conte
 		var placeholders []string
 		for i, f := range vector {
 			placeholders = append(placeholders, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)", i*9+1, i*9+2, i*9+3, i*9+4, i*9+5, i*9+6, i*9+7, i*9+8, i*9+9))
-			args = append(args, f.OrganizationID, f.EntityType, f.EntityID, f.FeatureName, f.FeatureValue, f.FeatureVersion, f.FeatureLineage, f.FeatureSource, f.FeatureTimestamp)
+			args = append(args, f.TenantID, f.EntityType, f.EntityID, f.FeatureName, f.FeatureValue, f.FeatureVersion, f.FeatureLineage, f.FeatureSource, f.FeatureTimestamp)
 		}
 		batchQuery := fmt.Sprintf(
-			"INSERT INTO ml_feature_store (organization_id, entity_type, entity_id, feature_name, feature_value, feature_version, feature_lineage, feature_source, feature_timestamp) VALUES %s",
+			"INSERT INTO ml_feature_store (tenant_id, entity_type, entity_id, feature_name, feature_value, feature_version, feature_lineage, feature_source, feature_timestamp) VALUES %s",
 			strings.Join(placeholders, ", "),
 		)
 		_, err := r.db.Exec(ctx, batchQuery, args...)
@@ -610,9 +610,9 @@ func (r *AnalyticsRepositoryImpl) GetFeaturesByVersion(ctx context.Context, tena
 	defer cancel()
 
 	query := `
-		SELECT organization_id, entity_type, entity_id, feature_name, feature_value, feature_version, feature_lineage, feature_source, feature_timestamp
+		SELECT tenant_id, entity_type, entity_id, feature_name, feature_value, feature_version, feature_lineage, feature_source, feature_timestamp
 		FROM ml_feature_store
-		WHERE organization_id = $1 AND entity_type = $2 AND entity_id = $3 AND feature_version = $4
+		WHERE tenant_id = $1 AND entity_type = $2 AND entity_id = $3 AND feature_version = $4
 	`
 	rows, err := r.db.Query(ctx, query, tenantID, entityType, entityID, version)
 	if err != nil {
@@ -623,7 +623,7 @@ func (r *AnalyticsRepositoryImpl) GetFeaturesByVersion(ctx context.Context, tena
 	var features []*models.MLFeatureStore
 	for rows.Next() {
 		var f models.MLFeatureStore
-		if err := rows.Scan(&f.OrganizationID, &f.EntityType, &f.EntityID, &f.FeatureName, &f.FeatureValue, &f.FeatureVersion, &f.FeatureLineage, &f.FeatureSource, &f.FeatureTimestamp); err != nil {
+		if err := rows.Scan(&f.TenantID, &f.EntityType, &f.EntityID, &f.FeatureName, &f.FeatureValue, &f.FeatureVersion, &f.FeatureLineage, &f.FeatureSource, &f.FeatureTimestamp); err != nil {
 			return nil, err
 		}
 		features = append(features, &f)
@@ -637,10 +637,10 @@ func (r *AnalyticsRepositoryImpl) SaveQueryPlan(ctx context.Context, plan *model
 	defer cancel()
 
 	query := `
-		INSERT INTO analytics_query_plans (id, organization_id, query_type, query_params, execution_duration_ms, query_plan, created_at)
+		INSERT INTO analytics_query_plans (id, tenant_id, query_type, query_params, execution_duration_ms, query_plan, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
-	_, err := r.db.Exec(ctx, query, plan.ID, plan.OrganizationID, plan.QueryType, plan.QueryParams, plan.ExecutionDuration, plan.QueryPlan, plan.CreatedAt)
+	_, err := r.db.Exec(ctx, query, plan.ID, plan.TenantID, plan.QueryType, plan.QueryParams, plan.ExecutionDuration, plan.QueryPlan, plan.CreatedAt)
 	return err
 }
 
@@ -650,10 +650,10 @@ func (r *AnalyticsRepositoryImpl) CreateAccessLog(ctx context.Context, log *mode
 	defer cancel()
 
 	query := `
-		INSERT INTO analytics_access_logs (id, organization_id, user_id, resource_id, resource_type, access_context, ip_address, user_agent, created_at)
+		INSERT INTO analytics_access_logs (id, tenant_id, user_id, resource_id, resource_type, access_context, ip_address, user_agent, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
-	_, err := r.db.Exec(ctx, query, log.ID, log.OrganizationID, log.UserID, log.ResourceID, log.ResourceType, log.AccessContext, log.IPAddress, log.UserAgent, log.CreatedAt)
+	_, err := r.db.Exec(ctx, query, log.ID, log.TenantID, log.UserID, log.ResourceID, log.ResourceType, log.AccessContext, log.IPAddress, log.UserAgent, log.CreatedAt)
 	return err
 }
 
@@ -663,9 +663,9 @@ func (r *AnalyticsRepositoryImpl) GetMaterializedReports(ctx context.Context, te
 	defer cancel()
 
 	query := `
-		SELECT id, organization_id, report_type, metric_key, metric_value, period, generated_at
+		SELECT id, tenant_id, report_type, metric_key, metric_value, period, generated_at
 		FROM materialized_fleet_reports
-		WHERE organization_id = $1 AND report_type = $2 AND period = $3
+		WHERE tenant_id = $1 AND report_type = $2 AND period = $3
 	`
 	rows, err := r.db.Query(ctx, query, tenantID, reportType, period)
 	if err != nil {
@@ -676,7 +676,7 @@ func (r *AnalyticsRepositoryImpl) GetMaterializedReports(ctx context.Context, te
 	var reports []*models.MaterializedFleetReport
 	for rows.Next() {
 		var rep models.MaterializedFleetReport
-		if err := rows.Scan(&rep.ID, &rep.OrganizationID, &rep.ReportType, &rep.MetricKey, &rep.MetricValue, &rep.Period, &rep.GeneratedAt); err != nil {
+		if err := rows.Scan(&rep.ID, &rep.TenantID, &rep.ReportType, &rep.MetricKey, &rep.MetricValue, &rep.Period, &rep.GeneratedAt); err != nil {
 			return nil, err
 		}
 		reports = append(reports, &rep)

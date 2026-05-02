@@ -44,7 +44,7 @@ func (s *dashboardServiceImpl) RefreshMetrics(ctx context.Context, tenantID uuid
 	// (In real implementation, these would be separate repository counts)
 
 	metrics := &models.ComplianceDashboardMetrics{
-		OrganizationID: tenantID,
+		TenantID: tenantID,
 		UpdatedAt:      time.Now(),
 	}
 

@@ -1,14 +1,13 @@
--- Driver Mobile App Schema
+-- Migration: 035_driver_mobile_app
+-- Description: Driver Mobile App Schema with tenant isolation.
 
--- Enable UUID extension if not already enabled
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- 1. Duty Status Logs (HOOS)
+-- 1. Duty Status Logs
 CREATE TABLE IF NOT EXISTS duty_status_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    driver_id UUID NOT NULL, -- references drivers(id) - loose coupling if drivers table in another service, but likely same DB
+    tenant_id UUID NOT NULL REFERENCES tenants(id),
+    driver_id UUID NOT NULL,
     status VARCHAR(50) NOT NULL CHECK (status IN ('OFF_DUTY', 'SLEEPER_BERTH', 'DRIVING', 'ON_DUTY')),
-    location JSONB, -- {latitude, longitude, address}
+    location JSONB,
     started_at TIMESTAMP WITH TIME ZONE NOT NULL,
     ended_at TIMESTAMP WITH TIME ZONE,
     duration_minutes INTEGER,
@@ -17,15 +16,16 @@ CREATE TABLE IF NOT EXISTS duty_status_logs (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_duty_status_logs_driver_id ON duty_status_logs(driver_id);
-CREATE INDEX idx_duty_status_logs_started_at ON duty_status_logs(started_at);
+CREATE INDEX IF NOT EXISTS idx_duty_status_logs_tenant ON duty_status_logs(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_duty_status_logs_driver ON duty_status_logs(driver_id);
 
 -- 2. Driver Messages
 CREATE TABLE IF NOT EXISTS driver_messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id),
     driver_id UUID NOT NULL,
-    trip_id UUID, -- optional link to trip
-    direction VARCHAR(10) NOT NULL CHECK (direction IN ('INBOUND', 'OUTBOUND')), -- INBOUND = from driver to dispatch
+    trip_id UUID,
+    direction VARCHAR(10) NOT NULL CHECK (direction IN ('INBOUND', 'OUTBOUND')),
     type VARCHAR(20) NOT NULL DEFAULT 'TEXT' CHECK (type IN ('TEXT', 'AUDIO', 'IMAGE')),
     content TEXT,
     attachment_url TEXT,
@@ -33,15 +33,16 @@ CREATE TABLE IF NOT EXISTS driver_messages (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_driver_messages_driver_id ON driver_messages(driver_id);
-CREATE INDEX idx_driver_messages_trip_id ON driver_messages(trip_id);
+CREATE INDEX IF NOT EXISTS idx_driver_messages_tenant ON driver_messages(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_driver_messages_driver ON driver_messages(driver_id);
 
 -- 3. Driver Expenses
 CREATE TABLE IF NOT EXISTS driver_expenses (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id),
     driver_id UUID NOT NULL,
     trip_id UUID,
-    type VARCHAR(50) NOT NULL, -- FUEL, TOLL, MAINTENANCE, FOOD, LODGING, OTHER
+    type VARCHAR(50) NOT NULL,
     amount DECIMAL(10, 2) NOT NULL,
     currency VARCHAR(3) DEFAULT 'USD',
     receipt_url TEXT,
@@ -52,27 +53,28 @@ CREATE TABLE IF NOT EXISTS driver_expenses (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_driver_expenses_driver_id ON driver_expenses(driver_id);
-CREATE INDEX idx_driver_expenses_trip_id ON driver_expenses(trip_id);
+CREATE INDEX IF NOT EXISTS idx_driver_expenses_tenant ON driver_expenses(tenant_id);
 
--- 4. Proof of Delivery (POD)
+-- 4. Proof of Delivery
 CREATE TABLE IF NOT EXISTS proof_of_delivery (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    trip_id UUID NOT NULL REFERENCES trips(id),
+    tenant_id UUID NOT NULL REFERENCES tenants(id),
+    trip_id UUID NOT NULL,
     type VARCHAR(20) NOT NULL CHECK (type IN ('SIGNATURE', 'PHOTO', 'DOCUMENT', 'QR_CODE')),
     url TEXT NOT NULL,
-    metadata JSONB, -- {recipient_name, location, timestamp}
-    uploaded_by UUID NOT NULL, -- driver_id
+    metadata JSONB,
+    uploaded_by UUID NOT NULL,
     verified BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_pod_trip_id ON proof_of_delivery(trip_id);
+CREATE INDEX IF NOT EXISTS idx_pod_tenant ON proof_of_delivery(tenant_id);
 
--- 5. Trip Offers (Assignment)
+-- 5. Trip Offers
 CREATE TABLE IF NOT EXISTS trip_offers (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    trip_id UUID NOT NULL REFERENCES trips(id),
+    tenant_id UUID NOT NULL REFERENCES tenants(id),
+    trip_id UUID NOT NULL,
     driver_id UUID NOT NULL,
     status VARCHAR(20) DEFAULT 'OFFERED' CHECK (status IN ('OFFERED', 'ACCEPTED', 'REJECTED', 'EXPIRED')),
     rejection_reason TEXT,
@@ -82,15 +84,19 @@ CREATE TABLE IF NOT EXISTS trip_offers (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_trip_offers_driver_id ON trip_offers(driver_id);
-CREATE INDEX idx_trip_offers_trip_id ON trip_offers(trip_id);
-CREATE INDEX idx_trip_offers_status ON trip_offers(status);
+CREATE INDEX IF NOT EXISTS idx_trip_offers_tenant ON trip_offers(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_trip_offers_status ON trip_offers(status);
 
--- Add last_known_location to drivers table if not exists (assuming drivers table exists)
+-- 6. Self-healing: Update drivers table if exists
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'drivers' AND column_name = 'last_known_location') THEN
-        ALTER TABLE drivers ADD COLUMN last_known_location JSONB;
-        ALTER TABLE drivers ADD COLUMN last_location_update TIMESTAMP WITH TIME ZONE;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'drivers') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'drivers' AND column_name = 'tenant_id') THEN
+            ALTER TABLE drivers ADD COLUMN tenant_id UUID REFERENCES tenants(id);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'drivers' AND column_name = 'last_known_location') THEN
+            ALTER TABLE drivers ADD COLUMN last_known_location JSONB;
+            ALTER TABLE drivers ADD COLUMN last_location_update TIMESTAMP WITH TIME ZONE;
+        END IF;
     END IF;
 END $$;

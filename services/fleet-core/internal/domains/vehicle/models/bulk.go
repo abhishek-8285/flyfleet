@@ -9,7 +9,7 @@ import (
 
 type BulkJob struct {
 	ID             uuid.UUID `json:"id"`
-	TenantID       uuid.UUID `json:"organization_id"`
+	TenantID       uuid.UUID `json:"tenant_id"`
 	FileName       string    `json:"file_name"`
 	Status         string    `json:"status"` // processing, completed, failed, partial_success
 	TotalRecords   int       `json:"total_records"`
@@ -32,7 +32,7 @@ type BulkJobRecord struct {
 }
 
 type BulkConfig struct {
-	TenantID          uuid.UUID       `json:"organization_id"`
+	TenantID          uuid.UUID       `json:"tenant_id"`
 	MaxRecordsPerFile int             `json:"max_records_per_file"`
 	ConcurrentThreads int             `json:"concurrent_threads"`
 	RetentionMonths   int             `json:"retention_months"`

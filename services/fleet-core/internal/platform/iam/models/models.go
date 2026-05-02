@@ -8,7 +8,7 @@ import (
 
 type User struct {
 	ID             uuid.UUID `json:"id"`
-	OrganizationID uuid.UUID `json:"organization_id"`
+	TenantID       uuid.UUID `json:"tenant_id"`
 	Email          string    `json:"email"`
 	FullName       string    `json:"full_name"`
 	PasswordHash   string    `json:"-"`
@@ -19,7 +19,7 @@ type User struct {
 type Role struct {
 	ID             uuid.UUID  `json:"id"`
 	Name           string     `json:"name"`
-	OrganizationID *uuid.UUID `json:"organization_id,omitempty"`
+	TenantID       *uuid.UUID `json:"tenant_id,omitempty"`
 	Description    string     `json:"description"`
 }
 

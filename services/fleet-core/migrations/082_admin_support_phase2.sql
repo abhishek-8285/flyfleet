@@ -2,14 +2,14 @@
 -- Admin Support Module Phase 2: RBAC Refinement and Attachments
 
 -- Admin Role Permissions (Role -> Permission mapping)
-CREATE TABLE admin_role_permissions (
+CREATE TABLE IF NOT EXISTS admin_role_permissions (
     role TEXT NOT NULL,
     permission TEXT NOT NULL REFERENCES admin_permissions(name),
     PRIMARY KEY (role, permission)
 );
 
 -- Support Ticket Attachments
-CREATE TABLE support_ticket_attachments (
+CREATE TABLE IF NOT EXISTS support_ticket_attachments (
     id UUID PRIMARY KEY,
     ticket_id UUID NOT NULL REFERENCES support_tickets(id),
     file_url TEXT NOT NULL,

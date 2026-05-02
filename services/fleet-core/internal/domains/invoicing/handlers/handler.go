@@ -37,7 +37,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	tenantID, ok := ctxkeys.GetTenantID(ctx)
 	if !ok {
-		http.Error(w, "organization context required", http.StatusUnauthorized)
+		http.Error(w, "tenant context required", http.StatusUnauthorized)
 		return
 	}
 
@@ -123,7 +123,7 @@ func (h *Handler) DownloadPDF(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	tenantID, ok := ctxkeys.GetTenantID(ctx)
 	if !ok {
-		http.Error(w, "organization context required", http.StatusUnauthorized)
+		http.Error(w, "tenant context required", http.StatusUnauthorized)
 		return
 	}
 	id, err := uuid.Parse(chi.URLParam(r, "id"))

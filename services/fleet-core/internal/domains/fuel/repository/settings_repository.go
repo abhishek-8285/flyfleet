@@ -30,15 +30,15 @@ func NewSettingsRepository(db *pgxpool.Pool) SettingsRepository {
 func (r *settingsRepository) Get(ctx context.Context, tenantID uuid.UUID) (*models.FuelSettings, error) {
 	query := `
 		SELECT
-			organization_id, default_currency, allowed_fuel_types,
+			tenant_id, default_currency, allowed_fuel_types,
 			validation_rules, auto_sync_enabled, created_at, updated_at
 		FROM fuel_settings
-		WHERE organization_id = $1
+		WHERE tenant_id = $1
 	`
 	var s models.FuelSettings
 	start := time.Now()
 	err := r.db.QueryRow(ctx, query, tenantID).Scan(
-		&s.OrganizationID, &s.DefaultCurrency, &s.AllowedFuelTypes,
+		&s.TenantID, &s.DefaultCurrency, &s.AllowedFuelTypes,
 		&s.ValidationRules, &s.AutoSyncEnabled, &s.CreatedAt, &s.UpdatedAt,
 	)
 	metrics.RecordDBQuery(query, time.Since(start))
@@ -54,10 +54,10 @@ func (r *settingsRepository) Get(ctx context.Context, tenantID uuid.UUID) (*mode
 func (r *settingsRepository) Upsert(ctx context.Context, s *models.FuelSettings) error {
 	query := `
 		INSERT INTO fuel_settings (
-			organization_id, default_currency, allowed_fuel_types,
+			tenant_id, default_currency, allowed_fuel_types,
 			validation_rules, auto_sync_enabled, updated_at
 		) VALUES ($1, $2, $3, $4, $5, NOW())
-		ON CONFLICT (organization_id) DO UPDATE SET
+		ON CONFLICT (tenant_id) DO UPDATE SET
 			default_currency = EXCLUDED.default_currency,
 			allowed_fuel_types = EXCLUDED.allowed_fuel_types,
 			validation_rules = EXCLUDED.validation_rules,
@@ -66,7 +66,7 @@ func (r *settingsRepository) Upsert(ctx context.Context, s *models.FuelSettings)
 	`
 	start := time.Now()
 	_, err := r.db.Exec(ctx, query,
-		s.OrganizationID, s.DefaultCurrency, s.AllowedFuelTypes,
+		s.TenantID, s.DefaultCurrency, s.AllowedFuelTypes,
 		s.ValidationRules, s.AutoSyncEnabled,
 	)
 	metrics.RecordDBQuery(query, time.Since(start))
@@ -84,7 +84,7 @@ func (r *settingsRepository) GetOrDefault(ctx context.Context, tenantID uuid.UUI
 	if s == nil {
 		// Return defaults
 		return &models.FuelSettings{
-			OrganizationID:   tenantID,
+			TenantID:   tenantID,
 			DefaultCurrency:  "USD",
 			AllowedFuelTypes: []byte(`["diesel", "petrol-95", "adblue", "ev"]`),
 			ValidationRules:  []byte(`{"odometer_check": true, "cost_calculation_verify": true}`),

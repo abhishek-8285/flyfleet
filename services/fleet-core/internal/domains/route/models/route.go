@@ -9,7 +9,7 @@ import (
 // RouteOptimizationRequest represents a request for route optimization
 type RouteOptimizationRequest struct {
 	ID                string                   `json:"id"`
-	OrganizationID    uuid.UUID                `json:"organization_id"`
+	TenantID          uuid.UUID                `json:"tenant_id"`
 	Name              string                   `json:"name"`
 	Description       string                   `json:"description"`
 	StartTime         time.Time                `json:"start_time"`
@@ -167,7 +167,7 @@ type OptimizationGoals struct {
 type RouteOptimizationResult struct {
 	ID                 string             `json:"id"`
 	RequestID          string             `json:"request_id"`
-	OrganizationID     uuid.UUID          `json:"organization_id"`
+	TenantID           uuid.UUID          `json:"tenant_id"`
 	OptimizationTime   time.Time          `json:"optimization_time"`
 	TotalDistance      float64            `json:"total_distance"` // in km
 	TotalTime          int                `json:"total_time"`     // in minutes
@@ -216,6 +216,7 @@ type PerformanceMetrics struct {
 type OptimizationJob struct {
 	ID          string     `json:"id"`
 	RequestID   string     `json:"request_id"`
+	TenantID    uuid.UUID  `json:"tenant_id"`
 	Status      string     `json:"status"` // pending, running, completed, failed
 	CreatedAt   time.Time  `json:"created_at"`
 	StartedAt   *time.Time `json:"started_at,omitempty"`

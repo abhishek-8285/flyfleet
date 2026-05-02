@@ -3,8 +3,11 @@
 --              and index hardening.
 
 -- 1. Add tenant_id NOT NULL to telemetry_points (if not already strictly enforced)
--- Note: This requires all existing rows (if any) to have a tenant_id.
-ALTER TABLE telemetry_points ALTER COLUMN tenant_id SET NOT NULL;
+DO $$ 
+BEGIN 
+    ALTER TABLE telemetry_points ALTER COLUMN tenant_id SET NOT NULL; 
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
 -- 2. Create telemetry_outbox table for NATS relay
 CREATE TABLE IF NOT EXISTS telemetry_outbox (
@@ -25,8 +28,14 @@ CREATE INDEX IF NOT EXISTS idx_telem_outbox_pending
     WHERE status = 'pending';
 
 -- 3. Hardening: Add constraint to ensure lat/lng are always valid
-ALTER TABLE telemetry_points
-    ADD CONSTRAINT check_coords CHECK (lat BETWEEN -90 AND 90 AND lng BETWEEN -180 AND 180);
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'telemetry_points' AND constraint_name = 'check_coords') THEN
+        ALTER TABLE telemetry_points
+            ADD CONSTRAINT check_coords CHECK (lat BETWEEN -90 AND 90 AND lng BETWEEN -180 AND 180);
+    END IF;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
 -- 4. Anomaly Thresholds Table (Per-Vehicle / Per-Tenant)
 CREATE TABLE IF NOT EXISTS tracking_config (

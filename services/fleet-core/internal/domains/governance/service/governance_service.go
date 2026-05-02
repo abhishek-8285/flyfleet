@@ -59,7 +59,7 @@ func (s *governanceService) CreateRequest(ctx context.Context, tenantID, userID 
 
 	gReq := &models.GovernanceRequest{
 		ID:             uuid.New(),
-		OrganizationID: tenantID,
+		TenantID: tenantID,
 		RequesterID:    userID,
 		RequestType:    req.RequestType,
 		DataScope:      req.DataScope,
@@ -81,7 +81,7 @@ func (s *governanceService) CreateRequest(ctx context.Context, tenantID, userID 
 	// Audit Log
 	s.repo.CreateAuditLog(ctx, &models.GovernanceAuditLog{
 		ID:             uuid.New(),
-		OrganizationID: tenantID,
+		TenantID: tenantID,
 		UserID:         userID,
 		Action:         "CREATE_REQUEST",
 		Module:         "DATA_REQUESTS",
@@ -157,7 +157,7 @@ func (s *governanceService) ApproveRequest(ctx context.Context, id, tenantID uui
 	userID := s.getUserID(ctx)
 	s.repo.CreateAuditLog(ctx, &models.GovernanceAuditLog{
 		ID:             uuid.New(),
-		OrganizationID: tenantID,
+		TenantID: tenantID,
 		UserID:         userID,
 		Action:         "APPROVE_REQUEST",
 		Module:         "DATA_REQUESTS",
@@ -192,7 +192,7 @@ func (s *governanceService) VerifyRequest(ctx context.Context, id, tenantID, use
 	// Audit Log
 	s.repo.CreateAuditLog(ctx, &models.GovernanceAuditLog{
 		ID:             uuid.New(),
-		OrganizationID: tenantID,
+		TenantID: tenantID,
 		UserID:         userID,
 		Action:         "VERIFY_REQUEST",
 		Module:         "DATA_REQUESTS",
@@ -228,7 +228,7 @@ func (s *governanceService) RejectRequest(ctx context.Context, id, tenantID uuid
 	userID := s.getUserID(ctx)
 	s.repo.CreateAuditLog(ctx, &models.GovernanceAuditLog{
 		ID:             uuid.New(),
-		OrganizationID: tenantID,
+		TenantID: tenantID,
 		UserID:         userID,
 		Action:         "REJECT_REQUEST",
 		Module:         "DATA_REQUESTS",
@@ -247,7 +247,7 @@ func (s *governanceService) GetSettings(ctx context.Context, tenantID uuid.UUID)
 }
 
 func (s *governanceService) UpdateSettings(ctx context.Context, tenantID, userID uuid.UUID, settings *models.GovernanceSettings) error {
-	settings.OrganizationID = tenantID
+	settings.TenantID = tenantID
 	settings.CreatedBy = userID // Fallback if record is new
 	settings.UpdatedBy = userID
 
@@ -258,7 +258,7 @@ func (s *governanceService) UpdateSettings(ctx context.Context, tenantID, userID
 	// Audit Log
 	s.repo.CreateAuditLog(ctx, &models.GovernanceAuditLog{
 		ID:             uuid.New(),
-		OrganizationID: tenantID,
+		TenantID: tenantID,
 		UserID:         userID,
 		Action:         "UPDATE_SETTINGS",
 		Module:         "GOVERNANCE_SETTINGS",
@@ -282,7 +282,7 @@ func (s *governanceService) ExpireRequests(ctx context.Context) (int, error) {
 		s.logger.Info("request expired", zap.String("id", info.ID.String()))
 		s.repo.CreateAuditLog(ctx, &models.GovernanceAuditLog{
 			ID:             uuid.New(),
-			OrganizationID: info.OrganizationID,
+			TenantID: info.TenantID,
 			UserID:         uuid.Nil, // System action
 			Action:         "EXPIRE_REQUEST",
 			Module:         "DATA_REQUESTS",
@@ -325,22 +325,22 @@ func (s *governanceService) EnforceRetention(ctx context.Context) error {
 	for _, setting := range settings {
 		var policies map[string]int
 		if err := json.Unmarshal(setting.RetentionPolicies, &policies); err != nil {
-			s.logger.Error("failed to unmarshal retention policies", zap.String("tenantID", setting.OrganizationID.String()), zap.Error(err))
+			s.logger.Error("failed to unmarshal retention policies", zap.String("tenantID", setting.TenantID.String()), zap.Error(err))
 			continue
 		}
 
 		for table, days := range policies {
-			count, err := s.repo.EnforceRetentionPolicy(ctx, setting.OrganizationID, table, days)
+			count, err := s.repo.EnforceRetentionPolicy(ctx, setting.TenantID, table, days)
 			if err != nil {
 				s.logger.Error("failed to enforce retention policy",
-					zap.String("tenantID", setting.OrganizationID.String()),
+					zap.String("tenantID", setting.TenantID.String()),
 					zap.String("table", table),
 					zap.Error(err))
 				continue
 			}
 			if count > 0 {
 				s.logger.Info("enforced retention policy",
-					zap.String("tenantID", setting.OrganizationID.String()),
+					zap.String("tenantID", setting.TenantID.String()),
 					zap.String("table", table),
 					zap.Int64("deleted_rows", count))
 				metrics.GovernanceDeletionsTotal.Add(float64(count))

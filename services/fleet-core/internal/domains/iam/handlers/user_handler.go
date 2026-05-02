@@ -30,7 +30,7 @@ func NewUserHandler(userSvc userService, log *zap.Logger) *UserHandler {
 // GET /api/v1/admin/users
 func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	params := models.ListUsersParams{
-		TenantID: GetOrgUUID(r),
+		TenantID: GetTenantUUID(r),
 		Page:     1,
 		PageSize: 20,
 	}
@@ -81,7 +81,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantID := GetOrgUUID(r)
+	tenantID := GetTenantUUID(r)
 	actorID := GetUserIDUUID(r)
 
 	user, err := h.userSvc.CreateUser(r.Context(), tenantID, req, actorID)
@@ -140,7 +140,7 @@ func (h *UserHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	actorID := GetUserIDUUID(r)
-	tenantID := GetOrgUUID(r)
+	tenantID := GetTenantUUID(r)
 
 	if err := h.userSvc.UpdateUserStatus(r.Context(), userID, tenantID, req.Status, actorID); err != nil {
 		if errors.Is(err, service.ErrInvalidStatus) {
@@ -166,7 +166,7 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	actorID := GetUserIDUUID(r)
-	tenantID := GetOrgUUID(r)
+	tenantID := GetTenantUUID(r)
 
 	if err := h.userSvc.DeleteUser(r.Context(), userID, tenantID, actorID); err != nil {
 		h.log.Error("failed to delete user", zap.Error(err), zap.String("user_id", idStr))
@@ -199,7 +199,7 @@ func (h *UserHandler) UpdatePreferences(w http.ResponseWriter, r *http.Request) 
 	}
 
 	actorID := GetUserIDUUID(r)
-	tenantID := GetOrgUUID(r)
+	tenantID := GetTenantUUID(r)
 
 	if err := h.userSvc.UpdateUserPreferences(r.Context(), userID, tenantID, req.SidebarCollapsed, req.Language, actorID); err != nil {
 		h.log.Error("failed to update user preferences", zap.Error(err), zap.String("user_id", idStr))

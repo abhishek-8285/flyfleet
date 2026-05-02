@@ -14,13 +14,13 @@ import (
 func (r *VideoRepositoryImpl) CreateRetentionPolicy(ctx context.Context, policy *models.VideoRetentionPolicy) error {
 	query := `
 		INSERT INTO video_retention_policies (
-			id, organization_id, name, description, event_type, retention_period,
+			id, tenant_id, name, description, event_type, retention_period,
 			auto_archive, auto_delete, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
 
 	_, err := r.db.Exec(ctx, query,
 		policy.ID,
-		policy.OrganizationID,
+		policy.TenantID,
 		policy.Name,
 		policy.Description,
 		policy.EventType,
@@ -37,7 +37,7 @@ func (r *VideoRepositoryImpl) CreateRetentionPolicy(ctx context.Context, policy 
 // GetRetentionPolicy retrieves a retention policy by ID
 func (r *VideoRepositoryImpl) GetRetentionPolicy(ctx context.Context, id string) (*models.VideoRetentionPolicy, error) {
 	query := `
-		SELECT id, organization_id, name, description, event_type, retention_period,
+		SELECT id, tenant_id, name, description, event_type, retention_period,
 		       auto_archive, auto_delete, created_at, updated_at
 		FROM video_retention_policies
 		WHERE id = $1`
@@ -46,7 +46,7 @@ func (r *VideoRepositoryImpl) GetRetentionPolicy(ctx context.Context, id string)
 
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&policy.ID,
-		&policy.OrganizationID,
+		&policy.TenantID,
 		&policy.Name,
 		&policy.Description,
 		&policy.EventType,
@@ -123,7 +123,7 @@ func (r *VideoRepositoryImpl) DeleteRetentionPolicy(ctx context.Context, id stri
 
 // ListRetentionPolicies retrieves retention policies with filtering
 func (r *VideoRepositoryImpl) ListRetentionPolicies(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.VideoRetentionPolicy, int, error) {
-	countQuery := "SELECT COUNT(*) FROM video_retention_policies WHERE organization_id = $1"
+	countQuery := "SELECT COUNT(*) FROM video_retention_policies WHERE tenant_id = $1"
 	var totalCount int
 	err := r.db.QueryRow(ctx, countQuery, tenantID).Scan(&totalCount)
 	if err != nil {
@@ -131,10 +131,10 @@ func (r *VideoRepositoryImpl) ListRetentionPolicies(ctx context.Context, tenantI
 	}
 
 	query := `
-		SELECT id, organization_id, name, description, event_type, retention_period,
+		SELECT id, tenant_id, name, description, event_type, retention_period,
 		       auto_archive, auto_delete, created_at, updated_at
 		FROM video_retention_policies
-		WHERE organization_id = $1
+		WHERE tenant_id = $1
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3`
 
@@ -149,7 +149,7 @@ func (r *VideoRepositoryImpl) ListRetentionPolicies(ctx context.Context, tenantI
 		var policy models.VideoRetentionPolicy
 		err := rows.Scan(
 			&policy.ID,
-			&policy.OrganizationID,
+			&policy.TenantID,
 			&policy.Name,
 			&policy.Description,
 			&policy.EventType,

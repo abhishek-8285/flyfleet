@@ -42,13 +42,13 @@ func (r *AnalyticsRepositoryImpl) CreatePredictionResults(ctx context.Context, r
 			args = append(args,
 				result.ID, result.ModelID, inputJSON, result.PredictedValue,
 				result.ConfidenceScore, probJSON, featJSON, result.AnomalyDetected,
-				result.AnomalyScore, result.Explanation, result.OrganizationID, result.RequestID, result.PredictedAt,
+				result.AnomalyScore, result.Explanation, result.TenantID, result.RequestID, result.PredictedAt,
 				result.CreatedAt, result.UpdatedAt)
 		}
 		batchQuery := fmt.Sprintf(
 			"INSERT INTO prediction_results (id, model_id, prediction_input, predicted_value, confidence_score, "+
 				"probability_scores, feature_importance, anomaly_detected, anomaly_score, explanation, "+
-				"organization_id, request_id, predicted_at, created_at, updated_at) VALUES %s",
+				"tenant_id, request_id, predicted_at, created_at, updated_at) VALUES %s",
 			strings.Join(placeholders, ", "),
 		)
 		_, err = tx.Exec(ctx, batchQuery, args...)
@@ -71,7 +71,7 @@ func (r *AnalyticsRepositoryImpl) CreatePredictionResult(ctx context.Context, re
 	query := `
 		INSERT INTO prediction_results (id, model_id, prediction_input, predicted_value, confidence_score, 
 			probability_scores, feature_importance, anomaly_detected, anomaly_score, explanation, 
-			organization_id, request_id, predicted_at, created_at, updated_at)
+			tenant_id, request_id, predicted_at, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 	`
 
@@ -98,7 +98,7 @@ func (r *AnalyticsRepositoryImpl) CreatePredictionResult(ctx context.Context, re
 
 	_, err = r.db.Exec(ctx, query, result.ID, result.ModelID, predictionInputJSON, result.PredictedValue,
 		result.ConfidenceScore, probabilityScoresJSON, featureImportanceJSON, result.AnomalyDetected,
-		anomalyScore, result.Explanation, result.OrganizationID, result.RequestID, result.PredictedAt,
+		anomalyScore, result.Explanation, result.TenantID, result.RequestID, result.PredictedAt,
 		result.CreatedAt, result.UpdatedAt)
 
 	if err != nil {
@@ -114,8 +114,8 @@ func (r *AnalyticsRepositoryImpl) GetPredictionResult(ctx context.Context, id st
 	query := `
 		SELECT id, model_id, prediction_input, predicted_value, confidence_score, 
 			probability_scores, feature_importance, anomaly_detected, anomaly_score, explanation, 
-			organization_id, request_id, predicted_at, created_at, updated_at
-		FROM prediction_results WHERE id = $1 AND organization_id = $2
+			tenant_id, request_id, predicted_at, created_at, updated_at
+		FROM prediction_results WHERE id = $1 AND tenant_id = $2
 	`
 
 	var result models.PredictionResult
@@ -125,7 +125,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictionResult(ctx context.Context, id st
 	err := r.db.QueryRow(ctx, query, id, tenantID).Scan(
 		&result.ID, &result.ModelID, &predictionInputJSON, &result.PredictedValue, &result.ConfidenceScore,
 		&probabilityScoresJSON, &featureImportanceJSON, &result.AnomalyDetected, &anomalyScore,
-		&result.Explanation, &result.OrganizationID, &result.RequestID, &result.PredictedAt,
+		&result.Explanation, &result.TenantID, &result.RequestID, &result.PredictedAt,
 		&result.CreatedAt, &result.UpdatedAt,
 	)
 	if err != nil {
@@ -158,7 +158,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictionResult(ctx context.Context, id st
 // GetPredictionResultsByModel retrieves prediction results by model ID
 func (r *AnalyticsRepositoryImpl) GetPredictionResultsByModel(ctx context.Context, modelID string, tenantID uuid.UUID, limit, offset int) ([]*models.PredictionResult, int, error) {
 	// Count query
-	countQuery := "SELECT COUNT(*) FROM prediction_results WHERE model_id = $1 AND organization_id = $2"
+	countQuery := "SELECT COUNT(*) FROM prediction_results WHERE model_id = $1 AND tenant_id = $2"
 	var totalCount int
 	err := r.db.QueryRow(ctx, countQuery, modelID, tenantID).Scan(&totalCount)
 	if err != nil {
@@ -169,9 +169,9 @@ func (r *AnalyticsRepositoryImpl) GetPredictionResultsByModel(ctx context.Contex
 	query := `
 		SELECT id, model_id, prediction_input, predicted_value, confidence_score, 
 			probability_scores, feature_importance, anomaly_detected, anomaly_score, explanation, 
-			organization_id, request_id, predicted_at, created_at, updated_at
+			tenant_id, request_id, predicted_at, created_at, updated_at
 		FROM prediction_results 
-		WHERE model_id = $1 AND organization_id = $2
+		WHERE model_id = $1 AND tenant_id = $2
 		ORDER BY created_at DESC 
 		LIMIT $3 OFFSET $4
 	`
@@ -191,7 +191,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictionResultsByModel(ctx context.Contex
 		err := rows.Scan(
 			&result.ID, &result.ModelID, &predictionInputJSON, &result.PredictedValue, &result.ConfidenceScore,
 			&probabilityScoresJSON, &featureImportanceJSON, &result.AnomalyDetected, &anomalyScore,
-			&result.Explanation, &result.OrganizationID, &result.RequestID, &result.PredictedAt,
+			&result.Explanation, &result.TenantID, &result.RequestID, &result.PredictedAt,
 			&result.CreatedAt, &result.UpdatedAt,
 		)
 		if err != nil {
@@ -221,10 +221,10 @@ func (r *AnalyticsRepositoryImpl) GetPredictionResultsByModel(ctx context.Contex
 	return results, totalCount, nil
 }
 
-// GetPredictionResultsByOrg retrieves prediction results by organization
-func (r *AnalyticsRepositoryImpl) GetPredictionResultsByOrg(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.PredictionResult, int, error) {
+// GetPredictionResultsByTenant retrieves prediction results by organization
+func (r *AnalyticsRepositoryImpl) GetPredictionResultsByTenant(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.PredictionResult, int, error) {
 	// Count query
-	countQuery := "SELECT COUNT(*) FROM prediction_results WHERE organization_id = $1"
+	countQuery := "SELECT COUNT(*) FROM prediction_results WHERE tenant_id = $1"
 	var totalCount int
 	err := r.db.QueryRow(ctx, countQuery, tenantID).Scan(&totalCount)
 	if err != nil {
@@ -235,9 +235,9 @@ func (r *AnalyticsRepositoryImpl) GetPredictionResultsByOrg(ctx context.Context,
 	query := `
 		SELECT id, model_id, prediction_input, predicted_value, confidence_score, 
 			probability_scores, feature_importance, anomaly_detected, anomaly_score, explanation, 
-			organization_id, request_id, predicted_at, created_at, updated_at
+			tenant_id, request_id, predicted_at, created_at, updated_at
 		FROM prediction_results 
-		WHERE organization_id = $1
+		WHERE tenant_id = $1
 		ORDER BY created_at DESC 
 		LIMIT $2 OFFSET $3
 	`
@@ -257,7 +257,7 @@ func (r *AnalyticsRepositoryImpl) GetPredictionResultsByOrg(ctx context.Context,
 		err := rows.Scan(
 			&result.ID, &result.ModelID, &predictionInputJSON, &result.PredictedValue, &result.ConfidenceScore,
 			&probabilityScoresJSON, &featureImportanceJSON, &result.AnomalyDetected, &anomalyScore,
-			&result.Explanation, &result.OrganizationID, &result.RequestID, &result.PredictedAt,
+			&result.Explanation, &result.TenantID, &result.RequestID, &result.PredictedAt,
 			&result.CreatedAt, &result.UpdatedAt,
 		)
 		if err != nil {
@@ -310,7 +310,7 @@ func (r *AnalyticsRepositoryImpl) UpdatePredictionResult(ctx context.Context, id
 	}
 
 	args = append(args, id, tenantID)
-	query := fmt.Sprintf("UPDATE prediction_results SET %s WHERE id = $%d AND organization_id = $%d",
+	query := fmt.Sprintf("UPDATE prediction_results SET %s WHERE id = $%d AND tenant_id = $%d",
 		strings.Join(setParts, ", "), argIndex, argIndex+1)
 
 	_, err := r.db.Exec(ctx, query, args...)
@@ -324,7 +324,7 @@ func (r *AnalyticsRepositoryImpl) UpdatePredictionResult(ctx context.Context, id
 func (r *AnalyticsRepositoryImpl) DeletePredictionResult(ctx context.Context, id string, tenantID uuid.UUID) error {
 	ctx, cancel := r.withTimeout(ctx)
 	defer cancel()
-	query := "DELETE FROM prediction_results WHERE id = $1 AND organization_id = $2"
+	query := "DELETE FROM prediction_results WHERE id = $1 AND tenant_id = $2"
 	_, err := r.db.Exec(ctx, query, id, tenantID)
 	if err != nil {
 		return fmt.Errorf("failed to delete prediction result %s: %w", id, err)
@@ -350,11 +350,11 @@ func (r *AnalyticsRepositoryImpl) ListPredictionResults(ctx context.Context, ten
 	baseQuery := `
 		SELECT id, model_id, prediction_input, predicted_value, confidence_score,
 		       probability_scores, feature_importance, anomaly_detected, anomaly_score,
-		       explanation, organization_id, request_id, predicted_at, created_at, updated_at
+		       explanation, tenant_id, request_id, predicted_at, created_at, updated_at
 		FROM prediction_results
-		WHERE organization_id = $1
+		WHERE tenant_id = $1
 	`
-	countQuery := `SELECT COUNT(*) FROM prediction_results WHERE organization_id = $1`
+	countQuery := `SELECT COUNT(*) FROM prediction_results WHERE tenant_id = $1`
 
 	args := []interface{}{tenantID}
 	argIndex := 2
@@ -410,7 +410,7 @@ func (r *AnalyticsRepositoryImpl) ListPredictionResults(ctx context.Context, ten
 		err := rows.Scan(
 			&pr.ID, &pr.ModelID, &predictionInputJSON, &pr.PredictedValue, &pr.ConfidenceScore,
 			&probabilityScoresJSON, &featureImportanceJSON, &pr.AnomalyDetected, &pr.AnomalyScore,
-			&pr.Explanation, &pr.OrganizationID, &pr.RequestID, &pr.PredictedAt, &pr.CreatedAt, &pr.UpdatedAt,
+			&pr.Explanation, &pr.TenantID, &pr.RequestID, &pr.PredictedAt, &pr.CreatedAt, &pr.UpdatedAt,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan prediction result: %w", err)

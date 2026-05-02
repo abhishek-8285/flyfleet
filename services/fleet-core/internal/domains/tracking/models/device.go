@@ -10,7 +10,7 @@ import (
 type Device struct {
 	ID                  uuid.UUID  `json:"id" db:"id"`
 	DeviceID            string     `json:"device_id" db:"device_id"` // Hardware device identifier
-	OrganizationID      uuid.UUID  `json:"organization_id" db:"organization_id"`
+	TenantID            uuid.UUID  `json:"tenant_id" db:"tenant_id"`
 	VehicleID           uuid.UUID  `json:"vehicle_id" db:"vehicle_id"`
 	HardwareAttestation string     `json:"hardware_attestation" db:"hardware_attestation"`
 	AndroidVersion      string     `json:"android_version" db:"android_version"`
@@ -34,7 +34,7 @@ type DeviceRegisterRequest struct {
 	AndroidVersion      string `json:"android_version" validate:"required"`
 	DeviceModel         string `json:"device_model" validate:"required"`
 	AppVersion          string `json:"app_version"`
-	OrganizationID      string `json:"organization_id"` // Optional, can be assigned later
+	TenantID            string `json:"tenant_id"` // Optional, can be assigned later
 	VehicleID           string `json:"vehicle_id"`      // Optional, can be assigned later
 }
 

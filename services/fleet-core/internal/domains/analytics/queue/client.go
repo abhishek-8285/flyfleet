@@ -15,13 +15,13 @@ const (
 
 type AnalyticsJobPayload struct {
 	JobID          string    `json:"job_id"`
-	OrganizationID uuid.UUID `json:"organization_id"`
+	TenantID uuid.UUID `json:"tenant_id"`
 	UserID         uuid.UUID `json:"user_id"`
 }
 
 // CacheInvalidatePayload represents the payload for a cache invalidation task
 type CacheInvalidatePayload struct {
-	OrganizationID uuid.UUID `json:"organization_id"`
+	TenantID uuid.UUID `json:"tenant_id"`
 	Pattern        string    `json:"pattern"`
 	ResourceType   string    `json:"resource_type"` // "vehicle", "driver", "fleet"
 	ResourceID     string    `json:"resource_id"`
@@ -41,7 +41,7 @@ func NewAnalyticsQueueClient(redisAddr string) *AnalyticsQueueClient {
 func (c *AnalyticsQueueClient) EnqueueAnalyticsJob(jobID string, tenantID, userID uuid.UUID) error {
 	payload, err := json.Marshal(AnalyticsJobPayload{
 		JobID:          jobID,
-		OrganizationID: tenantID,
+		TenantID: tenantID,
 		UserID:         userID,
 	})
 	if err != nil {
@@ -57,7 +57,7 @@ func (c *AnalyticsQueueClient) EnqueueAnalyticsJob(jobID string, tenantID, userI
 // EnqueueCacheInvalidate enqueues a task to invalidate cache patterns
 func (c *AnalyticsQueueClient) EnqueueCacheInvalidate(tenantID uuid.UUID, pattern, resourceType, resourceID string) error {
 	payload, err := json.Marshal(CacheInvalidatePayload{
-		OrganizationID: tenantID,
+		TenantID: tenantID,
 		Pattern:        pattern,
 		ResourceType:   resourceType,
 		ResourceID:     resourceID,

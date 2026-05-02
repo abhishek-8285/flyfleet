@@ -156,18 +156,22 @@ func (r *PostgresTripRepository) GetByID(ctx context.Context, id string) (*model
 	var fuelUsed sql.NullFloat64
 	var idlingTimeMinutes sql.NullInt32
 
+	var plannedDist sql.NullFloat64
 	start := time.Now()
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&trip.ID, &trip.TenantID, &trip.VehicleID, &trip.DriverID, &trip.Status, &trip.TripType, &trip.Title, &trip.Description,
 		&pLat, &pLng, &dLat, &dLng,
 		&plannedRouteJSON, &actualRouteJSON, &waypointsJSON,
-		&trip.PlannedDistance, &totalDistance, &trip.EstimatedDurationMin, &actualDurationMin,
+		&plannedDist, &totalDistance, &trip.EstimatedDurationMin, &actualDurationMin,
 		&cargoDetailsJSON, &trip.ScheduledStart, &trip.StartTime, &trip.EndTime,
 		&trip.StartOdometer, &trip.EndOdometer, &trip.FuelLevelSnapshot, &fuelUsed, &idlingTimeMinutes,
 		&trip.EWayBillNo, &trip.GSTClassification, &trip.PermitVerified, &trip.AIS140Compliant,
 		&trip.CustomerName, &trip.CustomerPhone, &trip.CustomerEmail, &cancellationReason,
 		&trip.Version, &trip.CreatedAt, &trip.UpdatedAt,
 	)
+	if err == nil && plannedDist.Valid {
+		trip.PlannedDistance = plannedDist.Float64
+	}
 	metrics.RecordDBQuery(query, time.Since(start))
 
 	if err != nil {
@@ -296,7 +300,7 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 	var trips []*models.Trip
 	for rows.Next() {
 		var trip models.Trip
-		var plannedDist float64
+		var plannedDist sql.NullFloat64
 		var totalDist sql.NullFloat64
 		var estDur int
 		var actDur sql.NullInt32
@@ -316,7 +320,9 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 			return nil, 0, err
 		}
 		
-		trip.PlannedDistance = plannedDist
+		if plannedDist.Valid {
+			trip.PlannedDistance = plannedDist.Float64
+		}
 		if totalDist.Valid {
 			trip.TotalDistance = &totalDist.Float64
 		}
@@ -564,12 +570,12 @@ func (r *PostgresTripRepository) GetActiveTripsForDriver(ctx context.Context, dr
 func (r *PostgresTripRepository) AddTelemetryPoint(ctx context.Context, point models.TelemetryPoint) error {
 	query := `
 		INSERT INTO telemetry_points (
-			trip_id, lat, lng, speed, heading, fuel_level, ignition_status, recorded_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+			tenant_id, trip_id, lat, lng, speed, heading, fuel_level, ignition_status, recorded_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 
 	start := time.Now()
 	_, err := r.db.Exec(ctx, query,
-		point.TripID, point.Latitude, point.Longitude, point.Speed, point.Heading,
+		point.TenantID, point.TripID, point.Latitude, point.Longitude, point.Speed, point.Heading,
 		point.FuelLevel, point.IgnitionStatus, point.RecordedAt,
 	)
 	metrics.RecordDBQuery(query, time.Since(start))
@@ -649,10 +655,11 @@ func (r *PostgresTripRepository) CheckOverlappingTrips(ctx context.Context, vehi
 
 func (r *PostgresTripRepository) GetActiveTripsForVehicle(ctx context.Context, vehicleID string) ([]*models.Trip, error) {
 	query := `
-		SELECT id, tenant_id, vehicle_id, driver_id, status, title, description,
+		SELECT id, tenant_id, vehicle_id, driver_id, status, 
+		       COALESCE(title, '') as title, COALESCE(description, '') as description,
 		       planned_distance, total_distance, estimated_duration_min,
 		       actual_duration_min, scheduled_start, start_time, end_time,
-		       customer_name, created_at, updated_at
+		       COALESCE(customer_name, '') as customer_name, created_at, updated_at
 		FROM trips
 		WHERE vehicle_id = $1 AND status IN ('CREATED', 'STARTED', 'PAUSED', 'RESUMED') AND is_deleted = FALSE
 		ORDER BY scheduled_start ASC`
@@ -668,12 +675,22 @@ func (r *PostgresTripRepository) GetActiveTripsForVehicle(ctx context.Context, v
 	var trips []*models.Trip
 	for rows.Next() {
 		var trip models.Trip
+		var plannedDist sql.NullFloat64
+		var totalDist sql.NullFloat64
 		err := rows.Scan(
 			&trip.ID, &trip.TenantID, &trip.VehicleID, &trip.DriverID, &trip.Status,
-			&trip.Title, &trip.Description, &trip.PlannedDistance, &trip.TotalDistance,
+			&trip.Title, &trip.Description, &plannedDist, &totalDist,
 			&trip.EstimatedDurationMin, &trip.ActualDurationMin, &trip.ScheduledStart,
 			&trip.StartTime, &trip.EndTime, &trip.CustomerName, &trip.CreatedAt, &trip.UpdatedAt,
 		)
+		if err == nil {
+			if plannedDist.Valid {
+				trip.PlannedDistance = plannedDist.Float64
+			}
+			if totalDist.Valid {
+				trip.TotalDistance = &totalDist.Float64
+			}
+		}
 		if err != nil {
 			return nil, err
 		}

@@ -28,7 +28,7 @@ func NewRBACHandler(rbacSvc rbacService, log *zap.Logger) *RBACHandler {
 // ListRoles returns all roles for the current organization.
 // GET /api/v1/admin/rbac/roles
 func (h *RBACHandler) ListRoles(w http.ResponseWriter, r *http.Request) {
-	tenantID := GetOrgUUID(r)
+	tenantID := GetTenantUUID(r)
 
 	roles, err := h.rbacSvc.ListRoles(r.Context(), tenantID)
 	if err != nil {
@@ -58,7 +58,7 @@ func (h *RBACHandler) CreateRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantID := GetOrgUUID(r)
+	tenantID := GetTenantUUID(r)
 	createdBy := GetUserIDUUID(r)
 
 	// Parse permissions from query string or body
@@ -91,7 +91,7 @@ func (h *RBACHandler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantID := GetOrgUUID(r)
+	tenantID := GetTenantUUID(r)
 	if err := h.rbacSvc.UpdateRole(r.Context(), roleID, tenantID, req.Name, req.Description); err != nil {
 		switch {
 		case errors.Is(err, service.ErrRoleNotFound):
@@ -130,7 +130,7 @@ func (h *RBACHandler) CloneRole(w http.ResponseWriter, r *http.Request) {
 	}
 
 	createdBy := GetUserIDUUID(r)
-	tenantID := GetOrgUUID(r)
+	tenantID := GetTenantUUID(r)
 
 	role, err := h.rbacSvc.CloneRole(r.Context(), sourceID, tenantID, req.Name, req.Description, createdBy)
 	if err != nil {
@@ -157,7 +157,7 @@ func (h *RBACHandler) DeleteRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantID := GetOrgUUID(r)
+	tenantID := GetTenantUUID(r)
 	if err := h.rbacSvc.DeleteRole(r.Context(), roleID, tenantID); err != nil {
 		switch {
 		case errors.Is(err, service.ErrRoleNotFound):
@@ -177,7 +177,7 @@ func (h *RBACHandler) DeleteRole(w http.ResponseWriter, r *http.Request) {
 // GetPermissionMatrix returns the full permission matrix for all roles.
 // GET /api/v1/admin/rbac/matrix
 func (h *RBACHandler) GetPermissionMatrix(w http.ResponseWriter, r *http.Request) {
-	tenantID := GetOrgUUID(r)
+	tenantID := GetTenantUUID(r)
 
 	matrix, err := h.rbacSvc.GetPermissionMatrix(r.Context(), tenantID)
 	if err != nil {
@@ -209,7 +209,7 @@ func (h *RBACHandler) UpdateRolePermissions(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	tenantID := GetOrgUUID(r)
+	tenantID := GetTenantUUID(r)
 	if err := h.rbacSvc.UpdateRolePermissions(r.Context(), roleID, tenantID, req.Permissions); err != nil {
 		switch {
 		case errors.Is(err, service.ErrRoleNotFound):
@@ -316,7 +316,7 @@ func (h *RBACHandler) GetUserRoles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantID := GetOrgUUID(r)
+	tenantID := GetTenantUUID(r)
 
 	roles, err := h.rbacSvc.GetUserRoles(r.Context(), userID, tenantID)
 	if err != nil {
@@ -342,7 +342,7 @@ func (h *RBACHandler) GetUserPermissions(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	tenantID := GetOrgUUID(r)
+	tenantID := GetTenantUUID(r)
 
 	perms, err := h.rbacSvc.GetUserPermissions(r.Context(), userID, tenantID)
 	if err != nil {

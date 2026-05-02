@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	ErrDuplicateJob  = errors.New("analytics job with this idempotency key already exists for this organization")
+	ErrDuplicateJob  = errors.New("analytics job with this idempotency key already exists for this tenant")
 	ErrInvalidTenant = errors.New("invalid or missing tenant context for analytics operation")
 )
 
@@ -30,7 +30,7 @@ type AnalyticsRepository interface {
 	CreatePredictionResults(ctx context.Context, results []*models.PredictionResult) error
 	GetPredictionResult(ctx context.Context, id string, tenantID uuid.UUID) (*models.PredictionResult, error)
 	GetPredictionResultsByModel(ctx context.Context, modelID string, tenantID uuid.UUID, limit, offset int) ([]*models.PredictionResult, int, error)
-	GetPredictionResultsByOrg(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.PredictionResult, int, error)
+	GetPredictionResultsByTenant(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.PredictionResult, int, error)
 	UpdatePredictionResult(ctx context.Context, id string, tenantID uuid.UUID, updates map[string]interface{}) error
 	DeletePredictionResult(ctx context.Context, id string, tenantID uuid.UUID) error
 	ListPredictionResults(ctx context.Context, tenantID uuid.UUID, modelID *string, anomalyDetected *bool, cursor string, limit, offset int) ([]*models.PredictionResult, int, error)
@@ -54,7 +54,7 @@ type AnalyticsRepository interface {
 	CreateDriverBehaviorAnalytics(ctx context.Context, analytics *models.DriverBehaviorAnalytics) error
 	GetDriverBehaviorAnalytics(ctx context.Context, id string, tenantID uuid.UUID) (*models.DriverBehaviorAnalytics, error)
 	GetDriverBehaviorAnalyticsByDriver(ctx context.Context, driverID uuid.UUID, tenantID uuid.UUID, limit, offset int) ([]*models.DriverBehaviorAnalytics, int, error)
-	GetDriverBehaviorAnalyticsByOrg(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.DriverBehaviorAnalytics, int, error)
+	GetDriverBehaviorAnalyticsByTenant(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]*models.DriverBehaviorAnalytics, int, error)
 	UpdateDriverBehaviorAnalytics(ctx context.Context, id string, tenantID uuid.UUID, updates map[string]interface{}) error
 	DeleteDriverBehaviorAnalytics(ctx context.Context, id string, tenantID uuid.UUID) error
 	ListDriverBehaviorAnalytics(ctx context.Context, tenantID uuid.UUID, periodStart, periodEnd *time.Time, cursor string, limit, offset int) ([]*models.DriverBehaviorAnalytics, int, error)

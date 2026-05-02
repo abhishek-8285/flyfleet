@@ -2,15 +2,28 @@
 -- Phase 2: DLQ table, heartbeat column, NOTIFY trigger for LISTEN/NOTIFY queue
 
 -- Add heartbeat tracking to report_jobs (used for crash recovery)
-ALTER TABLE report_jobs ADD COLUMN IF NOT EXISTS last_heartbeat TIMESTAMP WITH TIME ZONE;
+CREATE TABLE IF NOT EXISTS report_jobs (
+    id UUID PRIMARY KEY
+);
+
+DO $$ 
+BEGIN 
+    ALTER TABLE report_jobs ADD COLUMN IF NOT EXISTS last_heartbeat TIMESTAMP WITH TIME ZONE;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
 -- Dead-letter queue for permanently failed jobs
 CREATE TABLE IF NOT EXISTS report_dlq (
-    id UUID PRIMARY KEY,
-    job_id UUID NOT NULL UNIQUE REFERENCES report_jobs(id) ON DELETE CASCADE,
-    reason TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    id UUID PRIMARY KEY
 );
+
+DO $$ 
+BEGIN 
+    ALTER TABLE report_dlq ADD COLUMN IF NOT EXISTS job_id UUID NOT NULL UNIQUE REFERENCES report_jobs(id) ON DELETE CASCADE;
+    ALTER TABLE report_dlq ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT 'unknown';
+    ALTER TABLE report_dlq ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW();
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_report_dlq_created ON report_dlq(created_at);
 

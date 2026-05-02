@@ -18,18 +18,18 @@ type MockRepository struct {
 	mock.Mock
 }
 
-type MockOrganizationService struct {
+type MockTenantService struct {
 	mock.Mock
 }
 
-func (m *MockOrganizationService) Onboard(ctx context.Context, name, taxID string) (*models.Organization, error) {
+func (m *MockTenantService) Onboard(ctx context.Context, name, taxID string) (*models.Tenant, error) {
 	args := m.Called(ctx, name, taxID)
-	return args.Get(0).(*models.Organization), args.Error(1)
+	return args.Get(0).(*models.Tenant), args.Error(1)
 }
 
-func (m *MockOrganizationService) GetOrganization(ctx context.Context, id uuid.UUID) (*models.Organization, error) {
+func (m *MockTenantService) GetTenant(ctx context.Context, id uuid.UUID) (*models.Tenant, error) {
 	args := m.Called(ctx, id)
-	return args.Get(0).(*models.Organization), args.Error(1)
+	return args.Get(0).(*models.Tenant), args.Error(1)
 }
 
 func (m *MockRepository) CreateUser(ctx context.Context, user *models.User) error {
@@ -53,7 +53,7 @@ func (m *MockRepository) GetUserByID(ctx context.Context, userID uuid.UUID) (*mo
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
-func (m *MockRepository) GetRolesByOrganization(ctx context.Context, tenantID uuid.UUID) ([]*models.Role, error) {
+func (m *MockRepository) GetRolesByTenant(ctx context.Context, tenantID uuid.UUID) ([]*models.Role, error) {
 	args := m.Called(ctx, tenantID)
 	return args.Get(0).([]*models.Role), args.Error(1)
 }
@@ -70,9 +70,9 @@ func (m *MockRepository) GetPermissionsForUser(ctx context.Context, userID uuid.
 
 func TestIAMService_JWT(t *testing.T) {
 	repo := new(MockRepository)
-	orgSvc := new(MockOrganizationService)
+	tenantSvc := new(MockTenantService)
 	secret := "test-secret"
-	svc := NewIAMService(repo, orgSvc, secret)
+	svc := NewIAMService(repo, tenantSvc, secret)
 
 	userID := uuid.New()
 	tenantID := uuid.New()
@@ -81,7 +81,7 @@ func TestIAMService_JWT(t *testing.T) {
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
 	user := &models.User{
 		ID:             userID,
-		OrganizationID: tenantID,
+		TenantID:       tenantID,
 		Email:          "test@example.com",
 		PasswordHash:   string(hashedPassword),
 		Status:         "active",
@@ -103,8 +103,8 @@ func TestIAMService_JWT(t *testing.T) {
 
 func TestIAMService_CheckPermission(t *testing.T) {
 	repo := new(MockRepository)
-	orgSvc := new(MockOrganizationService)
-	svc := NewIAMService(repo, orgSvc, "secret")
+	tenantSvc := new(MockTenantService)
+	svc := NewIAMService(repo, tenantSvc, "secret")
 
 	userID := uuid.New()
 	permissions := []*models.Permission{
@@ -126,8 +126,8 @@ func TestIAMService_CheckPermission(t *testing.T) {
 
 func TestIAMService_ValidateToken_AlgorithmCheck(t *testing.T) {
 	repo := new(MockRepository)
-	orgSvc := new(MockOrganizationService)
-	iamSvc := NewIAMService(repo, orgSvc, "test-secret")
+	tenantSvc := new(MockTenantService)
+	iamSvc := NewIAMService(repo, tenantSvc, "test-secret")
 
 	// Test 1: Reject missing algorithm
 	t.Run("Reject missing algorithm", func(t *testing.T) {
@@ -151,7 +151,7 @@ func TestIAMService_ValidateToken_ExpirationCheck(t *testing.T) {
 	validTenantID := uuid.New()
 	activeUser := &models.User{
 		ID:             validUserID,
-		OrganizationID: validTenantID,
+		TenantID:       validTenantID,
 		Status:         "active",
 	}
 
@@ -169,8 +169,8 @@ func TestIAMService_ValidateToken_ExpirationCheck(t *testing.T) {
 
 	t.Run("Reject expired token", func(t *testing.T) {
 		repo := new(MockRepository)
-		orgSvc := new(MockOrganizationService)
-		iamSvc := NewIAMService(repo, orgSvc, "test-secret")
+		tenantSvc := new(MockTenantService)
+		iamSvc := NewIAMService(repo, tenantSvc, "test-secret")
 
 		// User exists but token is expired
 		repo.On("GetUserByID", mock.Anything, validUserID).Return(activeUser, nil)
@@ -200,12 +200,12 @@ func TestIAMService_ValidateToken_UserStatusCheck(t *testing.T) {
 
 	t.Run("Reject inactive user", func(t *testing.T) {
 		repo := new(MockRepository)
-		orgSvc := new(MockOrganizationService)
-		iamSvc := NewIAMService(repo, orgSvc, "test-secret")
+		tenantSvc := new(MockTenantService)
+		iamSvc := NewIAMService(repo, tenantSvc, "test-secret")
 
 		inactiveUser := &models.User{
 			ID:             validUserID,
-			OrganizationID: validTenantID,
+			TenantID:       validTenantID,
 			Status:         "inactive",
 		}
 		repo.On("GetUserByID", mock.Anything, validUserID).Return(inactiveUser, nil)
@@ -217,8 +217,8 @@ func TestIAMService_ValidateToken_UserStatusCheck(t *testing.T) {
 
 	t.Run("Reject non-existent user", func(t *testing.T) {
 		repo := new(MockRepository)
-		orgSvc := new(MockOrganizationService)
-		iamSvc := NewIAMService(repo, orgSvc, "test-secret")
+		tenantSvc := new(MockTenantService)
+		iamSvc := NewIAMService(repo, tenantSvc, "test-secret")
 
 		repo.On("GetUserByID", mock.Anything, validUserID).Return((*models.User)(nil), assert.AnError)
 
@@ -229,12 +229,12 @@ func TestIAMService_ValidateToken_UserStatusCheck(t *testing.T) {
 
 	t.Run("Accept active user", func(t *testing.T) {
 		repo := new(MockRepository)
-		orgSvc := new(MockOrganizationService)
-		iamSvc := NewIAMService(repo, orgSvc, "test-secret")
+		tenantSvc := new(MockTenantService)
+		iamSvc := NewIAMService(repo, tenantSvc, "test-secret")
 
 		activeUser := &models.User{
 			ID:             validUserID,
-			OrganizationID: validTenantID,
+			TenantID:       validTenantID,
 			Status:         "active",
 		}
 		repo.On("GetUserByID", mock.Anything, validUserID).Return(activeUser, nil)

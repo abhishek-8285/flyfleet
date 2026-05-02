@@ -21,7 +21,7 @@ func (h *BillingHandler) ListPlans(w http.ResponseWriter, r *http.Request) {
 func (h *BillingHandler) GetSubscription(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
+		h.errorJSON(w, r, "Invalid Tenant ID", http.StatusBadRequest)
 		return
 	}
 
@@ -43,7 +43,7 @@ func (h *BillingHandler) GetSubscription(w http.ResponseWriter, r *http.Request)
 func (h *BillingHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
+		h.errorJSON(w, r, "Invalid Tenant ID", http.StatusBadRequest)
 		return
 	}
 
@@ -68,7 +68,7 @@ func (h *BillingHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 func (h *BillingHandler) ChangePlan(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
+		h.errorJSON(w, r, "Invalid Tenant ID", http.StatusBadRequest)
 		return
 	}
 
@@ -93,7 +93,7 @@ func (h *BillingHandler) ChangePlan(w http.ResponseWriter, r *http.Request) {
 func (h *BillingHandler) CancelSubscription(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
-		h.errorJSON(w, r, "Invalid Organization ID", http.StatusBadRequest)
+		h.errorJSON(w, r, "Invalid Tenant ID", http.StatusBadRequest)
 		return
 	}
 

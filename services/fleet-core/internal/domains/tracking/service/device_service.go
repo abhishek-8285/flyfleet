@@ -109,9 +109,9 @@ func (s *DeviceService) RegisterDevice(ctx context.Context, req *models.DeviceRe
 	}
 
 	// Parse optional IDs
-	if req.OrganizationID != "" {
-		if tenantID, err := uuid.Parse(req.OrganizationID); err == nil {
-			device.OrganizationID = tenantID
+	if req.TenantID != "" {
+		if tenantID, err := uuid.Parse(req.TenantID); err == nil {
+			device.TenantID = tenantID
 		}
 	}
 
@@ -131,7 +131,7 @@ func (s *DeviceService) RegisterDevice(ctx context.Context, req *models.DeviceRe
 	if s.nc != nil {
 		eventData := map[string]interface{}{
 			"device_id":       req.DeviceID,
-			"organization_id": req.OrganizationID,
+			"tenant_id":       req.TenantID,
 			"vehicle_id":      req.VehicleID,
 			"timestamp":       time.Now().Unix(),
 		}

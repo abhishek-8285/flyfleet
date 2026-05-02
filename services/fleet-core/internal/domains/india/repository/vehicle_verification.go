@@ -25,7 +25,7 @@ func (r *IndiaIntegrationRepositoryImpl) CreateVehicleVerification(ctx context.C
 	_, err := r.db.Exec(ctx, query,
 		verification.ID,
 		verification.VehicleID,
-		verification.OrganizationID,
+		verification.TenantID,
 		verification.RegistrationNumber,
 		verification.Status,
 		verification.VerificationDate,
@@ -78,7 +78,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetVehicleVerification(ctx context.Cont
 	err := row.Scan(
 		&verification.ID,
 		&verification.VehicleID,
-		&verification.OrganizationID,
+		&verification.TenantID,
 		&verification.RegistrationNumber,
 		&verification.Status,
 		&verification.VerificationDate,
@@ -138,7 +138,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetVehicleVerificationByRegNumber(ctx c
 	err := row.Scan(
 		&verification.ID,
 		&verification.VehicleID,
-		&verification.OrganizationID,
+		&verification.TenantID,
 		&verification.RegistrationNumber,
 		&verification.Status,
 		&verification.VerificationDate,
@@ -285,7 +285,7 @@ func (r *IndiaIntegrationRepositoryImpl) ListVehicleVerifications(ctx context.Co
 		err := rows.Scan(
 			&verification.ID,
 			&verification.VehicleID,
-			&verification.OrganizationID,
+			&verification.TenantID,
 			&verification.RegistrationNumber,
 			&verification.Status,
 			&verification.VerificationDate,

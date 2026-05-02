@@ -29,7 +29,7 @@ func (r *IndiaIntegrationRepositoryImpl) CreateIntegrationConfig(ctx context.Con
 
 	_, err := r.db.Exec(ctx, query,
 		config.ID,
-		config.OrganizationID,
+		config.TenantID,
 		config.ServiceType,
 		config.APIEndpoint,
 		apiKey,
@@ -65,7 +65,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetIntegrationConfig(ctx context.Contex
 	row := r.db.QueryRow(ctx, query, id)
 	err := row.Scan(
 		&config.ID,
-		&config.OrganizationID,
+		&config.TenantID,
 		&config.ServiceType,
 		&config.APIEndpoint,
 		&config.APIKey,
@@ -114,7 +114,7 @@ func (r *IndiaIntegrationRepositoryImpl) GetIntegrationConfigByServiceType(ctx c
 	row := r.db.QueryRow(ctx, query, tenantID, serviceType)
 	err := row.Scan(
 		&config.ID,
-		&config.OrganizationID,
+		&config.TenantID,
 		&config.ServiceType,
 		&config.APIEndpoint,
 		&config.APIKey,
@@ -259,7 +259,7 @@ func (r *IndiaIntegrationRepositoryImpl) ListIntegrationConfigs(ctx context.Cont
 
 		err := rows.Scan(
 			&config.ID,
-			&config.OrganizationID,
+			&config.TenantID,
 			&config.ServiceType,
 			&config.APIEndpoint,
 			&config.APIKey,
