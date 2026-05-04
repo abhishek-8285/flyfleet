@@ -57,6 +57,17 @@ type Vehicle struct {
 	CurrentDriver      *DriverInfo `json:"current_driver,omitempty"`
 	SpeedLimit         float64    `json:"speed_limit"          db:"speed_limit"`
 	LicensePlate       string     `json:"license_plate"        db:"license_plate"`
+	Insurance          string     `json:"insurance"           db:"insurance"`
+	InsuranceExpiry    *time.Time `json:"insurance_expiry"    db:"insurance_expiry_date"`
+	PermitNumber       string     `json:"permit_number"       db:"permit_number"`
+	PermitExpiry       *time.Time `json:"permit_expiry"       db:"permit_expiry_date"`
+	PollutionExpiry    *time.Time `json:"pollution_expiry"    db:"pollution_expiry_date"`
+	FitnessExpiry      *time.Time `json:"fitness_expiry"      db:"fitness_expiry_date"`
+	TaxExpiry          *time.Time `json:"tax_expiry"          db:"tax_expiry_date"`
+	LastServiceDate    *time.Time `json:"last_service_date"   db:"last_service_date"`
+	NextServiceDate    *time.Time `json:"next_service_date"   db:"next_service_date"`
+	LastServiceOdometer int64      `json:"last_service_odometer" db:"last_service_odometer"`
+	Metadata           map[string]interface{} `json:"metadata"          db:"metadata"`
 
 	CreatedAt time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at" db:"updated_at"`
@@ -142,6 +153,16 @@ type UpdateVehicleRequest struct {
 	ParentVehicleID    *uuid.UUID `json:"parent_vehicle_id"`
 	SpeedLimit         *float64   `json:"speed_limit"`
 	Insurance          *string    `json:"insurance"`
+	InsuranceExpiry    *time.Time `json:"insurance_expiry"`
+	PermitNumber       *string    `json:"permit_number"`
+	PermitExpiry       *time.Time `json:"permit_expiry"`
+	PollutionExpiry    *time.Time `json:"pollution_expiry"`
+	FitnessExpiry      *time.Time `json:"fitness_expiry"`
+	TaxExpiry          *time.Time `json:"tax_expiry"`
+	LastServiceDate    *time.Time `json:"last_service_date"`
+	NextServiceDate    *time.Time `json:"next_service_date"`
+	LastServiceOdometer *int64     `json:"last_service_odometer"`
+	Metadata           *map[string]interface{} `json:"metadata"`
 }
 
 // VehicleListResponse is the paginated list response.

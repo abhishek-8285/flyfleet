@@ -44,6 +44,15 @@ import (
 	invoicingHandlers "github.com/flyfleet/fleet-core/internal/domains/invoicing/handlers"
 	invoicingRepo "github.com/flyfleet/fleet-core/internal/domains/invoicing/repository/postgres"
 	invoicingSvc "github.com/flyfleet/fleet-core/internal/domains/invoicing/service"
+	documentHandlers "github.com/flyfleet/fleet-core/internal/domains/document/handlers"
+	documentRepo "github.com/flyfleet/fleet-core/internal/domains/document/repository"
+	documentService "github.com/flyfleet/fleet-core/internal/domains/document/service"
+	"github.com/flyfleet/fleet-core/internal/pkg/storage"
+	
+	// Domain Models for Auto-Sync
+	iamModels "github.com/flyfleet/fleet-core/internal/domains/iam/models"
+	driverModels "github.com/flyfleet/fleet-core/internal/domains/driver/models"
+	vehicleModels "github.com/flyfleet/fleet-core/internal/domains/vehicle/models"
 )
 
 func main() {
@@ -79,13 +88,10 @@ func main() {
 	}
 	defer pool.Close()
 
-	// --- DATABASE MIGRATIONS (Auto-apply on startup) ---
-	if err := database.RunMigrations(cfg.DatabaseURL, logger); err != nil {
-		logger.Fatal("database migrations failed", zap.Error(err))
-	}
-
-	// --- SYSTEM RESTORATION (Unified Schema Sync) ---
+	// --- PREMIUM AUTO-SYNC (Scriptless Schema Management) ---
+	// This replaces manual .sql migration files with code-driven synchronization
 	syncAllSchemas(ctx, pool, logger)
+	ensureAutoSync(ctx, pool, logger)
 
 	// --- Redis ---
 	rdb, err := database.NewRedis(ctx, cfg.RedisURL)
@@ -212,10 +218,21 @@ func main() {
 		logger,
 	)
 
-	// --- New Invoicing Domain ---
+	// --- Invoicing Domain ---
 	invRepo := invoicingRepo.NewInvoiceRepository(pool)
 	invoicingService := invoicingSvc.NewInvoicingService(invRepo)
 	invoicingHandler := invoicingHandlers.NewHandler(invoicingService)
+
+	// --- Document Domain ---
+	storageProvider, err := storage.NewLocalStorage("./uploads", "http://localhost:8085/api/v1/uploads")
+	if err != nil {
+		logger.Error("failed to initialize storage provider", zap.Error(err))
+		// Continue with nil provider or exit? In a real system, we might want to exit.
+		// For now, we'll log it and let it fail gracefully on upload.
+	}
+	docRepo := documentRepo.NewDocumentRepository(pool)
+	docSvc := documentService.NewDocumentService(docRepo, storageProvider)
+	documentHandler := documentHandlers.NewDocumentHandler(docSvc, logger)
 
 	// --- Geofence Worker (conditional) ---
 	var geofenceChecker *worker.GeofenceChecker
@@ -346,6 +363,12 @@ func main() {
 					invoicingHandler.RegisterRoutes(r)
 				})
 
+				// Document Domain
+				r.Route("/documents", func(r chi.Router) {
+					r.Post("/upload", documentHandler.UploadDocument)
+					r.Get("/", documentHandler.GetDocuments)
+				})
+
 				// Tenant & Dashboard Intelligence (Registers /tenants, /branches, etc.)
 				tenantHandler.RegisterRoutes(r)
 			})
@@ -355,6 +378,10 @@ func main() {
 				Enabled:              cfg.Billing.Enabled,
 				ChromeTimeoutSeconds: cfg.Billing.ChromeTimeoutSeconds,
 			}, logger)
+
+			// Static file serving for uploads (Authenticated)
+			fileServer := http.FileServer(http.Dir("./uploads"))
+			r.Handle("/uploads/*", http.StripPrefix("/api/v1/uploads", fileServer))
 		})
 	})
 
@@ -443,6 +470,21 @@ func syncAllSchemas(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger)
 	ensureTrackingSchema(ctx, pool, logger)
 
 	logger.Info("Total System Restoration Complete.")
+}
+
+func ensureAutoSync(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
+	logger.Info("🚀 Starting Premium Auto-Migration Engine (Scriptless Mode)...")
+	
+	// Identity & Access
+	database.AutoSyncSchema(ctx, pool, "tenants", iamModels.Tenant{}, logger)
+	database.AutoSyncSchema(ctx, pool, "users", iamModels.User{}, logger)
+	database.AutoSyncSchema(ctx, pool, "roles", iamModels.Role{}, logger)
+	
+	// Assets & Fleet
+	database.AutoSyncSchema(ctx, pool, "vehicles", vehicleModels.Vehicle{}, logger)
+	database.AutoSyncSchema(ctx, pool, "drivers", driverModels.Driver{}, logger)
+	
+	logger.Info("✅ Premium Auto-Migration Complete. System is now fully synced via Code.")
 }
 
 func ensureIAMSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {

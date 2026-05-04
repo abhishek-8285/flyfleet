@@ -34,8 +34,10 @@ func (r *DriverRepository) Create(ctx context.Context, driver *models.Driver) er
 			license_number, license_type, license_issue_date, license_expiry, license_authority,
 			date_of_birth, address, emergency_contact, status, employment_type, joining_date,
 			experience_years, rating, total_trips, total_distance_km,
-			total_hours_driven, behavior_score, metadata, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
+			total_hours_driven, behavior_score, 
+			last_medical_checkup_date, police_verification_date, police_verification_status, blood_group,
+			metadata, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)
 		RETURNING id, created_at, updated_at`
 
 	id := uuid.New().String()
@@ -62,7 +64,9 @@ func (r *DriverRepository) Create(ctx context.Context, driver *models.Driver) er
 		driver.LicenseNumber, driver.LicenseType, driver.LicenseIssueDate, driver.LicenseExpiry, driver.LicenseAuthority,
 		driver.DateOfBirth, addressJSON, emergencyContactJSON, driver.Status, driver.EmploymentType, driver.JoiningDate,
 		driver.ExperienceYears, driver.Rating, driver.TotalTrips, driver.TotalDistanceKm,
-		driver.TotalHoursDriven, driver.BehaviorScore, metadataJSON, now, now,
+		driver.TotalHoursDriven, driver.BehaviorScore, 
+		driver.LastMedicalCheckup, driver.PoliceVerificationDate, driver.PoliceVerificationStatus, driver.BloodGroup,
+		metadataJSON, now, now,
 	).Scan(&driver.ID, &driver.CreatedAt, &driver.UpdatedAt)
 	metrics.RecordDBQuery(query, time.Since(start))
 
@@ -75,7 +79,7 @@ func (r *DriverRepository) Create(ctx context.Context, driver *models.Driver) er
 
 // GetByEmail retrieves a driver by email address
 func (r *DriverRepository) GetByEmail(ctx context.Context, email string) (*models.Driver, error) {
-	query := `SELECT id, tenant_id, first_name, last_name, full_name, email, status, created_at
+	query := `SELECT id::text, tenant_id::text, COALESCE(first_name, '') as first_name, COALESCE(last_name, '') as last_name, COALESCE(full_name, '') as full_name, COALESCE(email, '') as email, COALESCE(status, 'active') as status, created_at
 	          FROM drivers WHERE email = $1 AND deleted_at IS NULL LIMIT 1`
 	var driver models.Driver
 	start := time.Now()
@@ -95,7 +99,7 @@ func (r *DriverRepository) GetByEmail(ctx context.Context, email string) (*model
 
 // GetByLicenseNumber retrieves a driver by license number
 func (r *DriverRepository) GetByLicenseNumber(ctx context.Context, licenseNumber string) (*models.Driver, error) {
-	query := `SELECT id, tenant_id, first_name, last_name, full_name, email, license_number, status, created_at
+	query := `SELECT id::text, tenant_id::text, COALESCE(first_name, '') as first_name, COALESCE(last_name, '') as last_name, COALESCE(full_name, '') as full_name, COALESCE(email, '') as email, COALESCE(license_number, '') as license_number, COALESCE(status, 'active') as status, created_at
 	          FROM drivers WHERE license_number = $1 AND deleted_at IS NULL LIMIT 1`
 	var driver models.Driver
 	start := time.Now()
@@ -116,13 +120,15 @@ func (r *DriverRepository) GetByLicenseNumber(ctx context.Context, licenseNumber
 // GetByID retrieves a driver by its ID
 func (r *DriverRepository) GetByID(ctx context.Context, id string) (*models.Driver, error) {
 	query := `
-		SELECT d.id, d.tenant_id, d.first_name, d.last_name, d.full_name, d.email, d.phone,
+		SELECT d.id::text, d.tenant_id::text, COALESCE(d.first_name, '') as first_name, COALESCE(d.last_name, '') as last_name, COALESCE(d.full_name, '') as full_name, COALESCE(d.email, '') as email, COALESCE(d.phone, '') as phone,
 		       d.employee_code, d.aadhaar_number, d.pan_number,
 		       COALESCE(d.license_number, '') as license_number, d.license_type, d.license_issue_date, d.license_expiry, d.license_authority,
 		       d.date_of_birth, d.address, d.emergency_contact, COALESCE(d.status, 'active') as status, d.employment_type, d.current_vehicle_id,
 		       d.current_trip_id, COALESCE(d.joining_date, '1970-01-01') as joining_date, d.resignation_date, COALESCE(d.experience_years, 0) as experience_years,
 		       COALESCE(d.rating, 5.0) as rating, COALESCE(d.total_trips, 0) as total_trips, COALESCE(d.total_distance_km, 0) as total_distance_km, COALESCE(d.total_hours_driven, 0) as total_hours_driven,
-		       COALESCE(d.behavior_score, 100) as behavior_score, d.documents, d.metadata, d.created_at, d.updated_at, d.deleted_at,
+		       COALESCE(d.behavior_score, 100) as behavior_score, d.documents, d.metadata, 
+		       d.last_medical_checkup_date, d.police_verification_date, COALESCE(d.police_verification_status, 'PENDING') as police_verification_status, COALESCE(d.blood_group, '') as blood_group,
+		       d.created_at, d.updated_at, d.deleted_at,
 		       v.registration_number as current_vehicle_registration
 		FROM drivers d
 		LEFT JOIN vehicles v ON d.current_vehicle_id::uuid = v.id
@@ -142,7 +148,9 @@ func (r *DriverRepository) GetByID(ctx context.Context, id string) (*models.Driv
 		&driver.CurrentVehicleID, &driver.CurrentTripID, &driver.JoiningDate, &driver.ResignationDate,
 		&driver.ExperienceYears, &driver.Rating, &driver.TotalTrips, &driver.TotalDistanceKm,
 		&driver.TotalHoursDriven, &driver.BehaviorScore, &documentsJSON,
-		&metadataJSON, &driver.CreatedAt, &driver.UpdatedAt, &driver.DeletedAt,
+		&metadataJSON, 
+		&driver.LastMedicalCheckup, &driver.PoliceVerificationDate, &driver.PoliceVerificationStatus, &driver.BloodGroup,
+		&driver.CreatedAt, &driver.UpdatedAt, &driver.DeletedAt,
 		&vehicleReg,
 	)
 	metrics.RecordDBQuery(query, time.Since(start))
@@ -423,9 +431,11 @@ func (r *DriverRepository) GetSchedules(ctx context.Context, driverID string) ([
 // List retrieves drivers with filtering and pagination
 func (r *DriverRepository) List(ctx context.Context, filter models.DriverListFilter) ([]*models.Driver, int, error) {
 	baseQuery := `
-		SELECT d.id, d.tenant_id, d.first_name, d.last_name, d.full_name, d.email, d.phone,
+		SELECT d.id::text, d.tenant_id::text, COALESCE(d.first_name, '') as first_name, COALESCE(d.last_name, '') as last_name, COALESCE(d.full_name, '') as full_name, COALESCE(d.email, '') as email, COALESCE(d.phone, '') as phone,
 		       COALESCE(d.license_number, '') as license_number, d.license_type, COALESCE(d.status, 'active') as status, d.current_vehicle_id,
-		       COALESCE(d.rating, 5.0) as rating, COALESCE(d.total_trips, 0) as total_trips, COALESCE(d.behavior_score, 100) as behavior_score, d.created_at, d.updated_at,
+		       COALESCE(d.rating, 5.0) as rating, COALESCE(d.total_trips, 0) as total_trips, COALESCE(d.behavior_score, 100) as behavior_score, 
+		       d.last_medical_checkup_date, d.police_verification_date, COALESCE(d.police_verification_status, 'PENDING') as police_verification_status, COALESCE(d.blood_group, '') as blood_group,
+		       d.created_at, d.updated_at,
 		       v.registration_number as current_vehicle_registration
 		FROM drivers d
 		LEFT JOIN vehicles v ON d.current_vehicle_id::uuid = v.id
@@ -527,7 +537,8 @@ func (r *DriverRepository) List(ctx context.Context, filter models.DriverListFil
 			&driver.ID, &driver.TenantID, &driver.FirstName, &driver.LastName, &driver.FullName,
 			&driver.Email, &driver.Phone, &driver.LicenseNumber, &driver.LicenseType,
 			&driver.Status, &driver.CurrentVehicleID, &driver.Rating, &driver.TotalTrips,
-			&driver.BehaviorScore, &driver.CreatedAt, &driver.UpdatedAt,
+			&driver.BehaviorScore, &driver.LastMedicalCheckup, &driver.PoliceVerificationDate, &driver.PoliceVerificationStatus, &driver.BloodGroup,
+			&driver.CreatedAt, &driver.UpdatedAt,
 			&vehicleReg,
 		)
 		if err != nil {
@@ -778,24 +789,24 @@ func (r *DriverRepository) AssignVehicle(ctx context.Context, driverID, vehicleI
 		return fmt.Errorf("failed to get driver tenant_id: %w", err)
 	}
 
-	// 1. Check if the driver already has a vehicle assigned
+	// 1. CLEANUP: If this driver already has a vehicle, clear that vehicle's record
 	var existingVehicleID *string
 	err = tx.QueryRow(ctx, `SELECT current_vehicle_id FROM drivers WHERE id = $1 AND tenant_id = $2`, driverID, tenantID).Scan(&existingVehicleID)
-	if err != nil {
-		return fmt.Errorf("failed to check driver assignment: %w", err)
-	}
-	if existingVehicleID != nil && *existingVehicleID != "" && *existingVehicleID != vehicleID {
-		return fmt.Errorf("driver is already assigned to another vehicle; please unmap first")
+	if err == nil && existingVehicleID != nil && *existingVehicleID != "" && *existingVehicleID != vehicleID {
+		_, err = tx.Exec(ctx, `UPDATE vehicles SET current_driver_id = NULL, updated_at = NOW() WHERE id = $1 AND tenant_id = $2`, *existingVehicleID, tenantID)
+		if err != nil {
+			return fmt.Errorf("failed to clear old vehicle link: %w", err)
+		}
 	}
 
-	// 2. Check if the vehicle already has a driver assigned
+	// 2. CLEANUP: If this vehicle already has a driver, clear that driver's record
 	var existingDriverID *string
 	err = tx.QueryRow(ctx, `SELECT current_driver_id FROM vehicles WHERE id = $1 AND tenant_id = $2`, vehicleID, tenantID).Scan(&existingDriverID)
-	if err != nil {
-		return fmt.Errorf("failed to check vehicle assignment: %w", err)
-	}
-	if existingDriverID != nil && *existingDriverID != "" && *existingDriverID != driverID {
-		return fmt.Errorf("vehicle is already assigned to another driver; please unmap first")
+	if err == nil && existingDriverID != nil && *existingDriverID != "" && *existingDriverID != driverID {
+		_, err = tx.Exec(ctx, `UPDATE drivers SET current_vehicle_id = NULL, updated_at = NOW() WHERE id = $1 AND tenant_id = $2`, *existingDriverID, tenantID)
+		if err != nil {
+			return fmt.Errorf("failed to clear old driver link: %w", err)
+		}
 	}
 
 	// 3. Update the primary driver record

@@ -282,12 +282,12 @@ const DynamicAdminLayout: React.FC = () => {
 function App() {
   return (
     <Provider store={store}>
-      <AuthProvider>
-        <RBACProvider>
-          <SessionTimeoutWarning
-            onLogout={() => (window.location.href = "/login")}
-          />
-          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AuthProvider>
+          <RBACProvider>
+            <SessionTimeoutWarning
+              onLogout={() => (window.location.href = "/login")}
+            />
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={

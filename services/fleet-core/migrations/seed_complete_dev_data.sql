@@ -10,9 +10,10 @@ BEGIN;
 -- ============================================================================
 -- 1. ORGANIZATION
 -- ============================================================================
-INSERT INTO tenants (id, name)
-VALUES ('550e8400-e29b-41d4-a716-446655440000', 'Delta Logistics Pvt Ltd')
-ON CONFLICT (id) DO NOTHING;
+    RAISE NOTICE 'Seeding Tenants...';
+    INSERT INTO tenants (id, name)
+    VALUES ('550e8400-e29b-41d4-a716-446655440000', 'Delta Logistics Pvt Ltd')
+    ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- 2. USERS (Defensive)
@@ -23,6 +24,7 @@ DECLARE
     t_id UUID := '550e8400-e29b-41d4-a716-446655440000';
     p_hash TEXT := '$2a$04$WOojoGDL.4DzIGNd3opDV.phzq0f8tFT8pEQXk2StJ7YvyGPDBahq';
 BEGIN
+    RAISE NOTICE 'Seeding Users...';
     -- Admin
     u_id := '550e8400-e29b-41d4-a716-446655440001';
     IF NOT EXISTS (SELECT 1 FROM users WHERE id = u_id) THEN
@@ -81,7 +83,7 @@ BEGIN
     v_has_hours := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'drivers' AND column_name = 'total_hours_driven');
     v_has_score := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'drivers' AND column_name = 'behavior_score');
 
-    -- Build column list
+    RAISE NOTICE 'Seeding Drivers...';
     v_cols := 'id, phone, email, license_number, license_expiry, license_authority, date_of_birth, address, emergency_contact, status, joining_date';
     IF v_has_tenant THEN v_cols := v_cols || ', tenant_id'; END IF;
     IF v_has_org THEN v_cols := v_cols || ', org_id'; END IF;
@@ -91,6 +93,13 @@ BEGIN
     IF v_has_dist THEN v_cols := v_cols || ', total_distance_km'; END IF;
     IF v_has_hours THEN v_cols := v_cols || ', total_hours_driven'; END IF;
     IF v_has_score THEN v_cols := v_cols || ', behavior_score'; END IF;
+    
+    -- Name columns detection for column list
+    IF v_has_full_name AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'drivers' AND column_name = 'full_name' AND is_generated = 'NEVER') THEN
+        v_cols := v_cols || ', full_name';
+    ELSIF v_has_first_name THEN
+        v_cols := v_cols || ', first_name, last_name';
+    END IF;
 
     -- Cleanup: Fix any existing records with NULL mandatory fields
     IF v_has_exp THEN EXECUTE 'UPDATE drivers SET experience_years = 0 WHERE experience_years IS NULL'; END IF;
@@ -181,6 +190,7 @@ DECLARE
     v_has_fuel BOOLEAN;
     v_has_ownership BOOLEAN;
 BEGIN
+    RAISE NOTICE 'Seeding Vehicles...';
     -- Detect columns
     v_has_model := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicles' AND column_name = 'model');
     v_has_make := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicles' AND column_name = 'make');
@@ -332,6 +342,7 @@ DECLARE
     v_speed_col TEXT;
     v_sql TEXT;
 BEGIN
+    RAISE NOTICE 'Seeding Telemetry...';
     -- Determine column names
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telemetry_points' AND column_name = 'recorded_at') THEN
         v_time_col := 'recorded_at';
@@ -412,11 +423,13 @@ DECLARE
     v_has_org BOOLEAN;
     v_has_tenant BOOLEAN;
     v_has_radius BOOLEAN;
+    v_has_radius_new BOOLEAN;
     v_has_enabled BOOLEAN;
     v_geo_cols TEXT;
     v_geo_sql TEXT;
     t_id UUID := '550e8400-e29b-41d4-a716-446655440000';
 BEGIN
+    RAISE NOTICE 'Seeding Geofences...';
     DELETE FROM geofences WHERE id IN ('550e8400-e29b-41d4-a716-446655440100', '550e8400-e29b-41d4-a716-446655440101', '550e8400-e29b-41d4-a716-446655440102', '550e8400-e29b-41d4-a716-446655440103');
     
     v_has_center_lat := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'geofences' AND column_name = 'center_lat');
@@ -424,6 +437,7 @@ BEGIN
     v_has_org := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'geofences' AND column_name = 'org_id');
     v_has_tenant := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'geofences' AND column_name = 'tenant_id');
     v_has_radius := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'geofences' AND column_name = 'radius_m');
+    v_has_radius_new := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'geofences' AND column_name = 'radius_meters');
     v_has_enabled := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'geofences' AND column_name = 'enabled');
 
     v_geo_cols := 'id, name, type';
@@ -432,6 +446,7 @@ BEGIN
     IF v_has_org THEN v_geo_cols := v_geo_cols || ', org_id'; END IF;
     IF v_has_tenant THEN v_geo_cols := v_geo_cols || ', tenant_id'; END IF;
     IF v_has_radius THEN v_geo_cols := v_geo_cols || ', radius_m'; END IF;
+    IF v_has_radius_new THEN v_geo_cols := v_geo_cols || ', radius_meters'; END IF;
     IF v_has_enabled THEN v_geo_cols := v_geo_cols || ', enabled'; END IF;
 
     -- Delhi Warehouse
@@ -441,6 +456,7 @@ BEGIN
     IF v_has_org THEN v_geo_sql := v_geo_sql || ', ''' || t_id || ''''; END IF;
     IF v_has_tenant THEN v_geo_sql := v_geo_sql || ', ''' || t_id || ''''; END IF;
     IF v_has_radius THEN v_geo_sql := v_geo_sql || ', 500'; END IF;
+    IF v_has_radius_new THEN v_geo_sql := v_geo_sql || ', 500'; END IF;
     IF v_has_enabled THEN v_geo_sql := v_geo_sql || ', true'; END IF;
     v_geo_sql := v_geo_sql || ') ON CONFLICT (id) DO NOTHING';
     EXECUTE v_geo_sql;
@@ -452,6 +468,7 @@ BEGIN
     IF v_has_org THEN v_geo_sql := v_geo_sql || ', ''' || t_id || ''''; END IF;
     IF v_has_tenant THEN v_geo_sql := v_geo_sql || ', ''' || t_id || ''''; END IF;
     IF v_has_radius THEN v_geo_sql := v_geo_sql || ', 300'; END IF;
+    IF v_has_radius_new THEN v_geo_sql := v_geo_sql || ', 300'; END IF;
     IF v_has_enabled THEN v_geo_sql := v_geo_sql || ', true'; END IF;
     v_geo_sql := v_geo_sql || ') ON CONFLICT (id) DO NOTHING';
     EXECUTE v_geo_sql;

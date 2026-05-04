@@ -4,6 +4,15 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- 0. Global Utilities
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
 -- 1. Create 'tenants' table if it doesn't exist
 CREATE TABLE IF NOT EXISTS tenants (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -14,6 +23,14 @@ CREATE TABLE IF NOT EXISTS tenants (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Ensure tax_id exists (Self-healing for pre-created tables)
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tenants' AND column_name = 'tax_id') THEN
+        ALTER TABLE tenants ADD COLUMN tax_id TEXT UNIQUE;
+    END IF;
+END $$;
 
 -- 2. Handle 'organizations' table/view conflict
 -- We use DO block to check if it's a table or view

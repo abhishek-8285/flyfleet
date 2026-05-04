@@ -22,6 +22,10 @@ type Driver struct {
 	LicenseIssueDate  *time.Time             `json:"license_issue_date" db:"license_issue_date" validate:"omitempty"`
 	LicenseAuthority  *string                `json:"license_authority" db:"license_authority" validate:"omitempty,max=100"`
 	DateOfBirth       *time.Time             `json:"date_of_birth" db:"date_of_birth" validate:"omitempty"`
+	LastMedicalCheckup *time.Time            `json:"medical_checkup_date" db:"last_medical_checkup_date"`
+	PoliceVerificationDate *time.Time        `json:"police_verification_date" db:"police_verification_date"`
+	PoliceVerificationStatus string          `json:"police_verification_status" db:"police_verification_status"`
+	BloodGroup        string                 `json:"blood_group" db:"blood_group"`
 	Address           Address                `json:"address" db:"address" validate:"required"`
 	EmergencyContact  EmergencyContact       `json:"emergency_contact" db:"emergency_contact" validate:"required"`
 	Status            string                 `json:"status" db:"status" validate:"required,oneof=active inactive suspended resigned"`
@@ -126,9 +130,13 @@ type CreateDriverRequest struct {
 	EmploymentType   string                 `json:"employment_type" validate:"required,oneof=FULL_TIME CONTRACT"`
 	Address          Address                `json:"address" validate:"required"`
 	EmergencyContact EmergencyContact       `json:"emergency_contact" validate:"required"`
-	ExperienceYears  int                    `json:"experience_years" validate:"gte=0,lte=50"`
-	JoiningDate      time.Time              `json:"joining_date" validate:"omitempty"`
-	Metadata         map[string]interface{} `json:"metadata"`
+	ExperienceYears          int                    `json:"experience_years" validate:"gte=0,lte=50"`
+	JoiningDate              time.Time              `json:"joining_date" validate:"omitempty"`
+	LastMedicalCheckup       *time.Time             `json:"last_medical_checkup_date" validate:"omitempty"`
+	PoliceVerificationDate   *time.Time             `json:"police_verification_date" validate:"omitempty"`
+	PoliceVerificationStatus *string                `json:"police_verification_status" validate:"omitempty,oneof=PENDING VERIFIED REJECTED"`
+	BloodGroup               *string                `json:"blood_group" validate:"omitempty"`
+	Metadata                 map[string]interface{} `json:"metadata"`
 }
 
 // UpdateDriverRequest represents the request body for updating a driver
@@ -150,6 +158,10 @@ type UpdateDriverRequest struct {
 	Address          *Address                `json:"address,omitempty" validate:"omitempty"`
 	EmergencyContact *EmergencyContact       `json:"emergency_contact,omitempty" validate:"omitempty"`
 	ExperienceYears  *int                    `json:"experience_years,omitempty" validate:"omitempty,gte=0,lte=50"`
+	LastMedicalCheckup *time.Time            `json:"medical_checkup_date,omitempty"`
+	PoliceVerificationDate *time.Time        `json:"police_verification_date,omitempty"`
+	PoliceVerificationStatus *string         `json:"police_verification_status,omitempty"`
+	BloodGroup        *string                `json:"blood_group,omitempty"`
 	Metadata         *map[string]interface{} `json:"metadata,omitempty"`
 }
 

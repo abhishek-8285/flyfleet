@@ -323,8 +323,29 @@ func (s *VehicleService) UpdateVehicle(ctx context.Context, id uuid.UUID, req *m
 	if (req.Odometer != nil) {
 		vehicle.Odometer = req.Odometer
 	}
-	if (req.CurrentDriverID != nil) {
-		vehicle.CurrentDriverID = req.CurrentDriverID
+	if req.CurrentDriverID != nil {
+		newDriverID := *req.CurrentDriverID
+		// Only act if the driver has actually changed
+		currentDriverID := uuid.Nil
+		if vehicle.CurrentDriverID != nil {
+			currentDriverID = *vehicle.CurrentDriverID
+		}
+
+		if newDriverID != currentDriverID {
+			if newDriverID == uuid.Nil {
+				// Explicit unassignment requested
+				if err := s.repo.UnassignDriver(ctx, vehicle.ID, vehicle.TenantID); err != nil {
+					return nil, fmt.Errorf("failed to clear driver assignment: %w", err)
+				}
+				vehicle.CurrentDriverID = nil
+			} else {
+				// New assignment or swap requested
+				if err := s.repo.AssignDriver(ctx, vehicle.ID, vehicle.TenantID, newDriverID); err != nil {
+					return nil, fmt.Errorf("failed to synchronize driver assignment: %w", err)
+				}
+				vehicle.CurrentDriverID = &newDriverID
+			}
+		}
 	}
 	if (req.ParentVehicleID != nil) {
 		vehicle.ParentVehicleID = req.ParentVehicleID

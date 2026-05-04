@@ -153,6 +153,10 @@ func (s *DriverService) Create(ctx context.Context, tenantID string, req *models
 		TotalDistanceKm:  0.0,
 		TotalHoursDriven: 0.0,
 		BehaviorScore:    100, // Start with perfect score
+		LastMedicalCheckup: req.LastMedicalCheckup,
+		PoliceVerificationDate: req.PoliceVerificationDate,
+		PoliceVerificationStatus: func() string { if req.PoliceVerificationStatus != nil { return *req.PoliceVerificationStatus }; return "PENDING" }(),
+		BloodGroup: func() string { if req.BloodGroup != nil { return *req.BloodGroup }; return "" }(),
 		Metadata:         req.Metadata,
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
@@ -257,6 +261,18 @@ func (s *DriverService) Update(ctx context.Context, id string, req *models.Updat
 	if req.EmploymentType != nil {
 		updates["employment_type"] = *req.EmploymentType
 	}
+	if req.LastMedicalCheckup != nil {
+		updates["last_medical_checkup_date"] = *req.LastMedicalCheckup
+	}
+	if req.PoliceVerificationDate != nil {
+		updates["police_verification_date"] = *req.PoliceVerificationDate
+	}
+	if req.PoliceVerificationStatus != nil {
+		updates["police_verification_status"] = *req.PoliceVerificationStatus
+	}
+	if req.BloodGroup != nil {
+		updates["blood_group"] = *req.BloodGroup
+	}
 	if req.Metadata != nil {
 		updates["metadata"] = *req.Metadata
 	}
@@ -321,10 +337,8 @@ func (s *DriverService) AssignVehicle(ctx context.Context, driverID, vehicleID s
 		return fmt.Errorf("driver is not active")
 	}
 
-	// Check if driver already has a vehicle assigned
-	if driver.CurrentVehicleID != nil {
-		return fmt.Errorf("driver already has a vehicle assigned")
-	}
+	// The repository now handles automatic unmapping of existing assignments
+	// to ensure 1-to-1 integrity within a single ACID transaction.
 
 	if err := s.repo.AssignVehicle(ctx, driverID, vehicleID); err != nil {
 		s.logger.Error("failed to assign vehicle to driver",

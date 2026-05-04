@@ -37,6 +37,8 @@ func (r *VehicleRepository) Create(ctx context.Context, vehicle *models.Vehicle)
 			parent_vehicle_id, branch_id, cost_center_id, status,
 			gps_device_id, gps_enabled, gps_device_type, immobilizer_enabled, ais140_compliant,
 			make, model, year, color, odometer, current_driver_id, speed_limit,
+			insurance, insurance_expiry_date, permit_number, permit_expiry_date, pollution_expiry_date,
+			fitness_expiry_date, tax_expiry_date, last_service_date, next_service_date, last_service_odometer, metadata,
 			created_at, updated_at, version
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7,
@@ -44,6 +46,7 @@ func (r *VehicleRepository) Create(ctx context.Context, vehicle *models.Vehicle)
 			$13, $14, $15, $16,
 			$17, $18, $19, $20, $21,
 			$22, $23, $24, $25, $26, $27, $28,
+			$29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39,
 			NOW(), NOW(), 1
 		) RETURNING id, created_at, updated_at, version`
 
@@ -56,6 +59,8 @@ func (r *VehicleRepository) Create(ctx context.Context, vehicle *models.Vehicle)
 		vehicle.ParentVehicleID, vehicle.BranchID, vehicle.CostCenterID, vehicle.Status,
 		vehicle.GPSDeviceID, vehicle.GPSEnabled, vehicle.GPSDeviceType, vehicle.ImmobilizerEnabled, vehicle.AIS140Compliant,
 		vehicle.Make, vehicle.Model, vehicle.Year, vehicle.Color, vehicle.Odometer, vehicle.CurrentDriverID, vehicle.SpeedLimit,
+		vehicle.Insurance, vehicle.InsuranceExpiry, vehicle.PermitNumber, vehicle.PermitExpiry, vehicle.PollutionExpiry,
+		vehicle.FitnessExpiry, vehicle.TaxExpiry, vehicle.LastServiceDate, vehicle.NextServiceDate, vehicle.LastServiceOdometer, vehicle.Metadata,
 	).Scan(&vehicle.ID, &vehicle.CreatedAt, &vehicle.UpdatedAt, &vehicle.Version)
 	metrics.RecordDBQuery(query, time.Since(start))
 	return err
@@ -63,15 +68,19 @@ func (r *VehicleRepository) Create(ctx context.Context, vehicle *models.Vehicle)
 
 func (r *VehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Vehicle, error) {
 	query := `
-		SELECT v.id, v.tenant_id, COALESCE(v.registration_number, '') as registration_number, COALESCE(v.license_plate, '') as license_plate, 
-		       COALESCE(v.chassis_number, '') as chassis_number, COALESCE(v.engine_number, '') as engine_number, COALESCE(v.vin_number, '') as vin_number,
-		       COALESCE(v.vehicle_type, 'TRUCK') as vehicle_type, COALESCE(v.capacity_tonnage, 0) as capacity_tonnage, 
-		       COALESCE(v.fuel_type, 'DIESEL') as fuel_type, COALESCE(v.fuel_tank_capacity, 0) as fuel_tank_capacity, 
+		SELECT v.id, v.tenant_id, COALESCE(v.registration_number, '') as registration_number, COALESCE(v.license_plate, '') as license_plate,
+		       v.chassis_number, v.engine_number, v.vin_number,
+		       COALESCE(v.vehicle_type, 'TRUCK') as vehicle_type, v.capacity_tonnage, 
+		       COALESCE(v.fuel_type, 'DIESEL') as fuel_type, v.fuel_tank_capacity, 
 		       COALESCE(v.ownership_type, 'OWNED') as ownership_type,
-		       v.parent_vehicle_id, v.branch_id, v.cost_center_id, COALESCE(v.status, 'active') as status,
+		       v.parent_vehicle_id, v.branch_id, v.cost_center_id, COALESCE(v.status, 'ACTIVE') as status,
 		       v.gps_device_id, COALESCE(v.gps_enabled, FALSE) as gps_enabled, v.gps_device_type, 
 		       COALESCE(v.immobilizer_enabled, FALSE) as immobilizer_enabled, COALESCE(v.ais140_compliant, FALSE) as ais140_compliant,
 		       v.make, v.model, v.year, v.color, v.odometer, v.current_driver_id, COALESCE(v.speed_limit, 0) as speed_limit,
+		       COALESCE(v.insurance, '') as insurance, v.insurance_expiry_date, COALESCE(v.permit_number, '') as permit_number,
+		       v.permit_expiry_date, v.pollution_expiry_date, v.fitness_expiry_date, v.tax_expiry_date,
+		       v.last_service_date, v.next_service_date, COALESCE(v.last_service_odometer, 0) as last_service_odometer,
+		       COALESCE(v.metadata, '{}') as metadata,
 		       v.created_at, v.updated_at, v.deleted_at, v.version,
 		       d.full_name as current_driver_name
 		FROM vehicles v
@@ -87,6 +96,8 @@ func (r *VehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.
 		&v.ParentVehicleID, &v.BranchID, &v.CostCenterID, &v.Status,
 		&v.GPSDeviceID, &v.GPSEnabled, &v.GPSDeviceType, &v.ImmobilizerEnabled, &v.AIS140Compliant,
 		&v.Make, &v.Model, &v.Year, &v.Color, &v.Odometer, &v.CurrentDriverID, &v.SpeedLimit,
+		&v.Insurance, &v.InsuranceExpiry, &v.PermitNumber, &v.PermitExpiry, &v.PollutionExpiry, &v.FitnessExpiry, &v.TaxExpiry,
+		&v.LastServiceDate, &v.NextServiceDate, &v.LastServiceOdometer, &v.Metadata,
 		&v.CreatedAt, &v.UpdatedAt, &v.DeletedAt, &v.Version,
 		&driverName,
 	)
@@ -121,14 +132,18 @@ func (r *VehicleRepository) GetByTenantID(ctx context.Context, tenantID uuid.UUI
 
 	query := `
 		SELECT v.id, v.tenant_id, COALESCE(v.registration_number, '') as registration_number, COALESCE(v.license_plate, '') as license_plate,
-		       COALESCE(v.chassis_number, '') as chassis_number, COALESCE(v.engine_number, '') as engine_number, COALESCE(v.vin_number, '') as vin_number,
-		       COALESCE(v.vehicle_type, 'TRUCK') as vehicle_type, COALESCE(v.capacity_tonnage, 0) as capacity_tonnage, 
-		       COALESCE(v.fuel_type, 'DIESEL') as fuel_type, COALESCE(v.fuel_tank_capacity, 0) as fuel_tank_capacity, 
+		       v.chassis_number, v.engine_number, v.vin_number,
+		       COALESCE(v.vehicle_type, 'TRUCK') as vehicle_type, v.capacity_tonnage, 
+		       COALESCE(v.fuel_type, 'DIESEL') as fuel_type, v.fuel_tank_capacity, 
 		       COALESCE(v.ownership_type, 'OWNED') as ownership_type,
-		       v.parent_vehicle_id, v.branch_id, v.cost_center_id, COALESCE(v.status, 'active') as status,
+		       v.parent_vehicle_id, v.branch_id, v.cost_center_id, COALESCE(v.status, 'ACTIVE') as status,
 		       v.gps_device_id, COALESCE(v.gps_enabled, FALSE) as gps_enabled, v.gps_device_type, 
 		       COALESCE(v.immobilizer_enabled, FALSE) as immobilizer_enabled, COALESCE(v.ais140_compliant, FALSE) as ais140_compliant,
 		       v.make, v.model, v.year, v.color, v.odometer, v.current_driver_id, COALESCE(v.speed_limit, 0) as speed_limit,
+		       COALESCE(v.insurance, '') as insurance, v.insurance_expiry_date, COALESCE(v.permit_number, '') as permit_number,
+		       v.permit_expiry_date, v.pollution_expiry_date, v.fitness_expiry_date, v.tax_expiry_date,
+		       v.last_service_date, v.next_service_date, COALESCE(v.last_service_odometer, 0) as last_service_odometer,
+		       COALESCE(v.metadata, '{}') as metadata,
 		       v.created_at, v.updated_at, v.deleted_at, v.version,
 		       d.full_name as current_driver_name
 		FROM vehicles v
@@ -154,6 +169,8 @@ func (r *VehicleRepository) GetByTenantID(ctx context.Context, tenantID uuid.UUI
 			&v.ParentVehicleID, &v.BranchID, &v.CostCenterID, &v.Status,
 			&v.GPSDeviceID, &v.GPSEnabled, &v.GPSDeviceType, &v.ImmobilizerEnabled, &v.AIS140Compliant,
 			&v.Make, &v.Model, &v.Year, &v.Color, &v.Odometer, &v.CurrentDriverID, &v.SpeedLimit,
+			&v.Insurance, &v.InsuranceExpiry, &v.PermitNumber, &v.PermitExpiry, &v.PollutionExpiry, &v.FitnessExpiry, &v.TaxExpiry,
+			&v.LastServiceDate, &v.NextServiceDate, &v.LastServiceOdometer, &v.Metadata,
 			&v.CreatedAt, &v.UpdatedAt, &v.DeletedAt, &v.Version,
 			&driverName,
 		); err != nil {
@@ -201,6 +218,17 @@ func (r *VehicleRepository) Update(ctx context.Context, vehicle *models.Vehicle)
 			odometer             = COALESCE($23, odometer),
 			current_driver_id    = COALESCE($24, current_driver_id),
 			speed_limit          = $25,
+			insurance            = COALESCE($29, insurance),
+			insurance_expiry_date = COALESCE($30, insurance_expiry_date),
+			permit_number        = COALESCE($31, permit_number),
+			permit_expiry_date   = COALESCE($32, permit_expiry_date),
+			pollution_expiry_date = COALESCE($33, pollution_expiry_date),
+			fitness_expiry_date   = COALESCE($34, fitness_expiry_date),
+			tax_expiry_date       = COALESCE($35, tax_expiry_date),
+			last_service_date    = COALESCE($36, last_service_date),
+			next_service_date    = COALESCE($37, next_service_date),
+			last_service_odometer = COALESCE($38, last_service_odometer),
+			metadata             = COALESCE($39, metadata),
 			updated_at           = NOW(),
 			version              = version + 1
 		WHERE id = $26 AND deleted_at IS NULL AND version = $27
@@ -215,6 +243,9 @@ func (r *VehicleRepository) Update(ctx context.Context, vehicle *models.Vehicle)
 		vehicle.ImmobilizerEnabled, vehicle.AIS140Compliant, vehicle.Make, vehicle.Model,
 		vehicle.Year, vehicle.Color, vehicle.Odometer, vehicle.CurrentDriverID,
 		vehicle.SpeedLimit, vehicle.ID, vehicle.Version, vehicle.LicensePlate,
+		vehicle.Insurance, vehicle.InsuranceExpiry, vehicle.PermitNumber, vehicle.PermitExpiry,
+		vehicle.PollutionExpiry, vehicle.FitnessExpiry, vehicle.TaxExpiry,
+		vehicle.LastServiceDate, vehicle.NextServiceDate, vehicle.LastServiceOdometer, vehicle.Metadata,
 	).Scan(&vehicle.UpdatedAt, &vehicle.Version)
 	metrics.RecordDBQuery(query, time.Since(start))
 
@@ -254,24 +285,24 @@ func (r *VehicleRepository) AssignDriver(ctx context.Context, vehicleID, tenantI
 	}
 	defer tx.Rollback(ctx)
 
-	// 1. Check if the vehicle already has a driver assigned
+	// 1. CLEANUP: If this vehicle already has a driver, clear that driver's record
 	var existingDriverID *uuid.UUID
 	err = tx.QueryRow(ctx, `SELECT current_driver_id FROM vehicles WHERE id = $1 AND tenant_id = $2`, vehicleID, tenantID).Scan(&existingDriverID)
-	if err != nil {
-		return fmt.Errorf("failed to check vehicle assignment: %w", err)
-	}
-	if existingDriverID != nil && *existingDriverID != uuid.Nil {
-		return fmt.Errorf("vehicle is already assigned; please unmap first")
+	if err == nil && existingDriverID != nil && *existingDriverID != uuid.Nil {
+		_, err = tx.Exec(ctx, `UPDATE drivers SET current_vehicle_id = NULL, updated_at = NOW() WHERE id = $1 AND tenant_id = $2`, existingDriverID.String(), tenantID.String())
+		if err != nil {
+			return fmt.Errorf("failed to clear old driver link: %w", err)
+		}
 	}
 
-	// 2. Check if the driver already has a vehicle assigned
+	// 2. CLEANUP: If this driver already has a vehicle, clear that vehicle's record
 	var existingVehicleID *string
 	err = tx.QueryRow(ctx, `SELECT current_vehicle_id FROM drivers WHERE id = $1 AND tenant_id = $2`, driverID.String(), tenantID.String()).Scan(&existingVehicleID)
-	if err != nil {
-		return fmt.Errorf("failed to check driver assignment: %w", err)
-	}
-	if existingVehicleID != nil && *existingVehicleID != "" {
-		return fmt.Errorf("driver is already assigned; please unmap first")
+	if err == nil && existingVehicleID != nil && *existingVehicleID != "" {
+		_, err = tx.Exec(ctx, `UPDATE vehicles SET current_driver_id = NULL, updated_at = NOW() WHERE id = $1 AND tenant_id = $2`, *existingVehicleID, tenantID)
+		if err != nil {
+			return fmt.Errorf("failed to clear old vehicle link: %w", err)
+		}
 	}
 
 	// 3. Update the primary vehicle record

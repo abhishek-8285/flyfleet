@@ -18,7 +18,7 @@ func NewTenantRepository(pool *pgxpool.Pool) *TenantRepository {
 
 func (r *TenantRepository) GetUserTenants(ctx context.Context, userID uuid.UUID) ([]models.TenantInfo, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT o.id, o.name, uo.role, ''::text,
+		SELECT o.id, COALESCE(o.name, ''), COALESCE(uo.role, 'viewer'), ''::text,
 			   COALESCE((SELECT COUNT(*) FROM vehicles v WHERE v.tenant_id = o.id), 0)
 		FROM user_tenants uo
 		JOIN tenants o ON o.id = uo.tenant_id
