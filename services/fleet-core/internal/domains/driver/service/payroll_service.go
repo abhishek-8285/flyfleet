@@ -6,14 +6,15 @@ import (
 	"time"
 
 	"github.com/flyfleet/fleet-core/internal/domains/driver/models"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 type PayrollRepo interface {
 	CreateSalaryConfig(ctx context.Context, config *models.SalaryConfig) error
 	CreateTripEarning(ctx context.Context, earning *models.TripEarning) error
-	GetSalaryConfig(ctx context.Context, driverID string) (*models.SalaryConfig, error)
-	GetTripEarnings(ctx context.Context, driverID string, start, end time.Time) ([]*models.TripEarning, error)
+	GetSalaryConfig(ctx context.Context, driverID uuid.UUID) (*models.SalaryConfig, error)
+	GetTripEarnings(ctx context.Context, driverID uuid.UUID, start, end time.Time) ([]*models.TripEarning, error)
 	CreatePayout(ctx context.Context, payout *models.Payout) error
 }
 
@@ -29,7 +30,7 @@ func NewPayrollService(repo PayrollRepo, logger *zap.Logger) *PayrollService {
 	}
 }
 
-func (s *PayrollService) CalculateTripEarnings(ctx context.Context, driverID string, tripID string, distanceKm float64) (*models.TripEarning, error) {
+func (s *PayrollService) CalculateTripEarnings(ctx context.Context, driverID uuid.UUID, tripID uuid.UUID, distanceKm float64) (*models.TripEarning, error) {
 	config, err := s.repo.GetSalaryConfig(ctx, driverID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get salary config: %w", err)
@@ -49,7 +50,7 @@ func (s *PayrollService) CalculateTripEarnings(ctx context.Context, driverID str
 	return earning, nil
 }
 
-func (s *PayrollService) GenerateMonthlyPayout(ctx context.Context, driverID string, year int, month time.Month) (*models.Payout, error) {
+func (s *PayrollService) GenerateMonthlyPayout(ctx context.Context, driverID uuid.UUID, year int, month time.Month) (*models.Payout, error) {
 	config, err := s.repo.GetSalaryConfig(ctx, driverID)
 	if err != nil {
 		return nil, err
@@ -83,6 +84,6 @@ func (s *PayrollService) GenerateMonthlyPayout(ctx context.Context, driverID str
 	return payout, nil
 }
 
-func (s *PayrollService) GetTripEarnings(ctx context.Context, driverID string, start, end time.Time) ([]*models.TripEarning, error) {
+func (s *PayrollService) GetTripEarnings(ctx context.Context, driverID uuid.UUID, start, end time.Time) ([]*models.TripEarning, error) {
 	return s.repo.GetTripEarnings(ctx, driverID, start, end)
 }

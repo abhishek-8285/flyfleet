@@ -18,37 +18,37 @@ import (
 type Repository interface {
 	// Driver Methods
 	Create(ctx context.Context, driver *models.Driver) error
-	GetByID(ctx context.Context, id string) (*models.Driver, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*models.Driver, error)
 	GetByEmail(ctx context.Context, email string) (*models.Driver, error)
 	GetByLicenseNumber(ctx context.Context, licenseNumber string) (*models.Driver, error)
 	List(ctx context.Context, filter models.DriverListFilter) ([]*models.Driver, int, error)
-	Update(ctx context.Context, id string, updates map[string]interface{}) error
-	Delete(ctx context.Context, id string) error
-	AssignVehicle(ctx context.Context, driverID, vehicleID string) error
-	UnassignVehicle(ctx context.Context, driverID string) error
-	UpdateBehaviorScore(ctx context.Context, driverID string, scoreChange int) error
-	IncrementStats(ctx context.Context, driverID string, distanceKm, hoursDriven float64) error
-	GetDriverAnalytics(ctx context.Context, driverID string) (*models.DriverAnalytics, error)
-	GetActiveDriversForVehicle(ctx context.Context, vehicleID string) ([]*models.Driver, error)
+	Update(ctx context.Context, id uuid.UUID, updates map[string]interface{}) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	AssignVehicle(ctx context.Context, driverID uuid.UUID, vehicleID uuid.UUID) error
+	UnassignVehicle(ctx context.Context, driverID uuid.UUID) error
+	UpdateBehaviorScore(ctx context.Context, driverID uuid.UUID, scoreChange int) error
+	IncrementStats(ctx context.Context, driverID uuid.UUID, distanceKm, hoursDriven float64) error
+	GetDriverAnalytics(ctx context.Context, driverID uuid.UUID) (*models.DriverAnalytics, error)
+	GetActiveDriversForVehicle(ctx context.Context, vehicleID uuid.UUID) ([]*models.Driver, error)
 
 	// Mobile App Methods
 	CreateDutyStatusLog(ctx context.Context, log *models.DutyStatusLog) error
-	GetLatestDutyStatus(ctx context.Context, driverID string) (*models.DutyStatusLog, error)
+	GetLatestDutyStatus(ctx context.Context, driverID uuid.UUID) (*models.DutyStatusLog, error)
 	CreateMessage(ctx context.Context, msg *models.DriverMessage) error
-	GetMessages(ctx context.Context, driverID string, limit, offset int) ([]*models.DriverMessage, error)
+	GetMessages(ctx context.Context, driverID uuid.UUID, limit, offset int) ([]*models.DriverMessage, error)
 	CreateExpense(ctx context.Context, expense *models.DriverExpense) error
-	ListExpenses(ctx context.Context, driverID string) ([]*models.DriverExpense, error)
+	ListExpenses(ctx context.Context, driverID uuid.UUID) ([]*models.DriverExpense, error)
 
 	// Behavior Scoring & Incident Methods
 	LogBehaviorScoreChange(ctx context.Context, driverID, tenantID uuid.UUID, oldScore, newScore int, reason, eventType string, userID uuid.UUID, userEmail string) error
 	CreateBehaviorScoreUpdate(ctx context.Context, update *models.BehaviorScoreUpdate) error
-	GetBehaviorRecords(ctx context.Context, driverID string, startDate, endDate time.Time) ([]*models.DriverBehavior, error)
-	GetBehaviorSummary(ctx context.Context, driverID string) (*models.DriverBehavior, error)
-	GetIncidents(ctx context.Context, driverID string, filter models.BehaviorReportRequest) ([]*models.DriverIncident, error)
+	GetBehaviorRecords(ctx context.Context, driverID uuid.UUID, startDate, endDate time.Time) ([]*models.DriverBehavior, error)
+	GetBehaviorSummary(ctx context.Context, driverID uuid.UUID) (*models.DriverBehavior, error)
+	GetIncidents(ctx context.Context, driverID uuid.UUID, filter models.BehaviorReportRequest) ([]*models.DriverIncident, error)
 
 	// Duty Status Methods
-	EndDutyStatusLog(ctx context.Context, logID string, durationMinutes int) error
-	GetDutyStatusLogs(ctx context.Context, driverID string, startDate, endDate time.Time) ([]*models.DutyStatusLog, error)
+	EndDutyStatusLog(ctx context.Context, logID uuid.UUID, durationMinutes int) error
+	GetDutyStatusLogs(ctx context.Context, driverID uuid.UUID, startDate, endDate time.Time) ([]*models.DutyStatusLog, error)
 
 	// Attendance & Schedule Methods
 	CreateAttendance(ctx context.Context, attendance *models.DriverAttendance) error
@@ -127,8 +127,8 @@ func (s *DriverService) Create(ctx context.Context, tenantID string, req *models
 	}
 
 	driver := &models.Driver{
-		ID:               uuid.New().String(),
-		TenantID:            tenantID,
+		ID:               uuid.New(),
+		TenantID:            uuid.MustParse(tenantID),
 		FirstName:        req.FirstName,
 		LastName:         req.LastName,
 		Email:            req.Email,
@@ -167,16 +167,16 @@ func (s *DriverService) Create(ctx context.Context, tenantID string, req *models
 		return nil, fmt.Errorf("failed to create driver: %w", err)
 	}
 
-	s.logger.Info("driver created", zap.String("driver_id", driver.ID))
+	s.logger.Info("driver created", zap.String("driver_id", driver.ID.String()))
 	s.publishEvent("driver.created", driver)
 	return driver, nil
 }
 
 // GetByID retrieves a driver by ID
-func (s *DriverService) GetByID(ctx context.Context, id string) (*models.Driver, error) {
+func (s *DriverService) GetByID(ctx context.Context, id uuid.UUID) (*models.Driver, error) {
 	driver, err := s.repo.GetByID(ctx, id)
 	if err != nil {
-		s.logger.Error("failed to get driver", zap.String("driver_id", id), zap.Error(err))
+		s.logger.Error("failed to get driver", zap.String("driver_id", id.String()), zap.Error(err))
 		return nil, fmt.Errorf("driver not found: %w", err)
 	}
 	return driver, nil
@@ -193,7 +193,7 @@ func (s *DriverService) List(ctx context.Context, filter models.DriverListFilter
 }
 
 // Update modifies an existing driver
-func (s *DriverService) Update(ctx context.Context, id string, req *models.UpdateDriverRequest) (*models.Driver, error) {
+func (s *DriverService) Update(ctx context.Context, id uuid.UUID, req *models.UpdateDriverRequest) (*models.Driver, error) {
 	// Validate that driver exists
 	driver, err := s.GetByID(ctx, id)
 	if err != nil {
@@ -281,7 +281,7 @@ func (s *DriverService) Update(ctx context.Context, id string, req *models.Updat
 		updates["updated_at"] = time.Now()
 
 		if err := s.repo.Update(ctx, id, updates); err != nil {
-			s.logger.Error("failed to update driver", zap.String("driver_id", id), zap.Error(err))
+			s.logger.Error("failed to update driver", zap.String("driver_id", id.String()), zap.Error(err))
 			return nil, fmt.Errorf("failed to update driver: %w", err)
 		}
 	}
@@ -300,7 +300,7 @@ func (s *DriverService) Update(ctx context.Context, id string, req *models.Updat
 }
 
 // Delete performs soft delete of a driver
-func (s *DriverService) Delete(ctx context.Context, id string) error {
+func (s *DriverService) Delete(ctx context.Context, id uuid.UUID) error {
 	// Check if driver has active assignments
 	driver, err := s.GetByID(ctx, id)
 	if err != nil {
@@ -316,17 +316,17 @@ func (s *DriverService) Delete(ctx context.Context, id string) error {
 	}
 
 	if err := s.repo.Delete(ctx, id); err != nil {
-		s.logger.Error("failed to delete driver", zap.String("driver_id", id), zap.Error(err))
+		s.logger.Error("failed to delete driver", zap.String("driver_id", id.String()), zap.Error(err))
 		return fmt.Errorf("failed to delete driver: %w", err)
 	}
 
-	s.logger.Info("driver deleted", zap.String("driver_id", id))
-	s.publishEvent("drivers.deleted", map[string]string{"driver_id": id})
+	s.logger.Info("driver deleted", zap.String("driver_id", id.String()))
+	s.publishEvent("drivers.deleted", map[string]string{"driver_id": id.String()})
 	return nil
 }
 
 // AssignVehicle assigns a vehicle to a driver
-func (s *DriverService) AssignVehicle(ctx context.Context, driverID, vehicleID string) error {
+func (s *DriverService) AssignVehicle(ctx context.Context, driverID uuid.UUID, vehicleID uuid.UUID) error {
 	// Check if driver exists and is active
 	driver, err := s.GetByID(ctx, driverID)
 	if err != nil {
@@ -342,20 +342,20 @@ func (s *DriverService) AssignVehicle(ctx context.Context, driverID, vehicleID s
 
 	if err := s.repo.AssignVehicle(ctx, driverID, vehicleID); err != nil {
 		s.logger.Error("failed to assign vehicle to driver",
-			zap.String("driver_id", driverID),
-			zap.String("vehicle_id", vehicleID),
+			zap.String("driver_id", driverID.String()),
+			zap.Stringer("vehicle_id", vehicleID),
 			zap.Error(err))
 		return fmt.Errorf("failed to assign vehicle: %w", err)
 	}
 
 	s.logger.Info("vehicle assigned to driver",
-		zap.String("driver_id", driverID),
-		zap.String("vehicle_id", vehicleID))
+		zap.String("driver_id", driverID.String()),
+		zap.Stringer("vehicle_id", vehicleID))
 	return nil
 }
 
 // UnassignVehicle removes vehicle assignment from a driver
-func (s *DriverService) UnassignVehicle(ctx context.Context, driverID string) error {
+func (s *DriverService) UnassignVehicle(ctx context.Context, driverID uuid.UUID) error {
 	// Check if driver exists
 	driver, err := s.GetByID(ctx, driverID)
 	if err != nil {
@@ -369,17 +369,17 @@ func (s *DriverService) UnassignVehicle(ctx context.Context, driverID string) er
 
 	if err := s.repo.UnassignVehicle(ctx, driverID); err != nil {
 		s.logger.Error("failed to unassign vehicle from driver",
-			zap.String("driver_id", driverID),
+			zap.String("driver_id", driverID.String()),
 			zap.Error(err))
 		return fmt.Errorf("failed to unassign vehicle: %w", err)
 	}
 
-	s.logger.Info("vehicle unassigned from driver", zap.String("driver_id", driverID))
+	s.logger.Info("vehicle unassigned from driver", zap.String("driver_id", driverID.String()))
 	return nil
 }
 
 // UpdateStatus updates driver status
-func (s *DriverService) UpdateStatus(ctx context.Context, driverID string, status string) error {
+func (s *DriverService) UpdateStatus(ctx context.Context, driverID uuid.UUID, status string) error {
 	validStatuses := map[string]bool{
 		"active": true, "inactive": true, "suspended": true, "resigned": true,
 	}
@@ -411,20 +411,20 @@ func (s *DriverService) UpdateStatus(ctx context.Context, driverID string, statu
 
 	if err := s.repo.Update(ctx, driverID, updates); err != nil {
 		s.logger.Error("failed to update driver status",
-			zap.String("driver_id", driverID),
+			zap.String("driver_id", driverID.String()),
 			zap.String("status", status),
 			zap.Error(err))
 		return fmt.Errorf("failed to update driver status: %w", err)
 	}
 
 	s.logger.Info("driver status updated",
-		zap.String("driver_id", driverID),
+		zap.String("driver_id", driverID.String()),
 		zap.String("status", status))
 	return nil
 }
 
 // UpdateBehaviorScore updates driver's behavior score
-func (s *DriverService) UpdateBehaviorScore(ctx context.Context, driverID string, scoreChange int, reason string) error {
+func (s *DriverService) UpdateBehaviorScore(ctx context.Context, driverID uuid.UUID, scoreChange int, reason string) error {
 	// Validate score change range
 	if scoreChange < -20 || scoreChange > 20 {
 		return fmt.Errorf("score change must be between -20 and 20")
@@ -449,7 +449,7 @@ func (s *DriverService) UpdateBehaviorScore(ctx context.Context, driverID string
 
 	if err := s.repo.UpdateBehaviorScore(ctx, driverID, scoreChangeActual); err != nil {
 		s.logger.Error("failed to update behavior score",
-			zap.String("driver_id", driverID),
+			zap.String("driver_id", driverID.String()),
 			zap.Int("score_change", scoreChange),
 			zap.String("reason", reason),
 			zap.Error(err))
@@ -457,14 +457,14 @@ func (s *DriverService) UpdateBehaviorScore(ctx context.Context, driverID string
 	}
 
 	s.logger.Info("driver behavior score updated",
-		zap.String("driver_id", driverID),
+		zap.String("driver_id", driverID.String()),
 		zap.Int("old_score", driver.BehaviorScore),
 		zap.Int("new_score", newScore),
 		zap.Int("score_change", scoreChangeActual),
 		zap.String("reason", reason))
 
 	s.publishEvent("driver.behavior_updated", map[string]interface{}{
-		"driver_id":    driverID,
+		"driver_id":    driverID.String(),
 		"old_score":    driver.BehaviorScore,
 		"new_score":    newScore,
 		"score_change": scoreChangeActual,
@@ -476,7 +476,7 @@ func (s *DriverService) UpdateBehaviorScore(ctx context.Context, driverID string
 }
 
 // GetBehaviorScore retrieves driver's current behavior score
-func (s *DriverService) GetBehaviorScore(ctx context.Context, driverID string) (int, error) {
+func (s *DriverService) GetBehaviorScore(ctx context.Context, driverID uuid.UUID) (int, error) {
 	driver, err := s.GetByID(ctx, driverID)
 	if err != nil {
 		return 0, err
@@ -485,11 +485,11 @@ func (s *DriverService) GetBehaviorScore(ctx context.Context, driverID string) (
 }
 
 // GetDriverAnalytics retrieves driver analytics
-func (s *DriverService) GetDriverAnalytics(ctx context.Context, driverID string) (*models.DriverAnalytics, error) {
+func (s *DriverService) GetDriverAnalytics(ctx context.Context, driverID uuid.UUID) (*models.DriverAnalytics, error) {
 	analytics, err := s.repo.GetDriverAnalytics(ctx, driverID)
 	if err != nil {
 		s.logger.Error("failed to get driver analytics",
-			zap.String("driver_id", driverID),
+			zap.String("driver_id", driverID.String()),
 			zap.Error(err))
 		return nil, fmt.Errorf("failed to get driver analytics: %w", err)
 	}
@@ -497,10 +497,10 @@ func (s *DriverService) GetDriverAnalytics(ctx context.Context, driverID string)
 }
 
 // IncrementDriverStats increments driver statistics after trip completion
-func (s *DriverService) IncrementDriverStats(ctx context.Context, driverID string, distanceKm, hoursDriven float64) error {
+func (s *DriverService) IncrementDriverStats(ctx context.Context, driverID uuid.UUID, distanceKm, hoursDriven float64) error {
 	if err := s.repo.IncrementStats(ctx, driverID, distanceKm, hoursDriven); err != nil {
 		s.logger.Error("failed to increment driver stats",
-			zap.String("driver_id", driverID),
+			zap.String("driver_id", driverID.String()),
 			zap.Float64("distance_km", distanceKm),
 			zap.Float64("hours_driven", hoursDriven),
 			zap.Error(err))
@@ -522,7 +522,7 @@ func (s *DriverService) GetByLicenseNumber(ctx context.Context, licenseNumber st
 }
 
 // GetActiveDriversForVehicle retrieves active drivers for a vehicle
-func (s *DriverService) GetActiveDriversForVehicle(ctx context.Context, vehicleID string) ([]*models.Driver, error) {
+func (s *DriverService) GetActiveDriversForVehicle(ctx context.Context, vehicleID uuid.UUID) ([]*models.Driver, error) {
 	return s.repo.GetActiveDriversForVehicle(ctx, vehicleID)
 }
 
@@ -540,7 +540,7 @@ func (s *DriverService) GetActiveDriversDutyHours(ctx context.Context) ([]models
 }
 
 // GetDriverPerformanceSummary retrieves a comprehensive performance summary for a driver
-func (s *DriverService) GetDriverPerformanceSummary(ctx context.Context, driverID, tenantID string) (map[string]interface{}, error) {
+func (s *DriverService) GetDriverPerformanceSummary(ctx context.Context, driverID uuid.UUID, tenantID uuid.UUID) (map[string]interface{}, error) {
 	driver, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
 		return nil, err
@@ -552,9 +552,9 @@ func (s *DriverService) GetDriverPerformanceSummary(ctx context.Context, driverI
 	// Enforce organization isolation
 	if driver.TenantID != tenantID {
 		s.logger.Warn("unauthorized access attempt to driver performance summary",
-			zap.String("requested_driver", driverID),
-			zap.String("authorized_org", driver.TenantID),
-			zap.String("requested_org", tenantID))
+			zap.String("requested_driver", driverID.String()),
+			zap.String("authorized_org", driver.TenantID.String()),
+			zap.String("requested_org", tenantID.String()))
 		return nil, fmt.Errorf("unauthorized access to driver data")
 	}
 
@@ -604,18 +604,18 @@ func (s *DriverService) GetDriverPerformanceSummary(ctx context.Context, driverI
 // MarkAttendance marks attendance for a driver
 func (s *DriverService) MarkAttendance(ctx context.Context, driverID, tenantID uuid.UUID, date time.Time, status string, checkIn, checkOut *time.Time, remarks string) error {
 	// Verify driver belongs to org
-	driver, err := s.repo.GetByID(ctx, driverID.String())
+	driver, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
 		return fmt.Errorf("failed to verify driver: %w", err)
 	}
-	if driver == nil || driver.TenantID != tenantID.String() {
+	if driver == nil || driver.TenantID != tenantID {
 		return fmt.Errorf("driver not found or unauthorized")
 	}
 
 	att := &models.DriverAttendance{
 		ID:             uuid.New(),
 		DriverID:       driverID,
-		TenantID:          tenantID.String(),
+		TenantID:          tenantID,
 		AttendanceDate: date,
 		Status:         status,
 		CheckInTime:    checkIn,
@@ -643,11 +643,11 @@ func (s *DriverService) MarkAttendance(ctx context.Context, driverID, tenantID u
 // GetAttendance retrieves attendance records for a driver
 func (s *DriverService) GetAttendance(ctx context.Context, driverID, tenantID uuid.UUID, from, to time.Time) ([]*models.DriverAttendance, error) {
 	// Verify driver belongs to org
-	driver, err := s.repo.GetByID(ctx, driverID.String())
+	driver, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify driver: %w", err)
 	}
-	if driver == nil || driver.TenantID != tenantID.String() {
+	if driver == nil || driver.TenantID != tenantID {
 		return nil, fmt.Errorf("driver not found or unauthorized")
 	}
 
@@ -662,11 +662,11 @@ func (s *DriverService) GetAttendance(ctx context.Context, driverID, tenantID uu
 // SetSchedule sets or updates a driver's weekly schedule
 func (s *DriverService) SetSchedule(ctx context.Context, driverID, tenantID uuid.UUID, dayOfWeek int, startTime, endTime string, isWorking bool) error {
 	// Verify driver belongs to org
-	driver, err := s.repo.GetByID(ctx, driverID.String())
+	driver, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
 		return fmt.Errorf("failed to verify driver: %w", err)
 	}
-	if driver == nil || driver.TenantID != tenantID.String() {
+	if driver == nil || driver.TenantID != tenantID {
 		return fmt.Errorf("driver not found or unauthorized")
 	}
 
@@ -697,7 +697,7 @@ func (s *DriverService) SetSchedule(ctx context.Context, driverID, tenantID uuid
 	sch := &models.DriverSchedule{
 		ID:        uuid.New(),
 		DriverID:  driverID,
-		TenantID:     tenantID.String(),
+		TenantID:     tenantID,
 		DayOfWeek: dayOfWeek,
 		StartTime: startTime,
 		EndTime:   endTime,
@@ -726,11 +726,11 @@ func (s *DriverService) SetSchedule(ctx context.Context, driverID, tenantID uuid
 // GetSchedule retrieves all schedules for a driver
 func (s *DriverService) GetSchedule(ctx context.Context, driverID, tenantID uuid.UUID) ([]*models.DriverSchedule, error) {
 	// Verify driver belongs to org
-	driver, err := s.repo.GetByID(ctx, driverID.String())
+	driver, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify driver: %w", err)
 	}
-	if driver == nil || driver.TenantID != tenantID.String() {
+	if driver == nil || driver.TenantID != tenantID {
 		return nil, fmt.Errorf("driver not found or unauthorized")
 	}
 
@@ -745,11 +745,11 @@ func (s *DriverService) GetSchedule(ctx context.Context, driverID, tenantID uuid
 // DeleteSchedule deletes a driver's schedule entry
 func (s *DriverService) DeleteSchedule(ctx context.Context, driverID, tenantID, scheduleID uuid.UUID) error {
 	// Verify driver belongs to org
-	driver, err := s.repo.GetByID(ctx, driverID.String())
+	driver, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
 		return fmt.Errorf("failed to verify driver: %w", err)
 	}
-	if driver == nil || driver.TenantID != tenantID.String() {
+	if driver == nil || driver.TenantID != tenantID {
 		return fmt.Errorf("driver not found or unauthorized")
 	}
 

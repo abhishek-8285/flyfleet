@@ -25,8 +25,8 @@ func (r *MobileSyncRepository) QueueItem(ctx context.Context, item *models.Mobil
 			id, driver_id, action_type, payload, status, created_at
 		) VALUES ($1, $2, $3, $4, $5, $6)`
 
-	if item.ID == "" {
-		item.ID = uuid.New().String()
+	if item.ID == uuid.Nil {
+		item.ID = uuid.New()
 	}
 	if item.CreatedAt.IsZero() {
 		item.CreatedAt = time.Now()
@@ -42,7 +42,7 @@ func (r *MobileSyncRepository) QueueItem(ctx context.Context, item *models.Mobil
 	return err
 }
 
-func (r *MobileSyncRepository) GetPendingItems(ctx context.Context, driverID string) ([]*models.MobileSyncItem, error) {
+func (r *MobileSyncRepository) GetPendingItems(ctx context.Context, driverID uuid.UUID) ([]*models.MobileSyncItem, error) {
 	query := `
 		SELECT id, driver_id, action_type, payload, status, created_at
 		FROM driver_mobile_sync_queue
@@ -71,7 +71,7 @@ func (r *MobileSyncRepository) GetPendingItems(ctx context.Context, driverID str
 	return items, nil
 }
 
-func (r *MobileSyncRepository) UpdateItemStatus(ctx context.Context, itemID string, status string) error {
+func (r *MobileSyncRepository) UpdateItemStatus(ctx context.Context, itemID uuid.UUID, status string) error {
 	query := `UPDATE driver_mobile_sync_queue SET status = $2 WHERE id = $1`
 	start := time.Now()
 	_, err := r.db.Exec(ctx, query, itemID, status)

@@ -70,7 +70,7 @@ func (s *DutyStatusService) UpdateDutyStatus(ctx context.Context, driverID, tena
 	}
 
 	// Get driver's latest duty status
-	latestLog, err := s.repo.GetLatestDutyStatus(ctx, driverID.String())
+	latestLog, err := s.repo.GetLatestDutyStatus(ctx, driverID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get latest duty status: %w", err)
 	}
@@ -87,11 +87,11 @@ func (s *DutyStatusService) UpdateDutyStatus(ctx context.Context, driverID, tena
 			// Ideally, this is determined by org config.
 			isIndiaRule := true // Defaulting to India as per project focus
 			if isIndiaRule {
-				if err := s.checkIndiaDrivingEligibility(ctx, driverID.String()); err != nil {
+				if err := s.checkIndiaDrivingEligibility(ctx, driverID); err != nil {
 					return nil, err
 				}
 			} else {
-				if err := s.checkDrivingEligibility(ctx, driverID.String()); err != nil {
+				if err := s.checkDrivingEligibility(ctx, driverID); err != nil {
 					return nil, err
 				}
 			}
@@ -100,8 +100,8 @@ func (s *DutyStatusService) UpdateDutyStatus(ctx context.Context, driverID, tena
 
 	// Create new duty status log
 	log := &models.DutyStatusLog{
-		ID:        uuid.New().String(),
-		DriverID:  driverID.String(),
+		ID:        uuid.New(),
+		DriverID:  driverID,
 		Status:    newStatus,
 		Location:  location,
 		StartedAt: time.Now(),
@@ -150,7 +150,7 @@ func (s *DutyStatusService) validateStatusTransition(fromStatus, toStatus string
 }
 
 // checkDrivingEligibility checks if driver is eligible to drive per FMCSA rules
-func (s *DutyStatusService) checkDrivingEligibility(ctx context.Context, driverID string) error {
+func (s *DutyStatusService) checkDrivingEligibility(ctx context.Context, driverID uuid.UUID) error {
 	// Get driver's duty logs for current duty day
 	now := time.Now()
 	dutyDayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
@@ -208,7 +208,7 @@ func (s *DutyStatusService) checkDrivingEligibility(ctx context.Context, driverI
 }
 
 // getLastBreakTime gets the time of driver's last qualifying break
-func (s *DutyStatusService) getLastBreakTime(ctx context.Context, driverID string) (time.Time, error) {
+func (s *DutyStatusService) getLastBreakTime(ctx context.Context, driverID uuid.UUID) (time.Time, error) {
 	// Get recent duty logs
 	now := time.Now()
 	since := now.Add(-24 * time.Hour)
@@ -233,7 +233,7 @@ func (s *DutyStatusService) getLastBreakTime(ctx context.Context, driverID strin
 }
 
 // GetDriverHOSStatus gets driver's current Hours of Service status
-func (s *DutyStatusService) GetDriverHOSStatus(ctx context.Context, driverID string) (*HOSStatus, error) {
+func (s *DutyStatusService) GetDriverHOSStatus(ctx context.Context, driverID uuid.UUID) (*HOSStatus, error) {
 	now := time.Now()
 	dutyDayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	weekStart := dutyDayStart.AddDate(0, 0, -7)
@@ -296,7 +296,7 @@ func (s *DutyStatusService) GetDriverHOSStatus(ctx context.Context, driverID str
 
 // HOSStatus represents driver's Hours of Service status
 type HOSStatus struct {
-	DriverID                  string    `json:"driver_id"`
+	DriverID                  uuid.UUID `json:"driver_id"`
 	AsOf                      time.Time `json:"as_of"`
 	DrivingHoursToday         float64   `json:"driving_hours_today"`
 	DrivingHoursRemaining     float64   `json:"driving_hours_remaining"`
@@ -308,12 +308,12 @@ type HOSStatus struct {
 }
 
 // GetDutyStatusHistory retrieves driver's duty status history
-func (s *DutyStatusService) GetDutyStatusHistory(ctx context.Context, driverID string, startDate, endDate time.Time) ([]*models.DutyStatusLog, error) {
+func (s *DutyStatusService) GetDutyStatusHistory(ctx context.Context, driverID uuid.UUID, startDate, endDate time.Time) ([]*models.DutyStatusLog, error) {
 	return s.repo.GetDutyStatusLogs(ctx, driverID, startDate, endDate)
 }
 
 // GenerateDailyHOSReport generates a daily HOS report for a driver
-func (s *DutyStatusService) GenerateDailyHOSReport(ctx context.Context, driverID string, date time.Time) (*HOSReport, error) {
+func (s *DutyStatusService) GenerateDailyHOSReport(ctx context.Context, driverID uuid.UUID, date time.Time) (*HOSReport, error) {
 	dayStart := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
 	dayEnd := dayStart.Add(24 * time.Hour)
 
@@ -360,7 +360,7 @@ func (s *DutyStatusService) GenerateDailyHOSReport(ctx context.Context, driverID
 
 // HOSReport represents a daily HOS report
 type HOSReport struct {
-	DriverID               string                  `json:"driver_id"`
+	DriverID               uuid.UUID               `json:"driver_id"`
 	Date                   time.Time               `json:"date"`
 	Logs                   []*models.DutyStatusLog `json:"logs"`
 	TotalDrivingHours      float64                 `json:"total_driving_hours"`
@@ -371,7 +371,7 @@ type HOSReport struct {
 }
 
 // checkIndiaDrivingEligibility checks if driver is eligible to drive per Indian MTW Act rules
-func (s *DutyStatusService) checkIndiaDrivingEligibility(ctx context.Context, driverID string) error {
+func (s *DutyStatusService) checkIndiaDrivingEligibility(ctx context.Context, driverID uuid.UUID) error {
 	now := time.Now()
 	dutyDayStart := time.Now().Add(-24 * time.Hour)
 

@@ -44,10 +44,11 @@ BEGIN
         END IF;
     END IF;
 
-    -- Map to organization_users if it exists
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'organization_users') THEN
-        INSERT INTO organization_users (tenant_id, email, role, status)
-        VALUES (t_id, 'admin@delta.io', 'ADMIN', 'ACTIVE')
+    -- Map to user_tenants if it exists
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_tenants') THEN
+        -- We will just insert the user_id, tenant_id, and role
+        INSERT INTO user_tenants (user_id, tenant_id, role)
+        VALUES (u_id, t_id, 'ADMIN')
         ON CONFLICT DO NOTHING;
     END IF;
 END $$;

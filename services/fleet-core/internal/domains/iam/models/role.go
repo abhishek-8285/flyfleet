@@ -7,15 +7,15 @@ import (
 )
 
 type Role struct {
-	ID             uuid.UUID `json:"id"`
-	TenantID          uuid.UUID `json:"tenant_id"`
-	Name           string    `json:"name"`
-	Description    string    `json:"description"`
-	IsSystem       bool      `json:"is_system"`
-	PermissionMask int64     `json:"permission_mask"`
-	CreatedBy      uuid.UUID `json:"created_by"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	ID             uuid.UUID `json:"id" db:"id"`
+	TenantID       uuid.UUID `json:"tenant_id" db:"tenant_id" index:"true" references:"tenants"`
+	Name           string    `json:"name" db:"name"`
+	Description    string    `json:"description" db:"description"`
+	IsSystem       bool      `json:"is_system" db:"is_system"`
+	PermissionMask int64     `json:"permission_mask" db:"permission_mask"`
+	CreatedBy      uuid.UUID `json:"created_by" db:"created_by"`
+	CreatedAt      time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at" db:"updated_at"`
 }
 
 type Permission struct {

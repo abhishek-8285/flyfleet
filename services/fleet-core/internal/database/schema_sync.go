@@ -3,6 +3,8 @@ package database
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -146,4 +148,60 @@ func getPostgresType(t reflect.Type) string {
 	default:
 		return "TEXT"
 	}
+}
+
+// SeedData reads the dev seed SQL file and executes it if the database is fresh.
+func SeedData(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) error {
+	logger.Info("🌱 Checking for Seed Data requirements...")
+
+	// Defensive check: only seed if 'admin@delta.io' is missing
+	var exists bool
+	err := pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM users WHERE email = 'admin@delta.io')").Scan(&exists)
+	if err != nil {
+		logger.Error("Failed to check admin user existence for seeding", zap.Error(err))
+		return err
+	}
+	
+	if exists {
+		logger.Info("✅ Admin user already exists. Skipping auto-seed.")
+		return nil
+	}
+
+	logger.Info("🚀 Fresh database detected. Executing Hyper-Defensive Seed Script...")
+
+	// Try multiple possible paths for the seed file
+	paths := []string{
+		"seeds/seed_complete_dev_data.sql",
+		"services/fleet-core/seeds/seed_complete_dev_data.sql",
+		"../seeds/seed_complete_dev_data.sql",
+	}
+
+	var content []byte
+	var finalPath string
+	for _, p := range paths {
+		absPath, _ := filepath.Abs(p)
+		data, err := os.ReadFile(p)
+		if err == nil {
+			content = data
+			finalPath = absPath
+			break
+		}
+	}
+
+	if content == nil {
+		logger.Warn("⚠️ Seed file not found in any standard locations. Skipping seeding.")
+		return nil
+	}
+
+	logger.Info("Found seed file", zap.String("path", finalPath))
+
+	// Execute the full script
+	_, err = pool.Exec(ctx, string(content))
+	if err != nil {
+		logger.Error("❌ Critical Failure during database seeding", zap.Error(err))
+		return err
+	}
+
+	logger.Info("✨ Database successfully seeded with Premium Dev Data.")
+	return nil
 }

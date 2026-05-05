@@ -19,7 +19,7 @@ func (r *DriverRepository) CreateMessage(ctx context.Context, msg *models.Driver
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id, created_at`
 
-	id := uuid.New().String()
+	id := uuid.New()
 	now := time.Now()
 
 	start := time.Now()
@@ -33,7 +33,7 @@ func (r *DriverRepository) CreateMessage(ctx context.Context, msg *models.Driver
 }
 
 // GetMessages retrieves messages for a driver
-func (r *DriverRepository) GetMessages(ctx context.Context, driverID string, limit, offset int) ([]*models.DriverMessage, error) {
+func (r *DriverRepository) GetMessages(ctx context.Context, driverID uuid.UUID, limit, offset int) ([]*models.DriverMessage, error) {
 	query := `
 		SELECT id, driver_id, trip_id, direction, type, content, attachment_url, is_read, created_at
 		FROM driver_messages
@@ -74,7 +74,7 @@ func (r *DriverRepository) CreateExpense(ctx context.Context, expense *models.Dr
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING id, created_at, updated_at`
 
-	id := uuid.New().String()
+	id := uuid.New()
 	now := time.Now()
 
 	start := time.Now()
@@ -89,7 +89,7 @@ func (r *DriverRepository) CreateExpense(ctx context.Context, expense *models.Dr
 }
 
 // ListExpenses retrieves expenses for a driver
-func (r *DriverRepository) ListExpenses(ctx context.Context, driverID string) ([]*models.DriverExpense, error) {
+func (r *DriverRepository) ListExpenses(ctx context.Context, driverID uuid.UUID) ([]*models.DriverExpense, error) {
 	query := `
 		SELECT id, driver_id, trip_id, type, amount, currency, receipt_url,
 			   notes, status, transaction_date, created_at, updated_at
@@ -131,7 +131,7 @@ func (r *DriverRepository) CreateDutyStatusLog(ctx context.Context, log *models.
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING id, created_at, updated_at`
 
-	id := uuid.New().String()
+	id := uuid.New()
 	now := time.Now()
 	locationJSON, _ := json.Marshal(log.Location)
 
@@ -146,7 +146,7 @@ func (r *DriverRepository) CreateDutyStatusLog(ctx context.Context, log *models.
 }
 
 // GetLatestDutyStatus retrieves the latest duty status for a driver
-func (r *DriverRepository) GetLatestDutyStatus(ctx context.Context, driverID string) (*models.DutyStatusLog, error) {
+func (r *DriverRepository) GetLatestDutyStatus(ctx context.Context, driverID uuid.UUID) (*models.DutyStatusLog, error) {
 	query := `
 		SELECT id, driver_id, status, location, started_at, ended_at,
 			   duration_minutes, remarks, created_at, updated_at
@@ -177,7 +177,7 @@ func (r *DriverRepository) GetLatestDutyStatus(ctx context.Context, driverID str
 }
 
 // EndDutyStatusLog updates a duty status log with end time and duration
-func (r *DriverRepository) EndDutyStatusLog(ctx context.Context, logID string, durationMinutes int) error {
+func (r *DriverRepository) EndDutyStatusLog(ctx context.Context, logID uuid.UUID, durationMinutes int) error {
 	query := `
 		UPDATE duty_status_logs
 		SET ended_at = NOW(), duration_minutes = $1, updated_at = NOW()
@@ -188,7 +188,7 @@ func (r *DriverRepository) EndDutyStatusLog(ctx context.Context, logID string, d
 }
 
 // GetDutyStatusLogs retrieves duty status logs for a driver within a date range
-func (r *DriverRepository) GetDutyStatusLogs(ctx context.Context, driverID string, startDate, endDate time.Time) ([]*models.DutyStatusLog, error) {
+func (r *DriverRepository) GetDutyStatusLogs(ctx context.Context, driverID uuid.UUID, startDate, endDate time.Time) ([]*models.DutyStatusLog, error) {
 	query := `
 		SELECT id, driver_id, status, location, started_at, ended_at,
 			   duration_minutes, remarks, created_at, updated_at

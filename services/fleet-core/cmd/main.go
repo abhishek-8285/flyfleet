@@ -11,7 +11,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
-	"github.com/gofrs/uuid/v5"
+	"github.com/google/uuid"
+	gofrsuuid "github.com/gofrs/uuid/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
@@ -53,6 +54,18 @@ import (
 	iamModels "github.com/flyfleet/fleet-core/internal/domains/iam/models"
 	driverModels "github.com/flyfleet/fleet-core/internal/domains/driver/models"
 	vehicleModels "github.com/flyfleet/fleet-core/internal/domains/vehicle/models"
+	tripModels "github.com/flyfleet/fleet-core/internal/domains/trip/models"
+	customerModels "github.com/flyfleet/fleet-core/internal/domains/customer/models"
+	invoicingModels "github.com/flyfleet/fleet-core/internal/domains/invoicing"
+	documentModels "github.com/flyfleet/fleet-core/internal/domains/document/models"
+	trackingModels "github.com/flyfleet/fleet-core/internal/tracking/models"
+	financeModels "github.com/flyfleet/fleet-core/internal/domains/finance/models"
+	platformModels "github.com/flyfleet/fleet-core/internal/platform/billing/models"
+	billingModels "github.com/flyfleet/fleet-core/internal/domains/billing/models"
+	maintenanceModels "github.com/flyfleet/fleet-core/internal/domains/maintenance/models"
+	fuelModels "github.com/flyfleet/fleet-core/internal/domains/fuel/models"
+	alertModels "github.com/flyfleet/fleet-core/internal/domains/alerts/models"
+	complianceModels "github.com/flyfleet/fleet-core/internal/domains/compliance/models"
 )
 
 func main() {
@@ -74,7 +87,7 @@ func main() {
 	logger, _ := zapCfg.Build()
 	defer logger.Sync()
 
-	logger.Info("starting fleet-core service",
+	logger.Info("Starting FlyFleet Premium Core...",
 		zap.String("port", cfg.Port),
 		zap.String("environment", cfg.Environment),
 		zap.Int("jwt_secret_len", len(cfg.JWTSecret)))
@@ -88,10 +101,9 @@ func main() {
 	}
 	defer pool.Close()
 
-	// --- PREMIUM AUTO-SYNC (Scriptless Schema Management) ---
-	// This replaces manual .sql migration files with code-driven synchronization
+	// --- CONSOLIDATED SCHEMA SYNC & RESTORATION ---
+	// This ensures all tables, columns, and data are perfectly synced across all domains.
 	syncAllSchemas(ctx, pool, logger)
-	ensureAutoSync(ctx, pool, logger)
 
 	// --- Redis ---
 	rdb, err := database.NewRedis(ctx, cfg.RedisURL)
@@ -108,10 +120,10 @@ func main() {
 	vehicleDomainRepo := vrepo.NewVehicleRepository(pool, logger) // vehicle domain (CRUD)
 
 	// --- Services ---
-	tenantChecker := &pgTenantChecker{pool: pool}
+	trackingChecker := &trackingTenantChecker{pool: pool}
 	ingestionSvc := ts.NewIngestionService(telemRepo, liveCache, rdb, logger)
 	ingestionSvc.SetHMACSecret(cfg.TelemetryHMACSecret)
-	querySvc := ts.NewTelemetryQueryService(telemRepo, liveCache, tenantChecker, logger)
+	querySvc := ts.NewTelemetryQueryService(telemRepo, liveCache, trackingChecker, logger)
 	batchSvc := ts.NewBatchLocationService(vehicleRepo, liveCache, telemRepo, logger, cfg.Flags.MaxVehiclesOnMap)
 
 	// --- IAM Domain (conditional) ---
@@ -440,6 +452,17 @@ func (t *pgTenantChecker) VehicleBelongsToOrg(ctx context.Context, tenantID, veh
 	return exists, err
 }
 
+// trackingTenantChecker implements tracking/repository.TenantChecker using gofrs/uuid
+type trackingTenantChecker struct{ pool *pgxpool.Pool }
+
+func (t *trackingTenantChecker) VehicleBelongsToOrg(ctx context.Context, tenantID, vehicleID gofrsuuid.UUID) (bool, error) {
+	var exists bool
+	err := t.pool.QueryRow(ctx,
+		`SELECT EXISTS(SELECT 1 FROM vehicles WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL)`,
+		vehicleID, tenantID).Scan(&exists)
+	return exists, err
+}
+
 // requestLogger is a simple chi middleware that logs each request.
 func requestLogger(logger *zap.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -459,6 +482,11 @@ func syncAllSchemas(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger)
 	logger.Info("Starting Total System Schema Restoration...")
 	
 	ensureIAMSchema(ctx, pool, logger)
+	
+	// 2. Modern Auto-Sync (pick up struct-level changes)
+	ensureAutoSync(ctx, pool, logger)
+
+	// 3. Domain-Specific Explicit Migrations (Renames, Backfills, Defaults)
 	ensureVehicleSchema(ctx, pool, logger)
 	ensureTripSchema(ctx, pool, logger)
 	ensureDriverSchema(ctx, pool, logger)
@@ -468,6 +496,11 @@ func syncAllSchemas(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger)
 	ensureHardwareBillingSchema(ctx, pool, logger)
 	ensureAnalyticsSchema(ctx, pool, logger)
 	ensureTrackingSchema(ctx, pool, logger)
+
+	// 4. Seed Data (Fresh environments only)
+	if err := database.SeedData(ctx, pool, logger); err != nil {
+		logger.Error("Critical: Seed data execution failed", zap.Error(err))
+	}
 
 	logger.Info("Total System Restoration Complete.")
 }
@@ -479,10 +512,65 @@ func ensureAutoSync(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger)
 	database.AutoSyncSchema(ctx, pool, "tenants", iamModels.Tenant{}, logger)
 	database.AutoSyncSchema(ctx, pool, "users", iamModels.User{}, logger)
 	database.AutoSyncSchema(ctx, pool, "roles", iamModels.Role{}, logger)
+	database.AutoSyncSchema(ctx, pool, "permissions", iamModels.Permission{}, logger)
+	database.AutoSyncSchema(ctx, pool, "user_tenants", iamModels.UserTenant{}, logger)
+	database.AutoSyncSchema(ctx, pool, "invitations", iamModels.Invitation{}, logger)
+	database.AutoSyncSchema(ctx, pool, "mfa_policies", iamModels.MFAPolicy{}, logger)
+	database.AutoSyncSchema(ctx, pool, "sessions", iamModels.Session{}, logger)
+	database.AutoSyncSchema(ctx, pool, "audit_logs", iamModels.AuditLog{}, logger)
+	database.AutoSyncSchema(ctx, pool, "mfa_events", iamModels.MFAEvent{}, logger)
 	
 	// Assets & Fleet
 	database.AutoSyncSchema(ctx, pool, "vehicles", vehicleModels.Vehicle{}, logger)
 	database.AutoSyncSchema(ctx, pool, "drivers", driverModels.Driver{}, logger)
+	database.AutoSyncSchema(ctx, pool, "driver_attendance", driverModels.DriverAttendance{}, logger)
+	database.AutoSyncSchema(ctx, pool, "driver_schedules", driverModels.DriverSchedule{}, logger)
+	database.AutoSyncSchema(ctx, pool, "driver_audit_logs", driverModels.DriverAuditLog{}, logger)
+	database.AutoSyncSchema(ctx, pool, "driver_behavior_logs", driverModels.DriverBehaviorLog{}, logger)
+	
+	database.AutoSyncSchema(ctx, pool, "driver_behavior", driverModels.DriverBehavior{}, logger)
+	database.AutoSyncSchema(ctx, pool, "driver_incidents", driverModels.DriverIncident{}, logger)
+	database.AutoSyncSchema(ctx, pool, "behavior_score_updates", driverModels.BehaviorScoreUpdate{}, logger)
+	
+	// Trips & Customers
+	database.AutoSyncSchema(ctx, pool, "trips", tripModels.Trip{}, logger)
+	database.AutoSyncSchema(ctx, pool, "customers", customerModels.Customer{}, logger)
+	
+	// Invoicing & Billing
+	database.AutoSyncSchema(ctx, pool, "invoices", invoicingModels.Invoice{}, logger)
+	database.AutoSyncSchema(ctx, pool, "invoice_items", invoicingModels.InvoiceItem{}, logger)
+	database.AutoSyncSchema(ctx, pool, "billing_hardware_products", billingModels.HardwareProduct{}, logger)
+	database.AutoSyncSchema(ctx, pool, "billing_device_assignments", billingModels.DeviceAssignment{}, logger)
+	
+	// Documents
+	database.AutoSyncSchema(ctx, pool, "documents", documentModels.Document{}, logger)
+	
+	// Telemetry & Geofencing
+	database.AutoSyncSchema(ctx, pool, "telemetry_points", trackingModels.TelemetryEvent{}, logger)
+	database.AutoSyncSchema(ctx, pool, "geofences", trackingModels.Geofence{}, logger)
+	
+	// Finance & Compliance
+	database.AutoSyncSchema(ctx, pool, "toll_transactions", financeModels.TollTransaction{}, logger)
+	
+	// Platform Infrastructure
+	database.AutoSyncSchema(ctx, pool, "plans", platformModels.Plan{}, logger)
+	database.AutoSyncSchema(ctx, pool, "subscriptions", platformModels.Subscription{}, logger)
+	database.AutoSyncSchema(ctx, pool, "usage_records", platformModels.UsageRecord{}, logger)
+	
+	// Maintenance & Fuel
+	database.AutoSyncSchema(ctx, pool, "maintenance_schedules", maintenanceModels.MaintenanceSchedule{}, logger)
+	database.AutoSyncSchema(ctx, pool, "maintenance_logs", maintenanceModels.MaintenanceLog{}, logger)
+	database.AutoSyncSchema(ctx, pool, "fuel_logs", fuelModels.FuelLog{}, logger)
+	
+	// Alerts & Notifications
+	database.AutoSyncSchema(ctx, pool, "notification_logs", alertModels.NotificationLog{}, logger)
+	database.AutoSyncSchema(ctx, pool, "alert_templates", alertModels.Template{}, logger)
+	database.AutoSyncSchema(ctx, pool, "notification_preferences", alertModels.UserPreference{}, logger)
+	
+	// Compliance & ELD
+	database.AutoSyncSchema(ctx, pool, "driver_certifications", complianceModels.DriverCertification{}, logger)
+	database.AutoSyncSchema(ctx, pool, "eld_events", complianceModels.ELDEvent{}, logger)
+	database.AutoSyncSchema(ctx, pool, "compliance_violations", complianceModels.DriverComplianceViolation{}, logger)
 	
 	logger.Info("✅ Premium Auto-Migration Complete. System is now fully synced via Code.")
 }
@@ -499,15 +587,39 @@ func ensureIAMSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger
 	for _, stmt := range tableRenames {
 		pool.Exec(ctx, stmt)
 	}
+
+	// 2. Ensure Correct Column Types (UUID Conversion)
+	typeMigrations := []string{
+		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'user_tenants' AND column_name = 'user_id' AND data_type IN ('character varying', 'text')) THEN ALTER TABLE user_tenants ALTER COLUMN user_id TYPE UUID USING user_id::UUID; END IF; END $$;",
+		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'user_tenants' AND column_name = 'tenant_id' AND data_type IN ('character varying', 'text')) THEN ALTER TABLE user_tenants ALTER COLUMN tenant_id TYPE UUID USING tenant_id::UUID; END IF; END $$;",
+		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'user_tenants' AND column_name = 'role_id' AND data_type IN ('character varying', 'text')) THEN ALTER TABLE user_tenants ALTER COLUMN role_id TYPE UUID USING role_id::UUID; END IF; END $$;",
+		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'vehicles' AND column_name = 'tenant_id' AND data_type IN ('character varying', 'text')) THEN ALTER TABLE vehicles ALTER COLUMN tenant_id TYPE UUID USING tenant_id::UUID; END IF; END $$;",
+		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'vehicles' AND column_name = 'current_driver_id' AND data_type IN ('character varying', 'text')) THEN ALTER TABLE vehicles ALTER COLUMN current_driver_id TYPE UUID USING current_driver_id::UUID; END IF; END $$;",
+		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'drivers' AND column_name = 'tenant_id' AND data_type IN ('character varying', 'text')) THEN ALTER TABLE drivers ALTER COLUMN tenant_id TYPE UUID USING tenant_id::UUID; END IF; END $$;",
+		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'drivers' AND column_name = 'current_vehicle_id' AND data_type IN ('character varying', 'text')) THEN ALTER TABLE drivers ALTER COLUMN current_vehicle_id TYPE UUID USING current_vehicle_id::UUID; END IF; END $$;",
+		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'trips' AND column_name = 'tenant_id' AND data_type IN ('character varying', 'text')) THEN ALTER TABLE trips ALTER COLUMN tenant_id TYPE UUID USING tenant_id::UUID; END IF; END $$;",
+		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'trips' AND column_name = 'vehicle_id' AND data_type IN ('character varying', 'text')) THEN ALTER TABLE trips ALTER COLUMN vehicle_id TYPE UUID USING vehicle_id::UUID; END IF; END $$;",
+		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'trips' AND column_name = 'driver_id' AND data_type IN ('character varying', 'text')) THEN ALTER TABLE trips ALTER COLUMN driver_id TYPE UUID USING driver_id::UUID; END IF; END $$;",
+		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'tenants' AND column_name = 'id' AND data_type IN ('character varying', 'text')) THEN ALTER TABLE tenants ALTER COLUMN id TYPE UUID USING id::UUID; END IF; END $$;",
+		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'id' AND data_type IN ('character varying', 'text')) THEN ALTER TABLE users ALTER COLUMN id TYPE UUID USING id::UUID; END IF; END $$;",
+		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'roles' AND column_name = 'id' AND data_type IN ('character varying', 'text')) THEN ALTER TABLE roles ALTER COLUMN id TYPE UUID USING id::UUID; END IF; END $$;",
+		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'drivers' AND column_name = 'id' AND data_type IN ('character varying', 'text')) THEN ALTER TABLE drivers ALTER COLUMN id TYPE UUID USING id::UUID; END IF; END $$;",
+		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'vehicles' AND column_name = 'id' AND data_type IN ('character varying', 'text')) THEN ALTER TABLE vehicles ALTER COLUMN id TYPE UUID USING id::UUID; END IF; END $$;",
+	}
+	for _, stmt := range typeMigrations {
+		pool.Exec(ctx, stmt)
+	}
  
 	// 2. Add Columns
 	statements := []string{
 		"ALTER TABLE roles ADD COLUMN IF NOT EXISTS tenant_id UUID",
+		"ALTER TABLE roles ADD COLUMN IF NOT EXISTS description TEXT",
 		"ALTER TABLE roles ADD COLUMN IF NOT EXISTS permission_mask BIGINT DEFAULT 0",
 		"ALTER TABLE roles ADD COLUMN IF NOT EXISTS is_system BOOLEAN DEFAULT FALSE",
 		"ALTER TABLE user_roles ADD COLUMN IF NOT EXISTS tenant_id UUID",
 		"ALTER TABLE tenants ADD COLUMN IF NOT EXISTS tenant_id UUID",
 		"ALTER TABLE users ADD COLUMN IF NOT EXISTS must_reset_password BOOLEAN DEFAULT FALSE",
+		"ALTER TABLE user_tenants ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE",
 	}
 	for _, stmt := range statements {
 		pool.Exec(ctx, stmt)
@@ -518,6 +630,7 @@ func ensureIAMSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger
 		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'roles' AND column_name = 'org_id') THEN UPDATE roles SET tenant_id = org_id WHERE tenant_id IS NULL AND org_id IS NOT NULL; END IF; END $$;",
 		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'user_roles' AND column_name = 'org_id') THEN UPDATE user_roles SET tenant_id = org_id WHERE tenant_id IS NULL AND org_id IS NOT NULL; END IF; END $$;",
 		"UPDATE tenants SET tenant_id = id WHERE tenant_id IS NULL",
+		"UPDATE user_tenants SET is_active = true WHERE is_active IS NULL",
 	}
 	for _, bf := range backfills {
 		pool.Exec(ctx, bf)
@@ -579,6 +692,8 @@ func ensureVehicleSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Lo
 	pool.Exec(ctx, "UPDATE vehicles SET vehicle_type = 'TRUCK' WHERE vehicle_type IS NULL")
 	pool.Exec(ctx, "UPDATE vehicles SET fuel_type = 'DIESEL' WHERE fuel_type IS NULL")
 	pool.Exec(ctx, "UPDATE vehicles SET ownership_type = 'OWNED' WHERE ownership_type IS NULL")
+	pool.Exec(ctx, "UPDATE vehicles SET created_at = NOW() WHERE created_at IS NULL")
+	pool.Exec(ctx, "UPDATE vehicles SET updated_at = NOW() WHERE updated_at IS NULL")
 }
 
 func ensureTripSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
@@ -629,6 +744,8 @@ func ensureDriverSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Log
 	pool.Exec(ctx, "UPDATE drivers SET total_distance_km = 0 WHERE total_distance_km IS NULL")
 	pool.Exec(ctx, "UPDATE drivers SET total_hours_driven = 0 WHERE total_hours_driven IS NULL")
 	pool.Exec(ctx, "UPDATE drivers SET behavior_score = 100 WHERE behavior_score IS NULL")
+	pool.Exec(ctx, "UPDATE drivers SET created_at = NOW() WHERE created_at IS NULL")
+	pool.Exec(ctx, "UPDATE drivers SET updated_at = NOW() WHERE updated_at IS NULL")
 }
 
 func ensureCustomerSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
@@ -646,6 +763,8 @@ func ensureCustomerSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.L
 	// HYPER-DEFENSIVE: Fix NULLs for mandatory scan fields
 	pool.Exec(ctx, "UPDATE customers SET status = 'ACTIVE' WHERE status IS NULL")
 	pool.Exec(ctx, "UPDATE customers SET is_deleted = FALSE WHERE is_deleted IS NULL")
+	pool.Exec(ctx, "UPDATE customers SET created_at = NOW() WHERE created_at IS NULL")
+	pool.Exec(ctx, "UPDATE customers SET updated_at = NOW() WHERE updated_at IS NULL")
 }
 
 func ensureInvoicingSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {

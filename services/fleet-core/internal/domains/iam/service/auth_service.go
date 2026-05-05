@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/flyfleet/fleet-core/internal/domains/iam/config"
@@ -382,7 +383,8 @@ func (s *AuthService) generateTokens(ctx context.Context, user *models.User, ten
 
 	// Get permissions — admin roles get full mask, others compute from role table
 	var mask int64
-	if role == "org_admin" || role == "system_admin" || role == "admin" {
+	lRole := strings.ToLower(role)
+	if lRole == "org_admin" || lRole == "system_admin" || lRole == "admin" || lRole == "super_admin" {
 		mask = 9223372036854775807
 	} else {
 		mask, err = s.roleRepo.ComputeEffectivePermissionMask(ctx, user.ID, orgUUID)
@@ -794,7 +796,8 @@ func (s *AuthService) SwitchTenant(ctx context.Context, userID uuid.UUID, target
  
 	// Compute permissions for new tenant
 	var mask int64
-	if userRole == "org_admin" || userRole == "system_admin" || userRole == "admin" {
+	lRole := strings.ToLower(userRole)
+	if lRole == "org_admin" || lRole == "system_admin" || lRole == "admin" || lRole == "super_admin" {
 		// Grant full permissions to administrative roles
 		mask = 9223372036854775807
 	} else {

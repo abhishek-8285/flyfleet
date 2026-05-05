@@ -4,12 +4,13 @@ import (
 	"context"
 
 	"github.com/flyfleet/fleet-core/internal/domains/driver/models"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 type RatingRepo interface {
 	CreateRating(ctx context.Context, rating *models.Rating) error
-	GetAverageRating(ctx context.Context, driverID string) (float64, error)
+	GetAverageRating(ctx context.Context, driverID uuid.UUID) (float64, error)
 }
 
 type RatingService struct {
@@ -31,6 +32,6 @@ func (s *RatingService) SubmitRating(ctx context.Context, rating *models.Rating)
 	return s.repo.CreateRating(ctx, rating)
 }
 
-func (s *RatingService) GetDriverRating(ctx context.Context, driverID string) (float64, error) {
+func (s *RatingService) GetDriverRating(ctx context.Context, driverID uuid.UUID) (float64, error) {
 	return s.repo.GetAverageRating(ctx, driverID)
 }

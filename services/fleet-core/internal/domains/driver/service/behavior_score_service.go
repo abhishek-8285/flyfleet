@@ -33,7 +33,7 @@ func (s *BehaviorScoreService) UpdateBehaviorScore(ctx context.Context, driverID
 	}
 
 	// Get current driver
-	driver, err := s.repo.GetByID(ctx, driverID.String())
+	driver, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get driver: %w", err)
 	}
@@ -41,7 +41,7 @@ func (s *BehaviorScoreService) UpdateBehaviorScore(ctx context.Context, driverID
 		return nil, ErrDriverNotFound
 	}
 
-	if driver.TenantID != tenantID.String() {
+	if driver.TenantID != tenantID {
 		return nil, fmt.Errorf("driver does not belong to organization")
 	}
 
@@ -58,7 +58,7 @@ func (s *BehaviorScoreService) UpdateBehaviorScore(ctx context.Context, driverID
 	}
 
 	// Update score in repository
-	if err := s.repo.UpdateBehaviorScore(ctx, driverID.String(), scoreChange); err != nil {
+	if err := s.repo.UpdateBehaviorScore(ctx, driverID, scoreChange); err != nil {
 		return nil, fmt.Errorf("failed to update behavior score: %w", err)
 	}
 
@@ -69,12 +69,12 @@ func (s *BehaviorScoreService) UpdateBehaviorScore(ctx context.Context, driverID
 
 	// Create behavior score update record
 	scoreUpdate := &models.BehaviorScoreUpdate{
-		ID:          uuid.New().String(),
-		DriverID:    driverID.String(),
+		ID:          uuid.New(),
+		DriverID:    driverID,
 		ScoreChange: scoreChange,
 		Reason:      reason,
 		EventType:   eventType,
-		CreatedBy:   userID.String(),
+		CreatedBy:   userID,
 		CreatedAt:   time.Now(),
 	}
 	if err := s.repo.CreateBehaviorScoreUpdate(ctx, scoreUpdate); err != nil {
@@ -82,7 +82,7 @@ func (s *BehaviorScoreService) UpdateBehaviorScore(ctx context.Context, driverID
 	}
 
 	// Get updated driver
-	updatedDriver, err := s.repo.GetByID(ctx, driverID.String())
+	updatedDriver, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get updated driver: %w", err)
 	}
@@ -100,13 +100,13 @@ func (s *BehaviorScoreService) UpdateBehaviorScore(ctx context.Context, driverID
 }
 
 // GetBehaviorScoreHistory retrieves behavior score change history for a driver
-func (s *BehaviorScoreService) GetBehaviorScoreHistory(ctx context.Context, driverID string, limit, offset int) ([]*models.BehaviorScoreUpdate, error) {
+func (s *BehaviorScoreService) GetBehaviorScoreHistory(ctx context.Context, driverID uuid.UUID, limit, offset int) ([]*models.BehaviorScoreUpdate, error) {
 	// This would need a new repository method to fetch score updates
 	// For now, return empty slice
 	return []*models.BehaviorScoreUpdate{}, nil
 }
 
-func (s *BehaviorScoreService) CalculateBehaviorScore(ctx context.Context, driverID string, periodStart, periodEnd time.Time) (int, error) {
+func (s *BehaviorScoreService) CalculateBehaviorScore(ctx context.Context, driverID uuid.UUID, periodStart, periodEnd time.Time) (int, error) {
 	driver, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get driver: %w", err)
@@ -143,7 +143,7 @@ func (s *BehaviorScoreService) CalculateBehaviorScore(ctx context.Context, drive
 }
 
 // GetBehaviorReport generates a comprehensive behavior report for a driver
-func (s *BehaviorScoreService) GetBehaviorReport(ctx context.Context, driverID string, periodType string, startDate, endDate *time.Time) (*models.DriverBehavior, error) {
+func (s *BehaviorScoreService) GetBehaviorReport(ctx context.Context, driverID uuid.UUID, periodType string, startDate, endDate *time.Time) (*models.DriverBehavior, error) {
 	// Set default date range if not provided
 	if startDate == nil {
 		now := time.Now()
@@ -189,7 +189,7 @@ func (s *BehaviorScoreService) GetBehaviorReport(ctx context.Context, driverID s
 
 	// Build comprehensive report
 	report := &models.DriverBehavior{
-		ID:                 uuid.New().String(),
+		ID:                 uuid.New(),
 		DriverID:           driverID,
 		PeriodStart:        *startDate,
 		PeriodEnd:          *endDate,
@@ -305,7 +305,8 @@ func (s *BehaviorScoreService) ProcessBehaviorEvent(ctx context.Context, event *
 	}
 
 	// 2. Update score
-	driver, err := s.repo.GetByID(ctx, event.DriverID)
+	driverID := event.DriverID
+	driver, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
 		return err
 	}
@@ -313,8 +314,8 @@ func (s *BehaviorScoreService) ProcessBehaviorEvent(ctx context.Context, event *
 		return ErrDriverNotFound
 	}
 
-	tenantID, _ := uuid.Parse(driver.TenantID)
+	tenantID := driver.TenantID
 	// Using ActionDriverBehaviorScoreUpdated as a placeholder for event processing
-	_, err = s.UpdateBehaviorScore(ctx, uuid.MustParse(event.DriverID), tenantID, uuid.Nil, "system", -penalty, fmt.Sprintf("Automated penalty for %s", event.EventType), event.EventType)
+	_, err = s.UpdateBehaviorScore(ctx, driverID, tenantID, uuid.Nil, "system", -penalty, fmt.Sprintf("Automated penalty for %s", event.EventType), event.EventType)
 	return err
 }

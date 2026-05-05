@@ -5,13 +5,14 @@ import (
 	"time"
 
 	"github.com/flyfleet/fleet-core/internal/domains/driver/models"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 type TrainingRepo interface {
 	CreateModule(ctx context.Context, module *models.TrainingModule) error
 	CreateRecord(ctx context.Context, record *models.TrainingRecord) error
-	GetRecordsByDriverID(ctx context.Context, driverID string) ([]*models.TrainingRecord, error)
+	GetRecordsByDriverID(ctx context.Context, driverID uuid.UUID) ([]*models.TrainingRecord, error)
 }
 
 type TrainingService struct {
@@ -26,7 +27,7 @@ func NewTrainingService(repo TrainingRepo, logger *zap.Logger) *TrainingService 
 	}
 }
 
-func (s *TrainingService) AssignTraining(ctx context.Context, driverID string, moduleID string) error {
+func (s *TrainingService) AssignTraining(ctx context.Context, driverID uuid.UUID, moduleID uuid.UUID) error {
 	record := &models.TrainingRecord{
 		DriverID: driverID,
 		ModuleID: moduleID,
@@ -34,7 +35,7 @@ func (s *TrainingService) AssignTraining(ctx context.Context, driverID string, m
 	return s.repo.CreateRecord(ctx, record)
 }
 
-func (s *TrainingService) CompleteTraining(ctx context.Context, driverID string, moduleID string, certificateURL string) error {
+func (s *TrainingService) CompleteTraining(ctx context.Context, driverID uuid.UUID, moduleID uuid.UUID, certificateURL string) error {
 	// Simple implementation for now: create a completed record
 	// In a real system, we would update an existing pending record
 	now := time.Now()
@@ -47,6 +48,6 @@ func (s *TrainingService) CompleteTraining(ctx context.Context, driverID string,
 	return s.repo.CreateRecord(ctx, record)
 }
 
-func (s *TrainingService) GetTrainingHistory(ctx context.Context, driverID string) ([]*models.TrainingRecord, error) {
+func (s *TrainingService) GetTrainingHistory(ctx context.Context, driverID uuid.UUID) ([]*models.TrainingRecord, error) {
 	return s.repo.GetRecordsByDriverID(ctx, driverID)
 }

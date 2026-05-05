@@ -19,7 +19,7 @@ func main() {
 	}
 	defer conn.Close(ctx)
 
-	seedFile := "migrations/seed_complete_dev_data.sql"
+	seedFile := "seeds/seed_complete_dev_data.sql"
 	content, err := os.ReadFile(seedFile)
 	if err != nil {
 		log.Fatalf("Unable to read seed file: %v\n", err)

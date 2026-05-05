@@ -28,8 +28,8 @@ const (
 // Vehicle is the enterprise aggregate root for the vehicle domain.
 type Vehicle struct {
 	ID                 uuid.UUID  `json:"id"                   db:"id"`
-	TenantID           uuid.UUID  `json:"tenant_id"            db:"tenant_id"`
-	RegistrationNumber string     `json:"registration_number"  db:"registration_number"`
+	TenantID           uuid.UUID  `json:"tenant_id"            db:"tenant_id" index:"true" references:"tenants"`
+	RegistrationNumber string     `json:"registration_number"  db:"registration_number" index:"unique"`
 	ChassisNumber      *string    `json:"chassis_number"       db:"chassis_number"` // AES-256 encrypted
 	EngineNumber       *string    `json:"engine_number"        db:"engine_number"`  // AES-256 encrypted
 	VINNumber          *string    `json:"vin_number"           db:"vin_number"`
@@ -38,11 +38,11 @@ type Vehicle struct {
 	FuelType           string     `json:"fuel_type"            db:"fuel_type"`
 	FuelTankCapacity   *float64   `json:"fuel_tank_capacity"   db:"fuel_tank_capacity"`
 	OwnershipType      string     `json:"ownership_type"       db:"ownership_type"`
-	ParentVehicleID    *uuid.UUID `json:"parent_vehicle_id"    db:"parent_vehicle_id"`
+	ParentVehicleID    *uuid.UUID `json:"parent_vehicle_id"    db:"parent_vehicle_id" references:"vehicles"`
 	BranchID           *uuid.UUID `json:"branch_id"            db:"branch_id"`
 	CostCenterID       *uuid.UUID `json:"cost_center_id"       db:"cost_center_id"`
 	Status             string     `json:"status"               db:"status"`
-	GPSDeviceID        *string    `json:"gps_device_id"        db:"gps_device_id"`
+	GPSDeviceID        *string    `json:"gps_device_id"        db:"gps_device_id" index:"true"`
 	GPSEnabled         bool       `json:"gps_enabled"          db:"gps_enabled"`
 	GPSDeviceType      *string    `json:"gps_device_type"      db:"gps_device_type"`
 	ImmobilizerEnabled bool       `json:"immobilizer_enabled"  db:"immobilizer_enabled"`
@@ -53,7 +53,7 @@ type Vehicle struct {
 	Year  *int    `json:"year"                 db:"year"`
 	Color *string `json:"color"                db:"color"`
 	Odometer           *int64     `json:"odometer"             db:"odometer"`
-	CurrentDriverID    *uuid.UUID `json:"current_driver_id"    db:"current_driver_id"`
+	CurrentDriverID    *uuid.UUID `json:"current_driver_id"    db:"current_driver_id" index:"true" references:"drivers"`
 	CurrentDriver      *DriverInfo `json:"current_driver,omitempty"`
 	SpeedLimit         float64    `json:"speed_limit"          db:"speed_limit"`
 	LicensePlate       string     `json:"license_plate"        db:"license_plate"`

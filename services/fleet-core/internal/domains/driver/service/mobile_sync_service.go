@@ -4,13 +4,14 @@ import (
 	"context"
 
 	"github.com/flyfleet/fleet-core/internal/domains/driver/models"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 type MobileSyncRepo interface {
 	QueueItem(ctx context.Context, item *models.MobileSyncItem) error
-	GetPendingItems(ctx context.Context, driverID string) ([]*models.MobileSyncItem, error)
-	UpdateItemStatus(ctx context.Context, itemID string, status string) error
+	GetPendingItems(ctx context.Context, driverID uuid.UUID) ([]*models.MobileSyncItem, error)
+	UpdateItemStatus(ctx context.Context, itemID uuid.UUID, status string) error
 }
 
 type MobileSyncService struct {
@@ -25,7 +26,7 @@ func NewMobileSyncService(repo MobileSyncRepo, logger *zap.Logger) *MobileSyncSe
 	}
 }
 
-func (s *MobileSyncService) QueueOfflineEvent(ctx context.Context, driverID string, actionType string, payload map[string]interface{}) error {
+func (s *MobileSyncService) QueueOfflineEvent(ctx context.Context, driverID uuid.UUID, actionType string, payload map[string]interface{}) error {
 	item := &models.MobileSyncItem{
 		DriverID:   driverID,
 		ActionType: actionType,
@@ -35,7 +36,7 @@ func (s *MobileSyncService) QueueOfflineEvent(ctx context.Context, driverID stri
 	return s.repo.QueueItem(ctx, item)
 }
 
-func (s *MobileSyncService) ProcessSyncQueue(ctx context.Context, driverID string) error {
+func (s *MobileSyncService) ProcessSyncQueue(ctx context.Context, driverID uuid.UUID) error {
 	items, err := s.repo.GetPendingItems(ctx, driverID)
 	if err != nil {
 		return err
@@ -44,10 +45,10 @@ func (s *MobileSyncService) ProcessSyncQueue(ctx context.Context, driverID strin
 	for _, item := range items {
 		// In a real implementation, we would dispatch these actions to their respective services
 		// For now, we just mark them as synced
-		s.logger.Info("processing sync item", zap.String("item_id", item.ID), zap.String("action", item.ActionType))
+		s.logger.Info("processing sync item", zap.String("item_id", item.ID.String()), zap.String("action", item.ActionType))
 		err := s.repo.UpdateItemStatus(ctx, item.ID, "SYNCED")
 		if err != nil {
-			s.logger.Error("failed to update sync item status", zap.Error(err), zap.String("item_id", item.ID))
+			s.logger.Error("failed to update sync item status", zap.Error(err), zap.String("item_id", item.ID.String()))
 		}
 	}
 	return nil

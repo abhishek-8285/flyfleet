@@ -2,16 +2,18 @@ package models
 
 import (
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // Driver represents a vehicle driver
 type Driver struct {
-	ID                string                 `json:"id" db:"id"`
-	TenantID             string                 `json:"tenant_id" db:"tenant_id" validate:"required,uuid"`
+	ID                uuid.UUID              `json:"id" db:"id"`
+	TenantID          uuid.UUID              `json:"tenant_id" db:"tenant_id" index:"true" references:"tenants" validate:"required"`
 	FirstName         string                 `json:"first_name" db:"first_name" validate:"required,max=50"`
 	LastName          string                 `json:"last_name" db:"last_name" validate:"required,max=50"`
 	FullName          string                 `json:"name" db:"full_name"`
-	Email             string                 `json:"email" db:"email" validate:"required,email"`
+	Email             string                 `json:"email" db:"email" index:"unique" validate:"required,email"`
 	Phone             string                 `json:"phone" db:"phone" validate:"required,e164"`
 	EmployeeCode      *string                `json:"employee_code" db:"employee_code" validate:"omitempty,max=50"`
 	AadhaarNumber     *string                `json:"aadhaar_number" db:"aadhaar_number" validate:"omitempty,len=12"`
@@ -29,9 +31,9 @@ type Driver struct {
 	Address           Address                `json:"address" db:"address" validate:"required"`
 	EmergencyContact  EmergencyContact       `json:"emergency_contact" db:"emergency_contact" validate:"required"`
 	Status            string                 `json:"status" db:"status" validate:"required,oneof=active inactive suspended resigned"`
-	CurrentVehicleID  *string                `json:"current_vehicle_id" db:"current_vehicle_id"`
+	CurrentVehicleID  *uuid.UUID             `json:"current_vehicle_id" db:"current_vehicle_id" index:"true" references:"vehicles"`
 	CurrentVehicle    *VehicleInfo           `json:"current_vehicle,omitempty"`
-	CurrentTripID     *string                `json:"current_trip_id" db:"current_trip_id"`
+	CurrentTripID     *uuid.UUID             `json:"current_trip_id" db:"current_trip_id"`
 	JoiningDate       time.Time              `json:"joining_date" db:"joining_date"`
 	ResignationDate   *time.Time             `json:"resignation_date" db:"resignation_date"`
 	ExperienceYears   int                    `json:"experience_years" db:"experience_years" validate:"gte=0,lte=50"`
@@ -52,8 +54,8 @@ type Driver struct {
 
 // VehicleInfo represents basic vehicle details embedded in other models.
 type VehicleInfo struct {
-	ID                 string `json:"id"`
-	RegistrationNumber string `json:"registration_number"`
+	ID                 uuid.UUID `json:"id"`
+	RegistrationNumber string    `json:"registration_number"`
 }
 
 // Address represents driver's address information
@@ -77,7 +79,7 @@ type EmergencyContact struct {
 
 // DriverDocument represents driver-related documents
 type DriverDocument struct {
-	ID               string     `json:"id" db:"id" validate:"required,uuid"`
+	ID               uuid.UUID  `json:"id" db:"id" validate:"required"`
 	DocumentType     string     `json:"document_type" db:"document_type" validate:"required,oneof=license aadhaar pan medical training other"`
 	DocumentNumber   string     `json:"document_number" db:"document_number" validate:"required,max=100"`
 	IssuingAuthority string     `json:"issuing_authority" db:"issuing_authority" validate:"required,max=100"`
@@ -85,14 +87,14 @@ type DriverDocument struct {
 	ExpiryDate       time.Time  `json:"expiry_date" db:"expiry_date" validate:"required"`
 	FileURL          string     `json:"file_url" db:"file_url" validate:"required,url"`
 	Verified         bool       `json:"verified" db:"verified"`
-	VerifiedBy       *string    `json:"verified_by" db:"verified_by"`
+	VerifiedBy       *uuid.UUID `json:"verified_by" db:"verified_by"`
 	VerifiedAt       *time.Time `json:"verified_at" db:"verified_at"`
 	CreatedAt        time.Time  `json:"created_at" db:"created_at"`
 }
 
 // AttendanceRecord represents driver attendance records
 type AttendanceRecord struct {
-	ID           string     `json:"id" db:"id" validate:"required,uuid"`
+	ID           uuid.UUID  `json:"id" db:"id" validate:"required"`
 	Date         time.Time  `json:"date" db:"date" validate:"required"`
 	Status       string     `json:"status" db:"status" validate:"required,oneof=present absent leave holiday"`
 	CheckInTime  *time.Time `json:"check_in_time" db:"check_in_time"`
@@ -103,7 +105,7 @@ type AttendanceRecord struct {
 
 // WorkSchedule represents driver work schedules
 type WorkSchedule struct {
-	ID        string    `json:"id" db:"id" validate:"required,uuid"`
+	ID        uuid.UUID `json:"id" db:"id" validate:"required"`
 	DayOfWeek int       `json:"day_of_week" db:"day_of_week" validate:"required,min=0,max=6"`
 	StartTime string    `json:"start_time" db:"start_time" validate:"required"`
 	EndTime   string    `json:"end_time" db:"end_time" validate:"required"`
@@ -210,9 +212,9 @@ type SetScheduleRequest struct {
 
 // DriverListFilter represents filters for listing drivers
 type DriverListFilter struct {
-	TenantID     string `json:"tenant_id" form:"tenant_id" validate:"omitempty,uuid"`
+	TenantID     uuid.UUID `json:"tenant_id" form:"tenant_id" validate:"omitempty"`
 	Status    string `json:"status" form:"status" validate:"omitempty,oneof=active inactive suspended resigned"`
-	VehicleID string `json:"vehicle_id" form:"vehicle_id" validate:"omitempty,uuid"`
+	VehicleID uuid.UUID `json:"vehicle_id" form:"vehicle_id" validate:"omitempty"`
 	Name      string `json:"name" form:"name" validate:"omitempty,max=100"`
 	Page      int    `json:"page" form:"page" validate:"gte=1"`
 	PageSize  int    `json:"page_size" form:"page_size" validate:"gte=1,lte=100"`
@@ -240,8 +242,8 @@ type DriverAnalytics struct {
 
 // BehaviorEvent represents driver behavior events
 type BehaviorEvent struct {
-	ID        string    `json:"id" db:"id" validate:"required,uuid"`
-	DriverID  string    `json:"driver_id" db:"driver_id" validate:"required,uuid"`
+	ID        uuid.UUID `json:"id" db:"id" validate:"required"`
+	DriverID  uuid.UUID `json:"driver_id" db:"driver_id" validate:"required"`
 	EventType string    `json:"event_type" db:"event_type" validate:"required,oneof=speeding harsh_braking harsh_acceleration phone_usage seatbelt_violation"`
 	Timestamp time.Time `json:"timestamp" db:"timestamp" validate:"required"`
 	Severity  string    `json:"severity" db:"severity" validate:"required,oneof=low medium high critical"`
@@ -285,9 +287,9 @@ type DriverPerformanceSummary struct {
 
 // DriverBehavior represents comprehensive driver behavior analytics
 type DriverBehavior struct {
-	ID              string    `json:"id" db:"id" validate:"required,uuid"`
-	DriverID        string    `json:"driver_id" db:"driver_id" validate:"required,uuid"`
-	TenantID           string    `json:"tenant_id" db:"tenant_id" validate:"required,uuid"`
+	ID              uuid.UUID `json:"id" db:"id" validate:"required"`
+	DriverID        uuid.UUID `json:"driver_id" db:"driver_id" validate:"required"`
+	TenantID        uuid.UUID `json:"tenant_id" db:"tenant_id" validate:"required"`
 	PeriodStart     time.Time `json:"period_start" db:"period_start" validate:"required"`
 	PeriodEnd       time.Time `json:"period_end" db:"period_end" validate:"required"`
 	Score           float64   `json:"score" db:"score" validate:"gte=0,lte=100"`
@@ -333,9 +335,9 @@ type DriverBehavior struct {
 
 // DriverIncident represents a specific driving incident
 type DriverIncident struct {
-	ID              string                 `json:"id" db:"id" validate:"required,uuid"`
-	DriverID        string                 `json:"driver_id" db:"driver_id" validate:"required,uuid"`
-	TenantID           string                 `json:"tenant_id" db:"tenant_id" validate:"required,uuid"`
+	ID              uuid.UUID              `json:"id" db:"id" validate:"required"`
+	DriverID        uuid.UUID              `json:"driver_id" db:"driver_id" validate:"required"`
+	TenantID        uuid.UUID              `json:"tenant_id" db:"tenant_id" validate:"required"`
 	Type            string                 `json:"type" db:"type" validate:"required"`
 	Severity        string                 `json:"severity" db:"severity" validate:"required,oneof=low medium high critical"`
 	Timestamp       time.Time              `json:"timestamp" db:"timestamp" validate:"required"`
@@ -357,21 +359,21 @@ type BehaviorReportRequest struct {
 
 // BehaviorScoreUpdate represents behavior score adjustment
 type BehaviorScoreUpdate struct {
-	ID          string                 `json:"id" db:"id" validate:"required,uuid"`
-	DriverID    string                 `json:"driver_id" db:"driver_id" validate:"required,uuid"`
+	ID          uuid.UUID              `json:"id" db:"id" validate:"required"`
+	DriverID    uuid.UUID              `json:"driver_id" db:"driver_id" validate:"required"`
 	ScoreChange int                    `json:"score_change" db:"score_change" validate:"gte=-20,lte=20"`
 	Reason      string                 `json:"reason" db:"reason" validate:"required,max=200"`
 	EventType   string                 `json:"event_type" db:"event_type" validate:"required"`
 	Details     map[string]interface{} `json:"details" db:"details"`
-	CreatedBy   string                 `json:"created_by" db:"created_by" validate:"required"`
+	CreatedBy   uuid.UUID              `json:"created_by" db:"created_by" validate:"required"`
 	CreatedAt   time.Time              `json:"created_at" db:"created_at"`
 }
 
 // DriverMessage represents messages between driver and dispatch
 type DriverMessage struct {
-	ID            string    `json:"id" db:"id" validate:"required,uuid"`
-	DriverID      string    `json:"driver_id" db:"driver_id" validate:"required,uuid"`
-	TripID        *string   `json:"trip_id" db:"trip_id" validate:"omitempty,uuid"`
+	ID            uuid.UUID `json:"id" db:"id" validate:"required"`
+	DriverID      uuid.UUID `json:"driver_id" db:"driver_id" validate:"required"`
+	TripID        *uuid.UUID `json:"trip_id" db:"trip_id" validate:"omitempty"`
 	Direction     string    `json:"direction" db:"direction" validate:"required,oneof=INBOUND OUTBOUND"`
 	Type          string    `json:"type" db:"type" validate:"required,oneof=TEXT AUDIO IMAGE"`
 	Content       string    `json:"content" db:"content" validate:"max=1000"`
@@ -382,9 +384,9 @@ type DriverMessage struct {
 
 // DriverExpense represents expenses incurred by the driver
 type DriverExpense struct {
-	ID              string    `json:"id" db:"id" validate:"required,uuid"`
-	DriverID        string    `json:"driver_id" db:"driver_id" validate:"required,uuid"`
-	TripID          *string   `json:"trip_id" db:"trip_id" validate:"omitempty,uuid"`
+	ID              uuid.UUID    `json:"id" db:"id" validate:"required"`
+	DriverID        uuid.UUID    `json:"driver_id" db:"driver_id" validate:"required"`
+	TripID          *uuid.UUID   `json:"trip_id" db:"trip_id" validate:"omitempty"`
 	Type            string    `json:"type" db:"type" validate:"required,oneof=FUEL TOLL MAINTENANCE FOOD LODGING OTHER"`
 	Amount          float64   `json:"amount" db:"amount" validate:"required,gt=0"`
 	Currency        string    `json:"currency" db:"currency" validate:"required,len=3"`
@@ -398,8 +400,8 @@ type DriverExpense struct {
 
 // DutyStatusLog represents HOOS logs
 type DutyStatusLog struct {
-	ID              string     `json:"id" db:"id" validate:"required,uuid"`
-	DriverID        string     `json:"driver_id" db:"driver_id" validate:"required,uuid"`
+	ID              uuid.UUID  `json:"id" db:"id" validate:"required"`
+	DriverID        uuid.UUID  `json:"driver_id" db:"driver_id" validate:"required"`
 	Status          string     `json:"status" db:"status" validate:"required,oneof=OFF_DUTY SLEEPER_BERTH DRIVING ON_DUTY REST BREAK"`
 	Location        *Location  `json:"location" db:"location" validate:"required"`
 	StartedAt       time.Time  `json:"started_at" db:"started_at" validate:"required"`
@@ -412,8 +414,8 @@ type DutyStatusLog struct {
 
 // OnboardingStep represents a step in the driver onboarding workflow
 type OnboardingStep struct {
-	ID          string     `json:"id" db:"id"`
-	DriverID    string     `json:"driver_id" db:"driver_id"`
+	ID          uuid.UUID  `json:"id" db:"id"`
+	DriverID    uuid.UUID  `json:"driver_id" db:"driver_id"`
 	Step        string     `json:"step" db:"step"`     // APPLICATION, DOCUMENT_VERIFICATION, etc.
 	Status      string     `json:"status" db:"status"` // PENDING, COMPLETED, REJECTED
 	Remarks     string     `json:"remarks" db:"remarks"`
@@ -423,8 +425,8 @@ type OnboardingStep struct {
 
 // Shift represents a driver's scheduled shift
 type Shift struct {
-	ID         string    `json:"id" db:"id"`
-	DriverID   string    `json:"driver_id" db:"driver_id"`
+	ID         uuid.UUID `json:"id" db:"id"`
+	DriverID   uuid.UUID `json:"driver_id" db:"driver_id"`
 	ShiftStart time.Time `json:"shift_start" db:"shift_start"`
 	ShiftEnd   time.Time `json:"shift_end" db:"shift_end"`
 	ShiftType  string    `json:"shift_type" db:"shift_type"` // DAY, NIGHT, ROTATIONAL
@@ -434,16 +436,16 @@ type Shift struct {
 
 // TrainingModule represents a training course available for drivers
 type TrainingModule struct {
-	ID          string `json:"id" db:"id"`
-	Name        string `json:"name" db:"name"`
-	Description string `json:"description" db:"description"`
+	ID          uuid.UUID `json:"id" db:"id"`
+	Name        string    `json:"name" db:"name"`
+	Description string    `json:"description" db:"description"`
 }
 
 // TrainingRecord represents a driver's completion of a training module
 type TrainingRecord struct {
-	ID             string     `json:"id" db:"id"`
-	DriverID       string     `json:"driver_id" db:"driver_id"`
-	ModuleID       string     `json:"module_id" db:"module_id"`
+	ID             uuid.UUID  `json:"id" db:"id"`
+	DriverID       uuid.UUID  `json:"driver_id" db:"driver_id"`
+	ModuleID       uuid.UUID  `json:"module_id" db:"module_id"`
 	CompletedAt    *time.Time `json:"completed_at" db:"completed_at"`
 	CertificateURL string     `json:"certificate_url" db:"certificate_url"`
 	CreatedAt      time.Time  `json:"created_at" db:"created_at"`
@@ -451,8 +453,8 @@ type TrainingRecord struct {
 
 // SalaryConfig represents a driver's salary configuration
 type SalaryConfig struct {
-	ID             string    `json:"id" db:"id"`
-	DriverID       string    `json:"driver_id" db:"driver_id"`
+	ID             uuid.UUID `json:"id" db:"id"`
+	DriverID       uuid.UUID `json:"driver_id" db:"driver_id"`
 	BaseSalary     float64   `json:"base_salary" db:"base_salary"`
 	PerKmRate      float64   `json:"per_km_rate" db:"per_km_rate"`
 	DailyAllowance float64   `json:"daily_allowance" db:"daily_allowance"`
@@ -463,9 +465,9 @@ type SalaryConfig struct {
 
 // TripEarning represents earnings for a specific trip
 type TripEarning struct {
-	ID         string    `json:"id" db:"id"`
-	DriverID   string    `json:"driver_id" db:"driver_id"`
-	TripID     string    `json:"trip_id" db:"trip_id"`
+	ID         uuid.UUID `json:"id" db:"id"`
+	DriverID   uuid.UUID `json:"driver_id" db:"driver_id"`
+	TripID     uuid.UUID `json:"trip_id" db:"trip_id"`
 	DistanceKm float64   `json:"distance_km" db:"distance_km"`
 	Earnings   float64   `json:"earnings" db:"earnings"`
 	Bonus      float64   `json:"bonus" db:"bonus"`
@@ -475,8 +477,8 @@ type TripEarning struct {
 
 // Payout represents a salary payout to a driver
 type Payout struct {
-	ID          string     `json:"id" db:"id"`
-	DriverID    string     `json:"driver_id" db:"driver_id"`
+	ID          uuid.UUID  `json:"id" db:"id"`
+	DriverID    uuid.UUID  `json:"driver_id" db:"driver_id"`
 	PeriodStart time.Time  `json:"period_start" db:"period_start"`
 	PeriodEnd   time.Time  `json:"period_end" db:"period_end"`
 	TotalAmount float64    `json:"total_amount" db:"total_amount"`
@@ -487,9 +489,9 @@ type Payout struct {
 
 // Rating represents a rating given to a driver for a trip
 type Rating struct {
-	ID               string    `json:"id" db:"id"`
-	DriverID         string    `json:"driver_id" db:"driver_id"`
-	TripID           string    `json:"trip_id" db:"trip_id"`
+	ID               uuid.UUID `json:"id" db:"id"`
+	DriverID         uuid.UUID `json:"driver_id" db:"driver_id"`
+	TripID           uuid.UUID `json:"trip_id" db:"trip_id"`
 	PunctualityScore int       `json:"punctuality_score" db:"punctuality_score"`
 	BehaviorScore    int       `json:"behavior_score" db:"behavior_score"`
 	DrivingScore     int       `json:"driving_score" db:"driving_score"`
@@ -500,9 +502,9 @@ type Rating struct {
 
 // SafetyEvent represents a safety-related event captured from telemetry
 type SafetyEvent struct {
-	ID        string    `json:"id" db:"id"`
-	DriverID  string    `json:"driver_id" db:"driver_id"`
-	TripID    *string   `json:"trip_id" db:"trip_id"`
+	ID        uuid.UUID `json:"id" db:"id"`
+	DriverID  uuid.UUID `json:"driver_id" db:"driver_id"`
+	TripID    *uuid.UUID `json:"trip_id" db:"trip_id"`
 	EventType string    `json:"event_type" db:"event_type"` // OVERSPEED, HARSH_BRAKE, PANIC_ALERT, etc.
 	Severity  string    `json:"severity" db:"severity"`     // LOW, MEDIUM, HIGH, CRITICAL
 	GPSLat    float64   `json:"gps_lat" db:"gps_lat"`
@@ -513,8 +515,8 @@ type SafetyEvent struct {
 
 // MobileSyncItem represents an item in the mobile sync queue
 type MobileSyncItem struct {
-	ID         string                 `json:"id" db:"id"`
-	DriverID   string                 `json:"driver_id" db:"driver_id"`
+	ID         uuid.UUID              `json:"id" db:"id"`
+	DriverID   uuid.UUID              `json:"driver_id" db:"driver_id"`
 	ActionType string                 `json:"action_type" db:"action_type"`
 	Payload    map[string]interface{} `json:"payload" db:"payload"`
 	Status     string                 `json:"status" db:"status"` // PENDING, SYNCED, FAILED

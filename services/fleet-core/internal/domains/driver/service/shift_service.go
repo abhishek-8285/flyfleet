@@ -5,14 +5,15 @@ import (
 	"time"
 
 	"github.com/flyfleet/fleet-core/internal/domains/driver/models"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 type ShiftRepo interface {
 	CreateShift(ctx context.Context, shift *models.Shift) error
-	AssignVehicle(ctx context.Context, shiftID string, vehicleID string) error
-	UpdateShiftStatus(ctx context.Context, shiftID string, status string) error
-	GetShiftsByDriverID(ctx context.Context, driverID string, start, end time.Time) ([]*models.Shift, error)
+	AssignVehicle(ctx context.Context, shiftID uuid.UUID, vehicleID string) error
+	UpdateShiftStatus(ctx context.Context, shiftID uuid.UUID, status string) error
+	GetShiftsByDriverID(ctx context.Context, driverID uuid.UUID, start, end time.Time) ([]*models.Shift, error)
 }
 
 type ShiftService struct {
@@ -32,18 +33,18 @@ func (s *ShiftService) CreateShift(ctx context.Context, shift *models.Shift) err
 	return s.repo.CreateShift(ctx, shift)
 }
 
-func (s *ShiftService) AssignToVehicle(ctx context.Context, shiftID string, vehicleID string) error {
+func (s *ShiftService) AssignToVehicle(ctx context.Context, shiftID uuid.UUID, vehicleID string) error {
 	return s.repo.AssignVehicle(ctx, shiftID, vehicleID)
 }
 
-func (s *ShiftService) StartShift(ctx context.Context, shiftID string) error {
+func (s *ShiftService) StartShift(ctx context.Context, shiftID uuid.UUID) error {
 	return s.repo.UpdateShiftStatus(ctx, shiftID, "ACTIVE")
 }
 
-func (s *ShiftService) EndShift(ctx context.Context, shiftID string) error {
+func (s *ShiftService) EndShift(ctx context.Context, shiftID uuid.UUID) error {
 	return s.repo.UpdateShiftStatus(ctx, shiftID, "COMPLETED")
 }
 
-func (s *ShiftService) GetShiftsByDriverID(ctx context.Context, driverID string, start, end time.Time) ([]*models.Shift, error) {
+func (s *ShiftService) GetShiftsByDriverID(ctx context.Context, driverID uuid.UUID, start, end time.Time) ([]*models.Shift, error) {
 	return s.repo.GetShiftsByDriverID(ctx, driverID, start, end)
 }

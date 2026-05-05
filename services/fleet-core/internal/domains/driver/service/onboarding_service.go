@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"github.com/flyfleet/fleet-core/internal/domains/driver/models"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 type OnboardingRepo interface {
 	CreateStep(ctx context.Context, step *models.OnboardingStep) error
 	UpdateStep(ctx context.Context, step *models.OnboardingStep) error
-	GetStepsByDriverID(ctx context.Context, driverID string) ([]*models.OnboardingStep, error)
+	GetStepsByDriverID(ctx context.Context, driverID uuid.UUID) ([]*models.OnboardingStep, error)
 }
 
 type OnboardingService struct {
@@ -27,7 +28,7 @@ func NewOnboardingService(repo OnboardingRepo, logger *zap.Logger) *OnboardingSe
 	}
 }
 
-func (s *OnboardingService) StartOnboarding(ctx context.Context, driverID string) error {
+func (s *OnboardingService) StartOnboarding(ctx context.Context, driverID uuid.UUID) error {
 	initialStep := &models.OnboardingStep{
 		DriverID:    driverID,
 		Step:        "APPLICATION",
@@ -50,7 +51,7 @@ func (s *OnboardingService) StartOnboarding(ctx context.Context, driverID string
 	return s.repo.CreateStep(ctx, nextStep)
 }
 
-func (s *OnboardingService) AdvanceOnboarding(ctx context.Context, driverID string, stepName string, status string, remarks string) error {
+func (s *OnboardingService) AdvanceOnboarding(ctx context.Context, driverID uuid.UUID, stepName string, status string, remarks string) error {
 	steps, err := s.repo.GetStepsByDriverID(ctx, driverID)
 	if err != nil {
 		return err
@@ -86,7 +87,7 @@ func (s *OnboardingService) AdvanceOnboarding(ctx context.Context, driverID stri
 	return nil
 }
 
-func (s *OnboardingService) createNextStep(ctx context.Context, driverID string, currentStepName string) error {
+func (s *OnboardingService) createNextStep(ctx context.Context, driverID uuid.UUID, currentStepName string) error {
 	var nextStepName string
 	switch currentStepName {
 	case "DOCUMENT_VERIFICATION":
@@ -110,6 +111,6 @@ func (s *OnboardingService) createNextStep(ctx context.Context, driverID string,
 	return s.repo.CreateStep(ctx, nextStep)
 }
 
-func (s *OnboardingService) GetOnboardingStatus(ctx context.Context, driverID string) ([]*models.OnboardingStep, error) {
+func (s *OnboardingService) GetOnboardingStatus(ctx context.Context, driverID uuid.UUID) ([]*models.OnboardingStep, error) {
 	return s.repo.GetStepsByDriverID(ctx, driverID)
 }

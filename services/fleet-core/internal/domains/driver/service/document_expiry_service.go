@@ -26,9 +26,9 @@ func NewDocumentExpiryService(repo Repository, logger *zap.Logger) *DocumentExpi
 
 // ExpiringDocument represents a document that is expiring or expired
 type ExpiringDocument struct {
-	DriverID        string    `json:"driver_id"`
+	DriverID        uuid.UUID `json:"driver_id"`
 	DriverName      string    `json:"driver_name"`
-	DocumentID      string    `json:"document_id"`
+	DocumentID      uuid.UUID `json:"document_id"`
 	DocumentType    string    `json:"document_type"`
 	DocumentNumber  string    `json:"document_number"`
 	ExpiryDate      time.Time `json:"expiry_date"`
@@ -78,7 +78,7 @@ func (s *DocumentExpiryService) GetExpiredDocuments(ctx context.Context, tenantI
 }
 
 // CheckDocumentExpiry checks if a specific document is expired or expiring soon
-func (s *DocumentExpiryService) CheckDocumentExpiry(ctx context.Context, driverID, documentID string, warningDays int) (*ExpiringDocument, error) {
+func (s *DocumentExpiryService) CheckDocumentExpiry(ctx context.Context, driverID uuid.UUID, documentID uuid.UUID, warningDays int) (*ExpiringDocument, error) {
 	driver, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get driver: %w", err)
@@ -123,7 +123,7 @@ func (s *DocumentExpiryService) CheckDocumentExpiry(ctx context.Context, driverI
 }
 
 // VerifyDocument marks a document as verified
-func (s *DocumentExpiryService) VerifyDocument(ctx context.Context, driverID, documentID string, verifiedBy uuid.UUID, userEmail string) error {
+func (s *DocumentExpiryService) VerifyDocument(ctx context.Context, driverID uuid.UUID, documentID uuid.UUID, verifiedBy uuid.UUID, userEmail string) error {
 	driver, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
 		return fmt.Errorf("failed to get driver: %w", err)
@@ -137,8 +137,7 @@ func (s *DocumentExpiryService) VerifyDocument(ctx context.Context, driverID, do
 	for i := range driver.Documents {
 		if driver.Documents[i].ID == documentID {
 			driver.Documents[i].Verified = true
-			verifiedByStr := verifiedBy.String()
-			driver.Documents[i].VerifiedBy = &verifiedByStr
+			driver.Documents[i].VerifiedBy = &verifiedBy
 			now := time.Now()
 			driver.Documents[i].VerifiedAt = &now
 			found = true
@@ -161,8 +160,8 @@ func (s *DocumentExpiryService) VerifyDocument(ctx context.Context, driverID, do
 	}
 
 	s.logger.Info("Document verified",
-		zap.String("driver_id", driverID),
-		zap.String("document_id", documentID),
+		zap.String("driver_id", driverID.String()),
+		zap.String("document_id", documentID.String()),
 		zap.String("verified_by", userEmail),
 	)
 
@@ -183,7 +182,7 @@ func (s *DocumentExpiryService) SendExpiryNotifications(ctx context.Context, ten
 			// Send expired notification
 			notificationsSent++
 			s.logger.Warn("Document expired",
-				zap.String("driver_id", doc.DriverID),
+				zap.String("driver_id", doc.DriverID.String()),
 				zap.String("driver_name", doc.DriverName),
 				zap.String("document_type", doc.DocumentType),
 				zap.String("document_number", doc.DocumentNumber),
@@ -193,7 +192,7 @@ func (s *DocumentExpiryService) SendExpiryNotifications(ctx context.Context, ten
 			// Send expiring soon notification
 			notificationsSent++
 			s.logger.Info("Document expiring soon",
-				zap.String("driver_id", doc.DriverID),
+				zap.String("driver_id", doc.DriverID.String()),
 				zap.String("driver_name", doc.DriverName),
 				zap.String("document_type", doc.DocumentType),
 				zap.Int("days_until_expiry", doc.DaysUntilExpiry),
