@@ -5,18 +5,33 @@
 -- 1. ROLES TABLE
 -- ───────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS roles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    name VARCHAR(100) NOT NULL,
-    description TEXT,
-    is_system BOOLEAN DEFAULT false,
-    permission_mask BIGINT DEFAULT 0,
-    created_by UUID REFERENCES users(id),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP WITH TIME ZONE,
-    UNIQUE(tenant_id, name)
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid()
 );
+
+DO $$ 
+BEGIN 
+    -- Harmonization
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'roles' AND column_name = 'org_id') 
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'roles' AND column_name = 'tenant_id') THEN
+        ALTER TABLE roles RENAME COLUMN org_id TO tenant_id;
+    END IF;
+
+    -- Ensure Columns
+    ALTER TABLE roles ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE;
+    ALTER TABLE roles ADD COLUMN IF NOT EXISTS name VARCHAR(100);
+    ALTER TABLE roles ADD COLUMN IF NOT EXISTS description TEXT;
+    ALTER TABLE roles ADD COLUMN IF NOT EXISTS is_system BOOLEAN DEFAULT false;
+    ALTER TABLE roles ADD COLUMN IF NOT EXISTS permission_mask BIGINT DEFAULT 0;
+    ALTER TABLE roles ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id);
+    ALTER TABLE roles ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+    ALTER TABLE roles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+    ALTER TABLE roles ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE;
+
+    -- Type Safety
+    IF (SELECT data_type FROM information_schema.columns WHERE table_name = 'roles' AND column_name = 'tenant_id') IN ('character varying', 'text') THEN
+        ALTER TABLE roles ALTER COLUMN tenant_id TYPE UUID USING tenant_id::uuid;
+    END IF;
+END $$;
 
 -- ───────────────────────────────────────────────────────────────────
 -- 2. PERMISSIONS TABLE (fine-grained permission catalog)
@@ -44,14 +59,29 @@ CREATE TABLE IF NOT EXISTS role_permissions (
 -- 4. USER_ROLES (many-to-many: users can have multiple roles)
 -- ───────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS user_roles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    assigned_by UUID REFERENCES users(id),
-    assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, role_id, tenant_id)
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid()
 );
+
+DO $$ 
+BEGIN 
+    -- Harmonization
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_roles' AND column_name = 'org_id') 
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'user_roles' AND column_name = 'tenant_id') THEN
+        ALTER TABLE user_roles RENAME COLUMN org_id TO tenant_id;
+    END IF;
+
+    -- Ensure Columns
+    ALTER TABLE user_roles ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id) ON DELETE CASCADE;
+    ALTER TABLE user_roles ADD COLUMN IF NOT EXISTS role_id UUID REFERENCES roles(id) ON DELETE CASCADE;
+    ALTER TABLE user_roles ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE;
+    ALTER TABLE user_roles ADD COLUMN IF NOT EXISTS assigned_by UUID REFERENCES users(id);
+    ALTER TABLE user_roles ADD COLUMN IF NOT EXISTS assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+
+    -- Type Safety
+    IF (SELECT data_type FROM information_schema.columns WHERE table_name = 'user_roles' AND column_name = 'tenant_id') IN ('character varying', 'text') THEN
+        ALTER TABLE user_roles ALTER COLUMN tenant_id TYPE UUID USING tenant_id::uuid;
+    END IF;
+END $$;
 
 -- ───────────────────────────────────────────────────────────────────
 -- 5. MFA_POLICIES (per-org MFA configuration)
@@ -101,10 +131,12 @@ CREATE INDEX IF NOT EXISTS idx_mfa_events_type ON mfa_events(event_type);
 ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS tenant_isolation_roles ON roles;
 CREATE POLICY tenant_isolation_roles ON roles
     USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid
            OR current_setting('app.is_super_admin', true)::boolean = true);
 
+DROP POLICY IF EXISTS tenant_isolation_user_roles ON user_roles;
 CREATE POLICY tenant_isolation_user_roles ON user_roles
     USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid
            OR current_setting('app.is_super_admin', true)::boolean = true);

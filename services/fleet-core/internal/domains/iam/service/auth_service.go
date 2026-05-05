@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"net"
-	"strings"
 	"time"
 
 	"github.com/flyfleet/fleet-core/internal/domains/iam/config"
@@ -383,8 +382,7 @@ func (s *AuthService) generateTokens(ctx context.Context, user *models.User, ten
 
 	// Get permissions — admin roles get full mask, others compute from role table
 	var mask int64
-	lRole := strings.ToLower(role)
-	if lRole == "org_admin" || lRole == "system_admin" || lRole == "admin" || lRole == "super_admin" {
+	if role == "org_admin" || role == "system_admin" || role == "admin" {
 		mask = 9223372036854775807
 	} else {
 		mask, err = s.roleRepo.ComputeEffectivePermissionMask(ctx, user.ID, orgUUID)
@@ -570,8 +568,11 @@ func (s *AuthService) Register(ctx context.Context, email, password, name string
 	}
 
 	// If tenantID provided, create user-tenant association
-	// Note: This would typically be done via a separate user_tenants repo method
-	// For now, generate tokens and let the user join tenant later
+	if tenantID != uuid.Nil {
+		if err := s.tenantRepo.AddUserToTenant(ctx, user.ID, tenantID, "Member", uuid.Nil); err != nil {
+			s.log.Error("failed to link user to tenant during registration", zap.Error(err))
+		}
+	}
 
 	// Generate tokens
 	return s.generateTokens(ctx, user, tenantID.String(), "", "", "register")
@@ -796,8 +797,7 @@ func (s *AuthService) SwitchTenant(ctx context.Context, userID uuid.UUID, target
  
 	// Compute permissions for new tenant
 	var mask int64
-	lRole := strings.ToLower(userRole)
-	if lRole == "org_admin" || lRole == "system_admin" || lRole == "admin" || lRole == "super_admin" {
+	if userRole == "org_admin" || userRole == "system_admin" || userRole == "admin" {
 		// Grant full permissions to administrative roles
 		mask = 9223372036854775807
 	} else {

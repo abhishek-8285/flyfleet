@@ -20,8 +20,8 @@ func NewTrainingRepository(db *pgxpool.Pool) *TrainingRepository {
 
 func (r *TrainingRepository) CreateModule(ctx context.Context, module *models.TrainingModule) error {
 	query := `INSERT INTO driver_training_modules (id, name, description) VALUES ($1, $2, $3)`
-	if module.ID == uuid.Nil {
-		module.ID = uuid.New()
+	if module.ID == "" {
+		module.ID = uuid.New().String()
 	}
 	start := time.Now()
 	_, err := r.db.Exec(ctx, query, module.ID, module.Name, module.Description)
@@ -35,8 +35,8 @@ func (r *TrainingRepository) CreateRecord(ctx context.Context, record *models.Tr
 			id, driver_id, module_id, completed_at, certificate_url, created_at
 		) VALUES ($1, $2, $3, $4, $5, $6)`
 
-	if record.ID == uuid.Nil {
-		record.ID = uuid.New()
+	if record.ID == "" {
+		record.ID = uuid.New().String()
 	}
 	if record.CreatedAt.IsZero() {
 		record.CreatedAt = time.Now()
@@ -51,7 +51,7 @@ func (r *TrainingRepository) CreateRecord(ctx context.Context, record *models.Tr
 	return err
 }
 
-func (r *TrainingRepository) GetRecordsByDriverID(ctx context.Context, driverID uuid.UUID) ([]*models.TrainingRecord, error) {
+func (r *TrainingRepository) GetRecordsByDriverID(ctx context.Context, driverID string) ([]*models.TrainingRecord, error) {
 	query := `
 		SELECT id, driver_id, module_id, completed_at, certificate_url, created_at
 		FROM driver_training_records

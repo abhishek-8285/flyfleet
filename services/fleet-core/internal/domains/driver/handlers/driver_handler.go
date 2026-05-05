@@ -303,9 +303,10 @@ func (h *DriverHandler) CreateDriver(w http.ResponseWriter, r *http.Request) {
 
 // GetDriver godoc
 func (h *DriverHandler) GetDriver(w http.ResponseWriter, r *http.Request) {
-	driverIDStr := chi.URLParam(r, "id")
-	driverID, err := uuid.Parse(driverIDStr)
-	if err != nil {
+	driverID := chi.URLParam(r, "id")
+
+	// Validate UUID format
+	if _, err := uuid.Parse(driverID); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
@@ -325,18 +326,15 @@ func (h *DriverHandler) ListDrivers(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	var filter models.DriverListFilter
 	filter.Status = query.Get("status")
-	if vID := query.Get("vehicle_id"); vID != "" {
-		if vid, err := uuid.Parse(vID); err == nil {
-			filter.VehicleID = vid
-		}
-	}
+	filter.VehicleID = query.Get("vehicle_id")
 	filter.Name = query.Get("name")
 	filter.Page = p.Page
 	filter.PageSize = p.Limit
 	filter.OrderBy = query.Get("order_by")
 	filter.OrderDir = query.Get("order_dir")
 
-	filter.TenantID = h.getTenantID(r)
+	tenantID := h.getTenantID(r)
+	filter.TenantID = tenantID.String()
 
 	drivers, totalCount, err := h.service.List(r.Context(), filter)
 	if err != nil {
@@ -350,15 +348,16 @@ func (h *DriverHandler) ListDrivers(w http.ResponseWriter, r *http.Request) {
 
 // UpdateDriver godoc
 func (h *DriverHandler) UpdateDriver(w http.ResponseWriter, r *http.Request) {
-	driverIDStr := chi.URLParam(r, "id")
-	driverID, err := uuid.Parse(driverIDStr)
-	if err != nil {
+	driverID := chi.URLParam(r, "id")
+
+	// Validate UUID format
+	if _, err := uuid.Parse(driverID); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
 	// Verify driver belongs to org before update (security check)
-	driver, ok := h.verifyDriverOwnership(w, r, driverID)
+	_, ok := h.verifyDriverOwnership(w, r, driverID)
 	if !ok {
 		return
 	}
@@ -399,9 +398,9 @@ func (h *DriverHandler) UpdateDriver(w http.ResponseWriter, r *http.Request) {
 		Metadata:         dto.Metadata,
 	}
 
-	updatedDriver, err := h.service.Update(r.Context(), driver.ID, req)
+	driver, err := h.service.Update(r.Context(), driverID, req)
 	if err != nil {
-		h.logger.Error("failed to update driver", zap.Stringer("driver_id", driverID), zap.Error(err))
+		h.logger.Error("failed to update driver", zap.String("driver_id", driverID), zap.Error(err))
 		statusCode := http.StatusInternalServerError
 		if err.Error() == "driver not found: no rows in result set" {
 			statusCode = http.StatusNotFound
@@ -410,27 +409,28 @@ func (h *DriverHandler) UpdateDriver(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{"data": updatedDriver})
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{"data": driver})
 }
 
 // DeleteDriver godoc
 func (h *DriverHandler) DeleteDriver(w http.ResponseWriter, r *http.Request) {
-	driverIDStr := chi.URLParam(r, "id")
-	driverID, err := uuid.Parse(driverIDStr)
-	if err != nil {
+	driverID := chi.URLParam(r, "id")
+
+	// Validate UUID format
+	if _, err := uuid.Parse(driverID); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
 	// Verify driver belongs to org before deletion (security check)
-	driver, ok := h.verifyDriverOwnership(w, r, driverID)
+	_, ok := h.verifyDriverOwnership(w, r, driverID)
 	if !ok {
 		return
 	}
 
-	err = h.service.Delete(r.Context(), driver.ID)
+	err := h.service.Delete(r.Context(), driverID)
 	if err != nil {
-		h.logger.Error("failed to delete driver", zap.Stringer("driver_id", driverID), zap.Error(err))
+		h.logger.Error("failed to delete driver", zap.String("driver_id", driverID), zap.Error(err))
 		statusCode := http.StatusInternalServerError
 		if err.Error() == "driver not found: no rows in result set" {
 			statusCode = http.StatusNotFound
@@ -447,16 +447,16 @@ func (h *DriverHandler) DeleteDriver(w http.ResponseWriter, r *http.Request) {
 
 // AssignVehicle godoc
 func (h *DriverHandler) AssignVehicle(w http.ResponseWriter, r *http.Request) {
-	driverIDStr := chi.URLParam(r, "id")
-	driverID, err := uuid.Parse(driverIDStr)
-	if err != nil {
+	driverID := chi.URLParam(r, "id")
+
+	// Validate UUID format
+	if _, err := uuid.Parse(driverID); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
 	// Verify driver belongs to org
-	driver, ok := h.verifyDriverOwnership(w, r, driverID)
-	if !ok {
+	if _, ok := h.verifyDriverOwnership(w, r, driverID); !ok {
 		return
 	}
 
@@ -475,17 +475,16 @@ func (h *DriverHandler) AssignVehicle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate vehicle ID format
-	vehicleID, err := uuid.Parse(dto.VehicleID)
-	if err != nil {
+	if _, err := uuid.Parse(dto.VehicleID); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid vehicle ID format", nil)
 		return
 	}
 
-	err = h.service.AssignVehicle(r.Context(), driver.ID, vehicleID)
+	err := h.service.AssignVehicle(r.Context(), driverID, dto.VehicleID)
 	if err != nil {
 		h.logger.Error("failed to assign vehicle to driver",
-			zap.Stringer("driver_id", driverID),
-			zap.Stringer("vehicle_id", vehicleID),
+			zap.String("driver_id", driverID),
+			zap.String("vehicle_id", dto.VehicleID),
 			zap.Error(err))
 		statusCode := http.StatusInternalServerError
 		if err.Error() == "driver not found: no rows in result set" {
@@ -507,23 +506,23 @@ func (h *DriverHandler) AssignVehicle(w http.ResponseWriter, r *http.Request) {
 
 // UnassignVehicle godoc
 func (h *DriverHandler) UnassignVehicle(w http.ResponseWriter, r *http.Request) {
-	driverIDStr := chi.URLParam(r, "id")
-	driverID, err := uuid.Parse(driverIDStr)
-	if err != nil {
+	driverID := chi.URLParam(r, "id")
+
+	// Validate UUID format
+	if _, err := uuid.Parse(driverID); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
 	// Verify driver belongs to org
-	driver, ok := h.verifyDriverOwnership(w, r, driverID)
-	if !ok {
+	if _, ok := h.verifyDriverOwnership(w, r, driverID); !ok {
 		return
 	}
 
-	err = h.service.UnassignVehicle(r.Context(), driver.ID)
+	err := h.service.UnassignVehicle(r.Context(), driverID)
 	if err != nil {
 		h.logger.Error("failed to unassign vehicle from driver",
-			zap.Stringer("driver_id", driverID),
+			zap.String("driver_id", driverID),
 			zap.Error(err))
 		statusCode := http.StatusInternalServerError
 		if err.Error() == "driver not found: no rows in result set" {
@@ -543,16 +542,16 @@ func (h *DriverHandler) UnassignVehicle(w http.ResponseWriter, r *http.Request) 
 
 // UpdateStatus godoc
 func (h *DriverHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
-	driverIDStr := chi.URLParam(r, "id")
-	driverID, err := uuid.Parse(driverIDStr)
-	if err != nil {
+	driverID := chi.URLParam(r, "id")
+
+	// Validate UUID format
+	if _, err := uuid.Parse(driverID); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
 	// Verify driver belongs to org
-	driver, ok := h.verifyDriverOwnership(w, r, driverID)
-	if !ok {
+	if _, ok := h.verifyDriverOwnership(w, r, driverID); !ok {
 		return
 	}
 
@@ -570,10 +569,10 @@ func (h *DriverHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.service.UpdateStatus(r.Context(), driver.ID, dto.Status)
+	err := h.service.UpdateStatus(r.Context(), driverID, dto.Status)
 	if err != nil {
 		h.logger.Error("failed to update driver status",
-			zap.Stringer("driver_id", driverID),
+			zap.String("driver_id", driverID),
 			zap.String("status", dto.Status),
 			zap.Error(err))
 		statusCode := http.StatusInternalServerError
@@ -595,23 +594,23 @@ func (h *DriverHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 
 // GetBehaviorScore godoc
 func (h *DriverHandler) GetBehaviorScore(w http.ResponseWriter, r *http.Request) {
-	driverIDStr := chi.URLParam(r, "id")
-	driverID, err := uuid.Parse(driverIDStr)
-	if err != nil {
+	driverID := chi.URLParam(r, "id")
+
+	// Validate UUID format
+	if _, err := uuid.Parse(driverID); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
 	// Verify driver belongs to org
-	driver, ok := h.verifyDriverOwnership(w, r, driverID)
-	if !ok {
+	if _, ok := h.verifyDriverOwnership(w, r, driverID); !ok {
 		return
 	}
 
-	score, err := h.service.GetBehaviorScore(r.Context(), driver.ID)
+	score, err := h.service.GetBehaviorScore(r.Context(), driverID)
 	if err != nil {
 		h.logger.Error("failed to get behavior score",
-			zap.Stringer("driver_id", driverID),
+			zap.String("driver_id", driverID),
 			zap.Error(err))
 		statusCode := http.StatusInternalServerError
 		if err.Error() == "driver not found: no rows in result set" {
@@ -630,16 +629,16 @@ func (h *DriverHandler) GetBehaviorScore(w http.ResponseWriter, r *http.Request)
 
 // UpdateBehaviorScore godoc
 func (h *DriverHandler) UpdateBehaviorScore(w http.ResponseWriter, r *http.Request) {
-	driverIDStr := chi.URLParam(r, "id")
-	driverID, err := uuid.Parse(driverIDStr)
-	if err != nil {
+	driverID := chi.URLParam(r, "id")
+
+	// Validate UUID format
+	if _, err := uuid.Parse(driverID); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
 	// Verify driver belongs to org
-	driver, ok := h.verifyDriverOwnership(w, r, driverID)
-	if !ok {
+	if _, ok := h.verifyDriverOwnership(w, r, driverID); !ok {
 		return
 	}
 
@@ -657,10 +656,10 @@ func (h *DriverHandler) UpdateBehaviorScore(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	err = h.service.UpdateBehaviorScore(r.Context(), driver.ID, dto.ScoreChange, dto.Reason)
+	err := h.service.UpdateBehaviorScore(r.Context(), driverID, dto.ScoreChange, dto.Reason)
 	if err != nil {
 		h.logger.Error("failed to update behavior score",
-			zap.Stringer("driver_id", driverID),
+			zap.String("driver_id", driverID),
 			zap.Int("score_change", dto.ScoreChange),
 			zap.String("reason", dto.Reason),
 			zap.Error(err))
@@ -675,7 +674,7 @@ func (h *DriverHandler) UpdateBehaviorScore(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Get updated score
-	newScore, err := h.service.GetBehaviorScore(r.Context(), driver.ID)
+	newScore, err := h.service.GetBehaviorScore(r.Context(), driverID)
 	if err != nil {
 		newScore = 0 // fallback
 	}
@@ -691,23 +690,23 @@ func (h *DriverHandler) UpdateBehaviorScore(w http.ResponseWriter, r *http.Reque
 
 // GetAnalytics godoc
 func (h *DriverHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) {
-	driverIDStr := chi.URLParam(r, "id")
-	driverID, err := uuid.Parse(driverIDStr)
-	if err != nil {
+	driverID := chi.URLParam(r, "id")
+
+	// Validate UUID format
+	if _, err := uuid.Parse(driverID); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
 	// Verify driver belongs to org
-	driver, ok := h.verifyDriverOwnership(w, r, driverID)
-	if !ok {
+	if _, ok := h.verifyDriverOwnership(w, r, driverID); !ok {
 		return
 	}
 
-	analytics, err := h.service.GetDriverAnalytics(r.Context(), driver.ID)
+	analytics, err := h.service.GetDriverAnalytics(r.Context(), driverID)
 	if err != nil {
 		h.logger.Error("failed to get driver analytics",
-			zap.Stringer("driver_id", driverID),
+			zap.String("driver_id", driverID),
 			zap.Error(err))
 		statusCode := http.StatusInternalServerError
 		if err.Error() == "driver not found: no rows in result set" {
@@ -722,16 +721,16 @@ func (h *DriverHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) {
 
 // UploadDocument godoc
 func (h *DriverHandler) UploadDocument(w http.ResponseWriter, r *http.Request) {
-	driverIDStr := chi.URLParam(r, "id")
-	driverID, err := uuid.Parse(driverIDStr)
-	if err != nil {
+	driverID := chi.URLParam(r, "id")
+
+	// Validate UUID format
+	if _, err := uuid.Parse(driverID); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
 	// Verify driver belongs to org
-	_, ok := h.verifyDriverOwnership(w, r, driverID)
-	if !ok {
+	if _, ok := h.verifyDriverOwnership(w, r, driverID); !ok {
 		return
 	}
 
@@ -761,7 +760,7 @@ func (h *DriverHandler) UploadDocument(w http.ResponseWriter, r *http.Request) {
 
 	// In a real implementation, this would call service.UploadDocument
 	// Since we are refactoring existing gin code which had mock behavior, we maintain it or improve if service is ready
-	docID := uuid.New()
+	docID := uuid.New().String()
 
 	h.writeJSONResponse(w, http.StatusCreated, map[string]interface{}{
 		"message":         "Document uploaded successfully",
@@ -774,16 +773,16 @@ func (h *DriverHandler) UploadDocument(w http.ResponseWriter, r *http.Request) {
 
 // ListDocuments godoc
 func (h *DriverHandler) ListDocuments(w http.ResponseWriter, r *http.Request) {
-	driverIDStr := chi.URLParam(r, "id")
-	driverID, err := uuid.Parse(driverIDStr)
-	if err != nil {
+	driverID := chi.URLParam(r, "id")
+
+	// Validate UUID format
+	if _, err := uuid.Parse(driverID); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
 	// Verify driver belongs to org
-	_, ok := h.verifyDriverOwnership(w, r, driverID)
-	if !ok {
+	if _, ok := h.verifyDriverOwnership(w, r, driverID); !ok {
 		return
 	}
 
@@ -797,16 +796,16 @@ func (h *DriverHandler) ListDocuments(w http.ResponseWriter, r *http.Request) {
 
 // DeleteDocument godoc
 func (h *DriverHandler) DeleteDocument(w http.ResponseWriter, r *http.Request) {
-	driverIDStr := chi.URLParam(r, "id")
-	driverID, err := uuid.Parse(driverIDStr)
-	if err != nil {
+	driverID := chi.URLParam(r, "id")
+	docID := chi.URLParam(r, "doc_id")
+
+	// Validate UUID formats
+	if _, err := uuid.Parse(driverID); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", nil)
 		return
 	}
 
-	docIDStr := chi.URLParam(r, "doc_id")
-	docID, err := uuid.Parse(docIDStr)
-	if err != nil {
+	if _, err := uuid.Parse(docID); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid document ID format", nil)
 		return
 	}
@@ -839,7 +838,7 @@ func (h *DriverHandler) MarkAttendance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify driver belongs to org
-	if _, ok := h.verifyDriverOwnership(w, r, driverID); !ok {
+	if _, ok := h.verifyDriverOwnership(w, r, driverIDStr); !ok {
 		return
 	}
 
@@ -895,7 +894,7 @@ func (h *DriverHandler) GetAttendance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify driver belongs to org
-	if _, ok := h.verifyDriverOwnership(w, r, driverID); !ok {
+	if _, ok := h.verifyDriverOwnership(w, r, driverIDStr); !ok {
 		return
 	}
 
@@ -952,13 +951,7 @@ func (h *DriverHandler) StartOnboarding(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	driverID, err := uuid.Parse(req.DriverID)
-	if err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", err)
-		return
-	}
-
-	if err := h.onboarding.StartOnboarding(r.Context(), driverID); err != nil {
+	if err := h.onboarding.StartOnboarding(r.Context(), req.DriverID); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -979,13 +972,7 @@ func (h *DriverHandler) AdvanceOnboarding(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	driverID, err := uuid.Parse(req.DriverID)
-	if err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", err)
-		return
-	}
-
-	if err := h.onboarding.AdvanceOnboarding(r.Context(), driverID, req.StepName, req.Status, req.Remarks); err != nil {
+	if err := h.onboarding.AdvanceOnboarding(r.Context(), req.DriverID, req.StepName, req.Status, req.Remarks); err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
@@ -996,12 +983,7 @@ func (h *DriverHandler) AdvanceOnboarding(w http.ResponseWriter, r *http.Request
 // GetOnboardingStatus retrieves the driver's onboarding status
 func (h *DriverHandler) GetOnboardingStatus(w http.ResponseWriter, r *http.Request) {
 	driverID := chi.URLParam(r, "id")
-	parsedID, err := uuid.Parse(driverID)
-	if err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", err)
-		return
-	}
-	steps, err := h.onboarding.GetOnboardingStatus(r.Context(), parsedID)
+	steps, err := h.onboarding.GetOnboardingStatus(r.Context(), driverID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
 		return
@@ -1028,8 +1010,8 @@ func (h *DriverHandler) CreateShift(w http.ResponseWriter, r *http.Request) {
 	}
 
 	shift := &models.Shift{
-		ID:         uuid.New(),
-		DriverID:   uuid.MustParse(req.DriverID),
+		ID:         uuid.New().String(),
+		DriverID:   req.DriverID,
 		ShiftStart: req.ShiftStart,
 		ShiftEnd:   req.ShiftEnd,
 		ShiftType:  req.ShiftType,
@@ -1042,13 +1024,8 @@ func (h *DriverHandler) CreateShift(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.VehicleID != nil {
-		vehicleID, err := uuid.Parse(*req.VehicleID)
-		if err != nil {
-			h.logger.Warn("invalid vehicle ID format for shift assignment", zap.Error(err))
-		} else {
-			if err := h.shift.AssignToVehicle(r.Context(), shift.DriverID, vehicleID.String()); err != nil {
-				h.logger.Warn("failed to assign vehicle to shift", zap.Error(err))
-			}
+		if err := h.shift.AssignToVehicle(r.Context(), shift.ID, *req.VehicleID); err != nil {
+			h.logger.Warn("failed to assign vehicle to shift", zap.Error(err))
 		}
 	}
 
@@ -1057,16 +1034,12 @@ func (h *DriverHandler) CreateShift(w http.ResponseWriter, r *http.Request) {
 
 // GetShifts retrieves shifts for a driver
 func (h *DriverHandler) GetShifts(w http.ResponseWriter, r *http.Request) {
-	driverIDStr := chi.URLParam(r, "id")
-	driverID, err := uuid.Parse(driverIDStr)
-	if err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID", err)
-		return
-	}
+	driverID := chi.URLParam(r, "id")
 	startDate := r.URL.Query().Get("start_date")
 	endDate := r.URL.Query().Get("end_date")
 
 	var start, end time.Time
+	var err error
 
 	if startDate != "" {
 		start, err = time.Parse("2006-01-02", startDate)
@@ -1100,16 +1073,12 @@ func (h *DriverHandler) GetShifts(w http.ResponseWriter, r *http.Request) {
 
 // GetEarnings retrieves trip earnings for a driver
 func (h *DriverHandler) GetEarnings(w http.ResponseWriter, r *http.Request) {
-	driverIDStr := chi.URLParam(r, "id")
-	driverID, err := uuid.Parse(driverIDStr)
-	if err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID", err)
-		return
-	}
+	driverID := chi.URLParam(r, "id")
 	startDate := r.URL.Query().Get("start_date")
 	endDate := r.URL.Query().Get("end_date")
 
 	var start, end time.Time
+	var err error
 
 	if startDate != "" {
 		start, err = time.Parse("2006-01-02", startDate)
@@ -1168,15 +1137,13 @@ func (h *DriverHandler) SubmitRating(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rating := &models.Rating{
-		ID:               uuid.New(),
-		DriverID:         uuid.MustParse(req.DriverID),
-		TripID:           uuid.MustParse(req.TripID),
+		DriverID:         req.DriverID,
+		TripID:           req.TripID,
 		PunctualityScore: req.PunctualityScore,
 		BehaviorScore:    req.BehaviorScore,
 		DrivingScore:     req.DrivingScore,
 		OverallRating:    req.OverallRating,
 		Comments:         req.Comments,
-		CreatedAt:        time.Now(),
 	}
 
 	if err := h.rating.SubmitRating(r.Context(), rating); err != nil {
@@ -1189,12 +1156,7 @@ func (h *DriverHandler) SubmitRating(w http.ResponseWriter, r *http.Request) {
 
 // GetRatings retrieves ratings for a driver
 func (h *DriverHandler) GetRatings(w http.ResponseWriter, r *http.Request) {
-	driverIDStr := chi.URLParam(r, "id")
-	driverID, err := uuid.Parse(driverIDStr)
-	if err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID", err)
-		return
-	}
+	driverID := chi.URLParam(r, "id")
 	avgRating, err := h.rating.GetDriverRating(r.Context(), driverID)
 	if err != nil {
 		h.writeErrorResponse(w, http.StatusInternalServerError, err.Error(), nil)
@@ -1301,7 +1263,7 @@ func (h *DriverHandler) getTenantID(r *http.Request) uuid.UUID {
 	return uuid.Nil
 }
 
-func (h *DriverHandler) verifyDriverOwnership(w http.ResponseWriter, r *http.Request, driverID uuid.UUID) (*models.Driver, bool) {
+func (h *DriverHandler) verifyDriverOwnership(w http.ResponseWriter, r *http.Request, driverID string) (*models.Driver, bool) {
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "organization ID required", nil)
@@ -1310,7 +1272,7 @@ func (h *DriverHandler) verifyDriverOwnership(w http.ResponseWriter, r *http.Req
 
 	driver, err := h.service.GetByID(r.Context(), driverID)
 	if err != nil {
-		h.logger.Error("failed to get driver for ownership check", zap.String("driver_id", driverID.String()), zap.Error(err))
+		h.logger.Error("failed to get driver for ownership check", zap.String("driver_id", driverID), zap.Error(err))
 		statusCode := http.StatusInternalServerError
 		if err.Error() == "driver not found: no rows in result set" {
 			statusCode = http.StatusNotFound
@@ -1319,11 +1281,11 @@ func (h *DriverHandler) verifyDriverOwnership(w http.ResponseWriter, r *http.Req
 		return nil, false
 	}
 
-	if driver.TenantID != tenantID {
+	if driver.TenantID != tenantID.String() {
 		h.logger.Warn("unauthorized access attempt to driver",
-			zap.Stringer("driver_id", driverID),
+			zap.String("driver_id", driverID),
 			zap.String("requester_tenant_id", tenantID.String()),
-			zap.String("driver_tenant_id", driver.TenantID.String()))
+			zap.String("driver_tenant_id", driver.TenantID))
 		h.writeErrorResponse(w, http.StatusForbidden, "Access denied", nil)
 		return nil, false
 	}

@@ -24,8 +24,8 @@ func (r *PayrollRepository) CreateSalaryConfig(ctx context.Context, config *mode
 			id, driver_id, base_salary, per_km_rate, daily_allowance, night_allowance, effective_from
 		) VALUES ($1, $2, $3, $4, $5, $6, $7)`
 
-	if config.ID == uuid.Nil {
-		config.ID = uuid.New()
+	if config.ID == "" {
+		config.ID = uuid.New().String()
 	}
 
 	start := time.Now()
@@ -43,8 +43,8 @@ func (r *PayrollRepository) CreateTripEarning(ctx context.Context, earning *mode
 			id, driver_id, trip_id, distance_km, earnings, bonus, penalty
 		) VALUES ($1, $2, $3, $4, $5, $6, $7)`
 
-	if earning.ID == uuid.Nil {
-		earning.ID = uuid.New()
+	if earning.ID == "" {
+		earning.ID = uuid.New().String()
 	}
 
 	start := time.Now()
@@ -56,7 +56,7 @@ func (r *PayrollRepository) CreateTripEarning(ctx context.Context, earning *mode
 	return err
 }
 
-func (r *PayrollRepository) GetSalaryConfig(ctx context.Context, driverID uuid.UUID) (*models.SalaryConfig, error) {
+func (r *PayrollRepository) GetSalaryConfig(ctx context.Context, driverID string) (*models.SalaryConfig, error) {
 	query := `
 		SELECT id, driver_id, base_salary, per_km_rate, daily_allowance, night_allowance, effective_from
 		FROM driver_salary
@@ -77,7 +77,7 @@ func (r *PayrollRepository) GetSalaryConfig(ctx context.Context, driverID uuid.U
 	return &c, nil
 }
 
-func (r *PayrollRepository) GetTripEarnings(ctx context.Context, driverID uuid.UUID, start, end time.Time) ([]*models.TripEarning, error) {
+func (r *PayrollRepository) GetTripEarnings(ctx context.Context, driverID string, start, end time.Time) ([]*models.TripEarning, error) {
 	query := `
 		SELECT id, driver_id, trip_id, distance_km, earnings, bonus, penalty, created_at
 		FROM driver_trip_earnings
@@ -109,8 +109,8 @@ func (r *PayrollRepository) CreatePayout(ctx context.Context, payout *models.Pay
 			id, driver_id, period_start, period_end, total_amount, status, created_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7)`
 
-	if payout.ID == uuid.Nil {
-		payout.ID = uuid.New()
+	if payout.ID == "" {
+		payout.ID = uuid.New().String()
 	}
 	if payout.CreatedAt.IsZero() {
 		payout.CreatedAt = time.Now()

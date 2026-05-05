@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	"github.com/flyfleet/fleet-core/internal/domains/driver/models"
@@ -34,13 +33,7 @@ func (h *DriverHandler) UpdateDutyStatus(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	parsedDriverID, err := uuid.Parse(driverID)
-	if err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", err)
-		return
-	}
-
-	if err := h.service.UpdateDutyStatus(r.Context(), parsedDriverID, tenantID, &req); err != nil {
+	if err := h.service.UpdateDutyStatus(r.Context(), driverID, tenantID, &req); err != nil {
 		h.logger.Error("failed to update duty status", zap.Error(err))
 
 		// Map domain errors to status codes
@@ -94,13 +87,7 @@ func (h *DriverHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	// Extract tenantID from context
 	tenantID := h.getTenantID(r)
 
-	parsedDriverID, err := uuid.Parse(driverID)
-	if err != nil {
-		http.Error(w, "Invalid driver ID format", http.StatusBadRequest)
-		return
-	}
-
-	msg, err := h.service.SendMessage(r.Context(), parsedDriverID, tenantID, req.Content, req.Type, req.AttachmentURL)
+	msg, err := h.service.SendMessage(r.Context(), driverID, tenantID.String(), req.Content, req.Type, req.AttachmentURL)
 	if err != nil {
 		h.logger.Error("failed to send message", zap.Error(err))
 		http.Error(w, "Failed to send message", http.StatusInternalServerError)
@@ -138,13 +125,7 @@ func (h *DriverHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
 	// Extract tenantID from context
 	tenantID := h.getTenantID(r)
 
-	parsedDriverID, err := uuid.Parse(driverID)
-	if err != nil {
-		http.Error(w, "Invalid driver ID format", http.StatusBadRequest)
-		return
-	}
-
-	messages, err := h.service.GetMessages(r.Context(), parsedDriverID, tenantID, page, pageSize)
+	messages, err := h.service.GetMessages(r.Context(), driverID, tenantID.String(), page, pageSize)
 	if err != nil {
 		h.logger.Error("failed to get messages", zap.Error(err))
 		http.Error(w, "Failed to get messages", http.StatusInternalServerError)
@@ -177,13 +158,7 @@ func (h *DriverHandler) SubmitExpense(w http.ResponseWriter, r *http.Request) {
 	// Extract tenantID from context
 	tenantID := h.getTenantID(r)
 
-	parsedDriverID, err := uuid.Parse(driverID)
-	if err != nil {
-		http.Error(w, "Invalid driver ID format", http.StatusBadRequest)
-		return
-	}
-
-	expense, err := h.service.SubmitExpense(r.Context(), parsedDriverID, tenantID, &req)
+	expense, err := h.service.SubmitExpense(r.Context(), driverID, tenantID.String(), &req)
 	if err != nil {
 		h.logger.Error("failed to submit expense", zap.Error(err))
 		http.Error(w, "Failed to submit expense", http.StatusInternalServerError)
@@ -209,13 +184,7 @@ func (h *DriverHandler) GetExpenses(w http.ResponseWriter, r *http.Request) {
 	// Extract tenantID from context
 	tenantID := h.getTenantID(r)
 
-	parsedDriverID, err := uuid.Parse(driverID)
-	if err != nil {
-		http.Error(w, "Invalid driver ID format", http.StatusBadRequest)
-		return
-	}
-
-	expenses, err := h.service.GetExpenses(r.Context(), parsedDriverID, tenantID)
+	expenses, err := h.service.GetExpenses(r.Context(), driverID, tenantID.String())
 	if err != nil {
 		h.logger.Error("failed to get expenses", zap.Error(err))
 		http.Error(w, "Failed to get expenses", http.StatusInternalServerError)
@@ -251,13 +220,7 @@ func (h *DriverHandler) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 	tenantID := h.getTenantID(r)
 	h.logger.Info("TriggerSOS: extracted tenantID", zap.String("tenant_id", tenantID.String()))
 
-	parsedDriverID, err := uuid.Parse(driverID)
-	if err != nil {
-		http.Error(w, "Invalid driver ID format", http.StatusBadRequest)
-		return
-	}
-
-	if err := h.service.TriggerSOS(r.Context(), parsedDriverID, tenantID, &loc); err != nil {
+	if err := h.service.TriggerSOS(r.Context(), driverID, tenantID.String(), &loc); err != nil {
 		h.logger.Error("failed to trigger SOS in service", zap.Error(err))
 		http.Error(w, "Failed to trigger SOS: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -282,13 +245,7 @@ func (h *DriverHandler) GetPerformance(w http.ResponseWriter, r *http.Request) {
 	// Extract tenantID from context
 	tenantID := h.getTenantID(r)
 
-	parsedDriverID, err := uuid.Parse(driverID)
-	if err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid driver ID format", err)
-		return
-	}
-
-	summary, err := h.service.GetDriverPerformanceSummary(r.Context(), parsedDriverID, tenantID)
+	summary, err := h.service.GetDriverPerformanceSummary(r.Context(), driverID, tenantID.String())
 	if err != nil {
 		h.logger.Error("failed to get driver performance summary", zap.Error(err))
 		statusCode := http.StatusInternalServerError

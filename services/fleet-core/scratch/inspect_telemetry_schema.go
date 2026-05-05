@@ -1,43 +1,38 @@
 package main
 
 import (
-	"context"
+	"database/sql"
 	"fmt"
 	"log"
-	"os"
 
-	"github.com/jackc/pgx/v5"
+	_ "github.com/lib/pq"
 )
 
 func main() {
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		dsn = "postgres://postgres:postgres@localhost:5432/flyfleet?sslmode=disable"
-	}
-
-	conn, err := pgx.Connect(context.Background(), dsn)
+	connStr := "postgres://postgres:postgres@localhost:5432/flyfleet?sslmode=disable"
+	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		log.Fatalf("Unable to connect to database: %v\n", err)
+		log.Fatal(err)
 	}
-	defer conn.Close(context.Background())
+	defer db.Close()
 
-	rows, err := conn.Query(context.Background(), `
-		SELECT column_name, data_type 
+	rows, err := db.Query(`
+		SELECT column_name, is_nullable, data_type 
 		FROM information_schema.columns 
-		WHERE table_name = 'device_telemetry'
-		ORDER BY ordinal_position;
+		WHERE table_name = 'telemetry_points'
+		ORDER BY ordinal_position
 	`)
 	if err != nil {
-		log.Fatalf("Query failed: %v\n", err)
+		log.Fatal(err)
 	}
 	defer rows.Close()
 
-	fmt.Println("Columns in device_telemetry:")
+	fmt.Println("Columns in telemetry_points:")
 	for rows.Next() {
-		var name, dtype string
-		if err := rows.Scan(&name, &dtype); err != nil {
+		var name, nullable, dtype string
+		if err := rows.Scan(&name, &nullable, &dtype); err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("- %s (%s)\n", name, dtype)
+		fmt.Printf("- %s (%s, %s)\n", name, dtype, nullable)
 	}
 }

@@ -13,10 +13,14 @@ import (
 )
 
 // UpdateDutyStatus updates the driver's duty status (HOOS) with compliance validation
-func (s *DriverService) UpdateDutyStatus(ctx context.Context, driverID uuid.UUID, tenantID uuid.UUID, req *models.DutyStatusLog) error {
+func (s *DriverService) UpdateDutyStatus(ctx context.Context, driverID string, tenantID uuid.UUID, req *models.DutyStatusLog) error {
+	dID, err := uuid.Parse(driverID)
+	if err != nil {
+		return fmt.Errorf("invalid driver id: %w", err)
+	}
 
 	// Use DutyStatusService for validation and creation
-	log, err := s.dutyStatus.UpdateDutyStatus(ctx, driverID, tenantID, req.Status, req.Location, req.Remarks)
+	log, err := s.dutyStatus.UpdateDutyStatus(ctx, dID, tenantID, req.Status, req.Location, req.Remarks)
 	if err != nil {
 		return err
 	}
@@ -27,7 +31,7 @@ func (s *DriverService) UpdateDutyStatus(ctx context.Context, driverID uuid.UUID
 	req.CreatedAt = log.CreatedAt
 
 	s.publishEvent("driver.duty_status_changed", map[string]interface{}{
-		"driver_id": driverID.String(),
+		"driver_id": driverID,
 		"status":    req.Status,
 		"location":  req.Location,
 		"timestamp": req.StartedAt,
@@ -37,7 +41,7 @@ func (s *DriverService) UpdateDutyStatus(ctx context.Context, driverID uuid.UUID
 }
 
 // SendMessage sends a message from driver to dispatch
-func (s *DriverService) SendMessage(ctx context.Context, driverID, tenantID uuid.UUID, content, msgType, attachmentURL string) (*models.DriverMessage, error) {
+func (s *DriverService) SendMessage(ctx context.Context, driverID, tenantID string, content, msgType, attachmentURL string) (*models.DriverMessage, error) {
 	// Verify driver ownership
 	driver, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
@@ -58,7 +62,7 @@ func (s *DriverService) SendMessage(ctx context.Context, driverID, tenantID uuid
 
 	if err := s.repo.CreateMessage(ctx, msg); err != nil {
 		s.logger.Error("failed to send message",
-			zap.String("driver_id", driverID.String()),
+			zap.String("driver_id", driverID),
 			zap.Error(err))
 		return nil, fmt.Errorf("failed to send message: %w", err)
 	}
@@ -68,7 +72,7 @@ func (s *DriverService) SendMessage(ctx context.Context, driverID, tenantID uuid
 }
 
 // GetMessages retrieves messages for a driver
-func (s *DriverService) GetMessages(ctx context.Context, driverID, tenantID uuid.UUID, page, pageSize int) ([]*models.DriverMessage, error) {
+func (s *DriverService) GetMessages(ctx context.Context, driverID, tenantID string, page, pageSize int) ([]*models.DriverMessage, error) {
 	// Verify driver ownership
 	driver, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
@@ -90,7 +94,7 @@ func (s *DriverService) GetMessages(ctx context.Context, driverID, tenantID uuid
 }
 
 // SubmitExpense submits a new expense claim
-func (s *DriverService) SubmitExpense(ctx context.Context, driverID, tenantID uuid.UUID, req *models.DriverExpense) (*models.DriverExpense, error) {
+func (s *DriverService) SubmitExpense(ctx context.Context, driverID, tenantID string, req *models.DriverExpense) (*models.DriverExpense, error) {
 	// Verify driver ownership
 	driver, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
@@ -105,7 +109,7 @@ func (s *DriverService) SubmitExpense(ctx context.Context, driverID, tenantID uu
 
 	if err := s.repo.CreateExpense(ctx, req); err != nil {
 		s.logger.Error("failed to submit expense",
-			zap.String("driver_id", driverID.String()),
+			zap.String("driver_id", driverID),
 			zap.Error(err))
 		return nil, fmt.Errorf("failed to submit expense: %w", err)
 	}
@@ -115,7 +119,7 @@ func (s *DriverService) SubmitExpense(ctx context.Context, driverID, tenantID uu
 }
 
 // GetExpenses retrieves expenses for a driver
-func (s *DriverService) GetExpenses(ctx context.Context, driverID, tenantID uuid.UUID) ([]*models.DriverExpense, error) {
+func (s *DriverService) GetExpenses(ctx context.Context, driverID, tenantID string) ([]*models.DriverExpense, error) {
 	// Verify driver ownership
 	driver, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
@@ -129,8 +133,8 @@ func (s *DriverService) GetExpenses(ctx context.Context, driverID, tenantID uuid
 }
 
 // TriggerSOS triggers an emergency SOS alert
-func (s *DriverService) TriggerSOS(ctx context.Context, driverID, tenantID uuid.UUID, location *models.Location) error {
-	s.logger.Info("TriggerSOS called", zap.String("driver_id", driverID.String()), zap.String("tenant_id", tenantID.String()))
+func (s *DriverService) TriggerSOS(ctx context.Context, driverID, tenantID string, location *models.Location) error {
+	s.logger.Info("TriggerSOS called", zap.String("driver_id", driverID), zap.String("tenant_id", tenantID))
 	// Verify driver ownership
 	driverRecord, err := s.repo.GetByID(ctx, driverID)
 	if err != nil {
@@ -138,24 +142,24 @@ func (s *DriverService) TriggerSOS(ctx context.Context, driverID, tenantID uuid.
 		return err
 	}
 	if driverRecord == nil {
-		s.logger.Warn("TriggerSOS: driver not found", zap.String("driver_id", driverID.String()))
+		s.logger.Warn("TriggerSOS: driver not found", zap.String("driver_id", driverID))
 		return fmt.Errorf("driver not found")
 	}
 	// Skip org check for certification test if org is the default test org
-	if driverRecord.TenantID != tenantID && tenantID.String() != "00000000-0000-0000-0000-000000000001" {
-		s.logger.Warn("TriggerSOS: unauthorized", zap.String("driver_org", driverRecord.TenantID.String()), zap.String("req_org", tenantID.String()))
+	if driverRecord.TenantID != tenantID && tenantID != "00000000-0000-0000-0000-000000000001" {
+		s.logger.Warn("TriggerSOS: unauthorized", zap.String("driver_org", driverRecord.TenantID), zap.String("req_org", tenantID))
 		return fmt.Errorf("unauthorized access to driver data (driver org: %s, req org: %s)", driverRecord.TenantID, tenantID)
 	}
 
 	s.logger.Warn("SOS ALERT TRIGGERED",
-		zap.String("driver_id", driverID.String()),
+		zap.String("driver_id", driverID),
 		zap.Any("location", location))
 
 	// Increment Prometheus metrics
 	driver.GlobalMetrics.SOSAlertsTotal.Inc()
 
 	s.publishEvent("driver.sos_alert", map[string]interface{}{
-		"driver_id": driverID.String(),
+		"driver_id": driverID,
 		"location":  location,
 		"timestamp": time.Now(),
 		"severity":  "CRITICAL",

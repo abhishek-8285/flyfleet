@@ -24,8 +24,8 @@ func (r *ShiftRepository) CreateShift(ctx context.Context, shift *models.Shift) 
 			id, driver_id, shift_start, shift_end, shift_type, status, created_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7)`
 
-	if shift.ID == uuid.Nil {
-		shift.ID = uuid.New()
+	if shift.ID == "" {
+		shift.ID = uuid.New().String()
 	}
 	if shift.CreatedAt.IsZero() {
 		shift.CreatedAt = time.Now()
@@ -40,20 +40,20 @@ func (r *ShiftRepository) CreateShift(ctx context.Context, shift *models.Shift) 
 	return err
 }
 
-func (r *ShiftRepository) AssignVehicle(ctx context.Context, shiftID uuid.UUID, vehicleID string) error {
+func (r *ShiftRepository) AssignVehicle(ctx context.Context, shiftID string, vehicleID string) error {
 	query := `
 		INSERT INTO driver_shift_assignments (
 			id, shift_id, vehicle_id, assigned_at
 		) VALUES ($1, $2, $3, $4)`
 
-	id := uuid.New()
+	id := uuid.New().String()
 	start := time.Now()
 	_, err := r.db.Exec(ctx, query, id, shiftID, vehicleID, time.Now())
 	metrics.RecordDBQuery(query, time.Since(start))
 	return err
 }
 
-func (r *ShiftRepository) UpdateShiftStatus(ctx context.Context, shiftID uuid.UUID, status string) error {
+func (r *ShiftRepository) UpdateShiftStatus(ctx context.Context, shiftID string, status string) error {
 	query := `UPDATE driver_shifts SET status = $2 WHERE id = $1`
 	start := time.Now()
 	_, err := r.db.Exec(ctx, query, shiftID, status)
@@ -61,7 +61,7 @@ func (r *ShiftRepository) UpdateShiftStatus(ctx context.Context, shiftID uuid.UU
 	return err
 }
 
-func (r *ShiftRepository) GetShiftsByDriverID(ctx context.Context, driverID uuid.UUID, start, end time.Time) ([]*models.Shift, error) {
+func (r *ShiftRepository) GetShiftsByDriverID(ctx context.Context, driverID string, start, end time.Time) ([]*models.Shift, error) {
 	query := `
 		SELECT id, driver_id, shift_start, shift_end, shift_type, status, created_at
 		FROM driver_shifts

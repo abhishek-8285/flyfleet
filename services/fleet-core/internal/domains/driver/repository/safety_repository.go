@@ -24,8 +24,8 @@ func (r *SafetyRepository) CreateSafetyEvent(ctx context.Context, event *models.
 			id, driver_id, trip_id, event_type, severity, gps_lat, gps_lng, timestamp, created_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 
-	if event.ID == uuid.Nil {
-		event.ID = uuid.New()
+	if event.ID == "" {
+		event.ID = uuid.New().String()
 	}
 	if event.CreatedAt.IsZero() {
 		event.CreatedAt = time.Now()

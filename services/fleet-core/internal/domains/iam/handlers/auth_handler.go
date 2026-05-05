@@ -109,8 +109,6 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			h.writeError(w, http.StatusForbidden, "account_locked", "Account is locked. Try again later", r)
 		case errors.Is(err, service.ErrUserNotFound):
 			h.writeError(w, http.StatusUnauthorized, "invalid_credentials", "Invalid email or password", r)
-		case err.Error() == "no_tenant":
-			h.writeError(w, http.StatusForbidden, "no_tenant", "You do not have access to any organization", r)
 		default:
 			h.log.Error("login failed", zap.Error(err), zap.String("email", req.Email))
 			h.writeError(w, http.StatusInternalServerError, "internal_error", "An internal error occurred", r)

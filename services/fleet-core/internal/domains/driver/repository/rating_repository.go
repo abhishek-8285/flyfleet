@@ -24,8 +24,8 @@ func (r *RatingRepository) CreateRating(ctx context.Context, rating *models.Rati
 			id, driver_id, trip_id, punctuality_score, behavior_score, driving_score, overall_rating, comments, created_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 
-	if rating.ID == uuid.Nil {
-		rating.ID = uuid.New()
+	if rating.ID == "" {
+		rating.ID = uuid.New().String()
 	}
 	if rating.CreatedAt.IsZero() {
 		rating.CreatedAt = time.Now()
@@ -41,7 +41,7 @@ func (r *RatingRepository) CreateRating(ctx context.Context, rating *models.Rati
 	return err
 }
 
-func (r *RatingRepository) GetAverageRating(ctx context.Context, driverID uuid.UUID) (float64, error) {
+func (r *RatingRepository) GetAverageRating(ctx context.Context, driverID string) (float64, error) {
 	query := `SELECT AVG(overall_rating) FROM driver_ratings WHERE driver_id = $1`
 	start := time.Now()
 	var avg float64

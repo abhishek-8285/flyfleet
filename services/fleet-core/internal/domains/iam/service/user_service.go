@@ -192,13 +192,22 @@ func (s *UserService) CreateUser(ctx context.Context, tenantID uuid.UUID, req mo
 	}
 
 	// Assign roles
-	for _, roleID := range req.RoleIDs {
+	var primaryRoleID uuid.UUID
+	for i, roleID := range req.RoleIDs {
+		if i == 0 {
+			primaryRoleID = roleID
+		}
 		if err := s.roleRepo.AssignRole(ctx, user.ID, roleID, tenantID, uuid.Nil); err != nil {
 			s.log.Error("failed to assign role during direct user creation",
 				zap.String("role_id", roleID.String()),
 				zap.Error(err),
 			)
 		}
+	}
+
+	// Link user to tenant for visibility and login
+	if err := s.tenantRepo.AddUserToTenant(ctx, user.ID, tenantID, "Member", primaryRoleID); err != nil {
+		s.log.Error("failed to link user to tenant", zap.Error(err))
 	}
 
 	// Log audit

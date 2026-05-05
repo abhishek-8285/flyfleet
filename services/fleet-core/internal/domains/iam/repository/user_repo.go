@@ -23,8 +23,8 @@ func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.User, error) {
 	var u models.User
 	err := r.pool.QueryRow(ctx, `
-		SELECT id, email, password_hash, COALESCE(name, ''), COALESCE(phone, ''), COALESCE(avatar_url, ''), COALESCE(mfa_enabled, false), COALESCE(mfa_secret, ''),
-		       COALESCE(mfa_backup_codes, '[]'::jsonb), COALESCE(status, 'active'), COALESCE(email_verified, false),
+		SELECT id, email, password_hash, COALESCE(name, ''), COALESCE(phone, ''), COALESCE(avatar_url, ''), mfa_enabled, COALESCE(mfa_secret, ''),
+		       COALESCE(mfa_backup_codes, '[]'::jsonb), status, email_verified,
 		       COALESCE(failed_logins, 0), locked_until, last_login_at,
 		       COALESCE(last_login_ip, '')::text, COALESCE(permission_mask, 0),
 		       COALESCE(sidebar_collapsed, false), COALESCE(language, 'en'),
@@ -48,8 +48,8 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.
 func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	var u models.User
 	err := r.pool.QueryRow(ctx, `
-		SELECT id, email, password_hash, COALESCE(name, ''), COALESCE(phone, ''), COALESCE(avatar_url, ''), COALESCE(mfa_enabled, false), COALESCE(mfa_secret, ''),
-		       COALESCE(mfa_backup_codes, '[]'::jsonb), COALESCE(status, 'active'), COALESCE(email_verified, false),
+		SELECT id, email, password_hash, COALESCE(name, ''), COALESCE(phone, ''), COALESCE(avatar_url, ''), mfa_enabled, COALESCE(mfa_secret, ''),
+		       COALESCE(mfa_backup_codes, '[]'::jsonb), status, email_verified,
 		       COALESCE(failed_logins, 0), locked_until, last_login_at,
 		       COALESCE(last_login_ip, '')::text, COALESCE(permission_mask, 0),
 		       COALESCE(sidebar_collapsed, false), COALESCE(language, 'en'),
@@ -194,7 +194,7 @@ func (r *UserRepository) UpdatePasswordAndClearResetFlag(ctx context.Context, id
 
 func (r *UserRepository) ListUsers(ctx context.Context, params models.ListUsersParams) (*models.ListUsersResponse, error) {
 	query := `
-		SELECT u.id, u.email, u.name, COALESCE(u.status, 'active'), u.last_login_at, u.created_at
+		SELECT u.id, u.email, u.name, u.status, u.last_login_at, u.created_at
 		FROM users u`
 	
 	countQuery := `SELECT COUNT(*) FROM users u`

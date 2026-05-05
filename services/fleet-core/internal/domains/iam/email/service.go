@@ -43,6 +43,8 @@ func NewEmailService(cfg config.EmailConfig, log *zap.Logger) *EmailService {
 			log.Warn("smtp configured but no host, falling back to no-op")
 			provider = NewNoOpProvider(log)
 		}
+	case "noop":
+		provider = NewNoOpProvider(log)
 	default:
 		log.Warn("unknown email provider, using no-op", zap.String("provider", cfg.Provider))
 		provider = NewNoOpProvider(log)

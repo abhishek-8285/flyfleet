@@ -3,54 +3,49 @@
 
 -- Create webhook subscriptions table
 CREATE TABLE IF NOT EXISTS webhook_subscriptions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    org_id UUID NOT NULL,
-    
-    -- Webhook configuration
-    name VARCHAR(255) NOT NULL,
-    url TEXT NOT NULL,
-    secret VARCHAR(255) NOT NULL, -- HMAC secret for signature verification
-    is_active BOOLEAN DEFAULT true,
-    
-    -- Event filters
-    events TEXT[] NOT NULL, -- Array of event types to subscribe to
-    
-    -- Headers (optional custom headers)
-    custom_headers JSONB DEFAULT '{}',
-    
-    -- Retry configuration
-    max_retries INTEGER DEFAULT 3,
-    retry_delay_seconds INTEGER DEFAULT 60,
-    timeout_seconds INTEGER DEFAULT 30,
-    
-    -- Rate limiting
-    rate_limit_per_minute INTEGER DEFAULT 60,
-    
-    -- Statistics
-    total_deliveries INTEGER DEFAULT 0,
-    successful_deliveries INTEGER DEFAULT 0,
-    failed_deliveries INTEGER DEFAULT 0,
-    last_delivery_at TIMESTAMPTZ,
-    last_success_at TIMESTAMPTZ,
-    last_failure_at TIMESTAMPTZ,
-    
-    -- Metadata
-    description TEXT,
-    metadata JSONB DEFAULT '{}',
-    
-    -- Audit
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    created_by UUID,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_by UUID,
-    deleted_at TIMESTAMPTZ,
-    
-    -- Constraints
-    CONSTRAINT chk_webhook_max_retries CHECK (max_retries >= 0 AND max_retries <= 10),
-    CONSTRAINT chk_webhook_retry_delay CHECK (retry_delay_seconds >= 10 AND retry_delay_seconds <= 3600),
-    CONSTRAINT chk_webhook_timeout CHECK (timeout_seconds >= 5 AND timeout_seconds <= 300),
-    CONSTRAINT chk_webhook_rate_limit CHECK (rate_limit_per_minute >= 1 AND rate_limit_per_minute <= 1000)
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid()
 );
+
+-- Defensive setup for all columns
+DO $$ 
+BEGIN 
+    -- Column Harmonization (Legacy org_id -> tenant_id)
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'webhook_subscriptions' AND column_name = 'org_id') 
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'webhook_subscriptions' AND column_name = 'tenant_id') THEN
+        ALTER TABLE webhook_subscriptions RENAME COLUMN org_id TO tenant_id;
+    END IF;
+
+    -- Ensure all columns exist
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE;
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS name VARCHAR(255);
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS url TEXT;
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS secret VARCHAR(255);
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS events TEXT[] NOT NULL DEFAULT '{}';
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS custom_headers JSONB DEFAULT '{}';
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS max_retries INTEGER DEFAULT 3;
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS retry_delay_seconds INTEGER DEFAULT 60;
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS timeout_seconds INTEGER DEFAULT 30;
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS rate_limit_per_minute INTEGER DEFAULT 60;
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS total_deliveries INTEGER DEFAULT 0;
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS successful_deliveries INTEGER DEFAULT 0;
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS failed_deliveries INTEGER DEFAULT 0;
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS last_delivery_at TIMESTAMPTZ;
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS last_success_at TIMESTAMPTZ;
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS last_failure_at TIMESTAMPTZ;
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS description TEXT;
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS created_by UUID;
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS updated_by UUID;
+    ALTER TABLE webhook_subscriptions ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+
+    -- Constraints (Defensive)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.constraint_column_usage WHERE table_name = 'webhook_subscriptions' AND constraint_name = 'chk_webhook_max_retries') THEN
+        ALTER TABLE webhook_subscriptions ADD CONSTRAINT chk_webhook_max_retries CHECK (max_retries >= 0 AND max_retries <= 10);
+    END IF;
+END $$;
 
 -- Create webhook delivery log table
 CREATE TABLE IF NOT EXISTS webhook_deliveries (
@@ -112,14 +107,14 @@ INSERT INTO webhook_event_types (event_type, description, category) VALUES
 ON CONFLICT (event_type) DO NOTHING;
 
 -- Indexes
-CREATE INDEX idx_webhook_subscriptions_org ON webhook_subscriptions(org_id);
-CREATE INDEX idx_webhook_subscriptions_active ON webhook_subscriptions(is_active);
-CREATE INDEX idx_webhook_subscriptions_events ON webhook_subscriptions USING GIN(events);
-CREATE INDEX idx_webhook_deliveries_subscription ON webhook_deliveries(subscription_id);
-CREATE INDEX idx_webhook_deliveries_status ON webhook_deliveries(status);
-CREATE INDEX idx_webhook_deliveries_event ON webhook_deliveries(event_type);
-CREATE INDEX idx_webhook_deliveries_sent ON webhook_deliveries(sent_at);
-CREATE INDEX idx_webhook_deliveries_retry ON webhook_deliveries(next_retry_at) WHERE status = 'retrying';
+CREATE INDEX IF NOT EXISTS idx_webhook_subscriptions_tenant ON webhook_subscriptions(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_subscriptions_active ON webhook_subscriptions(is_active);
+CREATE INDEX IF NOT EXISTS idx_webhook_subscriptions_events ON webhook_subscriptions USING GIN(events);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_subscription ON webhook_deliveries(subscription_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_status ON webhook_deliveries(status);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_event ON webhook_deliveries(event_type);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_sent ON webhook_deliveries(sent_at);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_retry ON webhook_deliveries(next_retry_at) WHERE status = 'retrying';
 
 -- Comments
 COMMENT ON TABLE webhook_subscriptions IS 'Webhook subscription configuration for external integrations';
@@ -235,7 +230,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE VIEW webhook_subscription_stats AS
 SELECT 
     ws.id,
-    ws.org_id,
+    ws.tenant_id,
     ws.name,
     ws.url,
     ws.is_active,

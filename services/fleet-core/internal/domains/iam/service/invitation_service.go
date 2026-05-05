@@ -162,13 +162,22 @@ func (s *InvitationService) AcceptInvite(ctx context.Context, token, name, passw
 	}
 
 	// Assign roles
-	for _, roleID := range inv.RoleIDs {
+	var primaryRoleID uuid.UUID
+	for i, roleID := range inv.RoleIDs {
+		if i == 0 {
+			primaryRoleID = roleID
+		}
 		if err := s.roleRepo.AssignRole(ctx, user.ID, roleID, inv.TenantID, uuid.Nil); err != nil {
 			s.log.Error("failed to assign role during invite acceptance",
 				zap.String("role_id", roleID.String()),
 				zap.Error(err),
 			)
 		}
+	}
+
+	// Link user to tenant for visibility and login
+	if err := s.tenantRepo.AddUserToTenant(ctx, user.ID, inv.TenantID, "Member", primaryRoleID); err != nil {
+		s.log.Error("failed to link user to tenant during invite accept", zap.Error(err))
 	}
 
 	// Mark invite as accepted

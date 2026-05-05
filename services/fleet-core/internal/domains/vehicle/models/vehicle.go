@@ -28,8 +28,8 @@ const (
 // Vehicle is the enterprise aggregate root for the vehicle domain.
 type Vehicle struct {
 	ID                 uuid.UUID  `json:"id"                   db:"id"`
-	TenantID           uuid.UUID  `json:"tenant_id"            db:"tenant_id" index:"true" references:"tenants"`
-	RegistrationNumber string     `json:"registration_number"  db:"registration_number" index:"unique"`
+	TenantID           uuid.UUID  `json:"tenant_id"            db:"tenant_id"`
+	RegistrationNumber string     `json:"registration_number"  db:"registration_number"`
 	ChassisNumber      *string    `json:"chassis_number"       db:"chassis_number"` // AES-256 encrypted
 	EngineNumber       *string    `json:"engine_number"        db:"engine_number"`  // AES-256 encrypted
 	VINNumber          *string    `json:"vin_number"           db:"vin_number"`
@@ -38,11 +38,11 @@ type Vehicle struct {
 	FuelType           string     `json:"fuel_type"            db:"fuel_type"`
 	FuelTankCapacity   *float64   `json:"fuel_tank_capacity"   db:"fuel_tank_capacity"`
 	OwnershipType      string     `json:"ownership_type"       db:"ownership_type"`
-	ParentVehicleID    *uuid.UUID `json:"parent_vehicle_id"    db:"parent_vehicle_id" references:"vehicles"`
+	ParentVehicleID    *uuid.UUID `json:"parent_vehicle_id"    db:"parent_vehicle_id"`
 	BranchID           *uuid.UUID `json:"branch_id"            db:"branch_id"`
 	CostCenterID       *uuid.UUID `json:"cost_center_id"       db:"cost_center_id"`
 	Status             string     `json:"status"               db:"status"`
-	GPSDeviceID        *string    `json:"gps_device_id"        db:"gps_device_id" index:"true"`
+	GPSDeviceID        *string    `json:"gps_device_id"        db:"gps_device_id"`
 	GPSEnabled         bool       `json:"gps_enabled"          db:"gps_enabled"`
 	GPSDeviceType      *string    `json:"gps_device_type"      db:"gps_device_type"`
 	ImmobilizerEnabled bool       `json:"immobilizer_enabled"  db:"immobilizer_enabled"`
@@ -53,21 +53,10 @@ type Vehicle struct {
 	Year  *int    `json:"year"                 db:"year"`
 	Color *string `json:"color"                db:"color"`
 	Odometer           *int64     `json:"odometer"             db:"odometer"`
-	CurrentDriverID    *uuid.UUID `json:"current_driver_id"    db:"current_driver_id" index:"true" references:"drivers"`
+	CurrentDriverID    *uuid.UUID `json:"current_driver_id"    db:"current_driver_id"`
 	CurrentDriver      *DriverInfo `json:"current_driver,omitempty"`
 	SpeedLimit         float64    `json:"speed_limit"          db:"speed_limit"`
 	LicensePlate       string     `json:"license_plate"        db:"license_plate"`
-	Insurance          string     `json:"insurance"           db:"insurance"`
-	InsuranceExpiry    *time.Time `json:"insurance_expiry"    db:"insurance_expiry_date"`
-	PermitNumber       string     `json:"permit_number"       db:"permit_number"`
-	PermitExpiry       *time.Time `json:"permit_expiry"       db:"permit_expiry_date"`
-	PollutionExpiry    *time.Time `json:"pollution_expiry"    db:"pollution_expiry_date"`
-	FitnessExpiry      *time.Time `json:"fitness_expiry"      db:"fitness_expiry_date"`
-	TaxExpiry          *time.Time `json:"tax_expiry"          db:"tax_expiry_date"`
-	LastServiceDate    *time.Time `json:"last_service_date"   db:"last_service_date"`
-	NextServiceDate    *time.Time `json:"next_service_date"   db:"next_service_date"`
-	LastServiceOdometer int64      `json:"last_service_odometer" db:"last_service_odometer"`
-	Metadata           map[string]interface{} `json:"metadata"          db:"metadata"`
 
 	CreatedAt time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at" db:"updated_at"`
@@ -153,16 +142,6 @@ type UpdateVehicleRequest struct {
 	ParentVehicleID    *uuid.UUID `json:"parent_vehicle_id"`
 	SpeedLimit         *float64   `json:"speed_limit"`
 	Insurance          *string    `json:"insurance"`
-	InsuranceExpiry    *time.Time `json:"insurance_expiry"`
-	PermitNumber       *string    `json:"permit_number"`
-	PermitExpiry       *time.Time `json:"permit_expiry"`
-	PollutionExpiry    *time.Time `json:"pollution_expiry"`
-	FitnessExpiry      *time.Time `json:"fitness_expiry"`
-	TaxExpiry          *time.Time `json:"tax_expiry"`
-	LastServiceDate    *time.Time `json:"last_service_date"`
-	NextServiceDate    *time.Time `json:"next_service_date"`
-	LastServiceOdometer *int64     `json:"last_service_odometer"`
-	Metadata           *map[string]interface{} `json:"metadata"`
 }
 
 // VehicleListResponse is the paginated list response.

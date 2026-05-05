@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"strings"
 	"github.com/flyfleet/fleet-core/internal/domains/iam/models"
 	"go.uber.org/zap"
 )
@@ -128,7 +127,6 @@ func (h *ProfileHandler) writeError(w http.ResponseWriter, status int, code stri
 
 // computePermissionsForRole returns a list of permission strings for the given role.
 func computePermissionsForRole(role string) []string {
-	role = strings.ToLower(role)
 	switch role {
 	case "admin", "super_admin", "org_admin":
 		return []string{

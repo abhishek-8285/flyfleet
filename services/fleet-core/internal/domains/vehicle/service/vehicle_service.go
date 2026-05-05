@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-
 	"github.com/fleet-platform/shared/pkg/middleware"
 
 	"github.com/flyfleet/fleet-core/internal/domains/vehicle/crypto"
@@ -121,9 +120,8 @@ func (s *VehicleService) CreateVehicle(ctx context.Context, req *models.CreateVe
 		LicensePlate:       regNo,
 		Status:             strings.ToLower(models.StatusActive),
 
-
-		CreatedAt:          time.Now(),
-		UpdatedAt:          time.Now(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 
 	// Encrypt sensitive fields before persist
@@ -320,37 +318,16 @@ func (s *VehicleService) UpdateVehicle(ctx context.Context, id uuid.UUID, req *m
 	if req.Color != nil {
 		vehicle.Color = req.Color
 	}
-	if (req.Odometer != nil) {
+	if req.Odometer != nil {
 		vehicle.Odometer = req.Odometer
 	}
 	if req.CurrentDriverID != nil {
-		newDriverID := *req.CurrentDriverID
-		// Only act if the driver has actually changed
-		currentDriverID := uuid.Nil
-		if vehicle.CurrentDriverID != nil {
-			currentDriverID = *vehicle.CurrentDriverID
-		}
-
-		if newDriverID != currentDriverID {
-			if newDriverID == uuid.Nil {
-				// Explicit unassignment requested
-				if err := s.repo.UnassignDriver(ctx, vehicle.ID, vehicle.TenantID); err != nil {
-					return nil, fmt.Errorf("failed to clear driver assignment: %w", err)
-				}
-				vehicle.CurrentDriverID = nil
-			} else {
-				// New assignment or swap requested
-				if err := s.repo.AssignDriver(ctx, vehicle.ID, vehicle.TenantID, newDriverID); err != nil {
-					return nil, fmt.Errorf("failed to synchronize driver assignment: %w", err)
-				}
-				vehicle.CurrentDriverID = &newDriverID
-			}
-		}
+		vehicle.CurrentDriverID = req.CurrentDriverID
 	}
-	if (req.ParentVehicleID != nil) {
+	if req.ParentVehicleID != nil {
 		vehicle.ParentVehicleID = req.ParentVehicleID
 	}
-	if (req.SpeedLimit != nil) {
+	if req.SpeedLimit != nil {
 		vehicle.SpeedLimit = *req.SpeedLimit
 	}
 	// Legacy status update (normalize case)

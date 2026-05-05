@@ -45,10 +45,6 @@ export REDIS_ADDR=localhost:6379
 export NATS_URL=nats://localhost:4222
 
 cd services/fleet-core
-export TMPDIR=$(pwd)/../../tmp
-export GOCACHE=$(pwd)/../../tmp/gocache
-export GOMODCACHE=$(pwd)/../../tmp/gomodcache
-mkdir -p $TMPDIR $GOCACHE $GOMODCACHE
 # Build and run the backend (using build to avoid 'go run' internal package issues in workspaces)
 go build -o fleet_backend ./cmd
 nohup ./fleet_backend > ../../backend.log 2>&1 &

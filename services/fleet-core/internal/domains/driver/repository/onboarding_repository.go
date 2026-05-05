@@ -24,8 +24,8 @@ func (r *OnboardingRepository) CreateStep(ctx context.Context, step *models.Onbo
 			id, driver_id, step, status, remarks, completed_at, created_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7)`
 
-	if step.ID == uuid.Nil {
-		step.ID = uuid.New()
+	if step.ID == "" {
+		step.ID = uuid.New().String()
 	}
 	if step.CreatedAt.IsZero() {
 		step.CreatedAt = time.Now()
@@ -52,7 +52,7 @@ func (r *OnboardingRepository) UpdateStep(ctx context.Context, step *models.Onbo
 	return err
 }
 
-func (r *OnboardingRepository) GetStepsByDriverID(ctx context.Context, driverID uuid.UUID) ([]*models.OnboardingStep, error) {
+func (r *OnboardingRepository) GetStepsByDriverID(ctx context.Context, driverID string) ([]*models.OnboardingStep, error) {
 	query := `
 		SELECT id, driver_id, step, status, remarks, completed_at, created_at
 		FROM driver_onboarding_steps

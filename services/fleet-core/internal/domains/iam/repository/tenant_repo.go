@@ -18,7 +18,7 @@ func NewTenantRepository(pool *pgxpool.Pool) *TenantRepository {
 
 func (r *TenantRepository) GetUserTenants(ctx context.Context, userID uuid.UUID) ([]models.TenantInfo, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT o.id, COALESCE(o.name, ''), COALESCE(uo.role, 'viewer'), ''::text,
+		SELECT o.id, o.name, uo.role, ''::text,
 			   COALESCE((SELECT COUNT(*) FROM vehicles v WHERE v.tenant_id = o.id), 0)
 		FROM user_tenants uo
 		JOIN tenants o ON o.id = uo.tenant_id
@@ -72,6 +72,17 @@ func (r *TenantRepository) LogTenantSwitch(ctx context.Context, userID, fromTena
 		INSERT INTO tenant_switch_events (user_id, from_tenant_id, to_tenant_id, ip_address, user_agent)
 		VALUES ($1, $2, $3, $4, $5)`,
 		userID, fromTenantID, toTenantID, ip, userAgent,
+	)
+	return err
+}
+
+func (r *TenantRepository) AddUserToTenant(ctx context.Context, userID, tenantID uuid.UUID, role string, roleID uuid.UUID) error {
+	_, err := r.pool.Exec(ctx, `
+		INSERT INTO user_tenants (user_id, tenant_id, role, role_id, is_active)
+		VALUES ($1, $2, $3, $4, true)
+		ON CONFLICT (user_id, tenant_id) DO UPDATE 
+		SET role = EXCLUDED.role, role_id = EXCLUDED.role_id, is_active = true`,
+		userID, tenantID, role, roleID,
 	)
 	return err
 }

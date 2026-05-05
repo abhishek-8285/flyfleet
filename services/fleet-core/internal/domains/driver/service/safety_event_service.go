@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/flyfleet/fleet-core/internal/domains/driver/models"
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -32,7 +31,7 @@ func (s *SafetyEventService) RecordSafetyEvent(ctx context.Context, event *model
 	return s.repo.CreateSafetyEvent(ctx, event)
 }
 
-func (s *SafetyEventService) DetectFatigue(ctx context.Context, driverID uuid.UUID, continuousDrivingHours float64) error {
+func (s *SafetyEventService) DetectFatigue(ctx context.Context, driverID string, continuousDrivingHours float64) error {
 	if continuousDrivingHours > 5.0 {
 		event := &models.SafetyEvent{
 			DriverID:  driverID,

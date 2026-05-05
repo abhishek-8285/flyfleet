@@ -39,7 +39,7 @@ else
 fi
 
 echo "Waiting for service to start on port 8084..."
-for i in $(seq 1 10); do
+for i in {1..10}; do
     if curl -s http://localhost:8084/health | grep -q "healthy"; then
         echo "Backend is UP and healthy!"
         exit 0
