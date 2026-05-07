@@ -151,7 +151,7 @@ export const DriverTable: React.FC<DriverTableProps> = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onDelete?.(id);
+                        onDelete?.(driver.id);
                       }}
                       className="p-2 text-gray-500 hover:text-rose-500 transition-colors"
                     >

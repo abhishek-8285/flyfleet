@@ -103,8 +103,8 @@ export const VehicleDetail: React.FC = () => {
   ]);
   
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([
-    { id: '101', time: '18:51:04', event: 'COMPLIANCE_HOLD', actor: 'SYSTEM', desc: 'Critical document "Fitness Certificate" hit EXPIRED state. Asset suspended.', severity: 'critical' },
-    { id: '102', time: '16:22:12', event: 'DOC_UPLOAD', actor: 'Admin', desc: 'Insurance Policy v2.4 uploaded via Portal.', severity: 'normal' },
+    { id: '101', time: '18:51:04', event: 'COMPLIANCE_HOLD', actor: 'SYSTEM', desc: 'Critical document "Fitness Certificate" hit EXPIRED state. Asset suspended.', severity: 'critical', nodeId: 'node-01', sessionId: 'session-01' },
+    { id: '102', time: '16:22:12', event: 'DOC_UPLOAD', actor: 'Admin', desc: 'Insurance Policy v2.4 uploaded via Portal.', severity: 'normal', nodeId: 'node-01', sessionId: 'session-01' },
   ]);
 
   // --- Search & Selection (Pilot Assignment) ---
@@ -238,6 +238,19 @@ export const VehicleDetail: React.FC = () => {
       setCommand('none');
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
+  const handleAssignDriver = async (driver: any) => {
+    try {
+      setIsSyncing(true);
+      await apiClient.post(`/fleet/vehicles/${id}/assign`, { driver_id: driver.id || driver.name });
+      setVehicle((prev: any) => ({ ...prev, current_driver: driver }));
+      addAudit('DRIVER_ASSIGNED', `Asset control transferred to ${driver.name}. Credentials verified.`, 'normal', 'CentralOps');
+      setCommand('none');
+    } catch (err) {
+      console.error("Assignment failed:", err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const handleDocumentUpload = (docId?: string) => {
     setCommand('upload');
@@ -256,7 +269,7 @@ export const VehicleDetail: React.FC = () => {
         addAudit('OCR_COMPLETE', `Extraction successful for ${docName}. Metadata pulse: 420d remaining.`, 'normal', 'ComplianceAI');
         setTimeout(() => setCommand('none'), 1500);
       } else {
-        setCommandData(prev => ({ ...prev, progress: Math.min(p, 95) }));
+        setCommandData((prev: any) => ({ ...prev, progress: Math.min(p, 95) }));
       }
     }, 400);
   };
@@ -264,7 +277,16 @@ export const VehicleDetail: React.FC = () => {
   if (loading || !vehicle) return null;
 
   const isRestricted = stats.isRestricted || vehicle.status === 'blocked';
-  const markers = [{ id: vehicle.id, registration_number: vehicle.registration_number, latitude: telemetry?.latitude || 28.6139, longitude: telemetry?.longitude || 77.2090, status: vehicle.status }];
+  const markers = [{ 
+    id: vehicle.id, 
+    registration_number: vehicle.registration_number, 
+    latitude: telemetry?.latitude || 28.6139, 
+    longitude: telemetry?.longitude || 77.2090, 
+    status: vehicle.status,
+    lat: telemetry?.latitude || 28.6139,
+    lng: telemetry?.longitude || 77.2090,
+    label: vehicle.registration_number
+  }];
 
   return (
     <div className="flex-1 flex flex-col bg-background-dark overflow-hidden font-sans relative">
