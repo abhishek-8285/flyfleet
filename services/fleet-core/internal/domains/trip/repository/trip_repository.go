@@ -541,7 +541,8 @@ func (r *PostgresTripRepository) AddPODDocument(ctx context.Context, tripID stri
 // GetActiveTripsForDriver retrieves trips for a driver that are not in terminal states
 func (r *PostgresTripRepository) GetActiveTripsForDriver(ctx context.Context, driverID string) ([]*models.Trip, error) {
 	query := `
-		SELECT id, tenant_id, vehicle_id, driver_id, status, title, created_at, updated_at
+		SELECT id, tenant_id, COALESCE(vehicle_id, '00000000-0000-0000-0000-000000000000') as vehicle_id, 
+		       driver_id, status, COALESCE(title, '') as title, created_at, updated_at
 		FROM trips
 		WHERE driver_id = $1
 		  AND status NOT IN ('COMPLETED', 'CANCELLED', 'FAILED')
@@ -585,7 +586,10 @@ func (r *PostgresTripRepository) AddTelemetryPoint(ctx context.Context, point mo
 // GetTelemetry retrieves telemetry points for a trip
 func (r *PostgresTripRepository) GetTelemetry(ctx context.Context, tripID string) ([]models.TelemetryPoint, error) {
 	query := `
-		SELECT trip_id, lat, lng, speed, heading, fuel_level, ignition_status, recorded_at
+		SELECT trip_id, COALESCE(lat, 0.0) as lat, COALESCE(lng, 0.0) as lng, 
+		       COALESCE(speed, 0.0) as speed, COALESCE(heading, 0.0) as heading, 
+		       COALESCE(fuel_level, 0.0) as fuel_level, COALESCE(ignition_status, false) as ignition_status, 
+		       recorded_at
 		FROM telemetry_points
 		WHERE trip_id = $1
 		ORDER BY recorded_at ASC`
@@ -657,7 +661,9 @@ func (r *PostgresTripRepository) GetActiveTripsForVehicle(ctx context.Context, v
 	query := `
 		SELECT id, tenant_id, vehicle_id, driver_id, status, 
 		       COALESCE(title, '') as title, COALESCE(description, '') as description,
-		       planned_distance, total_distance, estimated_duration_min,
+		       COALESCE(planned_distance, 0.0) as planned_distance, 
+		       COALESCE(total_distance, 0.0) as total_distance, 
+		       COALESCE(estimated_duration_min, 0) as estimated_duration_min,
 		       actual_duration_min, scheduled_start, start_time, end_time,
 		       COALESCE(customer_name, '') as customer_name, created_at, updated_at
 		FROM trips
@@ -787,7 +793,7 @@ func (r *PostgresTripRepository) GetDriverStats(ctx context.Context, tenantID st
 			COALESCE(SUM(total_distance), 0) as total_distance,
 			COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END) as trips_completed,
 			COUNT(*) as total_trips,
-			AVG(CASE WHEN status = 'completed' THEN 100 ELSE 0 END) as on_time_rate -- Simplified for demo
+			COALESCE(AVG(CASE WHEN status = 'COMPLETED' THEN 100 ELSE 0 END), 0) as on_time_rate
 		FROM trips
 		WHERE tenant_id = $1 AND driver_id IS NOT NULL AND is_deleted = FALSE
 		GROUP BY driver_id`

@@ -61,7 +61,9 @@ func (r *ComplianceRepository) Get(ctx context.Context, vehicleID uuid.UUID) (*m
 	err := r.db.QueryRow(ctx, `
 		SELECT vehicle_id, rc_expiry_date, insurance_expiry_date, puc_expiry_date,
 		       fitness_expiry_date, permit_expiry_date, permit_type, insurance_policy_no,
-		       is_blacklisted, legal_hold, last_verified_at, verified_by, created_at, updated_at
+		       COALESCE(is_blacklisted, false) as is_blacklisted, 
+		       COALESCE(legal_hold, false) as legal_hold, 
+		       last_verified_at, verified_by, created_at, updated_at
 		FROM vehicle_compliance WHERE vehicle_id = $1`, vehicleID,
 	).Scan(
 		&c.VehicleID, &c.RCExpiryDate, &c.InsuranceExpiryDate, &c.PUCExpiryDate,

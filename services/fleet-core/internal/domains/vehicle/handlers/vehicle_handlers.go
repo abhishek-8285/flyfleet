@@ -16,6 +16,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+	"strings"
 )
 
 // DTOs for request payloads (separate from models to prevent mass assignment)
@@ -401,9 +402,9 @@ func (h *VehicleHandlers) SearchVehicles(w http.ResponseWriter, r *http.Request)
 
 	params := models.VehicleSearchParams{
 		Query:       q.Get("q"),
-		Status:      q.Get("status"),
-		VehicleType: q.Get("vehicle_type"),
-		FuelType:    q.Get("fuel_type"),
+		Status:      models.VehicleStatus(strings.ToUpper(q.Get("status"))),
+		VehicleType: models.VehicleType(strings.ToUpper(q.Get("vehicle_type"))),
+		FuelType:    models.FuelType(strings.ToUpper(q.Get("fuel_type"))),
 	}
 
 	h.logger.Info("Vehicle Search Triggered",

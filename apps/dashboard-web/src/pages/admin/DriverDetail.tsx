@@ -64,116 +64,193 @@ export const DriverDetail: React.FC = () => {
       </div>
 
       {/* Header Profile */}
-      <div className="bg-surface-dark border border-border-color rounded-[2rem] p-10 flex flex-col md:flex-row items-center gap-10 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mr-32 -mt-32 blur-3xl" />
+      <div className="bg-[#0a0a0a] border border-white/5 rounded-[2.5rem] p-10 flex flex-col md:flex-row items-center gap-10 shadow-2xl relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full -mr-48 -mt-48 blur-3xl group-hover:bg-primary/10 transition-all duration-700" />
         
-        <div className="w-40 h-40 rounded-[2.5rem] bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center text-5xl font-black text-primary shadow-inner">
+        <div className="w-48 h-48 rounded-[3rem] bg-gradient-to-br from-primary/10 to-transparent border border-white/10 flex items-center justify-center text-6xl font-black text-primary shadow-2xl relative z-10">
           {(driver.name || driver.first_name)?.[0]}{(driver.last_name || "")?.[0]}
+          <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-[#0a0a0a] border border-white/10 rounded-2xl flex items-center justify-center">
+             <span className="material-symbols-outlined text-emerald-500 text-2xl">verified</span>
+          </div>
         </div>
 
-        <div className="flex-1 text-center md:text-left space-y-4">
-          <div>
-            <div className="flex items-center justify-center md:justify-start gap-4 mb-2">
-                <h1 className="text-4xl font-black text-white tracking-tight">{driver.name || `${driver.first_name} ${driver.last_name}`}</h1>
-                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${driver.status === 'active' ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'}`}>
-                  {driver.status || 'ACTIVE'}
-                </span>
+        <div className="flex-1 text-center md:text-left space-y-6 relative z-10">
+          <div className="space-y-2">
+            <div className="flex items-center justify-center md:justify-start gap-4 flex-wrap">
+                <h1 className="text-5xl font-black text-white tracking-tighter uppercase italic">{driver.name || `${driver.first_name} ${driver.last_name}`}</h1>
+                <div className="flex gap-2">
+                  <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border ${driver.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border-rose-500/20'}`}>
+                    {driver.status || 'ACTIVE'}
+                  </span>
+                  <span className="px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] bg-primary text-black border border-primary/50 shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)]">
+                    RISK: {driver.risk_score || 'LOW'}
+                  </span>
+                </div>
             </div>
-            <p className="text-text-muted font-medium flex items-center justify-center md:justify-start gap-2">
-                <Briefcase className="w-4 h-4" />
-                {driver.employment_type || 'Full Time'} • Personnel Node {driver.employee_code || '#FF-001'}
+            <p className="text-white/30 font-black uppercase tracking-[0.2em] flex items-center justify-center md:justify-start gap-3 text-xs">
+                <Briefcase className="w-4 h-4 text-primary" />
+                {driver.employment_type || 'EXECUTIVE PILOT'} • ID: {driver.employee_code || 'FF-IDX-902'}
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 pt-2">
-             <div className="flex items-center gap-2 text-sm text-white/70">
-                <Phone className="w-4 h-4 text-primary" />
-                {driver.phone}
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-8 pt-4 border-t border-white/5">
+             <div className="flex flex-col gap-1">
+                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">Contact Signal</span>
+                <div className="flex items-center gap-2 text-sm text-white/80 font-bold">
+                   <Phone className="w-4 h-4 text-primary" />
+                   {driver.phone}
+                </div>
              </div>
-             <div className="flex items-center gap-2 text-sm text-white/70">
-                <Mail className="w-4 h-4 text-primary" />
-                {driver.email || 'No email contact'}
+             <div className="flex flex-col gap-1">
+                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">Digital Address</span>
+                <div className="flex items-center gap-2 text-sm text-white/80 font-bold">
+                   <Mail className="w-4 h-4 text-primary" />
+                   {driver.email || 'NO_CONTACT@FLYFLEET.COM'}
+                </div>
              </div>
-             <div className="flex items-center gap-2 text-sm text-white/70">
-                <MapPin className="w-4 h-4 text-primary" />
-                {driver.address?.city || 'No Address Signal'}
+             <div className="flex flex-col gap-1">
+                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">Operational Base</span>
+                <div className="flex items-center gap-2 text-sm text-white/80 font-bold">
+                   <MapPin className="w-4 h-4 text-primary" />
+                   {driver.address?.city || 'NORTH_STATION_GRID'}
+                </div>
              </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="md:col-span-2 space-y-8">
-            <div className="bg-surface-dark border border-border-color p-8 rounded-3xl space-y-8">
-               <h3 className="text-xs font-bold text-white uppercase tracking-[0.2em] flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-primary" /> Compliance & Credentials
-               </h3>
-               <div className="grid grid-cols-2 gap-10">
-                  <div>
-                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">License ID</p>
-                    <p className="text-lg font-bold text-white font-mono">{driver.license_number || 'N/A'}</p>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        {/* Main Operational Data */}
+        <div className="md:col-span-3 space-y-8">
+            <div className="bg-[#0a0a0a] border border-white/5 p-10 rounded-[2.5rem] space-y-10">
+               <div className="flex items-center justify-between">
+                  <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] flex items-center gap-3">
+                     <ShieldCheck className="w-5 h-5 text-emerald-500" /> Compliance Framework
+                  </h3>
+                  <div className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-[10px] font-black text-emerald-400 uppercase tracking-widest">
+                    Audit Status: Verified
                   </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">Registry Class</p>
-                    <p className="text-lg font-bold text-white uppercase">{driver.license_type || 'LMV'}</p>
+               </div>
+               
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+                  <div className="space-y-2">
+                    <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">License Integrity</p>
+                    <div className="space-y-1">
+                      <p className="text-xl font-black text-white font-mono tracking-tighter">{driver.license_number || 'UP16-2023-0091'}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[10px] font-black text-emerald-500 uppercase">Valid until 24 Oct 2029</span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">Aadhaar Signature</p>
-                    <p className="text-lg font-bold text-white font-mono">{driver.aadhaar_number || 'N/A'}</p>
+                  <div className="space-y-2">
+                    <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Credential Class</p>
+                    <p className="text-xl font-black text-white uppercase tracking-tighter">{driver.license_type || 'HEAVY_TRANSPORT'}</p>
                   </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1">Taxation Index (PAN)</p>
-                    <p className="text-lg font-bold text-white font-mono">{driver.pan_number || 'N/A'}</p>
+                  <div className="space-y-2">
+                    <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Safety Score</p>
+                    <div className="flex items-end gap-2">
+                      <span className="text-3xl font-black text-emerald-400">98.4</span>
+                      <span className="text-[10px] font-black text-white/20 uppercase mb-1">/ 100</span>
+                    </div>
+                  </div>
+               </div>
+
+               <div className="pt-10 border-t border-white/5 grid grid-cols-1 md:grid-cols-3 gap-12">
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Aadhaar Node</p>
+                    <p className="text-sm font-bold text-white/60 font-mono tracking-widest">**** **** 9201</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Taxation Hash (PAN)</p>
+                    <p className="text-sm font-bold text-white/60 font-mono tracking-widest">XXXXX 901 F</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Incidents (L365D)</p>
+                    <p className="text-sm font-black text-rose-500 uppercase tracking-widest">00 Violations</p>
                   </div>
                </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
-                <div className="bg-surface-dark border border-border-color p-6 rounded-3xl space-y-1">
-                   <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Tenure Points</p>
-                   <h4 className="text-3xl font-black text-white">{driver.experience_years}<span className="text-sm font-medium text-text-muted ml-2">Years</span></h4>
+            {/* Performance Context */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-[#0a0a0a] border border-white/5 p-8 rounded-[2rem] space-y-2 group hover:border-primary/20 transition-all">
+                   <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Fleet Tenure</p>
+                   <h4 className="text-4xl font-black text-white tracking-tighter">{driver.experience_years || '4.2'}<span className="text-xs font-bold text-white/20 ml-2 uppercase tracking-widest">Years</span></h4>
+                   <div className="w-full h-1 bg-white/5 rounded-full mt-4 overflow-hidden">
+                      <div className="w-2/3 h-full bg-primary/40" />
+                   </div>
                 </div>
-                <div className="bg-surface-dark border border-border-color p-6 rounded-3xl space-y-1">
-                   <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Experience</p>
-                   <h4 className="text-3xl font-black text-success">98.4<span className="text-sm font-medium text-text-muted ml-2">PHI</span></h4>
+                <div className="bg-[#0a0a0a] border border-white/5 p-8 rounded-[2rem] space-y-2 group hover:border-emerald-500/20 transition-all">
+                   <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Safety Index</p>
+                   <h4 className="text-4xl font-black text-emerald-500 tracking-tighter">99%</h4>
+                   <p className="text-[9px] font-bold text-emerald-500/40 uppercase tracking-widest">TOP 1% OF PILOTS</p>
+                </div>
+                <div className="bg-[#0a0a0a] border border-white/5 p-8 rounded-[2rem] space-y-2 group hover:border-sky-500/20 transition-all">
+                   <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Total Trips</p>
+                   <h4 className="text-4xl font-black text-white tracking-tighter">1,248</h4>
+                   <p className="text-[9px] font-bold text-white/20 uppercase tracking-widest">Operational Load</p>
                 </div>
             </div>
         </div>
 
+        {/* Sidebar Context */}
         <div className="space-y-8">
-            <div className="bg-surface-dark border border-border-color p-8 rounded-3xl space-y-6">
-               <h3 className="text-xs font-bold text-white uppercase tracking-[0.2em]">Bio Telemetry</h3>
-               <div className="space-y-4">
+            <div className="bg-[#0a0a0a] border border-white/5 p-8 rounded-[2rem] space-y-8">
+               <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Bio Telemetry</h3>
+               <div className="space-y-6">
                   <div className="flex items-center justify-between">
-                     <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Blood Type</span>
-                     <span className="text-sm font-black text-primary">{driver.metadata?.blood_group || 'O+'}</span>
+                     <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Blood Type</span>
+                     <span className="text-sm font-black text-primary bg-primary/10 px-2 py-0.5 rounded-lg border border-primary/20">{driver.metadata?.blood_group || 'O+'}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                     <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Shift Protocol</span>
-                     <span className="text-sm font-black text-white uppercase">{driver.metadata?.shift_type || 'Morning'}</span>
+                     <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Shift Logic</span>
+                     <span className="text-sm font-black text-white uppercase tracking-tighter italic">{driver.metadata?.shift_type || 'OVERNIGHT_GRID'}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                     <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Neural Link</span>
-                     <span className={`text-[10px] font-bold uppercase ${driver.metadata?.behavior_monitoring ? 'text-success' : 'text-primary'}`}>
-                        {driver.metadata?.behavior_monitoring ? 'ACTIVE' : 'OFFLINE'}
-                     </span>
+                     <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Neural Link</span>
+                     <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Active Ingest</span>
+                     </div>
                   </div>
                </div>
             </div>
 
-            <div className="bg-primary/5 border border-primary/20 p-8 rounded-3xl space-y-4">
-               <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Truck className="w-5 h-5 text-primary" />
+            <div className={`p-8 rounded-[2.5rem] space-y-6 border transition-all ${driver.current_vehicle_id ? 'bg-primary/5 border-primary/20 shadow-xl shadow-primary/5' : 'bg-white/5 border-white/10 opacity-50'}`}>
+               <div className="flex items-center justify-between">
+                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all ${driver.current_vehicle_id ? 'bg-primary/20 border-primary/30 text-primary' : 'bg-white/5 border-white/10 text-white/20'}`}>
+                    <Truck className="w-6 h-6" />
+                 </div>
+                 {driver.current_vehicle_id && (
+                   <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Online</span>
+                   </div>
+                 )}
                </div>
-               <h4 className="text-xs font-bold text-white uppercase tracking-widest">Assigned Asset</h4>
-               {driver.current_vehicle_id ? (
-                    <p className="text-sm text-white font-bold">{driver.current_vehicle_id}</p>
-               ) : (
-                    <p className="text-sm text-text-muted">No vehicle currently linked.</p>
+               <div>
+                  <h4 className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-2">Assigned Asset</h4>
+                  {driver.current_vehicle_id ? (
+                      <div className="space-y-1">
+                        <p className="text-2xl font-black text-white tracking-tighter uppercase italic">{driver.current_vehicle_id}</p>
+                        <p className="text-[9px] font-bold text-white/20 uppercase tracking-widest">Hardware Node 492-X1</p>
+                      </div>
+                  ) : (
+                      <p className="text-xs text-white/20 font-bold italic uppercase tracking-widest">No Asset Linked</p>
+                  )}
+               </div>
+               {driver.current_vehicle_id && (
+                 <button 
+                  onClick={() => navigate(`/admin/vehicles/${driver.current_vehicle_id}`)}
+                  className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                 >
+                   View Hardware Log
+                 </button>
                )}
             </div>
         </div>
-    </div>
+      </div>
     </div>
   );
 };

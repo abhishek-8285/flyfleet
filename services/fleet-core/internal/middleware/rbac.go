@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
+
 // RequireRole ensures the user has one of the required roles
 func RequireRole(logger *zap.Logger, requiredRoles ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -44,29 +45,35 @@ func RequireRole(logger *zap.Logger, requiredRoles ...string) func(http.Handler)
 func RequirePermissions(logger *zap.Logger, required ...permissions.Permission) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var userMask permissions.Permission = 0
-			switch mask := r.Context().Value(ctxkeys.PermissionMaskKey).(type) {
-			case uint64:
-				userMask = permissions.Permission(mask)
-			case int64:
-				userMask = permissions.Permission(mask)
-			case float64:
-				userMask = permissions.Permission(uint64(mask))
+			// 1. Get user's permission mask from context
+			userMaskRaw := ctxkeys.GetPermissionMask(r.Context())
+			userMask := permissions.Permission(userMaskRaw)
+
+			// 2. Perform diagnostic logging (Dev only)
+			if userMask == 0 {
+				logger.Warn("RBAC Failure: User mask is ZERO",
+					zap.String("path", r.URL.Path),
+				)
 			}
 
 			// Deny access if mask is completely missing or empty
 			if userMask == 0 {
-				logger.Warn("Access denied: missing or empty permission mask in context")
+				logger.Error("Access denied: missing or empty permission mask in context",
+					zap.Uint64("raw_mask", userMaskRaw))
 				http.Error(w, "Forbidden: Missing Permissions", http.StatusForbidden)
 				return
 			}
 
+
+
 			// Validate all required permissions
 			for _, p := range required {
 				if !permissions.HasPermission(userMask, p) {
-					logger.Warn("Access denied: insufficient permission bit",
+					logger.Warn("RBAC Permission Denied",
+						zap.String("path", r.URL.Path),
+						zap.Uint64("required_permission_bit", uint64(p)),
 						zap.Uint64("user_mask", uint64(userMask)),
-						zap.Uint64("missing_bit", uint64(p)))
+					)
 					http.Error(w, "Forbidden: Insufficient Permissions", http.StatusForbidden)
 					return
 				}

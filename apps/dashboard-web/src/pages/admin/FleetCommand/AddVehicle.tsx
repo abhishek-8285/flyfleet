@@ -1,6 +1,4 @@
-import {
-  XMarkIcon
-} from '@heroicons/react/24/outline';
+import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../../../services/api';
@@ -55,10 +53,10 @@ export default function AddVehicle() {
   const fetchMetadata = async () => {
     try {
       const [dResp, bResp, cResp, tResp] = await Promise.all([
-        api.get("/admin/drivers?limit=500"),
-        api.get("/admin/branches"),
-        api.get("/admin/cost-centers"),
-        api.get("/ui/settings/gps-types"),
+        api.get('/admin/drivers?limit=500'),
+        api.get('/admin/branches'),
+        api.get('/admin/cost-centers'),
+        api.get('/ui/settings/gps-types'),
       ]);
 
       const ensureArray = (resp: any, key?: string) => {
@@ -71,22 +69,22 @@ export default function AddVehicle() {
       };
 
       setDropdowns({
-        drivers: ensureArray(dResp, "drivers").map((d: any) => ({
+        drivers: ensureArray(dResp, 'drivers').map((d: any) => ({
           value: d.id,
-          label: `${d.first_name || ""} ${d.last_name || ""}`.trim() || d.name || d.id,
+          label: `${d.first_name || ''} ${d.last_name || ''}`.trim() || d.name || d.id,
         })),
-        branches: ensureArray(bResp, "branches").map((b: any) => ({
+        branches: ensureArray(bResp, 'branches').map((b: any) => ({
           value: b.id,
           label: b.name,
         })),
-        costCenters: ensureArray(cResp, "cost_centers").map((c: any) => ({
+        costCenters: ensureArray(cResp, 'cost_centers').map((c: any) => ({
           value: c.id,
           label: c.name,
         })),
       });
       setGpsDeviceTypes(ensureArray(tResp));
     } catch (err) {
-      console.error("Failed to load metadata:", err);
+      console.error('Failed to load metadata:', err);
     }
   };
 
@@ -149,7 +147,7 @@ export default function AddVehicle() {
             <span>/</span>
             <span className="text-primary font-medium">Add</span>
           </div>
-          <h1 className="text-2xl font-bold text-white">Initialize Registry Node</h1>
+          <h1 className="text-2xl font-bold text-white">Add Vehicle</h1>
         </div>
         <div className="flex items-center gap-3">
           <Link

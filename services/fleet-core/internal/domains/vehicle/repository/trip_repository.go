@@ -57,7 +57,7 @@ func (r *TripRepository) scanTrip(row interface {
 }
 
 const tripSelectCols = `id, trip_id, vehicle_id, driver_id, start_location, end_location,
-			start_time, end_time, distance, status, tenant_id, fuel_consumed_liters, created_at, updated_at`
+			start_time, end_time, COALESCE(distance, 0.0) as distance, status, tenant_id, COALESCE(fuel_consumed_liters, 0.0) as fuel_consumed_liters, created_at, updated_at`
 
 func (r *TripRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Trip, error) {
 	query := fmt.Sprintf(`SELECT %s FROM trips WHERE id = $1`, tripSelectCols)
@@ -229,7 +229,9 @@ func (r *TripRepository) AddTelemetry(ctx context.Context, t *models.Telemetry) 
 
 func (r *TripRepository) GetTelemetry(ctx context.Context, tripID uuid.UUID, limit int) ([]models.Telemetry, error) {
 	query := `
-		SELECT id, trip_id, latitude, longitude, speed, heading, event_type, event_time
+		SELECT id, trip_id, COALESCE(latitude, 0.0) as latitude, COALESCE(longitude, 0.0) as longitude, 
+		       COALESCE(speed, 0.0) as speed, COALESCE(heading, 0.0) as heading, 
+		       event_type, event_time
 		FROM telemetry WHERE trip_id = $1 ORDER BY event_time DESC LIMIT $2
 	`
 	start := time.Now()

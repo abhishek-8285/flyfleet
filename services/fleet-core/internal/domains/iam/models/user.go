@@ -34,6 +34,8 @@ type User struct {
 	SidebarCollapsed bool      `json:"sidebar_collapsed"`
 	Language         string     `json:"language"`
 	MustResetPassword bool      `json:"must_reset_password"`
+	Roles            []string   `json:"roles"`
 	CreatedAt       time.Time  `json:"created_at"`
+
 	UpdatedAt       time.Time  `json:"updated_at"`
 }

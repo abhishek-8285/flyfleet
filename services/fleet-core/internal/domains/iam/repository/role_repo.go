@@ -20,8 +20,8 @@ func NewRoleRepository(pool *pgxpool.Pool) *RoleRepository {
 
 func (r *RoleRepository) ListRoles(ctx context.Context, tenantID uuid.UUID) ([]models.Role, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, tenant_id, name, description, is_system, permission_mask,
-			   created_by, created_at, updated_at
+		SELECT id, tenant_id, COALESCE(name, ''), COALESCE(description, ''), is_system, permission_mask,
+			   COALESCE(created_by, '00000000-0000-0000-0000-000000000000'::uuid), created_at, updated_at
 		FROM roles WHERE tenant_id = $1 AND deleted_at IS NULL ORDER BY name`, tenantID)
 	if err != nil {
 		return nil, err
@@ -43,8 +43,8 @@ func (r *RoleRepository) ListRoles(ctx context.Context, tenantID uuid.UUID) ([]m
 func (r *RoleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Role, error) {
 	var role models.Role
 	err := r.pool.QueryRow(ctx, `
-		SELECT id, tenant_id, name, description, is_system, permission_mask,
-			   created_by, created_at, updated_at
+		SELECT id, tenant_id, COALESCE(name, ''), COALESCE(description, ''), is_system, permission_mask,
+			   COALESCE(created_by, '00000000-0000-0000-0000-000000000000'::uuid), created_at, updated_at
 		FROM roles WHERE id = $1 AND deleted_at IS NULL`, id).Scan(
 		&role.ID, &role.TenantID, &role.Name, &role.Description, &role.IsSystem,
 		&role.PermissionMask, &role.CreatedBy, &role.CreatedAt, &role.UpdatedAt,
@@ -117,7 +117,7 @@ func (r *RoleRepository) Clone(ctx context.Context, sourceID uuid.UUID, name, de
 
 func (r *RoleRepository) GetAllPermissions(ctx context.Context) ([]models.Permission, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, resource, action, description, bit_position
+		SELECT id, COALESCE(resource, ''), COALESCE(action, ''), COALESCE(description, ''), bit_position
 		FROM permissions ORDER BY bit_position`)
 	if err != nil {
 		return nil, err
@@ -137,8 +137,8 @@ func (r *RoleRepository) GetAllPermissions(ctx context.Context) ([]models.Permis
 
 func (r *RoleRepository) GetUserRoles(ctx context.Context, userID, tenantID uuid.UUID) ([]models.Role, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT r.id, r.tenant_id, r.name, r.description, r.is_system, r.permission_mask,
-			   r.created_by, r.created_at, r.updated_at
+		SELECT r.id, r.tenant_id, COALESCE(r.name, ''), COALESCE(r.description, ''), r.is_system, r.permission_mask,
+			   COALESCE(r.created_by, '00000000-0000-0000-0000-000000000000'::uuid), r.created_at, r.updated_at
 		FROM user_roles ur
 		JOIN roles r ON r.id = ur.role_id
 		WHERE ur.user_id = $1 AND ur.tenant_id = $2`, userID, tenantID)

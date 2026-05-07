@@ -77,3 +77,26 @@ func WithTenantID(ctx context.Context, tenantID string) context.Context {
 func WithContextValue(ctx context.Context, key any, value any) context.Context {
 	return context.WithValue(ctx, key, value)
 }
+
+// GetPermissionMask safely extracts the permission mask from context.
+func GetPermissionMask(ctx context.Context) uint64 {
+	keys := []any{PermissionMaskKey, "permissions_mask", "permission_mask"}
+	for _, k := range keys {
+		if val := ctx.Value(k); val != nil {
+			if m, ok := val.(uint64); ok {
+				return m
+			}
+			if m, ok := val.(int64); ok {
+				return uint64(m)
+			}
+			if m, ok := val.(int); ok {
+				return uint64(m)
+			}
+			if f, ok := val.(float64); ok {
+				return uint64(f)
+			}
+		}
+	}
+	return 0
+}
+

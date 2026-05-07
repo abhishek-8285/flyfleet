@@ -1,4 +1,4 @@
-package service
+package service // triggered reload Copied!
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/flyfleet/fleet-core/internal/domains/iam/config"
@@ -382,7 +383,8 @@ func (s *AuthService) generateTokens(ctx context.Context, user *models.User, ten
 
 	// Get permissions — admin roles get full mask, others compute from role table
 	var mask int64
-	if role == "org_admin" || role == "system_admin" || role == "admin" {
+	lowerRole := strings.ToLower(role)
+	if lowerRole == "org_admin" || lowerRole == "system_admin" || lowerRole == "admin" || lowerRole == "owner" {
 		mask = 9223372036854775807
 	} else {
 		mask, err = s.roleRepo.ComputeEffectivePermissionMask(ctx, user.ID, orgUUID)

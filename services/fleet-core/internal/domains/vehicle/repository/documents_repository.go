@@ -22,17 +22,20 @@ func NewDocumentsRepository(db *pgxpool.Pool) *DocumentsRepository {
 
 func (r *DocumentsRepository) Insert(ctx context.Context, doc *models.VehicleDocument) error {
 	query := `
-		INSERT INTO vehicle_documents (id, vehicle_id, document_type, file_url, version, hash, uploaded_at, uploaded_by)
-		VALUES ($1, $2, $3, $4,
+		INSERT INTO vehicle_documents (
+			id, vehicle_id, document_type, document_number, file_url, 
+			expiry_date, status, version, hash, uploaded_at, uploaded_by
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7,
 		  COALESCE((SELECT MAX(version) FROM vehicle_documents WHERE vehicle_id = $2 AND document_type = $3), 0) + 1,
-		  $5, NOW(), $6)
+		  $8, NOW(), $9)
 		RETURNING version, uploaded_at`
 
 	start := time.Now()
 	err := r.db.QueryRow(ctx, query,
-		doc.ID, doc.VehicleID, doc.DocumentType, doc.FileURL,
-		doc.Hash, doc.UploadedBy,
-	).Scan(&doc.Version, &doc.UploadedAt)
+		doc.ID, doc.VehicleID, doc.Type, doc.DocumentNumber, doc.DocumentURL,
+		doc.ExpiryDate, doc.Status, doc.Hash, doc.UploadedBy,
+	).Scan(&doc.Version, &doc.CreatedAt)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
 		return fmt.Errorf("failed to insert vehicle document: %w", err)
@@ -43,9 +46,9 @@ func (r *DocumentsRepository) Insert(ctx context.Context, doc *models.VehicleDoc
 func (r *DocumentsRepository) List(ctx context.Context, vehicleID uuid.UUID) ([]models.VehicleDocument, error) {
 	start := time.Now()
 	rows, err := r.db.Query(ctx,
-		`SELECT id, vehicle_id, document_type, file_url, version, hash, uploaded_at, uploaded_by
-		 FROM vehicle_documents WHERE vehicle_id = $1 ORDER BY uploaded_at DESC`, vehicleID)
-	metrics.RecordDBQuery(`SELECT id, vehicle_id, document_type, file_url, version, hash, uploaded_at, uploaded_by FROM vehicle_documents WHERE vehicle_id = $1 ORDER BY uploaded_at DESC`, time.Since(start))
+		`SELECT id, vehicle_id, document_type, document_number, file_url, expiry_date, status, COALESCE(version, 1) as version, hash, uploaded_at, uploaded_by
+		 FROM vehicle_documents WHERE vehicle_id = $1 AND deleted_at IS NULL ORDER BY uploaded_at DESC`, vehicleID)
+	metrics.RecordDBQuery(`SELECT id, ... FROM vehicle_documents WHERE vehicle_id = $1 AND deleted_at IS NULL`, time.Since(start))
 	if err != nil {
 		return nil, fmt.Errorf("database error: %w", err)
 	}
@@ -54,7 +57,10 @@ func (r *DocumentsRepository) List(ctx context.Context, vehicleID uuid.UUID) ([]
 	var docs []models.VehicleDocument
 	for rows.Next() {
 		d := models.VehicleDocument{}
-		if err := rows.Scan(&d.ID, &d.VehicleID, &d.DocumentType, &d.FileURL, &d.Version, &d.Hash, &d.UploadedAt, &d.UploadedBy); err != nil {
+		if err := rows.Scan(
+			&d.ID, &d.VehicleID, &d.Type, &d.DocumentNumber, &d.DocumentURL, 
+			&d.ExpiryDate, &d.Status, &d.Version, &d.Hash, &d.CreatedAt, &d.UploadedBy,
+		); err != nil {
 			return nil, fmt.Errorf("scan error: %w", err)
 		}
 		docs = append(docs, d)
@@ -66,10 +72,13 @@ func (r *DocumentsRepository) Get(ctx context.Context, id uuid.UUID) (*models.Ve
 	d := &models.VehicleDocument{}
 	start := time.Now()
 	err := r.db.QueryRow(ctx,
-		`SELECT id, vehicle_id, document_type, file_url, version, hash, uploaded_at, uploaded_by
-		 FROM vehicle_documents WHERE id = $1`, id,
-	).Scan(&d.ID, &d.VehicleID, &d.DocumentType, &d.FileURL, &d.Version, &d.Hash, &d.UploadedAt, &d.UploadedBy)
-	metrics.RecordDBQuery(`SELECT id, vehicle_id, document_type, file_url, version, hash, uploaded_at, uploaded_by FROM vehicle_documents WHERE id = $1`, time.Since(start))
+		`SELECT id, vehicle_id, document_type, document_number, file_url, expiry_date, status, COALESCE(version, 1) as version, hash, uploaded_at, uploaded_by
+		 FROM vehicle_documents WHERE id = $1 AND deleted_at IS NULL`, id,
+	).Scan(
+		&d.ID, &d.VehicleID, &d.Type, &d.DocumentNumber, &d.DocumentURL, 
+		&d.ExpiryDate, &d.Status, &d.Version, &d.Hash, &d.CreatedAt, &d.UploadedBy,
+	)
+	metrics.RecordDBQuery(`SELECT id, ... FROM vehicle_documents WHERE id = $1`, time.Since(start))
 	if err != nil {
 		if err.Error() == "no rows in result set" {
 			return nil, nil

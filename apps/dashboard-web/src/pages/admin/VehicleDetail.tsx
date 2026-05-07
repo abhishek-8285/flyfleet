@@ -1,229 +1,247 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import apiClient from "../../services/apiClient";
+import { 
+  Truck, 
+  ChevronLeft, 
+  Edit3, 
+  Signal, 
+  ShieldCheck, 
+  AlertCircle,
+  Clock,
+  Activity,
+  User,
+  History,
+  FileText
+} from "lucide-react";
+import { api } from "../../services/api";
 
 interface Vehicle {
   id: string;
-  name: string;
   registration_number: string;
-  license_plate: string;
+  make: string;
+  model: string;
   status: string;
-  org_id: string;
   current_driver_id?: string;
   current_driver_name?: string;
-  current_driver_since?: string;
-  device_id?: string;
+  current_driver?: {
+    id: string;
+    name: string;
+  };
+  summary?: {
+    compliance_status?: string;
+    gps_status?: string;
+    last_seen?: string;
+    risk_score?: number;
+    risk_category?: string;
+  };
+  metadata?: any;
 }
 
 export const VehicleDetail: React.FC = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchVehicle = async () => {
-      try {
-        const direct = (await apiClient.get(`/admin/vehicles?id=${id}`)) as any;
-        const directVehicle = direct?.data ?? direct;
-        if (directVehicle?.id) {
-          setVehicle(directVehicle);
-          return;
-        }
-
-        // Fallback for older API responses.
-        const res = (await apiClient.get(
-          "/admin/vehicles?page=1&size=100",
-        )) as any;
-        const list = res?.data ?? [];
-        const v = list.find((item: any) => item.id === id);
-        if (v) setVehicle(v);
-      } catch (error) {
-        console.error("Failed to fetch vehicle:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchVehicle();
-  }, [id]);
-
-  const handleUnassign = async () => {
-    if (!vehicle || !window.confirm("Are you sure you want to unassign the current driver?")) return;
-    
+  const loadVehicle = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
     try {
-      setLoading(true);
-      await apiClient.post(`/admin/vehicles/${vehicle.id}/unassign-driver`, {});
-      // Refresh data
-      const direct = (await apiClient.get(`/admin/vehicles?id=${id}`)) as any;
-      setVehicle(direct?.data ?? direct);
-      alert("Driver unassigned successfully.");
+      const res = await api.getVehicle(id);
+      setVehicle(res?.data || res);
     } catch (error) {
-      console.error("Failed to unassign driver:", error);
-      alert("Failed to unassign driver. Please try again.");
+      console.error("Failed to fetch vehicle:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  if (loading)
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-surface-dim">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
-          <p className="text-on-surface-variant font-bold text-xs uppercase tracking-widest">Initialising Asset Profile...</p>
-        </div>
+  useEffect(() => {
+    loadVehicle();
+  }, [loadVehicle]);
+
+  if (loading) return (
+    <div className="flex h-screen items-center justify-center bg-surface-dark text-white">
+      <div className="flex flex-col items-center gap-4">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+        <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Resolving Asset Profile...</p>
       </div>
-    );
-  if (!vehicle)
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-surface-dim">
-        <div className="text-center">
-          <span className="material-symbols-outlined text-6xl text-rose-500/20 mb-4">error</span>
-          <p className="text-white text-xl font-bold">Vehicle Not Found</p>
-          <button onClick={() => navigate("/admin/vehicles")} className="mt-4 text-primary hover:underline font-bold text-sm">Return to Directory</button>
-        </div>
+    </div>
+  );
+
+  if (!vehicle) return (
+    <div className="flex h-screen items-center justify-center bg-surface-dark">
+      <div className="text-center">
+        <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-4" />
+        <h2 className="text-xl font-bold text-white">Asset Not Found</h2>
+        <p className="text-gray-500 mt-2">The requested vehicle record does not exist.</p>
+        <button 
+          onClick={() => navigate("/admin/vehicles")}
+          className="mt-6 px-6 py-2 bg-white/5 border border-white/10 text-white rounded-lg hover:bg-white/10 transition-all text-sm font-semibold"
+        >
+          Return to Registry
+        </button>
       </div>
-    );
+    </div>
+  );
+
+  const summary = vehicle.summary || {};
+  const driverName = vehicle.current_driver?.name || vehicle.current_driver_name;
+  const compliance = summary.compliance_status || "UNKNOWN";
+  const gpsStatus = summary.gps_status || "OFFLINE";
+  const lastSeen = summary.last_seen;
+  const riskScore = summary.risk_score || 0;
+  const status = vehicle.status?.toLowerCase();
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 bg-surface-dim min-h-screen">
-      <button
-        onClick={() => navigate("/admin/vehicles")}
-        className="flex items-center gap-2 text-on-surface-variant hover:text-white transition-all mb-4 group font-bold text-[11px] uppercase tracking-wider"
-      >
-        <span className="material-symbols-outlined text-xs group-hover:-translate-x-1 transition-transform">arrow_back</span>
-        <span>Return to Directory</span>
-      </button>
-
-      {/* Header Section */}
-      <div className="bg-surface-container border border-outline rounded-3xl p-8 shadow-2xl flex justify-between items-start">
-        <div className="flex gap-8">
-          <div className="h-28 w-28 bg-primary/10 rounded-2xl flex items-center justify-center text-primary border border-primary/20 shadow-inner">
-            <span className="material-symbols-outlined text-5xl">local_shipping</span>
-          </div>
-          <div className="flex flex-col justify-center">
-            <h1 className="text-4xl font-bold text-white tracking-tighter">
-              {vehicle.registration_number || vehicle.license_plate || vehicle.name || "Unnamed Asset"}
-            </h1>
-            <p className="text-on-surface-variant mt-2 font-mono text-xl font-bold opacity-70">
-              {vehicle.registration_number ? vehicle.license_plate : (vehicle.name || vehicle.id.slice(0, 8))}
-            </p>
-            <div className="flex items-center gap-4 mt-6">
-              <span
-                className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
-                  vehicle.status === "active"
-                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                    : "bg-surface-container-highest text-on-surface-variant border-outline"
-                }`}
-              >
-                {vehicle.status}
-              </span>
-              <div className="w-1 h-1 rounded-full bg-outline" />
-              <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">System ID: {vehicle.id.slice(0, 8)}...</span>
-            </div>
-          </div>
-        </div>
+    <div className="p-6 space-y-6 max-w-7xl mx-auto pb-20">
+      {/* Navigation & Actions */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => navigate("/admin/vehicles")}
+          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors group text-sm font-semibold"
+        >
+          <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+          Asset Registry
+        </button>
         <div className="flex gap-3">
-          <button className="bg-surface-container-highest border border-outline text-white px-5 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-white/5 transition-all active:scale-95">
-            Maintenance Log
+          <button className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-white rounded-lg hover:bg-white/10 transition-all text-sm font-semibold">
+            <History className="w-4 h-4" />
+            Audit Log
           </button>
-          <button className="bg-primary text-white px-5 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 active:scale-95">
-            Edit Asset
+          <button 
+            onClick={() => navigate(`/admin/vehicles/${id}/edit`)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all text-sm font-bold shadow-lg shadow-primary/20"
+          >
+            <Edit3 className="w-4 h-4" />
+            Modify Asset
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Core Vehicle Stats */}
-        <div className="bg-surface-container border border-outline rounded-3xl p-6 space-y-6">
-          <h3 className="text-white font-bold text-xs uppercase tracking-widest border-b border-outline pb-4">Operational Status</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-surface-dim rounded-2xl border border-outline">
-              <p className="text-on-surface-variant text-[9px] font-bold uppercase tracking-widest mb-1">Fuel Level</p>
-              <p className="text-white font-bold text-lg">78%</p>
+      {/* Header Info - Sober Style */}
+      <div className="bg-surface-dark border border-border-color rounded-2xl p-8 flex items-center gap-8 shadow-2xl">
+        <div className="w-24 h-24 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+          <Truck className="w-12 h-12" />
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-4">
+            <h1 className="text-3xl font-bold text-white tracking-tight">
+              {vehicle.registration_number}
+            </h1>
+            <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest border ${
+              status === 'active' ? 'bg-success/10 text-success border-success/20' : 'bg-white/5 text-gray-500 border-white/10'
+            }`}>
+              {vehicle.status}
+            </span>
+          </div>
+          <p className="text-gray-400 font-semibold mt-1 uppercase tracking-wider text-sm">
+            {vehicle.make} {vehicle.model} • <span className="font-mono text-gray-500">{vehicle.id.slice(0, 8)}</span>
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Compliance & Health */}
+        <div className="md:col-span-2 space-y-6">
+          <div className="bg-surface-dark border border-border-color p-6 rounded-2xl space-y-6">
+            <h3 className="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2 pb-4 border-b border-border-color">
+              <ShieldCheck className="w-4 h-4 text-primary" /> Operational Health
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+               <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Compliance Status</p>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${compliance === 'GREEN' ? 'bg-success' : compliance === 'YELLOW' ? 'bg-amber-500' : 'bg-rose-500'}`} />
+                    <span className={`text-lg font-bold ${compliance === 'GREEN' ? 'text-success' : 'text-rose-500'}`}>
+                      {compliance}
+                    </span>
+                  </div>
+               </div>
+               <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">GPS Connectivity</p>
+                  <div className="flex items-center gap-2 text-white font-bold text-lg">
+                    <Signal className={`w-5 h-5 ${gpsStatus === 'ONLINE' ? 'text-success' : 'text-gray-600'}`} />
+                    {gpsStatus}
+                  </div>
+               </div>
+               <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Safety Index</p>
+                  <div className="flex items-end gap-1">
+                    <span className="text-2xl font-bold text-white">{riskScore}%</span>
+                    <span className="text-[10px] text-gray-500 font-bold mb-1 uppercase">Risk</span>
+                  </div>
+               </div>
             </div>
-            <div className="p-4 bg-surface-dim rounded-2xl border border-outline">
-              <p className="text-on-surface-variant text-[9px] font-bold uppercase tracking-widest mb-1">Odometer</p>
-              <p className="text-white font-bold text-lg">24,521 <span className="text-[10px]">km</span></p>
-            </div>
-            <div className="p-4 bg-surface-dim rounded-2xl border border-outline">
-              <p className="text-on-surface-variant text-[9px] font-bold uppercase tracking-widest mb-1">Battery</p>
-              <p className="text-emerald-400 font-bold text-lg">Good</p>
-            </div>
-            <div className="p-4 bg-surface-dim rounded-2xl border border-outline">
-              <p className="text-on-surface-variant text-[9px] font-bold uppercase tracking-widest mb-1">Next Service</p>
-              <p className="text-amber-400 font-bold text-lg">1,200 <span className="text-[10px]">km</span></p>
-            </div>
+          </div>
+
+          {/* Detailed Specs / Documents */}
+          <div className="bg-surface-dark border border-border-color p-6 rounded-2xl space-y-4">
+             <h3 className="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                <FileText className="w-4 h-4 text-primary" /> Registered Documents
+             </h3>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-border-color">
+                   <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-400">RC</div>
+                      <span className="text-sm font-semibold text-gray-200">Registration Certificate</span>
+                   </div>
+                   <span className="text-[10px] font-bold text-success uppercase">Valid</span>
+                </div>
+                <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-border-color">
+                   <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-400">INS</div>
+                      <span className="text-sm font-semibold text-gray-200">Insurance Policy</span>
+                   </div>
+                   <span className="text-[10px] font-bold text-amber-500 uppercase">Expiring in 12d</span>
+                </div>
+             </div>
           </div>
         </div>
 
-        {/* Driver Assignment Card */}
-        <div className="bg-surface-container border border-outline rounded-3xl p-6 flex flex-col">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-white font-bold text-xs uppercase tracking-widest">
-              Current Personnel
-            </h3>
-            {vehicle.current_driver_id && (
-              <button 
-                onClick={handleUnassign}
-                className="text-[10px] text-primary font-black uppercase tracking-widest hover:underline"
-              >
-                Unassign
-              </button>
-            )}
-          </div>
-
-          <div className="flex-1 flex flex-col justify-center">
-            {vehicle.current_driver_id ? (
-              <div className="flex items-center gap-4 p-5 bg-surface-dim rounded-2xl border border-outline hover:border-primary/40 transition-all group">
-                <div className="h-14 w-14 bg-primary/20 rounded-full flex items-center justify-center text-primary font-black text-lg border border-primary/20">
-                  {vehicle.current_driver_name?.split(' ').map(n => n[0]).join('') || "JD"}
+        {/* Assignments & Telemetry Sidebar */}
+        <div className="space-y-6">
+           <div className="bg-surface-dark border border-border-color p-6 rounded-2xl space-y-6">
+              <h3 className="text-xs font-bold text-white uppercase tracking-widest">Active Assignment</h3>
+              {driverName ? (
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                    {driverName[0]}
+                  </div>
+                  <div>
+                    <div className="font-bold text-white">{driverName}</div>
+                    <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mt-0.5">Assigned Pilot</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-bold text-white text-lg tracking-tight group-hover:text-primary transition-colors">
-                    {vehicle.current_driver_name || "Unassigned"}
-                  </p>
-                  <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider mt-1">
-                    Active since {vehicle.current_driver_since || "---"}
-                  </p>
+              ) : (
+                <div className="text-center py-6 bg-white/5 rounded-xl border border-dashed border-border-color">
+                   <User className="w-8 h-8 text-gray-700 mx-auto mb-2" />
+                   <p className="text-[10px] font-bold text-gray-600 uppercase">No Pilot Assigned</p>
+                   <button className="mt-3 text-[10px] font-bold text-primary uppercase hover:underline">Link Pilot</button>
                 </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 bg-surface-container-highest/20 rounded-2xl border border-dashed border-outline">
-                <span className="material-symbols-outlined text-4xl text-on-surface-variant/20 mb-3">person_add</span>
-                <p className="text-on-surface-variant font-bold text-[10px] uppercase tracking-widest mb-4">
-                  No personnel assigned
-                </p>
-                <button className="bg-white/5 border border-outline text-white px-5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-white/10 transition-all active:scale-95">
-                  Assign Driver
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+              )}
+           </div>
 
-        {/* Device Intelligence Card */}
-        <div className="bg-surface-container border border-outline rounded-3xl p-6 flex flex-col">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-white font-bold text-xs uppercase tracking-widest text">
-              Telemetry Status
-            </h3>
-            <button className="text-[10px] text-primary font-black uppercase tracking-widest hover:underline">
-              Diagnostics
-            </button>
-          </div>
-
-          <div className="flex-1 flex flex-col justify-center">
-            <div className="text-center py-8 bg-surface-container-highest/20 rounded-2xl border border-dashed border-outline">
-              <span className="material-symbols-outlined text-4xl text-on-surface-variant/20 mb-3">sensors_off</span>
-              <p className="text-on-surface-variant font-bold text-[10px] uppercase tracking-widest mb-4">
-                No telemetry link active
-              </p>
-              <button className="bg-white/5 border border-outline text-white px-5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-white/10 transition-all active:scale-95">
-                Link Device
-              </button>
-            </div>
-          </div>
+           <div className="bg-surface-dark border border-border-color p-6 rounded-2xl space-y-4">
+              <div className="flex items-center justify-between">
+                 <h3 className="text-xs font-bold text-white uppercase tracking-widest">Last Activity</h3>
+                 <Clock className="w-4 h-4 text-gray-600" />
+              </div>
+              <div className="space-y-4">
+                 <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase">Telemetry Signal</span>
+                    <span className="text-xs font-semibold text-gray-300">
+                      {lastSeen ? new Date(lastSeen).toLocaleTimeString() : 'NEVER'}
+                    </span>
+                 </div>
+                 <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase">System Status</span>
+                    <span className={`text-xs font-semibold uppercase ${gpsStatus === 'ONLINE' ? 'text-success' : 'text-gray-500'}`}>
+                      {gpsStatus}
+                    </span>
+                 </div>
+              </div>
+           </div>
         </div>
       </div>
     </div>

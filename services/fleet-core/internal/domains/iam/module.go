@@ -184,11 +184,10 @@ func (m *Module) RegisterAuthRoutes(r chi.Router, logger *zap.Logger) {
 		r.Delete("/admin/users/invite/{id}", m.InviteHandler.RevokeInvite)
 	})
 
-	// Admin - RBAC reads (requires role:read)
-	// TODO: Replace PermReadVehicles with a proper PermReadRoles IAM permission
 	r.Group(func(r chi.Router) {
-		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermReadVehicles))
+		r.Use(fcmiddleware.RequirePermissions(logger, permissions.PermReadRoles))
 		r.Get("/admin/rbac/roles", m.RBACHandler.ListRoles)
+
 		r.Get("/admin/rbac/matrix", m.RBACHandler.GetPermissionMatrix)
 		r.Get("/admin/rbac/permissions", m.RBACHandler.ListAllPermissions)
 		r.Get("/admin/rbac/users/{id}/roles", m.RBACHandler.GetUserRoles)

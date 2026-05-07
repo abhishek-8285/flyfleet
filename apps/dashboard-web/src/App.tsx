@@ -80,7 +80,7 @@ import {
     TripsList,
     TripTelemetry,
 } from './pages/admin/Trips';
-import { VehicleList as FleetVehicleList } from './pages/admin/VehicleList';
+import { VehicleList as FleetVehicleList } from './pages/admin/FleetCommand/VehicleList';
 import Drivers from './pages/Drivers';
 import ErrorScreen from './pages/ErrorScreen';
 import ForgotPassword from './pages/ForgotPassword';

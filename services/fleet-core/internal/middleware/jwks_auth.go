@@ -89,7 +89,13 @@ func (j *JWKSAuthHandler) Handler(next http.Handler) http.Handler {
 		ctx = context.WithValue(ctx, ctxkeys.UserIDKey, claims.UserID)
 		ctx = context.WithValue(ctx, ctxkeys.RoleKey, role)
 		ctx = context.WithValue(ctx, ctxkeys.RolesKey, claims.Roles)
-			ctx = context.WithValue(ctx, ctxkeys.PermissionMaskKey, uint64(claims.PermissionMask))
+		ctx = context.WithValue(ctx, ctxkeys.PermissionMaskKey, uint64(claims.PermissionMask))
+		j.logger.Info("JWT Auth Context Set",
+			zap.Uint64("permission_mask", uint64(claims.PermissionMask)),
+			zap.String("user_id", claims.UserID.String()),
+			zap.String("tenant_id", effectiveTenantID.String()))
+
+
 
 		// Shared library keys (UUID type — consumed by billing/tracking/shared domains)
 		ctx = context.WithValue(ctx, sharedmiddleware.TenantIDKey, effectiveTenantID)

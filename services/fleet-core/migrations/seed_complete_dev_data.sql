@@ -42,11 +42,37 @@ BEGIN
         END IF;
     END IF;
 
-    -- Map to organization_users if it exists
+    -- Map to organization_users if it exists (Admin Support Domain)
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'organization_users') THEN
         INSERT INTO organization_users (tenant_id, email, role, status)
         VALUES (t_id, 'admin@delta.io', 'ADMIN', 'ACTIVE')
         ON CONFLICT DO NOTHING;
+    END IF;
+
+    -- Map to user_tenants if it exists (IAM Domain)
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_tenants') THEN
+        INSERT INTO user_tenants (user_id, tenant_id, role, is_active)
+        VALUES (u_id, t_id, 'admin', true)
+        ON CONFLICT (user_id, tenant_id) DO UPDATE SET role = 'admin', is_active = true;
+    END IF;
+
+    -- Map to user_roles if it exists (IAM Domain Fine-grained)
+    -- First ensure the 'admin' role exists for this tenant in the roles table
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'roles') THEN
+        DECLARE
+            r_id UUID;
+        BEGIN
+            r_id := '550e8400-e29b-41d4-a716-446655440999';
+            INSERT INTO roles (id, tenant_id, name, description, is_system, permission_mask)
+            VALUES (r_id, t_id, 'admin', 'Administrator with full access', true, 9223372036854775807)
+            ON CONFLICT (id) DO NOTHING;
+
+            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_roles') THEN
+                INSERT INTO user_roles (user_id, role_id, tenant_id)
+                VALUES (u_id, r_id, t_id)
+                ON CONFLICT DO NOTHING;
+            END IF;
+        END;
     END IF;
 END $$;
 
@@ -273,7 +299,7 @@ END $$;
 -- Clean up old telemetry for these vehicles if possible
 DO $$ 
 BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telemetry_points' AND column_name = 'vehicle_id') THEN
+    IF EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'telemetry_points'::regclass AND attname = 'vehicle_id' AND NOT attisdropped) THEN
         DELETE FROM telemetry_points WHERE vehicle_id IN (
             '550e8400-e29b-41d4-a716-446655440001'::uuid,
             '550e8400-e29b-41d4-a716-446655440002'::uuid,
@@ -283,6 +309,11 @@ BEGIN
         );
     END IF;
 END $$;
+
+-- 5. TRIPS (For Telemetry)
+INSERT INTO trips (id, vehicle_id, driver_id, status, tenant_id)
+VALUES ('550e8400-e29b-41d4-a716-446655440020', '550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440010', 'ACTIVE', '550e8400-e29b-41d4-a716-446655440000')
+ON CONFLICT (id) DO NOTHING;
 
 DO $$
 DECLARE
@@ -302,35 +333,35 @@ DECLARE
     trip_id UUID := '550e8400-e29b-41d4-a716-446655440020';
 BEGIN
     -- Determine column names
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telemetry_points' AND column_name = 'recorded_at') THEN
+    IF EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'telemetry_points'::regclass AND attname = 'recorded_at' AND NOT attisdropped) THEN
         v_time_col := 'recorded_at';
     ELSE
         v_time_col := 'time';
     END IF;
 
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telemetry_points' AND column_name = 'lat') THEN
+    IF EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'telemetry_points'::regclass AND attname = 'lat' AND NOT attisdropped) THEN
         v_lat_col := 'lat';
     ELSE
         v_lat_col := 'latitude';
     END IF;
 
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telemetry_points' AND column_name = 'lng') THEN
+    IF EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'telemetry_points'::regclass AND attname = 'lng' AND NOT attisdropped) THEN
         v_lng_col := 'lng';
     ELSE
         v_lng_col := 'longitude';
     END IF;
 
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telemetry_points' AND column_name = 'speed') THEN
+    IF EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'telemetry_points'::regclass AND attname = 'speed' AND NOT attisdropped) THEN
         v_speed_col := 'speed';
     ELSE
         v_speed_col := 'speed_kmh';
     END IF;
 
-    v_has_device_id := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telemetry_points' AND column_name = 'device_id');
-    v_has_event_id := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telemetry_points' AND column_name = 'event_id');
-    v_has_tenant_id := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telemetry_points' AND column_name = 'tenant_id');
-    v_has_trip_id := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telemetry_points' AND column_name = 'trip_id');
-    v_has_vehicle_id := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telemetry_points' AND column_name = 'vehicle_id');
+    v_has_device_id := EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'telemetry_points'::regclass AND attname = 'device_id' AND NOT attisdropped);
+    v_has_event_id := EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'telemetry_points'::regclass AND attname = 'event_id' AND NOT attisdropped);
+    v_has_tenant_id := EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'telemetry_points'::regclass AND attname = 'tenant_id' AND NOT attisdropped);
+    v_has_trip_id := EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'telemetry_points'::regclass AND attname = 'trip_id' AND NOT attisdropped);
+    v_has_vehicle_id := EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'telemetry_points'::regclass AND attname = 'vehicle_id' AND NOT attisdropped);
 
     v_tele_cols := format('%I, %I, %I, %I', v_lat_col, v_lng_col, v_speed_col, v_time_col);
     
@@ -341,13 +372,13 @@ BEGIN
     IF v_has_tenant_id THEN v_tele_cols := v_tele_cols || ', tenant_id'; END IF;
     
     -- Add other columns if they exist
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telemetry_points' AND column_name = 'heading') THEN
+    IF EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'telemetry_points'::regclass AND attname = 'heading' AND NOT attisdropped) THEN
         v_tele_cols := v_tele_cols || ', heading';
     END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telemetry_points' AND column_name = 'ignition') THEN
+    IF EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'telemetry_points'::regclass AND attname = 'ignition' AND NOT attisdropped) THEN
         v_tele_cols := v_tele_cols || ', ignition';
     END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telemetry_points' AND column_name = 'fuel_level') THEN
+    IF EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'telemetry_points'::regclass AND attname = 'fuel_level' AND NOT attisdropped) THEN
         v_tele_cols := v_tele_cols || ', fuel_level';
     END IF;
 
@@ -361,13 +392,13 @@ BEGIN
     IF v_has_tenant_id THEN v_sql := v_sql || ', ''' || t_id || '''::uuid'; END IF;
     
     -- Static values for extra columns
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telemetry_points' AND column_name = 'heading') THEN
+    IF EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'telemetry_points'::regclass AND attname = 'heading' AND NOT attisdropped) THEN
         v_sql := v_sql || ', 135 + (gs % 10)';
     END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telemetry_points' AND column_name = 'ignition') THEN
+    IF EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'telemetry_points'::regclass AND attname = 'ignition' AND NOT attisdropped) THEN
         v_sql := v_sql || ', true';
     END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telemetry_points' AND column_name = 'fuel_level') THEN
+    IF EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'telemetry_points'::regclass AND attname = 'fuel_level' AND NOT attisdropped) THEN
         v_sql := v_sql || ', 72.5 - (gs * 0.05)';
     END IF;
     

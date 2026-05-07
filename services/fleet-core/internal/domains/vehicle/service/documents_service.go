@@ -49,12 +49,15 @@ func (s *DocumentsService) Upload(ctx context.Context, vehicleID uuid.UUID, tena
 	}
 
 	doc := &models.VehicleDocument{
-		ID:           uuid.New(),
-		VehicleID:    vehicleID,
-		DocumentType: req.DocumentType,
-		FileURL:      req.FileURL,
-		Hash:         req.Hash,
-		UploadedBy:   uploadedBy,
+		ID:             uuid.New(),
+		VehicleID:      vehicleID,
+		Type:           req.Type,
+		DocumentURL:    &req.DocumentURL,
+		DocumentNumber: req.DocumentNumber,
+		ExpiryDate:     req.ExpiryDate,
+		Status:         models.VerificationPending,
+		Hash:           req.Hash,
+		UploadedBy:     uploadedBy,
 	}
 
 	if err := s.docsRepo.Insert(ctx, doc); err != nil {
@@ -69,7 +72,7 @@ func (s *DocumentsService) Upload(ctx context.Context, vehicleID uuid.UUID, tena
 			VehicleID: vehicleID,
 			EventType: models.EventVehicleDocumentUploaded,
 			Payload: map[string]interface{}{
-				"document_type": doc.DocumentType,
+				"document_type": doc.Type,
 				"document_id":   doc.ID.String(),
 				"version":       doc.Version,
 			},

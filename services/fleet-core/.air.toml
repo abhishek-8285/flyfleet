@@ -11,7 +11,7 @@ tmp_dir = "tmp"
 [build]
   args_bin = []
   bin = "tmp/fleet-core"
-  cmd = "go build -o tmp/fleet-core ./cmd"
+  cmd = "go run ./cmd"
   delay = 1000
   entrypoint = ["./tmp/fleet-core"]
   exclude_dir = ["assets", "tmp", "vendor", "testdata", "bin", ".git", "node_modules", "uploads", "nats-data", "pgdata"]
@@ -49,7 +49,7 @@ tmp_dir = "tmp"
   clean_on_exit = false
 
 [proxy]
-  app_port = 8084
+  app_port = 8100
   app_start_timeout = 0
   enabled = false
   proxy_port = 0

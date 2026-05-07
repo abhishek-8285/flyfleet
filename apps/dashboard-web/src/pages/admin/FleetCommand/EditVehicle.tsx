@@ -12,7 +12,13 @@ import {
   Info,
   History,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  ClipboardCheck,
+  Settings,
+  Wrench,
+  ShieldCheck,
+  Link as LinkIcon,
+  MapPin
 } from "lucide-react";
 import apiClient from "../../../services/apiClient";
 import { 
@@ -52,6 +58,18 @@ interface FormState {
   odometer: string;
   odometer_unit: string;
   speed_limit: string;
+  // Compliance
+  insurance: string;
+  insurance_expiry: string;
+  permit_number: string;
+  permit_expiry: string;
+  pollution_expiry: string;
+  fitness_expiry: string;
+  tax_expiry: string;
+  // Maintenance
+  last_service_date: string;
+  last_service_odometer: string;
+  next_service_date: string;
 }
 
 type FieldName = keyof FormState;
@@ -60,6 +78,7 @@ const STEPS = [
   { id: 1, label: "Identity", icon: Truck, description: "Vehicle classification & status" },
   { id: 2, label: "Hardware", icon: Cpu, description: "Engineering & technical specs" },
   { id: 3, label: "Network", icon: Activity, description: "Telemetry & organizational hooks" },
+  { id: 4, label: "Registry", icon: Shield, description: "Legal & compliance validity" },
 ];
 
 export const EditVehicle: React.FC = () => {
@@ -72,6 +91,9 @@ export const EditVehicle: React.FC = () => {
     engine_number: "", parent_vehicle_id: "", branch_id: "", cost_center_id: "",
     immobilizer_enabled: false, ais140_compliant: false, status: "ACTIVE", notes: "",
     odometer: "0", odometer_unit: "km", speed_limit: "0", current_driver_id: "",
+    insurance: "", insurance_expiry: "", permit_number: "", permit_expiry: "",
+    pollution_expiry: "", fitness_expiry: "", tax_expiry: "",
+    last_service_date: "", last_service_odometer: "", next_service_date: "",
   });
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -123,6 +145,16 @@ export const EditVehicle: React.FC = () => {
             odometer: v.odometer ? (v.odometer / 1000).toString() : "0",
             odometer_unit: "km",
             speed_limit: v.speed_limit ? v.speed_limit.toString() : "0",
+            insurance: v.insurance || "",
+            insurance_expiry: v.insurance_expiry ? v.insurance_expiry.split("T")[0] : "",
+            permit_number: v.permit_number || "",
+            permit_expiry: v.permit_expiry ? v.permit_expiry.split("T")[0] : "",
+            pollution_expiry: v.pollution_expiry ? v.pollution_expiry.split("T")[0] : "",
+            fitness_expiry: v.fitness_expiry ? v.fitness_expiry.split("T")[0] : "",
+            tax_expiry: v.tax_expiry ? v.tax_expiry.split("T")[0] : "",
+            last_service_date: v.last_service_date ? v.last_service_date.split("T")[0] : "",
+            last_service_odometer: v.last_service_odometer ? v.last_service_odometer.toString() : "",
+            next_service_date: v.next_service_date ? v.next_service_date.split("T")[0] : "",
           });
 
           const ensureArray = (resp: any, key?: string) => {
@@ -377,6 +409,36 @@ export const EditVehicle: React.FC = () => {
                     </section>
                   </div>
                 )}
+
+                {currentStep === 4 && (
+                  <div className="space-y-12">
+                    <section className="space-y-8">
+                       <h3 className="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-3">
+                         <div className="w-1.5 h-1.5 rounded-full bg-primary" /> Compliance & Legal
+                       </h3>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                         <TextInput label="Insurance Policy #" name="insurance" value={form.insurance} onChange={(e) => updateField("insurance", e.target.value)} />
+                         <TextInput label="Insurance Expiry" name="insurance_expiry" type="date" value={form.insurance_expiry} onChange={(e) => updateField("insurance_expiry", e.target.value)} />
+                         <TextInput label="Permit Number" name="permit_number" value={form.permit_number} onChange={(e) => updateField("permit_number", e.target.value)} />
+                         <TextInput label="Permit Expiry" name="permit_expiry" type="date" value={form.permit_expiry} onChange={(e) => updateField("permit_expiry", e.target.value)} />
+                         <TextInput label="Pollution (PUC) Expiry" name="pollution_expiry" type="date" value={form.pollution_expiry} onChange={(e) => updateField("pollution_expiry", e.target.value)} />
+                         <TextInput label="Fitness Expiry" name="fitness_expiry" type="date" value={form.fitness_expiry} onChange={(e) => updateField("fitness_expiry", e.target.value)} />
+                         <TextInput label="Tax Validity Expiry" name="tax_expiry" type="date" value={form.tax_expiry} onChange={(e) => updateField("tax_expiry", e.target.value)} />
+                       </div>
+                    </section>
+
+                    <section className="space-y-8">
+                       <h3 className="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-3">
+                         <div className="w-1.5 h-1.5 rounded-full bg-primary" /> Maintenance History
+                       </h3>
+                       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                         <TextInput label="Last Service Date" name="last_service_date" type="date" value={form.last_service_date} onChange={(e) => updateField("last_service_date", e.target.value)} />
+                         <TextInput label="Last Service Odometer" name="last_service_odometer" type="number" value={form.last_service_odometer} onChange={(e) => updateField("last_service_odometer", e.target.value)} />
+                         <TextInput label="Next Service Due" name="next_service_date" type="date" value={form.next_service_date} onChange={(e) => updateField("next_service_date", e.target.value)} />
+                       </div>
+                    </section>
+                  </div>
+                )}
               </motion.div>
             </AnimatePresence>
 
@@ -490,119 +552,3 @@ export const EditVehicle: React.FC = () => {
 };
 
 export default EditVehicle;
-          </section>
-
-          {/* Section: Compliance & Validity */}
-          <section className="bg-[#111114] border border-white/5 rounded-3xl p-8 space-y-8 shadow-sm">
-            <div className="flex items-center gap-3">
-              <ClipboardCheck className="text-primary w-5 h-5" />
-              <h2 className="text-white font-bold tracking-tight">Compliance & Validity</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <TextInput label="Insurance Policy #" name="insurance" value={form.insurance} onChange={(e) => updateField("insurance", e.target.value)} />
-              <TextInput label="Insurance Expiry" name="insurance_expiry" type="date" value={form.insurance_expiry} onChange={(e) => updateField("insurance_expiry", e.target.value)} />
-              <TextInput label="Permit Number" name="permit_number" value={form.permit_number} onChange={(e) => updateField("permit_number", e.target.value)} />
-              <TextInput label="Permit Expiry" name="permit_expiry" type="date" value={form.permit_expiry} onChange={(e) => updateField("permit_expiry", e.target.value)} />
-              <TextInput label="Pollution (PUC) Expiry" name="pollution_expiry" type="date" value={form.pollution_expiry} onChange={(e) => updateField("pollution_expiry", e.target.value)} />
-              <TextInput label="Fitness Expiry" name="fitness_expiry" type="date" value={form.fitness_expiry} onChange={(e) => updateField("fitness_expiry", e.target.value)} />
-              <TextInput label="Tax Validity Expiry" name="tax_expiry" type="date" value={form.tax_expiry} onChange={(e) => updateField("tax_expiry", e.target.value)} />
-              <div className="flex flex-col gap-2">
-                 <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Registry ID:</p>
-                 <span className="text-xs text-white">{vehicle?.id}</span>
-              </div>
-            </div>
-          </section>
-
-          {/* Section: Engineering */}
-          <section className="bg-[#111114] border border-white/5 rounded-3xl p-8 space-y-8 shadow-sm">
-            <div className="flex items-center gap-3">
-              <Settings className="text-primary w-5 h-5" />
-              <h2 className="text-white font-bold tracking-tight">Engineering Metadata</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <TextInput label="Manufacturer" name="make" value={form.make} onChange={(e) => updateField("make", e.target.value)} />
-              <TextInput label="Variant/Model" name="model" value={form.model} onChange={(e) => updateField("model", e.target.value)} />
-              <TextInput label="Registry Year" name="year" value={form.year} onChange={(e) => updateField("year", e.target.value)} />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <TextInput label="VIN Number" name="vin_number" value={form.vin_number} onChange={(e) => updateField("vin_number", e.target.value)} />
-              <TextInput label="Chassis Number" name="chassis_number" value={form.chassis_number} onChange={(e) => updateField("chassis_number", e.target.value)} />
-              <TextInput label="Engine Sequence" name="engine_number" value={form.engine_number} onChange={(e) => updateField("engine_number", e.target.value)} />
-              <TextInput label="Registry Color" name="color" value={form.color} onChange={(e) => updateField("color", e.target.value)} />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 pt-4 border-t border-white/5">
-              <TextInput label="Tonnage" name="capacity_tonnage" type="number" value={form.capacity_tonnage} onChange={(e) => updateField("capacity_tonnage", e.target.value)} />
-              <TextInput label="Fuel Cap (L)" name="fuel_tank_capacity" type="number" value={form.fuel_tank_capacity} onChange={(e) => updateField("fuel_tank_capacity", e.target.value)} />
-              <TextInput label="Odometer (Km)" name="odometer" type="number" value={form.odometer} onChange={(e) => updateField("odometer", e.target.value)} />
-              <TextInput label="Speed Limit" name="speed_limit" type="number" value={form.speed_limit} onChange={(e) => updateField("speed_limit", e.target.value)} />
-            </div>
-          </section>
-
-          {/* Section: Maintenance History */}
-          <section className="bg-[#111114] border border-white/5 rounded-3xl p-8 space-y-8 shadow-sm">
-            <div className="flex items-center gap-3">
-              <Wrench className="text-primary w-5 h-5" />
-              <h2 className="text-white font-bold tracking-tight">Maintenance History</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <TextInput label="Last Service Date" name="last_service_date" type="date" value={form.last_service_date} onChange={(e) => updateField("last_service_date", e.target.value)} />
-              <TextInput label="Last Service Odometer" name="last_service_odometer" type="number" value={form.last_service_odometer} onChange={(e) => updateField("last_service_odometer", e.target.value)} />
-              <TextInput label="Next Service Due" name="next_service_date" type="date" value={form.next_service_date} onChange={(e) => updateField("next_service_date", e.target.value)} />
-            </div>
-          </section>
-
-          {/* Section: Personnel & Assignment */}
-          <section className="bg-[#111114] border border-white/5 rounded-3xl p-8 space-y-8 shadow-sm">
-            <div className="flex items-center gap-3">
-              <ShieldCheck className="text-primary w-5 h-5" />
-              <h2 className="text-white font-bold tracking-tight">Personnel & Assignment</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <SelectInput label="Assigned Guardian" name="current_driver_id" value={form.current_driver_id} options={dropdowns.drivers} onChange={(e) => updateField("current_driver_id", e.target.value)} placeholder="Unassigned" />
-              <SelectInput label="Operational Branch" name="branch_id" value={form.branch_id} options={dropdowns.branches} onChange={(e) => updateField("branch_id", e.target.value)} />
-              <SelectInput label="Cost Allocation" name="cost_center_id" value={form.cost_center_id} options={dropdowns.costCenters} onChange={(e) => updateField("cost_center_id", e.target.value)} />
-              <div className="pt-6 border-t border-white/5 flex items-center gap-2 text-text-muted">
-                 <LinkIcon className="w-4 h-4" />
-                 <p className="text-xs font-bold uppercase tracking-widest">Parent Asset Node:</p>
-                 <span className="text-xs text-white">{vehicle?.parent_vehicle_id || "None (Top Level)"}</span>
-              </div>
-            </div>
-          </section>
-
-          {/* Section: Telematics */}
-          <section className="bg-[#111114] border border-white/5 rounded-3xl p-8 space-y-8 shadow-sm">
-            <div className="flex items-center justify-between">
-               <div className="flex items-center gap-3">
-                <MapPin className="text-primary w-5 h-5" />
-                <h2 className="text-white font-bold tracking-tight">Telematics Configuration</h2>
-              </div>
-              <ToggleInput label="" checked={form.gps_enabled} onChange={(v) => updateField("gps_enabled", v)} />
-            </div>
-            {form.gps_enabled && (
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6 border-t border-white/5">
-                  <TextInput label="Device Serial (IMEI)" name="gps_device_id" value={form.gps_device_id} onChange={(e) => updateField("gps_device_id", e.target.value)} />
-                  <TextInput label="Link Protocol" name="gps_device_type" value={form.gps_device_type} onChange={(e) => updateField("gps_device_type", e.target.value)} />
-               </div>
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pt-4">
-               <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 transition-all hover:bg-white/10">
-                  <div className="space-y-1">
-                    <p className="text-sm font-bold text-white">Engine Immobilizer</p>
-                    <p className="text-[10px] text-text-muted">Remote kill-switch capability</p>
-                  </div>
-                  <ToggleInput label="" checked={form.immobilizer_enabled} onChange={(v) => updateField("immobilizer_enabled", v)} />
-               </div>
-               <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 transition-all hover:bg-white/10">
-                  <div className="space-y-1">
-                    <p className="text-sm font-bold text-white">AIS 140 Standard</p>
-                    <p className="text-[10px] text-text-muted">Government safety compliance</p>
-                  </div>
-                  <ToggleInput label="" checked={form.ais140_compliant} onChange={(v) => updateField("ais140_compliant", v)} />
-               </div>
-            </div>
-          </section>
-        </div>
-      </div>
-    </div>
-  );
-}

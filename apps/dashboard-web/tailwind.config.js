@@ -49,6 +49,11 @@ module.exports = {
         "monitor-success": "#10b981",
         "monitor-warning": "#f59e0b",
         "monitor-danger": "#ef4444",
+
+        // Semantic Aliases
+        "success": "#10b981",
+        "warning": "#f59e0b",
+        "danger": "#ef4444",
       },
       fontFamily: {
         "display": ["Inter", "sans-serif"],

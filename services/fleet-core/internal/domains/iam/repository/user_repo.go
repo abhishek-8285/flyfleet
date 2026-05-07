@@ -23,8 +23,8 @@ func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.User, error) {
 	var u models.User
 	err := r.pool.QueryRow(ctx, `
-		SELECT id, email, password_hash, COALESCE(name, ''), COALESCE(phone, ''), COALESCE(avatar_url, ''), mfa_enabled, COALESCE(mfa_secret, ''),
-		       COALESCE(mfa_backup_codes, '[]'::jsonb), status, email_verified,
+		SELECT id, email, password_hash, COALESCE(name, ''), COALESCE(phone, ''), COALESCE(avatar_url, ''), COALESCE(mfa_enabled, false), COALESCE(mfa_secret, ''),
+		       COALESCE(mfa_backup_codes, '[]'::jsonb), COALESCE(status, 'active'), COALESCE(email_verified, false),
 		       COALESCE(failed_logins, 0), locked_until, last_login_at,
 		       COALESCE(last_login_ip, '')::text, COALESCE(permission_mask, 0),
 		       COALESCE(sidebar_collapsed, false), COALESCE(language, 'en'),
@@ -48,8 +48,8 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.
 func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	var u models.User
 	err := r.pool.QueryRow(ctx, `
-		SELECT id, email, password_hash, COALESCE(name, ''), COALESCE(phone, ''), COALESCE(avatar_url, ''), mfa_enabled, COALESCE(mfa_secret, ''),
-		       COALESCE(mfa_backup_codes, '[]'::jsonb), status, email_verified,
+		SELECT id, email, password_hash, COALESCE(name, ''), COALESCE(phone, ''), COALESCE(avatar_url, ''), COALESCE(mfa_enabled, false), COALESCE(mfa_secret, ''),
+		       COALESCE(mfa_backup_codes, '[]'::jsonb), COALESCE(status, 'active'), COALESCE(email_verified, false),
 		       COALESCE(failed_logins, 0), locked_until, last_login_at,
 		       COALESCE(last_login_ip, '')::text, COALESCE(permission_mask, 0),
 		       COALESCE(sidebar_collapsed, false), COALESCE(language, 'en'),
@@ -177,8 +177,8 @@ func (r *UserRepository) UpdateStatus(ctx context.Context, id, tenantID uuid.UUI
 
 func (r *UserRepository) CreateUser(ctx context.Context, u *models.User) error {
 	return r.pool.QueryRow(ctx, `
-		INSERT INTO users (email, password_hash, name, phone, avatar_url, status, email_verified, must_reset_password, role_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, (SELECT id FROM roles WHERE name = 'super_admin' LIMIT 1))
+		INSERT INTO users (email, password_hash, name, phone, avatar_url, status, email_verified, must_reset_password)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, created_at, updated_at`,
 		u.Email, u.PasswordHash, u.Name, u.Phone, u.AvatarURL, u.Status, u.EmailVerified, u.MustResetPassword,
 	).Scan(&u.ID, &u.CreatedAt, &u.UpdatedAt)
@@ -194,7 +194,7 @@ func (r *UserRepository) UpdatePasswordAndClearResetFlag(ctx context.Context, id
 
 func (r *UserRepository) ListUsers(ctx context.Context, params models.ListUsersParams) (*models.ListUsersResponse, error) {
 	query := `
-		SELECT u.id, u.email, u.name, u.status, u.last_login_at, u.created_at
+		SELECT u.id, u.email, COALESCE(u.name, '') as name, COALESCE(u.status, 'active') as status, u.last_login_at, u.created_at
 		FROM users u`
 	
 	countQuery := `SELECT COUNT(*) FROM users u`
@@ -294,7 +294,7 @@ func (r *UserRepository) MarkEmailVerified(ctx context.Context, id uuid.UUID) er
 // GetTenants returns all tenants the user belongs to.
 func (r *UserRepository) GetTenants(ctx context.Context, userID uuid.UUID) ([]models.TenantInfo, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT o.id, o.name, uo.role
+		SELECT o.id, COALESCE(o.name, '') as name, COALESCE(uo.role, 'member') as role
 		FROM user_tenants uo
 		JOIN tenants o ON uo.tenant_id = o.id
 		WHERE uo.user_id = $1 AND uo.is_active = true

@@ -8,7 +8,13 @@ import {
   Phone,
   Mail,
   MapPin,
-  Info 
+  Info,
+  Activity,
+  Calendar,
+  Briefcase,
+  HeartPulse,
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
 import { api } from "../../services/api";
 import { TextInput, SelectInput, ToggleInput } from "../../components/common/FormFields";
@@ -42,6 +48,7 @@ interface FormState {
   shift_type: string;
   behavior_monitoring: boolean;
   notes: string;
+  police_verification_date: string;
 }
 
 export const EditDriver: React.FC = () => {
@@ -88,6 +95,7 @@ export const EditDriver: React.FC = () => {
           shift_type: data.metadata?.shift_type || "MORNING",
           behavior_monitoring: data.metadata?.behavior_monitoring ?? true,
           notes: data.metadata?.notes || "",
+          police_verification_date: data.metadata?.police_verification_date ? data.metadata.police_verification_date.split("T")[0] : "",
         };
         setForm(formData);
         setInitialForm(formData);
@@ -216,7 +224,8 @@ export const EditDriver: React.FC = () => {
         <div className="w-20" />
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6 pb-20">
+        {/* Section: Identity */}
         <div className="bg-surface-dark border border-border-color p-8 rounded-3xl space-y-8 shadow-2xl">
           <div className="flex items-center gap-3">
              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -228,11 +237,14 @@ export const EditDriver: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <TextInput label="First Name" name="first_name" value={form.first_name} onChange={(e) => updateField("first_name", e.target.value)} required />
             <TextInput label="Last Name" name="last_name" value={form.last_name} onChange={(e) => updateField("last_name", e.target.value)} required />
-            <TextInput label="Email" name="email" type="email" value={form.email} onChange={(e) => updateField("email", e.target.value)} />
-            <TextInput label="Phone" name="phone" type="tel" value={form.phone} onChange={(e) => updateField("phone", e.target.value)} required />
+            <TextInput label="Email Address" name="email" type="email" value={form.email} onChange={(e) => updateField("email", e.target.value)} />
+            <TextInput label="Primary Contact" name="phone" type="tel" value={form.phone} onChange={(e) => updateField("phone", e.target.value)} required />
+            <TextInput label="Date of Birth" name="date_of_birth" type="date" value={form.date_of_birth} onChange={(e) => updateField("date_of_birth", e.target.value)} />
+            <TextInput label="Blood Group" name="blood_group" value={form.blood_group} onChange={(e) => updateField("blood_group", e.target.value)} />
           </div>
         </div>
 
+        {/* Section: Compliance & Credentials */}
         <div className="bg-surface-dark border border-border-color p-8 rounded-3xl space-y-8 shadow-2xl">
           <div className="flex items-center gap-3">
              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
@@ -244,26 +256,52 @@ export const EditDriver: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <TextInput label="License Number" name="license_number" value={form.license_number} onChange={(e) => updateField("license_number", e.target.value)} required />
             <SelectInput 
-              label="License Type" 
+              label="License Class" 
               name="license_type"
               value={form.license_type} 
               options={[
-                { value: "LMV", label: "LMV" },
-                { value: "HMV", label: "HMV" }
+                { value: "LMV", label: "LMV (Light)" },
+                { value: "HMV", label: "HMV (Heavy)" },
+                { value: "TRANS", label: "Transport" }
               ]} 
               onChange={(e) => updateField("license_type", e.target.value)} 
             />
+            <TextInput label="License Issue Date" name="license_issue_date" type="date" value={form.license_issue_date} onChange={(e) => updateField("license_issue_date", e.target.value)} />
+            <TextInput label="License Expiry" name="license_expiry" type="date" value={form.license_expiry} onChange={(e) => updateField("license_expiry", e.target.value)} />
+            <TextInput label="License Authority" name="license_authority" value={form.license_authority} onChange={(e) => updateField("license_authority", e.target.value)} />
+            <TextInput label="Police Verification Date" name="police_verification_date" type="date" value={form.police_verification_date} onChange={(e) => updateField("police_verification_date", e.target.value)} />
             <TextInput label="Aadhaar ID" name="aadhaar_number" value={form.aadhaar_number} onChange={(e) => updateField("aadhaar_number", e.target.value)} />
             <TextInput label="PAN Signal" name="pan_number" value={form.pan_number} onChange={(e) => updateField("pan_number", e.target.value)} />
           </div>
         </div>
 
+        {/* Section: Residence */}
         <div className="bg-surface-dark border border-border-color p-8 rounded-3xl space-y-8 shadow-2xl">
           <div className="flex items-center gap-3">
-             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                <Info className="w-5 h-5" />
+             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                <MapPin className="w-5 h-5" />
              </div>
-             <h2 className="text-lg font-semibold text-white">Additional Metadata</h2>
+             <h2 className="text-lg font-semibold text-white">Geographic Vector (Address)</h2>
+          </div>
+
+          <div className="space-y-6">
+            <TextInput label="Street Address" name="address_street" value={form.address_street} onChange={(e) => updateField("address_street", e.target.value)} />
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <TextInput label="City" name="address_city" value={form.address_city} onChange={(e) => updateField("address_city", e.target.value)} />
+              <TextInput label="State" name="address_state" value={form.address_state} onChange={(e) => updateField("address_state", e.target.value)} />
+              <TextInput label="Pincode" name="address_pincode" value={form.address_pincode} onChange={(e) => updateField("address_pincode", e.target.value)} />
+              <TextInput label="Country" name="address_country" value={form.address_country} onChange={(e) => updateField("address_country", e.target.value)} />
+            </div>
+          </div>
+        </div>
+
+        {/* Section: Logistics */}
+        <div className="bg-surface-dark border border-border-color p-8 rounded-3xl space-y-8 shadow-2xl">
+          <div className="flex items-center gap-3">
+             <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400">
+                <Briefcase className="w-5 h-5" />
+             </div>
+             <h2 className="text-lg font-semibold text-white">Logistics & Employment</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -289,11 +327,48 @@ export const EditDriver: React.FC = () => {
               ]} 
               onChange={(e) => updateField("shift_type", e.target.value)} 
             />
-            <ToggleInput label="Behavior Monitoring" checked={form.behavior_monitoring} onChange={(v) => updateField("behavior_monitoring", v)} />
+             <div className="flex flex-col gap-2">
+                <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Joining Date (ReadOnly)</p>
+                <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-sm text-white flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-primary" /> {form.joining_date ? new Date(form.joining_date).toLocaleDateString() : "N/A"}
+                </div>
+              </div>
+          </div>
+          <div className="p-6 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-between transition-all hover:bg-white/10">
+              <div className="space-y-1">
+                <p className="text-sm font-bold text-white">Behavior Monitoring</p>
+                <p className="text-[10px] text-text-muted">Neural driving pattern analysis</p>
+              </div>
+              <ToggleInput label="" checked={form.behavior_monitoring} onChange={(v) => updateField("behavior_monitoring", v)} />
+            </div>
+        </div>
+
+        {/* Section: Emergency */}
+        <div className="bg-surface-dark border border-border-color p-8 rounded-3xl space-y-8 shadow-2xl">
+          <div className="flex items-center gap-3">
+             <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-400">
+                <HeartPulse className="w-5 h-5" />
+             </div>
+             <h2 className="text-lg font-semibold text-white">Emergency & Kinship</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <TextInput label="Emergency Name" name="emergency_name" value={form.emergency_name} onChange={(e) => updateField("emergency_name", e.target.value)} />
+            <TextInput label="Emergency Phone" name="emergency_phone" value={form.emergency_phone} onChange={(e) => updateField("emergency_phone", e.target.value)} />
+            <TextInput label="Kinship Relation" name="emergency_relation" value={form.emergency_relation} onChange={(e) => updateField("emergency_relation", e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest ml-1">Administrative Notes</label>
+            <textarea 
+              value={form.notes} 
+              onChange={(e) => updateField("notes", e.target.value)}
+              className="w-full bg-[#0a0a0b] border border-white/5 rounded-2xl p-4 text-sm text-white outline-none focus:border-primary/50 transition-all h-24 resize-none"
+              placeholder="Record operative notes..."
+            />
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-4 pt-4">
+        <div className="flex items-center justify-end gap-4 pt-10">
             <button
               type="button"
               onClick={() => navigate(-1)}
@@ -311,112 +386,12 @@ export const EditDriver: React.FC = () => {
               ) : (
                 <Save className="w-5 h-5" />
               )}
-              Save Changes
+              Save Configuration
             </button>
         </div>
       </form>
     </div>
   );
 };
-                </label>
-                <TextInput label="" name="police_verification_date" type="date" value={form.police_verification_date} onChange={(e) => updateField("police_verification_date", e.target.value)} />
-              </div>
-            </div>
-          </section>
 
-          {/* Section: Credentials */}
-          <section className="bg-[#111114] border border-white/5 rounded-3xl p-8 space-y-8 shadow-sm">
-            <div className="flex items-center gap-3">
-              <IdCard className="text-primary w-5 h-5" />
-              <h2 className="text-white font-bold tracking-tight">Compliance & Licensing</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <TextInput label="License Number" name="license_number" value={form.license_number} onChange={(e) => updateField("license_number", e.target.value)} />
-              <SelectInput label="License Type" name="license_type" value={form.license_type} options={[{value: "LMV", label: "LMV"}, {value: "HMV", label: "HMV"}, {value: "Transport", label: "Transport"}]} onChange={(e) => updateField("license_type", e.target.value)} />
-              <TextInput label="Issue Date" name="license_issue_date" type="date" value={form.license_issue_date} onChange={(e) => updateField("license_issue_date", e.target.value)} />
-              <TextInput label="Expiry Date" name="license_expiry" type="date" value={form.license_expiry} onChange={(e) => updateField("license_expiry", e.target.value)} />
-              <TextInput label="Issuing Authority" name="license_authority" value={form.license_authority} onChange={(e) => updateField("license_authority", e.target.value)} />
-              <div className="grid grid-cols-2 gap-4">
-                <TextInput label="Aadhaar ID" name="aadhaar_number" value={form.aadhaar_number} onChange={(e) => updateField("aadhaar_number", e.target.value)} />
-                <TextInput label="PAN Signal" name="pan_number" value={form.pan_number} onChange={(e) => updateField("pan_number", e.target.value)} />
-              </div>
-            </div>
-          </section>
-
-          {/* Section: Residence */}
-          <section className="bg-[#111114] border border-white/5 rounded-3xl p-8 space-y-8 shadow-sm">
-            <div className="flex items-center gap-3">
-              <MapPin className="text-primary w-5 h-5" />
-              <h2 className="text-white font-bold tracking-tight">Geographic Vector (Address)</h2>
-            </div>
-            <div className="space-y-6">
-              <TextInput label="Street Address" name="address_street" value={form.address_street} onChange={(e) => updateField("address_street", e.target.value)} />
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <TextInput label="City" name="address_city" value={form.address_city} onChange={(e) => updateField("address_city", e.target.value)} />
-                <TextInput label="State" name="address_state" value={form.address_state} onChange={(e) => updateField("address_state", e.target.value)} />
-                <TextInput label="Pincode" name="address_pincode" value={form.address_pincode} onChange={(e) => updateField("address_pincode", e.target.value)} />
-                <TextInput label="Country" name="address_country" value={form.address_country} onChange={(e) => updateField("address_country", e.target.value)} />
-              </div>
-            </div>
-          </section>
-
-          {/* Section: Logistics */}
-          <section className="bg-[#111114] border border-white/5 rounded-3xl p-8 space-y-8 shadow-sm">
-            <div className="flex items-center gap-3">
-              <Briefcase className="text-primary w-5 h-5" />
-              <h2 className="text-white font-bold tracking-tight">Logistics & Employment</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <SelectInput label="Employment Type" name="employment_type" value={form.employment_type} options={[{value: "FULL_TIME", label: "Full Time"}, {value: "CONTRACT", label: "Contract"}]} onChange={(e) => updateField("employment_type", e.target.value)} />
-              <TextInput label="Experience (Years)" name="experience_years" type="number" value={form.experience_years} onChange={(e) => updateField("experience_years", e.target.value)} />
-              <SelectInput label="Shift Pattern" name="shift_type" value={form.shift_type} options={[{value: "MORNING", label: "Morning"}, {value: "EVENING", label: "Evening"}, {value: "NIGHT", label: "Night"}]} onChange={(e) => updateField("shift_type", e.target.value)} />
-              <div className="flex flex-col gap-2">
-                <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Joining Date (Locked)</p>
-                <div className="p-4 bg-white/5 rounded-2xl border border-white/5 text-sm text-white flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-primary" /> {driver?.joining_date ? new Date(driver.joining_date).toLocaleDateString() : "N/A"}
-                </div>
-              </div>
-            </div>
-            <div className="p-6 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-between transition-all hover:bg-white/10">
-              <div className="space-y-1">
-                <p className="text-sm font-bold text-white">Behavior Monitoring</p>
-                <p className="text-[10px] text-text-muted">Neural driving pattern analysis</p>
-              </div>
-              <ToggleInput label="" checked={form.behavior_monitoring} onChange={(v) => updateField("behavior_monitoring", v)} />
-            </div>
-          </section>
-
-          {/* Section: Emergency & Notes */}
-          <section className="bg-[#111114] border border-white/5 rounded-3xl p-8 space-y-8 shadow-sm">
-            <div className="flex items-center gap-3">
-              <HeartPulse className="text-primary w-5 h-5" />
-              <h2 className="text-white font-bold tracking-tight">Emergency & Notes</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <TextInput label="Emergency Name" name="emergency_name" value={form.emergency_name} onChange={(e) => updateField("emergency_name", e.target.value)} />
-              <TextInput label="Emergency Phone" name="emergency_phone" value={form.emergency_phone} onChange={(e) => updateField("emergency_phone", e.target.value)} />
-              <TextInput label="Kinship Relation" name="emergency_relation" value={form.emergency_relation} onChange={(e) => updateField("emergency_relation", e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-text-muted uppercase tracking-widest">Administrative Notes</label>
-              <textarea 
-                value={form.notes} 
-                onChange={(e) => updateField("notes", e.target.value)}
-                className="w-full bg-[#0a0a0b] border border-white/5 rounded-2xl p-4 text-sm text-white outline-none focus:border-primary/50 transition-all h-24 resize-none"
-                placeholder="Record operative notes..."
-              />
-            </div>
-            <div className="pt-6 border-t border-white/5 flex items-center justify-between text-text-muted">
-               <div className="flex items-center gap-2">
-                  <Activity className="w-4 h-4" />
-                  <p className="text-xs font-bold uppercase tracking-widest">Profile Status:</p>
-                  <span className="text-xs text-white uppercase">{driver?.status || "Unknown"}</span>
-               </div>
-               <p className="text-[10px] italic">Status changes require separate administrative authorization</p>
-            </div>
-          </section>
-        </div>
-      </div>
-    </div>
-  );
-}
+export default EditDriver;

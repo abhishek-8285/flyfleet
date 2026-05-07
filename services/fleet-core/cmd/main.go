@@ -661,6 +661,15 @@ func ensureIAMSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger
 		"ALTER TABLE user_roles ADD COLUMN IF NOT EXISTS tenant_id UUID",
 		"ALTER TABLE invitations ADD COLUMN IF NOT EXISTS tenant_id UUID",
 		"ALTER TABLE users ADD COLUMN IF NOT EXISTS must_reset_password BOOLEAN DEFAULT FALSE",
+		"UPDATE users SET email_verified = FALSE WHERE email_verified IS NULL",
+		"ALTER TABLE users ALTER COLUMN email_verified SET DEFAULT FALSE",
+		"ALTER TABLE users ALTER COLUMN email_verified SET NOT NULL",
+		"UPDATE users SET mfa_enabled = FALSE WHERE mfa_enabled IS NULL",
+		"ALTER TABLE users ALTER COLUMN mfa_enabled SET DEFAULT FALSE",
+		"ALTER TABLE users ALTER COLUMN mfa_enabled SET NOT NULL",
+		"UPDATE users SET status = 'active' WHERE status IS NULL",
+		"ALTER TABLE users ALTER COLUMN status SET DEFAULT 'active'",
+		"ALTER TABLE users ALTER COLUMN status SET NOT NULL",
 
 		// Role Permissions Hardening (Nuclear Option for Migration 098c)
 		"CREATE TABLE IF NOT EXISTS role_permissions (id UUID PRIMARY KEY DEFAULT gen_random_uuid())",
@@ -866,6 +875,9 @@ func ensureTrackingSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.L
 		"ALTER TABLE telemetry_points ADD COLUMN IF NOT EXISTS heading DOUBLE PRECISION",
 		"ALTER TABLE telemetry_points ADD COLUMN IF NOT EXISTS ignition BOOLEAN DEFAULT FALSE",
 		"ALTER TABLE telemetry_points ADD COLUMN IF NOT EXISTS fuel_level DOUBLE PRECISION",
+		"ALTER TABLE telemetry_points ADD COLUMN IF NOT EXISTS trip_id UUID",
+		"ALTER TABLE telemetry_points ALTER COLUMN trip_id DROP NOT NULL",
+		"ALTER TABLE telemetry_points ALTER COLUMN tenant_id DROP NOT NULL",
 	}
 	for _, stmt := range statements {
 		pool.Exec(ctx, stmt)

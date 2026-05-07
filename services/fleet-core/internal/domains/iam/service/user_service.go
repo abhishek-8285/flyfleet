@@ -6,7 +6,9 @@ import (
 
 	"github.com/flyfleet/fleet-core/internal/domains/iam/models"
 	"github.com/flyfleet/fleet-core/internal/domains/iam/repository"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	"github.com/google/uuid"
+
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -48,7 +50,7 @@ func (s *UserService) ListUsers(ctx context.Context, params models.ListUsersPara
 
 	// Enrich each user with their role names
 	for i := range resp.Users {
-		roles, err := s.roleRepo.GetUserRoles(ctx, resp.Users[i].ID, uuid.Nil)
+		roles, err := s.roleRepo.GetUserRoles(ctx, resp.Users[i].ID, params.TenantID)
 		if err == nil && len(roles) > 0 {
 			roleNames := make([]string, 0, len(roles))
 			for _, r := range roles {
@@ -59,6 +61,7 @@ func (s *UserService) ListUsers(ctx context.Context, params models.ListUsersPara
 			resp.Users[i].Roles = []string{}
 		}
 	}
+
 
 	return resp, nil
 }
@@ -72,8 +75,23 @@ func (s *UserService) GetUser(ctx context.Context, id uuid.UUID) (*models.User, 
 	if user == nil {
 		return nil, ErrUserNotFound
 	}
+
+	// Fetch tenant ID from context to get tenant-specific roles
+	tenantID, _ := ctxkeys.GetTenantID(ctx)
+
+	// Fetch roles
+	roles, err := s.roleRepo.GetUserRoles(ctx, id, tenantID)
+	if err == nil {
+		roleNames := make([]string, 0, len(roles))
+		for _, r := range roles {
+			roleNames = append(roleNames, r.Name)
+		}
+		user.Roles = roleNames
+	}
+
 	return user, nil
 }
+
 
 // UpdateUserStatus changes a user's status (active, disabled, locked).
 func (s *UserService) UpdateUserStatus(ctx context.Context, userID, tenantID uuid.UUID, status string, actorID uuid.UUID) error {

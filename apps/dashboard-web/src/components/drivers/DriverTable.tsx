@@ -6,9 +6,6 @@ import {
   Edit3, 
   Trash2, 
   ChevronRight,
-  ShieldCheck,
-  IdCard,
-  Briefcase
 } from "lucide-react";
 import { Driver } from "../../types";
 
@@ -46,7 +43,7 @@ export const DriverTable: React.FC<DriverTableProps> = ({
     <div className="overflow-x-auto">
       <table className="w-full text-left">
         <thead>
-          <tr className="text-xs font-semibold text-gray-400 uppercase tracking-wider bg-white/5 border-b border-border-color">
+          <tr className="text-xs font-semibold text-gray-400 uppercase tracking-wider bg-white/5 border-b border-white/5">
             {onSelect && (
               <th className="px-6 py-4 w-12">
                 <input
@@ -57,14 +54,14 @@ export const DriverTable: React.FC<DriverTableProps> = ({
                 />
               </th>
             )}
-            <th className="px-6 py-4">Driver</th>
-            <th className="px-6 py-4">License</th>
+            <th className="px-6 py-4">Personnel</th>
+            <th className="px-6 py-4">Credentials</th>
             <th className="px-6 py-4">Status</th>
-            <th className="px-6 py-4">Assigned Vehicle</th>
-            <th className="px-6 py-4 text-right">Actions</th>
+            <th className="px-6 py-4">Assigned Asset</th>
+            <th className="px-6 py-4 text-right pr-10">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-border-color">
+        <tbody className="divide-y divide-white/5">
           {loading ? (
             Array(3).fill(0).map((_, i) => (
               <tr key={i} className="animate-pulse">
@@ -73,7 +70,7 @@ export const DriverTable: React.FC<DriverTableProps> = ({
             ))
           ) : drivers.length === 0 ? (
             <tr>
-              <td colSpan={6} className="px-6 py-10 text-center text-gray-500">No personnel registered.</td>
+              <td colSpan={6} className="px-6 py-10 text-center text-gray-500">No personnel detected.</td>
             </tr>
           ) : (
             drivers.map((driver) => (
@@ -94,41 +91,41 @@ export const DriverTable: React.FC<DriverTableProps> = ({
                 )}
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform font-bold">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold">
                       {driver.name?.[0] || driver.first_name?.[0]}
                     </div>
                     <div>
-                      <div className="font-semibold text-white">{driver.name || `${driver.first_name} ${driver.last_name}`}</div>
-                      <div className="text-xs text-gray-500 capitalize">{driver.employment_type?.toLowerCase() || 'Full Time'}</div>
+                      <div className="font-semibold text-white tracking-tight">{driver.name || `${driver.first_name} ${driver.last_name}`}</div>
+                      <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">{driver.employment_type || 'Full Time'}</div>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex flex-col">
                     <span className="text-sm text-gray-300 font-mono">{driver.license_number || "-"}</span>
-                    <span className="text-[10px] text-gray-500 uppercase">{driver.license_type || "LMV"}</span>
+                    <span className="text-[10px] text-gray-500 uppercase font-bold">{driver.license_type || "LMV"}</span>
                   </div>
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
-                    <div className={`w-1.5 h-1.5 rounded-full ${driver.status === 'active' ? 'bg-success' : 'bg-primary'}`} />
-                    <span className={`text-xs font-medium uppercase ${driver.status === 'active' ? 'text-success' : 'text-primary'}`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${driver.status === 'active' ? 'bg-success' : 'bg-amber-500'}`} />
+                    <span className={`text-[10px] font-bold uppercase ${driver.status === 'active' ? 'text-success' : 'text-amber-500'}`}>
                       {driver.status}
                     </span>
                   </div>
                 </td>
                 <td className="px-6 py-4">
                     {driver.current_vehicle?.registration_number ? (
-                        <div className="flex items-center gap-2 text-white/70 text-sm">
+                        <div className="flex items-center gap-2 text-white/70 text-sm font-semibold">
                             <Car className="w-4 h-4 text-primary" />
                             {driver.current_vehicle.registration_number}
                         </div>
                     ) : (
-                        <span className="text-gray-600 text-xs italic">Unassigned</span>
+                        <span className="text-gray-600 text-[10px] font-bold uppercase tracking-wider italic">Unassigned</span>
                     )}
                 </td>
                 <td className="px-6 py-4">
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="flex items-center justify-end gap-1">
                     <button 
                       onClick={(e) => { e.stopPropagation(); onEdit?.(driver.id); }}
                       className="p-2 text-gray-500 hover:text-white transition-colors"
@@ -136,12 +133,12 @@ export const DriverTable: React.FC<DriverTableProps> = ({
                       <Edit3 className="w-4 h-4" />
                     </button>
                     <button 
-                      onClick={(e) => { e.stopPropagation(); onDelete?.(driver.id); }}
-                      className="p-2 text-gray-500 hover:text-error transition-colors"
+                      onClick={(e) => { e.stopPropagation(); onDelete?.(id); }}
+                      className="p-2 text-gray-500 hover:text-rose-500 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
-                    <ChevronRight className="w-5 h-5 text-gray-600" />
+                    <ChevronRight className="w-5 h-5 text-gray-700 ml-2" />
                   </div>
                 </td>
               </tr>

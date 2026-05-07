@@ -172,10 +172,10 @@ func (s *LifecycleService) checkComplianceForActivation(ctx context.Context, veh
 	return true, "", nil
 }
 
-func (s *LifecycleService) emitStatusChangedEvent(ctx context.Context, vehicleID uuid.UUID, oldStatus, newStatus string) {
+func (s *LifecycleService) emitStatusChangedEvent(ctx context.Context, vehicleID uuid.UUID, oldStatus, newStatus models.VehicleStatus) {
 	s.emitEvent(ctx, vehicleID, models.EventVehicleStatusChanged, map[string]interface{}{
-		"old_status": oldStatus,
-		"new_status": newStatus,
+		"old_status": string(oldStatus),
+		"new_status": string(newStatus),
 	})
 }
 

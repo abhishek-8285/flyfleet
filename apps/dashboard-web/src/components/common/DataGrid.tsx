@@ -82,6 +82,7 @@ export function DataGrid<T extends { id: string | number }>({
       // 1. Raw array: [...]
       // 2. Nested data: { data: [...] }
       // 3. Standardized envelope: { data: { data: [...] } }
+      // 4. Domain-specific keys: { users: [...] }, { drivers: [...] }, etc.
       let records: T[] = [];
       if (Array.isArray(response)) {
         records = response;
@@ -89,7 +90,18 @@ export function DataGrid<T extends { id: string | number }>({
         records = response.data;
       } else if (Array.isArray(response?.data?.data)) {
         records = response.data.data;
+      } else if (Array.isArray(response?.users)) {
+        records = response.users;
+      } else if (Array.isArray(response?.drivers)) {
+        records = response.drivers;
+      } else if (Array.isArray(response?.vehicles)) {
+        records = response.vehicles;
+      } else if (Array.isArray(response?.trips)) {
+        records = response.trips;
+      } else if (Array.isArray(response?.customers)) {
+        records = response.customers;
       }
+
 
       // --- Robust Metadata Extraction ---
       // Supports both standardized MetaInfo and legacy manual maps

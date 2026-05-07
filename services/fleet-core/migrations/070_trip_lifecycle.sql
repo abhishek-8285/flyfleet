@@ -57,8 +57,8 @@ BEGIN
 END $$;
 
 CREATE TABLE IF NOT EXISTS telemetry_points (
-    tenant_id UUID NOT NULL REFERENCES tenants(id),
-    trip_id UUID NOT NULL,
+    tenant_id UUID REFERENCES tenants(id),
+    trip_id UUID,
     lat DOUBLE PRECISION NOT NULL,
     lng DOUBLE PRECISION NOT NULL,
     speed DECIMAL(5, 2),

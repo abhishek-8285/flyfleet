@@ -63,7 +63,9 @@ func (r *FinancialRepository) Get(ctx context.Context, vehicleID uuid.UUID) (*mo
 	err := r.db.QueryRow(ctx, `
 		SELECT vehicle_id, acquisition_cost, depreciation_method, depreciation_rate,
 		       residual_value, emi_amount, lease_end_date, insurance_premium,
-		       total_maintenance_cost, total_fuel_cost, total_toll_cost,
+		       COALESCE(total_maintenance_cost, 0.0) as total_maintenance_cost, 
+		       COALESCE(total_fuel_cost, 0.0) as total_fuel_cost, 
+		       COALESCE(total_toll_cost, 0.0) as total_toll_cost,
 		       tco_cached, tco_calculated_at, created_at, updated_at
 		FROM vehicle_financials WHERE vehicle_id = $1`, vehicleID,
 	).Scan(

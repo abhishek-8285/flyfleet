@@ -28,7 +28,7 @@ const securityHeadersPlugin = () => ({
       // Images and media (includes tile servers)
       "img-src 'self' data: blob: https: http://localhost:3000",
       // Connections (API, WebSocket, analytics, geocoding, IP geolocation, Map tiles)
-      "connect-src 'self' ws: wss: http://localhost:8084 https://us.i.posthog.com https://*.trycloudflare.com wss://*.trycloudflare.com https://nominatim.openstreetmap.org http://ip-api.com https://ip-api.com https://*.basemaps.cartocdn.com https://img.icons8.com",
+      "connect-src 'self' ws: wss: http://localhost:8100 https://us.i.posthog.com https://*.trycloudflare.com wss://*.trycloudflare.com https://nominatim.openstreetmap.org http://ip-api.com https://ip-api.com https://*.basemaps.cartocdn.com https://img.icons8.com",
       // Workers for MapLibre
       "worker-src 'self' blob:",
       "child-src 'self' blob:",
@@ -77,22 +77,22 @@ export default defineConfig({
     },
     proxy: {
       '/api/v1/ws': {
-        target: 'ws://localhost:8084',
+        target: 'ws://localhost:8100',
         ws: true,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/v1\/ws/, '/ws/telemetry'),
       },
       '/api': {
-        target: 'http://localhost:8084',
+        target: 'http://localhost:8100',
         changeOrigin: true,
       },
       '/ws': {
-        target: 'ws://localhost:8084',
+        target: 'ws://localhost:8100',
         ws: true,
         changeOrigin: true,
       },
       '/auth': {
-        target: 'http://localhost:8084',
+        target: 'http://localhost:8100',
         changeOrigin: true,
       },
       '/carto-proxy': {

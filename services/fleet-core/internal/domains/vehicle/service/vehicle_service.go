@@ -97,11 +97,11 @@ func (s *VehicleService) CreateVehicle(ctx context.Context, req *models.CreateVe
 		ChassisNumber:      req.ChassisNumber,
 		EngineNumber:       req.EngineNumber,
 		VINNumber:          req.VINNumber,
-		VehicleType:        strings.ToLower(req.VehicleType),
-		CapacityTonnage:    req.CapacityTonnage,
-		FuelType:           strings.ToLower(req.FuelType),
-		FuelTankCapacity:   req.FuelTankCapacity,
-		OwnershipType:      strings.ToLower(req.OwnershipType),
+		VehicleType:        models.VehicleType(strings.ToUpper(req.VehicleType)),
+		CapacityTonnage:    0,
+		FuelType:           models.FuelType(strings.ToUpper(req.FuelType)),
+		FuelTankCapacity:   0,
+		OwnershipType:      models.OwnershipType(strings.ToUpper(req.OwnershipType)),
 		ParentVehicleID:    req.ParentVehicleID,
 		BranchID:           req.BranchID,
 		CostCenterID:       req.CostCenterID,
@@ -110,18 +110,34 @@ func (s *VehicleService) CreateVehicle(ctx context.Context, req *models.CreateVe
 		GPSDeviceType:      req.GPSDeviceType,
 		ImmobilizerEnabled: req.ImmobilizerEnabled,
 		AIS140Compliant:    req.AIS140Compliant,
-		Make:               req.Make,
-		Model:              req.Model,
-		Year:               req.Year,
-		Color:              req.Color,
-		Odometer:           req.Odometer,
 		CurrentDriverID:    req.CurrentDriverID,
 		SpeedLimit:         req.SpeedLimit,
-		LicensePlate:       regNo,
-		Status:             strings.ToLower(models.StatusActive),
+		Status:             models.StatusActive,
 
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
+	}
+
+	if req.CapacityTonnage != nil {
+		vehicle.CapacityTonnage = *req.CapacityTonnage
+	}
+	if req.FuelTankCapacity != nil {
+		vehicle.FuelTankCapacity = *req.FuelTankCapacity
+	}
+	if req.Make != nil {
+		vehicle.Make = *req.Make
+	}
+	if req.Model != nil {
+		vehicle.Model = *req.Model
+	}
+	if req.Year != nil {
+		vehicle.Year = *req.Year
+	}
+	if req.Color != nil {
+		vehicle.Color = *req.Color
+	}
+	if req.Odometer != nil {
+		vehicle.Odometer = float64(*req.Odometer)
 	}
 
 	// Encrypt sensitive fields before persist
@@ -262,19 +278,19 @@ func (s *VehicleService) UpdateVehicle(ctx context.Context, id uuid.UUID, req *m
 	}
 
 	if req.VehicleType != nil {
-		vehicle.VehicleType = strings.ToLower(*req.VehicleType)
+		vehicle.VehicleType = models.VehicleType(strings.ToUpper(*req.VehicleType))
 	}
 	if req.FuelType != nil {
-		vehicle.FuelType = strings.ToLower(*req.FuelType)
+		vehicle.FuelType = models.FuelType(strings.ToUpper(*req.FuelType))
 	}
 	if req.OwnershipType != nil {
-		vehicle.OwnershipType = strings.ToLower(*req.OwnershipType)
+		vehicle.OwnershipType = models.OwnershipType(strings.ToUpper(*req.OwnershipType))
 	}
 	if req.CapacityTonnage != nil {
-		vehicle.CapacityTonnage = req.CapacityTonnage
+		vehicle.CapacityTonnage = *req.CapacityTonnage
 	}
 	if req.FuelTankCapacity != nil {
-		vehicle.FuelTankCapacity = req.FuelTankCapacity
+		vehicle.FuelTankCapacity = *req.FuelTankCapacity
 	}
 	if req.ChassisNumber != nil {
 		vehicle.ChassisNumber = req.ChassisNumber
@@ -307,25 +323,25 @@ func (s *VehicleService) UpdateVehicle(ctx context.Context, id uuid.UUID, req *m
 		vehicle.AIS140Compliant = *req.AIS140Compliant
 	}
 	if req.Make != nil {
-		vehicle.Make = req.Make
+		vehicle.Make = *req.Make
 	}
 	if req.Model != nil {
-		vehicle.Model = req.Model
+		vehicle.Model = *req.Model
 	}
 	if req.Year != nil {
-		vehicle.Year = req.Year
+		vehicle.Year = *req.Year
 	}
 	if req.Color != nil {
-		vehicle.Color = req.Color
+		vehicle.Color = *req.Color
 	}
 	if req.Odometer != nil {
-		vehicle.Odometer = req.Odometer
-	}
-	if req.CurrentDriverID != nil {
-		vehicle.CurrentDriverID = req.CurrentDriverID
+		vehicle.Odometer = float64(*req.Odometer)
 	}
 	if req.ParentVehicleID != nil {
 		vehicle.ParentVehicleID = req.ParentVehicleID
+	}
+	if req.CurrentDriverID != nil {
+		vehicle.CurrentDriverID = req.CurrentDriverID
 	}
 	if req.SpeedLimit != nil {
 		vehicle.SpeedLimit = *req.SpeedLimit
@@ -412,9 +428,10 @@ func (s *VehicleService) GetVehicleLocation(ctx context.Context, vehicleID uuid.
 		return nil, err
 	}
 	return &models.VehicleLocation{
-		ID:        uuid.New(),
 		VehicleID: vehicleID,
 		Timestamp: vehicle.UpdatedAt,
+		Latitude:  0, // To be filled by tracking service integration
+		Longitude: 0,
 	}, nil
 }
 
@@ -451,16 +468,16 @@ func (s *VehicleService) emitEvent(ctx context.Context, vehicleID uuid.UUID, eve
 }
 
 // normalizeStatus converts legacy lowercase status values to ENUM values.
-func normalizeStatus(s string) string {
-	switch s {
-	case "active":
+func normalizeStatus(s string) models.VehicleStatus {
+	switch strings.ToUpper(s) {
+	case "ACTIVE":
 		return models.StatusActive
-	case "maintenance":
+	case "MAINTENANCE":
 		return models.StatusMaintenance
-	case "inactive", "suspended":
+	case "INACTIVE", "SUSPENDED":
 		return models.StatusSuspended
-	case "retired", "decommissioned":
+	case "RETIRED", "DECOMMISSIONED":
 		return models.StatusDecommissioned
 	}
-	return s
+	return models.VehicleStatus(strings.ToUpper(s))
 }
