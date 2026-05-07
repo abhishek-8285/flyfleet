@@ -21,8 +21,8 @@ echo "📡 Starting NATS..."
 nohup ./nats-server-v2.10.11-linux-amd64/nats-server -js -p 4222 > nats.log 2>&1 &
 
 echo "📦 Starting Redis..."
-# Try to start redis on standard port 6379 as per project configs
-redis-server --port 6379 --daemonize yes || echo "Redis already running or failed to start"
+# Try to start redis on standard port 6380 as per project configs
+redis-server --port 6380 --daemonize yes || echo "Redis already running or failed to start"
 
 # Wait for infra to initialize
 sleep 2
@@ -30,18 +30,18 @@ sleep 2
 # 3. Run Database Migrations
 echo "🗄️ Running Database Migrations (in background)..."
 chmod +x migrate.sh
-export DB_USER=fleet_user
-export DB_PASSWORD=fleet_password
-export DB_NAME=fleet_db
+export DB_USER=flyfleet_admin
+export DB_PASSWORD=flyfleet_secret
+export DB_NAME=flyfleet
 nohup ./migrate.sh > migrate.log 2>&1 &
 
 # 4. Start Backend (fleet-core)
 echo "⚙️ Starting Backend (fleet-core)..."
-export DB_URL="postgres://fleet_user:fleet_password@localhost:5432/fleet_db?sslmode=disable"
+export DB_URL="postgres://flyfleet_admin:flyfleet_secret@localhost:5432/flyfleet?sslmode=disable"
 export PORT=8084
 export APP_ENV=development
 export LOG_LEVEL=debug
-export REDIS_ADDR=localhost:6379
+export REDIS_ADDR=localhost:6380
 export NATS_URL=nats://localhost:4222
 
 cd services/fleet-core

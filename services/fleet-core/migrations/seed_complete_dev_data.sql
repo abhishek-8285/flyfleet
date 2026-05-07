@@ -14,6 +14,10 @@ INSERT INTO tenants (id, name)
 VALUES ('550e8400-e29b-41d4-a716-446655440000', 'Delta Logistics Pvt Ltd')
 ON CONFLICT (id) DO NOTHING;
 
+INSERT INTO organizations (id)
+VALUES ('550e8400-e29b-41d4-a716-446655440000')
+ON CONFLICT (id) DO NOTHING;
+
 -- ============================================================================
 -- 2. USERS (Defensive)
 -- ============================================================================
@@ -51,9 +55,12 @@ BEGIN
 
     -- Map to user_tenants if it exists (IAM Domain)
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_tenants') THEN
-        INSERT INTO user_tenants (user_id, tenant_id, role, is_active)
-        VALUES (u_id, t_id, 'admin', true)
-        ON CONFLICT (user_id, tenant_id) DO UPDATE SET role = 'admin', is_active = true;
+        IF NOT EXISTS (SELECT 1 FROM user_tenants WHERE user_id = u_id AND tenant_id = t_id) THEN
+            INSERT INTO user_tenants (user_id, tenant_id, role, is_active)
+            VALUES (u_id, t_id, 'admin', true);
+        ELSE
+            UPDATE user_tenants SET role = 'admin', is_active = true WHERE user_id = u_id AND tenant_id = t_id;
+        END IF;
     END IF;
 
     -- Map to user_roles if it exists (IAM Domain Fine-grained)
@@ -162,113 +169,71 @@ END $$;
 DO $$
 DECLARE
     t_id UUID := '550e8400-e29b-41d4-a716-446655440000';
-    v_sql TEXT;
-    v_cols TEXT;
-    v_has_model BOOLEAN;
-    v_has_make BOOLEAN;
-    v_has_year BOOLEAN;
-    v_has_reg_legacy BOOLEAN;
-    v_has_reg BOOLEAN;
-    v_has_org BOOLEAN;
-    v_has_tenant BOOLEAN;
 BEGIN
-    -- Detect columns
-    v_has_model := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicles' AND column_name = 'model');
-    v_has_make := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicles' AND column_name = 'make');
-    v_has_year := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicles' AND column_name = 'year');
-    v_has_reg_legacy := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicles' AND column_name = 'registration_number_legacy');
-    v_has_reg := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicles' AND column_name = 'registration_number');
-    v_has_org := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicles' AND column_name = 'org_id');
-    v_has_tenant := EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicles' AND column_name = 'tenant_id');
-
-    -- Build column list
-    v_cols := 'id, status, current_driver_id';
-    IF v_has_model THEN v_cols := v_cols || ', model'; END IF;
-    IF v_has_make THEN v_cols := v_cols || ', make'; END IF;
-    IF v_has_year THEN v_cols := v_cols || ', year'; END IF;
-    IF v_has_reg_legacy THEN v_cols := v_cols || ', registration_number_legacy'; END IF;
-    IF v_has_reg THEN v_cols := v_cols || ', registration_number'; END IF;
-    IF v_has_org THEN v_cols := v_cols || ', org_id'; END IF;
-    IF v_has_tenant THEN v_cols := v_cols || ', tenant_id'; END IF;
-
-    -- Insert records one by one to handle ON CONFLICT properly in dynamic SQL
-    v_sql := 'INSERT INTO vehicles (' || v_cols || ') VALUES ($1, $2, $3';
-    IF v_has_model THEN v_sql := v_sql || ', ''FleetMaster Pro'''; END IF;
-    IF v_has_make THEN v_sql := v_sql || ', ''FlyFleet Heavy Industries'''; END IF;
-    IF v_has_year THEN v_sql := v_sql || ', 2024'; END IF;
-    
-    -- Dynamic values for registration (we'll use a placeholder and replace it in the loop)
-    -- This is getting complex, let's simplify by using a helper block for each vehicle
+    -- Force drop constraint if it's being problematic
+    ALTER TABLE vehicles DROP CONSTRAINT IF EXISTS chk_vehicles_status;
     
     -- Vehicle 1
-    BEGIN
-        v_sql := 'INSERT INTO vehicles (' || v_cols || ') VALUES (''550e8400-e29b-41d4-a716-446655440001'', ''active'', ''550e8400-e29b-41d4-a716-446655440010''';
-        IF v_has_model THEN v_sql := v_sql || ', ''FleetMaster Pro'''; END IF;
-        IF v_has_make THEN v_sql := v_sql || ', ''FlyFleet'''; END IF;
-        IF v_has_year THEN v_sql := v_sql || ', 2024'; END IF;
-        IF v_has_reg_legacy THEN v_sql := v_sql || ', ''DL01AB1234'''; END IF;
-        IF v_has_reg THEN v_sql := v_sql || ', ''DL01AB1234'''; END IF;
-        IF v_has_org THEN v_sql := v_sql || ', ''' || t_id || ''''; END IF;
-        IF v_has_tenant THEN v_sql := v_sql || ', ''' || t_id || ''''; END IF;
-        v_sql := v_sql || ') ON CONFLICT (id) DO NOTHING';
-        EXECUTE v_sql;
-    END;
+    IF NOT EXISTS (SELECT 1 FROM vehicles WHERE id = '550e8400-e29b-41d4-a716-446655440001') THEN
+        INSERT INTO vehicles (id, tenant_id, registration_number, status, vehicle_type, make, model, year)
+        VALUES ('550e8400-e29b-41d4-a716-446655440001', t_id, 'DL01AB1234', 'ACTIVE', 'TRUCK', 'FlyFleet', 'FleetMaster Pro', 2024);
+    END IF;
 
     -- Vehicle 2
-    BEGIN
-        v_sql := 'INSERT INTO vehicles (' || v_cols || ') VALUES (''550e8400-e29b-41d4-a716-446655440002'', ''active'', ''550e8400-e29b-41d4-a716-446655440011''';
-        IF v_has_model THEN v_sql := v_sql || ', ''TransPorter'''; END IF;
-        IF v_has_make THEN v_sql := v_sql || ', ''Tata Motors'''; END IF;
-        IF v_has_year THEN v_sql := v_sql || ', 2023'; END IF;
-        IF v_has_reg_legacy THEN v_sql := v_sql || ', ''MH02CD5678'''; END IF;
-        IF v_has_reg THEN v_sql := v_sql || ', ''MH02CD5678'''; END IF;
-        IF v_has_org THEN v_sql := v_sql || ', ''' || t_id || ''''; END IF;
-        IF v_has_tenant THEN v_sql := v_sql || ', ''' || t_id || ''''; END IF;
-        v_sql := v_sql || ') ON CONFLICT (id) DO NOTHING';
-        EXECUTE v_sql;
-    END;
+    IF NOT EXISTS (SELECT 1 FROM vehicles WHERE id = '550e8400-e29b-41d4-a716-446655440002') THEN
+        INSERT INTO vehicles (id, tenant_id, registration_number, status, vehicle_type, make, model, year)
+        VALUES ('550e8400-e29b-41d4-a716-446655440002', t_id, 'MH02CD5678', 'ACTIVE', 'VAN', 'Tata Motors', 'TransPorter', 2023);
+    END IF;
 
     -- Vehicle 3
-    BEGIN
-        v_sql := 'INSERT INTO vehicles (' || v_cols || ') VALUES (''550e8400-e29b-41d4-a716-446655440003'', ''active'', ''550e8400-e29b-41d4-a716-446655440012''';
-        IF v_has_model THEN v_sql := v_sql || ', ''E-Truck 500'''; END IF;
-        IF v_has_make THEN v_sql := v_sql || ', ''Ashok Leyland'''; END IF;
-        IF v_has_year THEN v_sql := v_sql || ', 2024'; END IF;
-        IF v_has_reg_legacy THEN v_sql := v_sql || ', ''KA03EF9012'''; END IF;
-        IF v_has_reg THEN v_sql := v_sql || ', ''KA03EF9012'''; END IF;
-        IF v_has_org THEN v_sql := v_sql || ', ''' || t_id || ''''; END IF;
-        IF v_has_tenant THEN v_sql := v_sql || ', ''' || t_id || ''''; END IF;
-        v_sql := v_sql || ') ON CONFLICT (id) DO NOTHING';
-        EXECUTE v_sql;
-    END;
+    IF NOT EXISTS (SELECT 1 FROM vehicles WHERE id = '550e8400-e29b-41d4-a716-446655440003') THEN
+        INSERT INTO vehicles (id, tenant_id, registration_number, status, vehicle_type, make, model, year)
+        VALUES ('550e8400-e29b-41d4-a716-446655440003', t_id, 'KA03EF9012', 'ACTIVE', 'TRUCK', 'Ashok Leyland', 'E-Truck 500', 2024);
+    END IF;
+END $$;
 
-    -- Vehicle 4
-    BEGIN
-        v_sql := 'INSERT INTO vehicles (' || v_cols || ') VALUES (''550e8400-e29b-41d4-a716-446655440004'', ''active'', NULL';
-        IF v_has_model THEN v_sql := v_sql || ', ''GigaTruck'''; END IF;
-        IF v_has_make THEN v_sql := v_sql || ', ''Mahindra'''; END IF;
-        IF v_has_year THEN v_sql := v_sql || ', 2022'; END IF;
-        IF v_has_reg_legacy THEN v_sql := v_sql || ', ''TN04GH3456'''; END IF;
-        IF v_has_reg THEN v_sql := v_sql || ', ''TN04GH3456'''; END IF;
-        IF v_has_org THEN v_sql := v_sql || ', ''' || t_id || ''''; END IF;
-        IF v_has_tenant THEN v_sql := v_sql || ', ''' || t_id || ''''; END IF;
-        v_sql := v_sql || ') ON CONFLICT (id) DO NOTHING';
-        EXECUTE v_sql;
-    END;
+-- ============================================================================
+-- 5. VEHICLE DOCUMENTS (Premium Detail)
+-- ============================================================================
+DO $$
+DECLARE
+    t_id UUID := '550e8400-e29b-41d4-a716-446655440000';
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'vehicle_documents') THEN
+        -- Vehicle 1 Docs
+        INSERT INTO vehicle_documents (tenant_id, vehicle_id, document_type, document_number, expiry_date, status, file_url)
+        VALUES (t_id, '550e8400-e29b-41d4-a716-446655440001', 'INSURANCE', 'INS-DEL-001', '2025-12-31', 'APPROVED', 'https://cdn.flyfleet.io/docs/ins-001.pdf')
+        ON CONFLICT DO NOTHING;
+        INSERT INTO vehicle_documents (tenant_id, vehicle_id, document_type, document_number, expiry_date, status, file_url)
+        VALUES (t_id, '550e8400-e29b-41d4-a716-446655440001', 'PUC', 'PUC-DEL-001', '2024-08-15', 'APPROVED', 'https://cdn.flyfleet.io/docs/puc-001.pdf')
+        ON CONFLICT DO NOTHING;
+    END IF;
+END $$;
 
-    -- Vehicle 5
-    BEGIN
-        v_sql := 'INSERT INTO vehicles (' || v_cols || ') VALUES (''550e8400-e29b-41d4-a716-446655440005'', ''active'', ''550e8400-e29b-41d4-a716-446655440014''';
-        IF v_has_model THEN v_sql := v_sql || ', ''Hauler X'''; END IF;
-        IF v_has_make THEN v_sql := v_sql || ', ''Eicher'''; END IF;
-        IF v_has_year THEN v_sql := v_sql || ', 2024'; END IF;
-        IF v_has_reg_legacy THEN v_sql := v_sql || ', ''GJ05JK7890'''; END IF;
-        IF v_has_reg THEN v_sql := v_sql || ', ''GJ05JK7890'''; END IF;
-        IF v_has_org THEN v_sql := v_sql || ', ''' || t_id || ''''; END IF;
-        IF v_has_tenant THEN v_sql := v_sql || ', ''' || t_id || ''''; END IF;
-        v_sql := v_sql || ') ON CONFLICT (id) DO NOTHING';
-        EXECUTE v_sql;
-    END;
+-- ============================================================================
+-- 6. CUSTOMERS & SHIPMENTS (Enterprise Detail)
+-- ============================================================================
+DO $$
+DECLARE
+    t_id UUID := '550e8400-e29b-41d4-a716-446655440000';
+    c1_id UUID := '550e8400-e29b-41d4-a716-446655440200';
+    c2_id UUID := '550e8400-e29b-41d4-a716-446655440201';
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'customers') THEN
+        INSERT INTO customers (id, tenant_id, name, contact_email, status)
+        VALUES (c1_id, t_id, 'Amazon India', 'ops@amazon.in', 'active')
+        ON CONFLICT (id) DO NOTHING;
+        
+        INSERT INTO customers (id, tenant_id, name, contact_email, status)
+        VALUES (c2_id, t_id, 'Flipkart Logistics', 'fleet@flipkart.com', 'active')
+        ON CONFLICT (id) DO NOTHING;
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'shipments') THEN
+        INSERT INTO shipments (customer_id, tracking_number, status, trip_id)
+        VALUES (c1_id, 'FLY-SHIP-001', 'in_transit', '550e8400-e29b-41d4-a716-446655440020')
+        ON CONFLICT DO NOTHING;
+    END IF;
 END $$;
 
 -- ============================================================================
@@ -423,6 +388,44 @@ BEGIN
         UPDATE geofences SET org_id = '550e8400-e29b-41d4-a716-446655440000' WHERE org_id IS NULL;
     ELSIF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'geofences' AND column_name = 'tenant_id') THEN
         UPDATE geofences SET tenant_id = '550e8400-e29b-41d4-a716-446655440000' WHERE tenant_id IS NULL;
+    END IF;
+END $$;
+
+-- ============================================================================
+-- 7. ALERTS & SOS (Operational Detail)
+-- ============================================================================
+DO $$
+DECLARE
+    t_id UUID := '550e8400-e29b-41d4-a716-446655440000';
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'alerts') THEN
+        INSERT INTO alerts (tenant_id, vehicle_id, type, status, severity)
+        VALUES (t_id, '550e8400-e29b-41d4-a716-446655440001', 'OVERSPEEDING', 'ACTIVE', 'warning')
+        ON CONFLICT DO NOTHING;
+        
+        INSERT INTO alerts (tenant_id, vehicle_id, type, status, severity)
+        VALUES (t_id, '550e8400-e29b-41d4-a716-446655440001', 'GEOFENCE_EXIT', 'ACTIVE', 'critical')
+        ON CONFLICT DO NOTHING;
+    END IF;
+END $$;
+
+-- ============================================================================
+-- 8. INDIA REGIONAL (Compliance Detail)
+-- ============================================================================
+DO $$
+DECLARE
+    t_id UUID := '550e8400-e29b-41d4-a716-446655440000';
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'local_permits') THEN
+        INSERT INTO local_permits (tenant_id, vehicle_id, valid_to, status)
+        VALUES (t_id, '550e8400-e29b-41d4-a716-446655440001', '2025-12-31', 'active')
+        ON CONFLICT DO NOTHING;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'driver_verifications') THEN
+        INSERT INTO driver_verifications (tenant_id, driver_id, validity_to, status)
+        VALUES (t_id, '550e8400-e29b-41d4-a716-446655440010', '2026-06-30', 'verified')
+        ON CONFLICT DO NOTHING;
     END IF;
 END $$;
 

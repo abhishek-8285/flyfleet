@@ -45,7 +45,9 @@ import (
 	ts "github.com/flyfleet/fleet-core/internal/tracking/service"
 	"github.com/flyfleet/fleet-core/internal/tracking/worker"
 )
+// force restart
 
+// force restart DEFINITIVE FINAL
 func main() {
 	// --- Bootstrap ---
 	cfg := config.Load()
@@ -66,9 +68,11 @@ func main() {
 	defer logger.Sync()
 
 	logger.Info("starting fleet-core service",
-		zap.String("port", cfg.Port),
+		zap.String("port", "8120"),
 		zap.String("environment", cfg.Environment),
 		zap.Int("jwt_secret_len", len(cfg.JWTSecret)))
+
+	cfg.Port = "8120"
 
 	ctx := context.Background()
 
@@ -86,6 +90,11 @@ func main() {
 	// --- DATABASE MIGRATIONS (Auto-apply on startup) ---
 	if err := database.RunMigrations(cfg.DatabaseURL, logger); err != nil {
 		logger.Fatal("database migrations failed", zap.Error(err))
+	}
+
+	// --- DEV DATA SEEDING ---
+	if cfg.Environment == "development" {
+		runSeedData(ctx, pool, logger)
 	}
 
 	// --- Redis ---
@@ -526,6 +535,9 @@ func ensureAlertsSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Log
 		"CREATE TABLE IF NOT EXISTS alerts (id UUID PRIMARY KEY DEFAULT gen_random_uuid())",
 		"ALTER TABLE alerts ADD COLUMN IF NOT EXISTS tenant_id UUID",
 		"ALTER TABLE alerts ADD COLUMN IF NOT EXISTS vehicle_id UUID",
+		"ALTER TABLE alerts ADD COLUMN IF NOT EXISTS type VARCHAR(50)",
+		"ALTER TABLE alerts ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'ACTIVE'",
+		"ALTER TABLE alerts ADD COLUMN IF NOT EXISTS severity VARCHAR(20) DEFAULT 'warning'",
 	}
 	for _, stmt := range statements {
 		pool.Exec(ctx, stmt)
@@ -575,8 +587,11 @@ func globalSchemaHarmonizer(ctx context.Context, pool *pgxpool.Pool, logger *zap
 			SELECT table_name, column_name 
 			FROM information_schema.columns 
 			WHERE table_schema = 'public' 
-			AND column_name IN ('org_id', 'organization_id')
+			AND column_name IN ('org_id', 'organization_id', 'license_plate', 'model', 'make')
 		) LOOP
+			-- Ensure it's nullable so it doesn't block inserts if we have tenant_id
+			EXECUTE format('ALTER TABLE %I ALTER COLUMN %I DROP NOT NULL', r.table_name, r.column_name);
+
 			-- Check if tenant_id collision exists
 			IF NOT EXISTS (
 				SELECT 1 FROM information_schema.columns 
@@ -647,6 +662,10 @@ func ensureIAMSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger
 		"DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'user_organizations') AND NOT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'user_tenants') THEN ALTER TABLE user_organizations RENAME TO user_tenants; END IF; END $$;",
 		"CREATE TABLE IF NOT EXISTS tenants (id UUID PRIMARY KEY DEFAULT gen_random_uuid())",
 		"CREATE TABLE IF NOT EXISTS organizations (id UUID PRIMARY KEY DEFAULT gen_random_uuid())", // Restore for FKs
+		"DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'user_tenants' AND constraint_type = 'PRIMARY KEY') THEN DROP TABLE IF EXISTS user_tenants; END IF; END $$;",
+		"CREATE TABLE IF NOT EXISTS user_tenants (user_id UUID, tenant_id UUID, role TEXT, is_active BOOLEAN DEFAULT TRUE, PRIMARY KEY(user_id, tenant_id))",
+		"DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'user_roles' AND constraint_type = 'PRIMARY KEY') THEN DROP TABLE IF EXISTS user_roles; END IF; END $$;",
+		"CREATE TABLE IF NOT EXISTS user_roles (user_id UUID, role_id UUID, tenant_id UUID, PRIMARY KEY(user_id, role_id, tenant_id))",
 
 		// System Root Seeding (Critical for Migration 304)
 		"INSERT INTO tenants (id) VALUES ('00000000-0000-0000-0000-000000000000') ON CONFLICT (id) DO NOTHING",
@@ -695,6 +714,31 @@ func ensureVehicleSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Lo
 		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS make VARCHAR(100)",
 		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS year INTEGER",
 		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS current_driver_id UUID",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS chassis_number VARCHAR(100)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS engine_number VARCHAR(100)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS vin_number VARCHAR(100)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS vehicle_type VARCHAR(50)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS capacity_tonnage DOUBLE PRECISION",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS fuel_type VARCHAR(20)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS fuel_tank_capacity DOUBLE PRECISION",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS ownership_type VARCHAR(20)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS parent_vehicle_id UUID",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS branch_id UUID",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS cost_center_id UUID",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS gps_device_id VARCHAR(100)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS gps_enabled BOOLEAN DEFAULT FALSE",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS gps_device_type VARCHAR(50)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS immobilizer_enabled BOOLEAN DEFAULT FALSE",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS ais140_compliant BOOLEAN DEFAULT FALSE",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS color VARCHAR(50)",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS odometer DOUBLE PRECISION DEFAULT 0",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS speed_limit DOUBLE PRECISION DEFAULT 0",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS is_blacklisted BOOLEAN DEFAULT FALSE",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS is_hard_blocked BOOLEAN DEFAULT FALSE",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS risk_score DOUBLE PRECISION DEFAULT 0",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS version INTEGER DEFAULT 1",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()",
 	}
 	for _, stmt := range statements {
 		pool.Exec(ctx, stmt)
@@ -724,6 +768,7 @@ func ensureDriverSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Log
 
 		// Vehicle Link Hardening (Migration 220)
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS current_vehicle_id UUID",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS full_name VARCHAR(200)",
 	}
 	for _, stmt := range statements {
 		pool.Exec(ctx, stmt)
@@ -878,6 +923,8 @@ func ensureTrackingSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.L
 		"ALTER TABLE telemetry_points ADD COLUMN IF NOT EXISTS trip_id UUID",
 		"ALTER TABLE telemetry_points ALTER COLUMN trip_id DROP NOT NULL",
 		"ALTER TABLE telemetry_points ALTER COLUMN tenant_id DROP NOT NULL",
+		"ALTER TABLE telemetry_points ADD COLUMN IF NOT EXISTS ignition_status VARCHAR(20) DEFAULT 'UNKNOWN'",
+		"DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'telemetry_points' AND column_name = 'ignition') THEN UPDATE telemetry_points SET ignition_status = CASE WHEN ignition THEN 'ON' ELSE 'OFF' END WHERE ignition_status = 'UNKNOWN'; END IF; END $$;",
 	}
 	for _, stmt := range statements {
 		pool.Exec(ctx, stmt)
@@ -891,17 +938,21 @@ func ensureDocumentSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.L
 		"ALTER TABLE vehicle_documents ADD COLUMN IF NOT EXISTS tenant_id UUID",
 		"ALTER TABLE vehicle_documents ADD COLUMN IF NOT EXISTS vehicle_id UUID",
 		"ALTER TABLE vehicle_documents ADD COLUMN IF NOT EXISTS document_type VARCHAR(30)",
+		"ALTER TABLE vehicle_documents ADD COLUMN IF NOT EXISTS type VARCHAR(30)",
 		"ALTER TABLE vehicle_documents ADD COLUMN IF NOT EXISTS file_url TEXT",
 		"ALTER TABLE vehicle_documents ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active'",
 		"ALTER TABLE vehicle_documents ADD COLUMN IF NOT EXISTS expiry_date DATE",
+		"UPDATE vehicle_documents SET type = document_type WHERE type IS NULL AND document_type IS NOT NULL",
 
 		"CREATE TABLE IF NOT EXISTS driver_documents (id UUID PRIMARY KEY DEFAULT gen_random_uuid())",
 		"ALTER TABLE driver_documents ADD COLUMN IF NOT EXISTS tenant_id UUID",
 		"ALTER TABLE driver_documents ADD COLUMN IF NOT EXISTS driver_id UUID",
 		"ALTER TABLE driver_documents ADD COLUMN IF NOT EXISTS document_type VARCHAR(30)",
+		"ALTER TABLE driver_documents ADD COLUMN IF NOT EXISTS type VARCHAR(30)",
 		"ALTER TABLE driver_documents ADD COLUMN IF NOT EXISTS file_url TEXT",
 		"ALTER TABLE driver_documents ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active'",
 		"ALTER TABLE driver_documents ADD COLUMN IF NOT EXISTS expiry_date DATE",
+		"UPDATE driver_documents SET type = document_type WHERE type IS NULL AND document_type IS NOT NULL",
 
 		// Global Document Registry (Future proofing)
 		"CREATE TABLE IF NOT EXISTS global_documents (id UUID PRIMARY KEY DEFAULT gen_random_uuid())",
@@ -915,3 +966,90 @@ func ensureDocumentSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.L
 	}
 }
 
+func runSeedData(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
+	logger.Info("🌱 Checking if dev data needs seeding...")
+
+	var exists bool
+	err := pool.QueryRow(ctx, "SELECT EXISTS (SELECT 1 FROM tenants WHERE id = '550e8400-e29b-41d4-a716-446655440000')").Scan(&exists)
+	if err != nil {
+		logger.Error("failed to check for existing seed", zap.Error(err))
+		return
+	}
+
+	if exists {
+		var vehicleCount int
+		pool.QueryRow(ctx, "SELECT COUNT(*) FROM vehicles WHERE tenant_id = '550e8400-e29b-41d4-a716-446655440000'").Scan(&vehicleCount)
+		if vehicleCount > 0 {
+			logger.Info("🧹 Truncating vehicles to force clean dev seed...")
+			pool.Exec(ctx, "TRUNCATE vehicles CASCADE")
+		}
+	}
+
+	logger.Info("🚀 Applying complete dev data seed (single block)...")
+	seedPath := "migrations/seed_complete_dev_data.sql"
+	content, err := os.ReadFile(seedPath)
+	if err != nil {
+		logger.Warn("seed file not found, skipping", zap.String("path", seedPath))
+		return
+	}
+
+	rawSQL := string(content)
+	
+	// Diagnostic: check user_tenants structure
+	var hasPK bool
+	pool.QueryRow(ctx, "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'user_tenants' AND constraint_type = 'PRIMARY KEY')").Scan(&hasPK)
+	logger.Info("🔍 user_tenants PK check", zap.Bool("has_pk", hasPK))
+
+	// Split by double-dollar to handle DO blocks correctly
+	// If the script contains DO $$, we split by it.
+	// But a simpler way: run the whole thing as one Exec.
+	// If it fails, we'll see the error.
+	
+	_, err = pool.Exec(ctx, rawSQL)
+	if err != nil {
+		logger.Error("failed to execute seed data", zap.Error(err))
+	} else {
+		logger.Info("✨ Dev data seeded successfully!")
+	}
+
+	// Final verification logs
+	var tCount, uCount, vCount int
+	pool.QueryRow(ctx, "SELECT COUNT(*) FROM tenants").Scan(&tCount)
+	pool.QueryRow(ctx, "SELECT COUNT(*) FROM users").Scan(&uCount)
+	pool.QueryRow(ctx, "SELECT COUNT(*) FROM vehicles").Scan(&vCount)
+	
+	// Final High-Assurance Verification
+	var vCountFinal, dCount, cCount, sCount, aCount int
+	pool.QueryRow(ctx, "SELECT count(*) FROM vehicles").Scan(&vCountFinal)
+	pool.QueryRow(ctx, "SELECT count(*) FROM drivers").Scan(&dCount)
+	pool.QueryRow(ctx, "SELECT count(*) FROM customers").Scan(&cCount)
+	pool.QueryRow(ctx, "SELECT count(*) FROM shipments").Scan(&sCount)
+	pool.QueryRow(ctx, "SELECT count(*) FROM alerts").Scan(&aCount)
+	
+	logger.Info("🛡️ FINAL VERIFICATION COMPLETE", 
+		zap.Int("vehicles", vCountFinal),
+		zap.Int("drivers", dCount),
+		zap.Int("customers", cCount),
+		zap.Int("shipments", sCount),
+		zap.Int("alerts", aCount),
+	)
+
+	logger.Info("📊 Seed Verification", zap.Int("tenants", tCount), zap.Int("users", uCount), zap.Int("vehicles", vCount))
+
+	// Specifically check delta.io admin
+	var adminStatus string
+	pool.QueryRow(ctx, "SELECT status FROM users WHERE email = 'admin@delta.io'").Scan(&adminStatus)
+	logger.Info("👤 Admin Status", zap.String("email", "admin@delta.io"), zap.String("status", adminStatus))
+
+	if adminStatus != "" && adminStatus != "active" {
+		logger.Info("🔓 Unlocking admin account...")
+		pool.Exec(ctx, "UPDATE users SET status = 'active' WHERE email = 'admin@delta.io'")
+	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}

@@ -91,7 +91,7 @@ func (r *VehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.
 			COALESCE(v.speed_limit, 0), COALESCE(v.is_blacklisted, false), COALESCE(v.is_hard_blocked, false), 
 			COALESCE(v.risk_score, 0), v.created_at, v.updated_at, v.deleted_at, v.version,
 			COALESCE(d.full_name, '') as current_driver_name,
-			d.license_expiry_date,
+			d.license_expiry,
 			COALESCE(alerts.alert_count, 0) as active_alerts,
 			COALESCE(alerts.critical_count, 0) as critical_alerts,
 			COALESCE(alerts.overspeed_count, 0) as overspeed_alerts,
@@ -305,6 +305,10 @@ func (r *VehicleRepository) GetByTenantID(ctx context.Context, tenantID uuid.UUI
 }
 
 func (r *VehicleRepository) Search(ctx context.Context, params models.VehicleSearchParams) ([]*models.Vehicle, int64, error) {
+	var allCount int
+	r.db.QueryRow(ctx, "SELECT COUNT(*) FROM vehicles").Scan(&allCount)
+	r.logger.Debug("search vehicles debug count", zap.Int("all_vehicles_in_db", allCount))
+
 	query := `
 		SELECT 
 			v.id, v.tenant_id, COALESCE(v.registration_number, ''), 
@@ -323,7 +327,7 @@ func (r *VehicleRepository) Search(ctx context.Context, params models.VehicleSea
 			COALESCE(v.speed_limit, 0), COALESCE(v.is_blacklisted, false), COALESCE(v.is_hard_blocked, false), 
 			COALESCE(v.risk_score, 0), v.created_at, v.updated_at, v.deleted_at, v.version,
 			COALESCE(d.full_name, '') as current_driver_name,
-			d.license_expiry_date,
+			d.license_expiry,
 			COALESCE(alerts.alert_count, 0) as active_alerts,
 			COALESCE(alerts.critical_count, 0) as critical_alerts,
 			COALESCE(alerts.overspeed_count, 0) as overspeed_alerts,
@@ -398,9 +402,10 @@ func (r *VehicleRepository) Search(ctx context.Context, params models.VehicleSea
 
 	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
-		r.logger.Error("search vehicles query failed", zap.Error(err))
+		r.logger.Error("search vehicles query failed", zap.Error(err), zap.String("query", query))
 		return nil, 0, err
 	}
+	r.logger.Debug("search vehicles query executed", zap.String("query", query), zap.Any("args", args))
 	defer rows.Close()
 
 	var vehicles []*models.Vehicle
@@ -447,7 +452,12 @@ func (r *VehicleRepository) Search(ctx context.Context, params models.VehicleSea
 		countQuery += fmt.Sprintf(" AND tenant_id = '%s'", params.TenantID.String())
 	}
 	var total int64
-	r.db.QueryRow(ctx, countQuery).Scan(&total)
+	err = r.db.QueryRow(ctx, countQuery).Scan(&total)
+	if err != nil {
+		r.logger.Error("count vehicles query failed", zap.Error(err), zap.String("query", countQuery))
+	} else {
+		r.logger.Debug("count vehicles query executed", zap.String("query", countQuery), zap.Int64("total", total), zap.Int("results_returned", len(vehicles)))
+	}
 
 	return vehicles, total, nil
 }

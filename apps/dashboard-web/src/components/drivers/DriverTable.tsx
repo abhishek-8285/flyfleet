@@ -1,13 +1,6 @@
-import React from "react";
-import { 
-  User, 
-  Car, 
-  MoreVertical, 
-  Edit3, 
-  Trash2, 
-  ChevronRight,
-} from "lucide-react";
-import { Driver } from "../../types";
+import { Car, ChevronRight, Edit3, Trash2 } from 'lucide-react';
+import React from 'react';
+import { Driver } from '../../types';
 
 type DriverRow = Driver & {
   current_vehicle?: {
@@ -63,19 +56,25 @@ export const DriverTable: React.FC<DriverTableProps> = ({
         </thead>
         <tbody className="divide-y divide-white/5">
           {loading ? (
-            Array(3).fill(0).map((_, i) => (
-              <tr key={i} className="animate-pulse">
-                <td className="px-6 py-4" colSpan={6}><div className="h-4 bg-white/5 rounded w-full" /></td>
-              </tr>
-            ))
+            Array(3)
+              .fill(0)
+              .map((_, i) => (
+                <tr key={i} className="animate-pulse">
+                  <td className="px-6 py-4" colSpan={6}>
+                    <div className="h-4 bg-white/5 rounded w-full" />
+                  </td>
+                </tr>
+              ))
           ) : drivers.length === 0 ? (
             <tr>
-              <td colSpan={6} className="px-6 py-10 text-center text-gray-500">No personnel detected.</td>
+              <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
+                No personnel detected.
+              </td>
             </tr>
           ) : (
             drivers.map((driver) => (
-              <tr 
-                key={driver.id} 
+              <tr
+                key={driver.id}
                 className="hover:bg-white/[0.02] transition-colors cursor-pointer group"
                 onClick={() => onDriverClick?.(driver)}
               >
@@ -95,45 +94,65 @@ export const DriverTable: React.FC<DriverTableProps> = ({
                       {driver.name?.[0] || driver.first_name?.[0]}
                     </div>
                     <div>
-                      <div className="font-semibold text-white tracking-tight">{driver.name || `${driver.first_name} ${driver.last_name}`}</div>
-                      <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">{driver.employment_type || 'Full Time'}</div>
+                      <div className="font-semibold text-white tracking-tight">
+                        {driver.name || `${driver.first_name} ${driver.last_name}`}
+                      </div>
+                      <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">
+                        {driver.employment_type || 'Full Time'}
+                      </div>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex flex-col">
-                    <span className="text-sm text-gray-300 font-mono">{driver.license_number || "-"}</span>
-                    <span className="text-[10px] text-gray-500 uppercase font-bold">{driver.license_type || "LMV"}</span>
+                    <span className="text-sm text-gray-300 font-mono">
+                      {driver.license_number || '-'}
+                    </span>
+                    <span className="text-[10px] text-gray-500 uppercase font-bold">
+                      {driver.license_type || 'LMV'}
+                    </span>
                   </div>
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
-                    <div className={`w-1.5 h-1.5 rounded-full ${driver.status === 'active' ? 'bg-success' : 'bg-amber-500'}`} />
-                    <span className={`text-[10px] font-bold uppercase ${driver.status === 'active' ? 'text-success' : 'text-amber-500'}`}>
+                    <div
+                      className={`w-1.5 h-1.5 rounded-full ${driver.status === 'active' ? 'bg-success' : 'bg-amber-500'}`}
+                    />
+                    <span
+                      className={`text-[10px] font-bold uppercase ${driver.status === 'active' ? 'text-success' : 'text-amber-500'}`}
+                    >
                       {driver.status}
                     </span>
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                    {driver.current_vehicle?.registration_number ? (
-                        <div className="flex items-center gap-2 text-white/70 text-sm font-semibold">
-                            <Car className="w-4 h-4 text-primary" />
-                            {driver.current_vehicle.registration_number}
-                        </div>
-                    ) : (
-                        <span className="text-gray-600 text-[10px] font-bold uppercase tracking-wider italic">Unassigned</span>
-                    )}
+                  {driver.current_vehicle?.registration_number ? (
+                    <div className="flex items-center gap-2 text-white/70 text-sm font-semibold">
+                      <Car className="w-4 h-4 text-primary" />
+                      {driver.current_vehicle.registration_number}
+                    </div>
+                  ) : (
+                    <span className="text-gray-600 text-[10px] font-bold uppercase tracking-wider italic">
+                      Unassigned
+                    </span>
+                  )}
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-end gap-1">
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); onEdit?.(driver.id); }}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit?.(driver.id);
+                      }}
                       className="p-2 text-gray-500 hover:text-white transition-colors"
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); onDelete?.(id); }}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete?.(id);
+                      }}
                       className="p-2 text-gray-500 hover:text-rose-500 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />

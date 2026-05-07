@@ -3,58 +3,33 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/jackc/pgx/v5"
 )
 
 func main() {
-	dsn := "postgres://postgres:postgres@localhost:5432/flyfleet?sslmode=disable"
-	ctx := context.Background()
-
-	conn, err := pgx.Connect(ctx, dsn)
+	conn, err := pgx.Connect(context.Background(), "postgres://postgres:postgres@localhost:5432/flyfleet?sslmode=disable")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
 	}
-	defer conn.Close(ctx)
+	defer conn.Close(context.Background())
 
-	fmt.Println("--- Inspecting 'invitations' table ---")
-	rows, err := conn.Query(ctx, `
-		SELECT column_name, data_type 
-		FROM information_schema.columns 
-		WHERE table_name = 'invitations'
-	`)
+	rows, err := conn.Query(context.Background(), "SELECT column_name FROM information_schema.columns WHERE table_name = 'alerts'")
 	if err != nil {
-		log.Fatalf("Query failed: %v", err)
+		fmt.Fprintf(os.Stderr, "Query failed: %v\n", err)
+		os.Exit(1)
 	}
 	defer rows.Close()
 
-	found := false
+	fmt.Println("Columns in 'alerts' table:")
 	for rows.Next() {
-		found = true
-		var name, dtype string
-		if err := rows.Scan(&name, &dtype); err != nil {
-			log.Fatal(err)
+		var columnName string
+		if err := rows.Scan(&columnName); err != nil {
+			fmt.Fprintf(os.Stderr, "Scan failed: %v\n", err)
+			os.Exit(1)
 		}
-		fmt.Printf("Column: %s (%s)\n", name, dtype)
-	}
-
-	if !found {
-		fmt.Println("Table 'invitations' does not exist.")
-	}
-
-	fmt.Println("\n--- Inspecting 'tenants' vs 'organizations' ---")
-	var hasTenants, hasOrgs bool
-	conn.QueryRow(ctx, "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'tenants')").Scan(&hasTenants)
-	conn.QueryRow(ctx, "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'organizations')").Scan(&hasOrgs)
-	fmt.Printf("Table 'tenants' exists: %v\n", hasTenants)
-	fmt.Printf("Table 'organizations' exists: %v\n", hasOrgs)
-
-	if hasOrgs {
-		var isView bool
-		conn.QueryRow(ctx, "SELECT table_type = 'VIEW' FROM information_schema.tables WHERE table_name = 'organizations'").Scan(&isView)
-		fmt.Printf("Table 'organizations' is a VIEW: %v\n", isView)
+		fmt.Println("- " + columnName)
 	}
 }

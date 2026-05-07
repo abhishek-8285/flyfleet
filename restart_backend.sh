@@ -4,7 +4,10 @@ set -e
 echo "Stopping stale processes..."
 pkill -9 -f air || true
 pkill -9 -f fleet-core || true
+pkill -9 -f 'go run' || true
 fuser -k 8084/tcp || true
+fuser -k 8100/tcp || true
+sleep 1
 
 # Install air if missing
 GOPATH=$(go env GOPATH)
@@ -26,6 +29,10 @@ fi
 echo "Verifying environment (Air: $AIR_CMD)..."
 cd services/fleet-core
 
+# Run database migrations
+echo "Running database migrations..."
+go run ./cmd/migrate up
+
 # Force a clean build to verify compilation
 echo "Checking compilation..."
 go build -o bin/fleet-core ./cmd
@@ -38,10 +45,15 @@ else
     exit 1
 fi
 
-echo "Waiting for service to start on port 8084..."
+# Detect port from .env
+TARGET_PORT=$(grep "^PORT=" .env | cut -d'=' -f2)
+TARGET_PORT=${TARGET_PORT:-8084}
+export PORT=$TARGET_PORT
+
+echo "Waiting for service to start on port $TARGET_PORT..."
 for i in {1..20}; do
-    if curl -s http://localhost:8084/health | grep -q "healthy"; then
-        echo "Backend is UP and healthy!"
+    if curl -s http://localhost:$TARGET_PORT/health | grep -q "healthy"; then
+        echo "Backend is UP and healthy on port $TARGET_PORT!"
         exit 0
     fi
     echo "Still waiting... ($i/20)"

@@ -33,44 +33,6 @@ CREATE TABLE IF NOT EXISTS vehicle_documents (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Ensure all columns exist for existing tables (from legacy migrations)
-DO $$ 
-BEGIN 
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicle_documents' AND column_name = 'tenant_id') THEN
-        ALTER TABLE vehicle_documents ADD COLUMN tenant_id UUID REFERENCES tenants(id);
-        -- Note: We might need a backfill for tenant_id if it's null, but for now we'll allow it or set it from vehicles
-        UPDATE vehicle_documents d SET tenant_id = v.tenant_id FROM vehicles v WHERE d.vehicle_id = v.id;
-        ALTER TABLE vehicle_documents ALTER COLUMN tenant_id SET NOT NULL;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicle_documents' AND column_name = 'document_number') THEN
-        ALTER TABLE vehicle_documents ADD COLUMN document_number VARCHAR(100) DEFAULT 'UNKNOWN';
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicle_documents' AND column_name = 'expiry_date') THEN
-        ALTER TABLE vehicle_documents ADD COLUMN expiry_date DATE DEFAULT CURRENT_DATE;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicle_documents' AND column_name = 'status') THEN
-        ALTER TABLE vehicle_documents ADD COLUMN status VARCHAR(50) NOT NULL DEFAULT 'PENDING';
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicle_documents' AND column_name = 'document_url') THEN
-        ALTER TABLE vehicle_documents ADD COLUMN document_url TEXT;
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicle_documents' AND column_name = 'file_url') THEN
-            UPDATE vehicle_documents SET document_url = file_url;
-        END IF;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicle_documents' AND column_name = 'created_at') THEN
-        ALTER TABLE vehicle_documents ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'vehicle_documents' AND column_name = 'updated_at') THEN
-        ALTER TABLE vehicle_documents ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
-    END IF;
-END $$;
-
 CREATE INDEX IF NOT EXISTS idx_vehicle_docs_vehicle ON vehicle_documents(vehicle_id);
 CREATE INDEX IF NOT EXISTS idx_vehicle_docs_tenant ON vehicle_documents(tenant_id);
 

@@ -24,6 +24,9 @@ Welcome to the unified FlyFleet Enterprise platform. This repository is organize
 
 ## Getting Started
 
+> [!IMPORTANT]
+> For detailed development environment configuration, database seeding, and port troubleshooting, refer to **[DEV_SETUP.md](./DEV_SETUP.md)**.
+
 ### Prerequisites
 - Go 1.23+
 - Node.js 20+

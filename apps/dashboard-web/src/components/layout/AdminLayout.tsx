@@ -1,11 +1,11 @@
-import React from "react";
-import { Outlet } from "react-router-dom";
-import { useAuth } from "../../context/AuthProvider";
-import { useUIStrings } from "../../hooks/useUIStrings";
-import { Sidebar } from "./Sidebar";
+import React from 'react';
+import { Outlet } from 'react-router-dom';
+import { useAuth } from '../../context/AuthProvider';
+import { useUIStrings } from '../../hooks/useUIStrings';
+import { Sidebar } from './Sidebar';
 
 export const AdminLayout: React.FC = () => {
-  const { uiStrings } = useUIStrings("layout_common");
+  const { uiStrings } = useUIStrings('layout_common');
   const { logout } = useAuth();
   return (
     <div className="flex h-screen w-full bg-background-dark text-white font-display overflow-hidden">
@@ -15,18 +15,12 @@ export const AdminLayout: React.FC = () => {
           <div className="flex items-center gap-4">
             <div>
               <h2 className="text-white text-lg font-bold">
-                {uiStrings?.admin_title || "FlyFleet Admin Portal"}
+                {uiStrings?.admin_title || 'FlyFleet Admin Portal'}
               </h2>
               <div className="flex items-center gap-2 text-[11px] text-text-muted mt-0.5 uppercase tracking-wide font-medium">
-                <span>
-                  {uiStrings?.enterprise_mgmt || "Enterprise Management"}
-                </span>
-                <span className="material-symbols-outlined text-[10px]">
-                  chevron_right
-                </span>
-                <span className="text-white">
-                  {uiStrings?.dashboard || "Dashboard"}
-                </span>
+                <span>{uiStrings?.enterprise_mgmt || 'Enterprise Management'}</span>
+                <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                <span className="text-white">{uiStrings?.dashboard || 'Dashboard'}</span>
               </div>
             </div>
             {/* <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success/20 text-success border border-success/30 flex items-center gap-1">
@@ -41,7 +35,7 @@ export const AdminLayout: React.FC = () => {
               </span>
               <input
                 className="bg-surface-dark border border-border-color text-xs text-white rounded pl-9 pr-3 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-text-muted/50"
-                placeholder={uiStrings?.search_placeholder || "Search..."}
+                placeholder={uiStrings?.search_placeholder || 'Search...'}
                 type="text"
               />
             </div>
@@ -55,19 +49,14 @@ export const AdminLayout: React.FC = () => {
               ></div>
               <div className="flex flex-col overflow-hidden">
                 <span className="text-sm font-medium text-white truncate">
-                  {uiStrings?.user_admin || "Admin User"}
+                  {uiStrings?.user_admin || 'Admin User'}
                 </span>
                 <span className="text-xs text-text-muted truncate">
-                  {uiStrings?.system_admin || "System Administrator"}
+                  {uiStrings?.system_admin || 'System Administrator'}
                 </span>
               </div>
-              <button
-                onClick={logout}
-                className="ml-auto text-text-muted hover:text-white"
-              >
-                <span className="material-symbols-outlined text-[20px]">
-                  logout
-                </span>
+              <button onClick={logout} className="ml-auto text-text-muted hover:text-white">
+                <span className="material-symbols-outlined text-[20px]">logout</span>
               </button>
             </div>
           </div>

@@ -1,7 +1,6 @@
-import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import { visualizer } from 'rollup-plugin-visualizer';
 import { resolve } from 'path';
+import { defineConfig } from 'vitest/config';
 
 // Security headers plugin for Vite
 const securityHeadersPlugin = () => ({
@@ -28,7 +27,7 @@ const securityHeadersPlugin = () => ({
       // Images and media (includes tile servers)
       "img-src 'self' data: blob: https: http://localhost:3000",
       // Connections (API, WebSocket, analytics, geocoding, IP geolocation, Map tiles)
-      "connect-src 'self' ws: wss: http://localhost:8100 https://us.i.posthog.com https://*.trycloudflare.com wss://*.trycloudflare.com https://nominatim.openstreetmap.org http://ip-api.com https://ip-api.com https://*.basemaps.cartocdn.com https://img.icons8.com",
+      "connect-src 'self' ws: wss: http://localhost:8120 https://us.i.posthog.com https://*.trycloudflare.com wss://*.trycloudflare.com https://nominatim.openstreetmap.org http://ip-api.com https://ip-api.com https://*.basemaps.cartocdn.com https://img.icons8.com",
       // Workers for MapLibre
       "worker-src 'self' blob:",
       "child-src 'self' blob:",
@@ -38,7 +37,7 @@ const securityHeadersPlugin = () => ({
       `<meta http-equiv="Content-Security-Policy" content="${csp}">`,
       `<meta http-equiv="X-Content-Type-Options" content="nosniff">`,
       `<meta http-equiv="X-XSS-Protection" content="1; mode=block">`,
-      `<meta name="referrer" content="strict-origin-when-cross-origin">`
+      `<meta name="referrer" content="strict-origin-when-cross-origin">`,
     ].join('\n      ');
 
     return html.replace('</head>', `      ${tags}\n    </head>`);
@@ -77,22 +76,22 @@ export default defineConfig({
     },
     proxy: {
       '/api/v1/ws': {
-        target: 'ws://localhost:8100',
+        target: 'ws://localhost:8120',
         ws: true,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/v1\/ws/, '/ws/telemetry'),
       },
       '/api': {
-        target: 'http://localhost:8100',
+        target: 'http://localhost:8120',
         changeOrigin: true,
       },
       '/ws': {
-        target: 'ws://localhost:8100',
+        target: 'ws://localhost:8120',
         ws: true,
         changeOrigin: true,
       },
       '/auth': {
-        target: 'http://localhost:8100',
+        target: 'http://localhost:8120',
         changeOrigin: true,
       },
       '/carto-proxy': {
@@ -111,15 +110,29 @@ export default defineConfig({
       output: {
         manualChunks: (id) => {
           // Vendor chunk - React ecosystem
-          if (id.includes('react') || id.includes('react-dom') || id.includes('react-redux') || id.includes('react-router-dom')) {
+          if (
+            id.includes('react') ||
+            id.includes('react-dom') ||
+            id.includes('react-redux') ||
+            id.includes('react-router-dom')
+          ) {
             return 'vendor';
           }
           // Charts & Maps - heavy visualization libraries
-          if (id.includes('recharts') || id.includes('leaflet') || id.includes('maplibre-gl') || id.includes('supercluster')) {
+          if (
+            id.includes('recharts') ||
+            id.includes('leaflet') ||
+            id.includes('maplibre-gl') ||
+            id.includes('supercluster')
+          ) {
             return 'charts-maps';
           }
           // Icons
-          if (id.includes('lucide-react') || id.includes('@heroicons/react') || id.includes('material-symbols')) {
+          if (
+            id.includes('lucide-react') ||
+            id.includes('@heroicons/react') ||
+            id.includes('material-symbols')
+          ) {
             return 'icons';
           }
           // Animation
@@ -136,8 +149,12 @@ export default defineConfig({
   },
   define: {
     'process.env.REACT_APP_API_URL': JSON.stringify(process.env.REACT_APP_API_URL || '/api/v1'),
-    'process.env.REACT_APP_PUBLIC_POSTHOG_KEY': JSON.stringify(process.env.REACT_APP_PUBLIC_POSTHOG_KEY || ''),
-    'process.env.REACT_APP_PUBLIC_POSTHOG_HOST': JSON.stringify(process.env.REACT_APP_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com'),
+    'process.env.REACT_APP_PUBLIC_POSTHOG_KEY': JSON.stringify(
+      process.env.REACT_APP_PUBLIC_POSTHOG_KEY || ''
+    ),
+    'process.env.REACT_APP_PUBLIC_POSTHOG_HOST': JSON.stringify(
+      process.env.REACT_APP_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com'
+    ),
   },
   test: {
     globals: true,

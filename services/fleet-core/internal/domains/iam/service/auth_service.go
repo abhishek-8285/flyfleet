@@ -141,9 +141,11 @@ func (s *AuthService) Login(ctx context.Context, req models.LoginRequest, ip, us
 
 	// Check password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		s.log.Warn("password_mismatch", zap.String("email", req.Email), zap.Error(err))
 		s.handleFailedLogin(ctx, user, ip)
 		return nil, nil, ErrInvalidCredentials
 	}
+	s.log.Info("password_match_success", zap.String("email", req.Email))
 
 	// Successful password check — check if MFA needed
 	if user.MFAEnabled {

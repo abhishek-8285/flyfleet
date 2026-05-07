@@ -21,14 +21,17 @@ if ! command -v psql &> /dev/null; then
     exit 1
 fi
 
-# Directory containing migration files
-MIGRATION_DIR="infrastructure/migrations"
+# Directories containing migration files
+MIGRATION_DIRS=("infrastructure/migrations" "services/fleet-core/migrations")
 
-# Check if directory exists
-if [ ! -d "$MIGRATION_DIR" ]; then
-    echo "Error: Migration directory $MIGRATION_DIR not found!"
-    exit 1
-fi
+for MIGRATION_DIR in "${MIGRATION_DIRS[@]}"; do
+    # Check if directory exists
+    if [ ! -d "$MIGRATION_DIR" ]; then
+        echo "Warning: Migration directory $MIGRATION_DIR not found, skipping..."
+        continue
+    fi
+
+    echo "Processing migrations in $MIGRATION_DIR..."
 
 # Loop through SQL files in alphabetical order
 for file in $(ls $MIGRATION_DIR/*.sql | sort); do
@@ -46,6 +49,7 @@ for file in $(ls $MIGRATION_DIR/*.sql | sort); do
         # But in a strict environment, we might want to exit.
         # For now, we continue.
     fi
+    done
 done
 
 echo "----------------------------------------------------------------"
