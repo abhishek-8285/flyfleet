@@ -37,6 +37,7 @@ export const FleetList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('priority');
+  const [filter, setFilter] = useState<'ALL' | 'CRITICAL' | 'ACTIVE'>('ALL');
 
   const fetchVehicles = useCallback(async () => {
     setLoading(true);
@@ -151,11 +152,17 @@ export const FleetList: React.FC = () => {
   const sortedAndFilteredVehicles = useMemo(() => {
     if (!Array.isArray(vehicles)) return [];
     
-    let filtered = vehicles.filter(v => 
-      v.registration_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      v.make?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (v.current_driver?.name || v.current_driver_name)?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    let filtered = vehicles.filter(v => {
+      const matchesSearch = 
+        v.registration_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        v.make?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (v.current_driver?.name || v.current_driver_name)?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      if (!matchesSearch) return false;
+      if (filter === 'CRITICAL') return getPriority(v) === 'CRITICAL';
+      if (filter === 'ACTIVE') return v.status === 'ACTIVE';
+      return true;
+    });
 
     return filtered.sort((a, b) => {
       const pMap: Record<string, number> = { 'CRITICAL': 0, 'WARNING': 1, 'HEALTHY': 2 };
@@ -166,69 +173,146 @@ export const FleetList: React.FC = () => {
       // Secondary: Alert count
       return (b.summary?.alert_count || 0) - (a.summary?.alert_count || 0);
     });
-  }, [vehicles, searchQuery]);
+  }, [vehicles, searchQuery, filter]);
+
+  const stats = useMemo(() => {
+    const total = vehicles.length;
+    const active = vehicles.filter(v => v.status === 'ACTIVE').length;
+    const critical = vehicles.filter(v => getPriority(v) === 'CRITICAL').length;
+    const offline = vehicles.filter(v => getTelemetryData(v).status === 'RED').length;
+    return { total, active, critical, offline };
+  }, [vehicles]);
 
   return (
-    <div className="p-6 space-y-6 max-w-[1600px] mx-auto min-h-screen bg-[#0a0f14]">
-      {/* Control Center Header */}
-      <div className="flex items-center justify-between">
+    <div className="flex-1 flex flex-col bg-background-dark overflow-hidden font-sans relative">
+      {/* --- Standardized Header --- */}
+      <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-30">
         <div className="flex items-center gap-4">
-          <div className="p-3.5 bg-primary/10 rounded-2xl border border-primary/20 shadow-lg shadow-primary/5">
-             <Zap className="w-8 h-8 text-primary fill-primary" />
+          <div className="p-2 bg-primary/10 rounded-lg">
+             <Zap className="w-5 h-5 text-primary fill-primary" />
           </div>
           <div>
-            <h1 className="text-3xl font-black text-white tracking-tighter italic uppercase leading-none">Fleet Operations Command</h1>
-            <p className="text-gray-600 text-[10px] font-black uppercase tracking-[0.4em] mt-2 ml-0.5">Autonomous Asset Triage & Decision Engine</p>
+            <div className="text-[10px] text-text-muted uppercase tracking-[0.2em] font-black mb-0.5">
+              Operations Center
+            </div>
+            <h1 className="text-white text-lg font-bold uppercase tracking-tight leading-none">
+              Fleet Operations
+            </h1>
           </div>
         </div>
-        <div className="flex gap-4">
+        <div className="flex items-center gap-3">
           <button 
             onClick={fetchVehicles}
-            className="flex items-center gap-2 px-5 py-2.5 bg-white/5 border border-white/10 text-white rounded-xl hover:bg-white/10 transition-all font-bold text-[10px] uppercase tracking-widest"
+            className="px-4 py-2 bg-surface-dark border border-border-color text-text-muted hover:text-white text-xs font-semibold rounded-lg transition-all flex items-center gap-2"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            Refresh Signals
+            Sync
           </button>
           <button
-            onClick={() => navigate('/admin/fleet/new')}
-            className="flex items-center gap-2 px-7 py-2.5 bg-primary text-white rounded-xl hover:bg-primary/90 transition-all font-black text-[10px] uppercase tracking-[0.2em] shadow-2xl shadow-primary/40 border-b-2 border-primary-dark"
+            onClick={() => navigate('/admin/vehicles/new')}
+            className="px-6 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded-lg flex items-center gap-2 shadow-lg shadow-primary/20 transition-all"
           >
-            <Plus className="w-4 h-4" />
-            Provision Asset
+            <Plus className="w-3.5 h-3.5" />
+            Add Vehicle
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* Triage Search */}
-      <div className="bg-surface-dark border border-border-color rounded-2xl p-4 shadow-2xl bg-white/[0.01]">
-        <div className="relative max-w-2xl">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-700" />
-          <input
-            type="text"
-            placeholder="Identity registration, pilot, or serial..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white/[0.03] border border-white/10 rounded-xl pl-14 pr-4 py-4 text-white focus:outline-none focus:border-primary transition-all text-sm font-semibold placeholder:text-gray-800 shadow-inner"
-          />
-        </div>
-      </div>
+      {/* --- Main Area --- */}
+      <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+        <div className="max-w-[1600px] mx-auto space-y-6 pb-32">
+          
+          {/* Status Summary Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-surface-dark border border-border-color p-5 rounded-xl flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-primary/10 text-primary">
+                <Truck className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="text-[10px] text-text-muted uppercase font-bold tracking-widest mb-1">Total Assets</div>
+                <div className="text-xl font-bold text-white">{stats.total}</div>
+              </div>
+            </div>
 
-      {/* Main Command Registry */}
-      <div className="bg-[#10161d] border border-border-color rounded-2xl overflow-hidden shadow-2xl">
+            <div className="bg-surface-dark border border-border-color p-5 rounded-xl flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-500">
+                <Zap className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="text-[10px] text-text-muted uppercase font-bold tracking-widest mb-1">Active Now</div>
+                <div className="text-xl font-bold text-emerald-500">{stats.active}</div>
+              </div>
+            </div>
+
+            <div className="bg-surface-dark border border-border-color p-5 rounded-xl flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-rose-500/10 text-rose-500">
+                <ShieldAlert className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="text-[10px] text-text-muted uppercase font-bold tracking-widest mb-1">Critical Priority</div>
+                <div className="text-xl font-bold text-rose-500">{stats.critical}</div>
+              </div>
+            </div>
+
+            <div className="bg-surface-dark border border-border-color p-5 rounded-xl flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-amber-500/10 text-amber-500">
+                <Signal className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="text-[10px] text-text-muted uppercase font-bold tracking-widest mb-1">Signal Loss</div>
+                <div className="text-xl font-bold text-amber-500">{stats.offline}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Triage Search Bar */}
+          <div className="bg-surface-dark border border-border-color rounded-xl p-3 shadow-xl flex items-center gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-700" />
+              <input
+                type="text"
+                placeholder="Search registration, driver, or model..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-black/20 border border-white/5 rounded-lg pl-12 pr-4 py-2.5 text-white focus:outline-none focus:border-primary transition-all text-sm font-semibold placeholder:text-gray-800"
+              />
+            </div>
+            <div className="flex items-center gap-2 px-4 border-l border-white/5">
+               <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Filter:</span>
+               <div className="flex gap-1">
+                  {['ALL', 'CRITICAL', 'ACTIVE'].map(f => (
+                    <button 
+                      key={f} 
+                      onClick={() => setFilter(f as any)}
+                      className={`px-3 py-1 rounded text-[9px] font-black uppercase border transition-all ${
+                        filter === f 
+                          ? 'bg-primary border-primary text-white' 
+                          : 'border-white/5 hover:bg-white/5 text-gray-500 hover:text-white'
+                      }`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+               </div>
+            </div>
+          </div>
+
+      {/* Vehicle Fleet Overview */}
+          <div className="bg-surface-dark border border-border-color rounded-xl overflow-hidden shadow-2xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="text-[9px] font-black text-gray-700 uppercase tracking-[0.45em] bg-white/[0.01] border-b border-border-color">
                 <th className="px-6 py-7 w-2"></th>
-                <th className="px-6 py-7">Identity</th>
+                <th className="px-6 py-7">Vehicle Information</th>
                 <th className="px-6 py-7">Driver</th>
-                <th className="px-6 py-7">Operational Health</th>
-                <th className="px-6 py-7 min-w-[340px]">Compliance (Integrity)</th>
+                <th className="px-6 py-7">Status</th>
+                <th className="px-6 py-7 min-w-[340px]">Documents & Compliance</th>
                 <th className="px-6 py-7">Alerts</th>
                 <th className="px-6 py-7 text-right pr-12">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border-color">
+            <tbody className="">
               {loading ? (
                 Array(5).fill(0).map((_, i) => (
                   <tr key={i} className="animate-pulse">
@@ -246,183 +330,153 @@ export const FleetList: React.FC = () => {
                   return (
                     <tr 
                       key={v.id} 
-                      className="hover:bg-white/[0.02] transition-all cursor-pointer group relative"
+                      className="hover:bg-white/[0.02] transition-all cursor-pointer group relative border-b border-white/[0.05]"
                       onClick={() => navigate(`/admin/vehicles/${v.id}`)}
                     >
                       {/* Priority Signal */}
-                      <td className="w-2 p-0">
-                        <div className={`h-[140px] w-2 transition-all ${
-                          priority === 'CRITICAL' ? 'bg-rose-600 shadow-[8px_0_30px_rgba(225,29,72,0.65)]' : 
+                      <td className="w-1 p-0">
+                        <div className={`h-[64px] w-1 transition-all ${
+                          priority === 'CRITICAL' ? 'bg-rose-600 shadow-[2px_0_10px_rgba(225,29,72,0.4)]' : 
                           priority === 'WARNING' ? 'bg-amber-500' : 'bg-emerald-500'
                         }`} />
                       </td>
 
                       {/* 1. Identity */}
-                      <td className="px-6 py-6">
-                        <div className="flex items-center gap-6">
-                          <div className={`w-18 h-18 rounded-2xl flex flex-col items-center justify-center font-black text-[10px] border-2 transition-transform group-hover:scale-105 ${
+                      <td className="px-5 py-2.5">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-9 h-9 rounded-lg flex flex-col items-center justify-center font-black text-[8px] border transition-transform group-hover:scale-105 ${
                             priority === 'CRITICAL' ? 'bg-rose-500/10 text-rose-500 border-rose-500/25' : 
                             priority === 'WARNING' ? 'bg-amber-500/10 text-amber-500 border-amber-500/25' : 
                             'bg-primary/10 text-primary border-primary/25'
                           }`}>
-                            <Truck className="w-8 h-8 mb-1.5 opacity-80" />
-                            <span className="text-[9px] uppercase opacity-60 tracking-widest leading-none">{v.vehicle_type || 'VEH'}</span>
+                            <Truck className="w-4 h-4 mb-0 opacity-80" />
                           </div>
-                          <div className="space-y-1.5">
-                            <div className="flex items-center gap-3">
-                               <div className="font-black text-white text-2xl leading-none tracking-tighter group-hover:text-primary transition-colors italic">{v.registration_number}</div>
-                               {priority === 'CRITICAL' && <Lock className="w-4.5 h-4.5 text-rose-500 animate-pulse" />}
+                          <div className="space-y-0">
+                            <div className="flex items-center gap-1.5">
+                               <div className="font-black text-white text-base leading-none tracking-tight group-hover:text-primary transition-colors">{v.registration_number}</div>
+                               {priority === 'CRITICAL' && <Lock className="w-3 h-3 text-rose-500" />}
                             </div>
-                            <div className="text-[11px] text-gray-500 uppercase font-black tracking-widest">{v.make} {v.model}</div>
-                            <div className="flex items-center gap-2.5 mt-2.5">
-                               <Fuel className="w-3.5 h-3.5 text-gray-800" />
-                               <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest">{v.fuel_type || 'Diesel'}</span>
-                            </div>
+                            <div className="text-[9px] text-gray-500 uppercase font-black tracking-widest">{v.make} {v.model}</div>
                           </div>
                         </div>
                       </td>
 
                       {/* 2. Driver */}
-                      <td className="px-6 py-6">
-                        <div className="space-y-1">
-                          <div className={`font-black text-base tracking-tight transition-colors uppercase italic ${driverName === 'Unassigned' ? 'text-gray-700 font-bold' : 'text-gray-200 group-hover:text-white'}`}>
+                      <td className="px-5 py-2.5">
+                        <div className="space-y-0">
+                          <div className={`font-black text-xs tracking-tight transition-colors uppercase ${driverName === 'Unassigned' ? 'text-gray-700' : 'text-gray-200 group-hover:text-white'}`}>
                             {driverName}
                           </div>
-                          <div className="text-[9px] font-black text-gray-700 uppercase tracking-widest">Active Personnel</div>
+                          <div className="text-[8px] font-black text-gray-700 uppercase tracking-widest">Driver</div>
                         </div>
                       </td>
 
                       {/* 3. Operational Health */}
-                      <td className="px-6 py-6">
-                        <div className="space-y-6">
+                      <td className="px-5 py-2.5">
+                        <div className="flex items-center gap-6">
                           <div className="flex flex-col">
-                             <div className="flex items-center gap-3">
-                                <Signal className={`w-4.5 h-4.5 ${tel.status === 'GREEN' ? 'text-emerald-500' : tel.status === 'YELLOW' ? 'text-amber-500' : 'text-rose-600'}`} />
-                                <span className={`text-[12px] font-black uppercase tracking-widest ${tel.status === 'GREEN' ? 'text-emerald-500' : tel.status === 'YELLOW' ? 'text-amber-500' : 'text-rose-600'}`}>
+                             <div className="flex items-center gap-2">
+                                <Signal className={`w-3.5 h-3.5 ${tel.status === 'GREEN' ? 'text-emerald-500' : tel.status === 'YELLOW' ? 'text-amber-500' : 'text-rose-600'}`} />
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${tel.status === 'GREEN' ? 'text-emerald-500' : tel.status === 'YELLOW' ? 'text-amber-500' : 'text-rose-600'}`}>
                                   {tel.text}
                                 </span>
                              </div>
-                             {tel.sub && <span className="text-[10px] text-gray-700 font-black ml-7.5 uppercase tracking-[0.1em] mt-1.5">{tel.sub}</span>}
+                             {tel.sub && <span className="text-[8px] text-gray-700 font-black ml-5.5 uppercase tracking-tighter">{tel.sub}</span>}
                           </div>
-                          <div className="flex items-center gap-3">
-                             <Toolbox className={`w-4 h-4 opacity-40 ${summary.maintenance_status === 'HEALTHY' ? 'text-emerald-500' : 'text-amber-500'}`} />
-                             <div className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${
-                               summary.maintenance_status === 'HEALTHY' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500/60' : 'bg-amber-500/10 border-amber-500/20 text-amber-500/60'
+                          <div className="flex items-center gap-2">
+                             <Toolbox className={`w-3 h-3 opacity-30 ${summary.maintenance_status === 'HEALTHY' ? 'text-emerald-500' : 'text-amber-500'}`} />
+                             <div className={`text-[8px] font-black uppercase tracking-widest px-1 py-0.5 rounded border ${
+                                summary.maintenance_status === 'HEALTHY' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500/60' : 'bg-amber-500/10 border-amber-500/20 text-amber-500/60'
                              }`}>
-                               Maintenance {summary.maintenance_status === 'HEALTHY' ? 'Healthy' : 'Due'}
+                                {summary.maintenance_status === 'HEALTHY' ? 'OK' : 'DUE'}
                              </div>
                           </div>
                         </div>
                       </td>
 
-                      {/* 4. Compliance (Integrity) - PRIMARY ANCHOR */}
-                      <td className="px-6 py-6">
-                        <div className="space-y-4 group/compliance relative">
+                      {/* 4. Compliance (Integrity) */}
+                      <td className="px-5 py-2.5">
+                        <div className="flex items-center gap-6 group/compliance relative">
                           <div className="flex flex-col">
-                             <span className={`text-4xl font-black italic tracking-tighter leading-none mb-4 drop-shadow-xl ${
-                               comp.status === 'GREEN' ? 'text-emerald-500' : 
-                               comp.status === 'YELLOW' ? 'text-amber-500' : 
-                               'text-rose-600 animate-pulse'
+                             <span className={`text-base font-black tracking-tighter leading-none mb-1 ${
+                                comp.status === 'GREEN' ? 'text-emerald-500' : 
+                                comp.status === 'YELLOW' ? 'text-amber-500' : 
+                                'text-rose-600 animate-pulse'
                              }`}>
                                {comp.text}
                              </span>
-                             <div className="flex items-center gap-4">
-                               <div className={`px-3 py-1.5 rounded text-[10px] font-black border transition-colors ${
+                             <div className="flex items-center gap-3">
+                               <div className={`px-1.5 py-0.5 rounded-[3px] text-[8px] font-black border ${
                                  comp.status === 'RED' ? 'bg-rose-500/10 text-rose-500 border-rose-500/25' : 
                                  comp.status === 'YELLOW' ? 'bg-amber-500/10 text-amber-500 border-amber-500/25' : 
                                  'bg-emerald-500/10 text-emerald-500 border-emerald-500/25'
                                }`}>
-                                 {comp.status === 'RED' ? 'HIGH RISK' : (summary.risk_score > 30 ? 'MED RISK' : 'LOW RISK')}
+                                 {comp.status === 'RED' ? 'RISK' : 'SAFE'}
                                </div>
-                               <div className="flex items-center gap-2.5 text-gray-500">
-                                  <Calendar className={`w-5 h-5 ${comp.status === 'RED' ? 'text-rose-500' : 'text-gray-800'}`} />
-                                  <span className={`text-[12px] font-black uppercase tracking-widest leading-none ${comp.status === 'RED' ? 'text-rose-500' : 'text-gray-600'}`}>
+                               <div className="flex items-center gap-1.5 text-gray-600">
+                                  <Calendar className="w-3.5 h-3.5" />
+                                  <span className="text-[9px] font-black uppercase tracking-tight leading-none">
                                     {comp.detail}
                                   </span>
                                </div>
                              </div>
                           </div>
 
-                          {/* Hover Tooltip - Registry Vault */}
-                          <div className="absolute left-0 top-[120%] w-80 bg-[#0b1219] border-2 border-border-color p-6 rounded-3xl shadow-[0_40px_80px_rgba(0,0,0,0.9)] opacity-0 group-hover/compliance:opacity-100 transition-all z-50 pointer-events-none translate-y-4 group-hover/compliance:translate-y-0 backdrop-blur-3xl border-white/5">
-                             <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
-                                <div className="flex items-center gap-3">
-                                  <FileText className="w-6 h-6 text-primary" />
-                                  <span className="text-[12px] font-black text-white uppercase tracking-[0.35em]">Digital Vault Integrity</span>
-                                </div>
-                                <Activity className="w-5 h-5 text-gray-700" />
-                             </div>
-                             <div className="space-y-5">
+                          {/* Document Preview Tooltip remains useful but smaller */}
+                          <div className="absolute left-0 top-[100%] w-64 bg-[#0b1219] border border-border-color p-4 rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.8)] opacity-0 group-hover/compliance:opacity-100 transition-all z-50 pointer-events-none translate-y-1 group-hover/compliance:translate-y-0 backdrop-blur-xl">
+                             <div className="space-y-2">
+                                <div className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2">Required Documents</div>
                                 {[
-                                  { label: 'Insurance Policy', status: comp.status === 'GREEN' ? 'VALID' : 'REVIEW', color: comp.status === 'GREEN' ? 'text-emerald-500' : 'text-rose-500' },
-                                  { label: 'Carrier Permit', status: 'VERIFIED', color: 'text-emerald-500' },
-                                  { label: 'Pollution (PUC)', status: 'EXPIRING', color: 'text-amber-500' },
-                                  { label: 'Fitness Registry', status: 'SECURED', color: 'text-emerald-500' }
+                                  { label: 'Insurance', status: comp.status === 'GREEN' ? 'VALID' : 'REVIEW', color: comp.status === 'GREEN' ? 'text-emerald-500' : 'text-rose-500' },
+                                  { label: 'Permit', status: 'VERIFIED', color: 'text-emerald-500' },
+                                  { label: 'Fitness', status: 'SECURED', color: 'text-emerald-500' }
                                 ].map((doc, idx) => (
-                                  <div key={idx} className="flex justify-between items-center group/item hover:bg-white/[0.04] p-2 rounded-xl transition-colors">
-                                    <span className="text-[11px] font-bold text-gray-500">{doc.label}</span>
-                                    <span className={`text-[11px] font-black ${doc.color} tracking-[0.1em]`}>{doc.status}</span>
+                                  <div key={idx} className="flex justify-between items-center text-[9px] font-bold">
+                                    <span className="text-gray-500">{doc.label}</span>
+                                    <span className={doc.color}>{doc.status}</span>
                                   </div>
                                 ))}
-                             </div>
-                             <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between">
-                                <span className="text-[9px] font-black text-gray-700 uppercase">Registry Updated 2h ago</span>
-                                <Info className="w-3.5 h-3.5 text-gray-800" />
                              </div>
                           </div>
                         </div>
                       </td>
 
-                      {/* 5. Alerts - CONDITIONAL */}
-                      <td className="px-6 py-6">
+                      {/* 5. Alerts */}
+                      <td className="px-5 py-2.5">
                          {(summary.alert_count || 0) > 0 ? (
-                           <div className="flex flex-col gap-4">
+                           <div className="flex gap-2">
                               {summary.critical_alert_count > 0 && (
-                                <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-rose-500/10 border border-rose-500/25 shadow-[0_0_10px_rgba(225,29,72,0.1)]">
-                                   <ShieldAlert className="w-5 h-5 text-rose-500" />
-                                   <span className="text-xs font-black text-rose-500">{summary.critical_alert_count} CRITICAL</span>
+                                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-rose-500/10 border border-rose-500/25">
+                                   <ShieldAlert className="w-3 h-3 text-rose-500" />
+                                   <span className="text-[8px] font-black text-rose-500">{summary.critical_alert_count}!</span>
                                 </div>
                               )}
                               {summary.alert_count - summary.critical_alert_count > 0 && (
-                                <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-amber-500/10 border border-amber-500/25">
-                                   <AlertTriangle className="w-5 h-5 text-amber-500" />
-                                   <span className="text-xs font-black text-amber-500">{summary.alert_count - summary.critical_alert_count} WARNING</span>
+                                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-500/10 border border-amber-500/25">
+                                   <AlertTriangle className="w-3 h-3 text-amber-500" />
+                                   <span className="text-[8px] font-black text-amber-500">{summary.alert_count - summary.critical_alert_count}</span>
                                 </div>
                               )}
                            </div>
                          ) : (
-                           <div className="text-[10px] font-black text-gray-800 uppercase tracking-widest opacity-30 italic">No Operational Alerts</div>
+                           <div className="text-[8px] font-black text-gray-800 uppercase tracking-widest opacity-20">Clean</div>
                          )}
                       </td>
 
                       {/* 6. Actions */}
-                      <td className="px-6 py-6 text-right">
-                        <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all translate-x-8 group-hover:translate-x-0">
+                      <td className="px-5 py-2.5 text-right">
+                        <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-all">
                           <button 
-                            title="Assign Pilot"
-                            onClick={(e) => { e.stopPropagation(); }}
-                            className="p-3.5 bg-white/5 rounded-2xl text-gray-600 hover:text-primary hover:bg-primary/10 transition-all border border-transparent hover:border-primary/25 shadow-lg"
+                            className="p-1.5 bg-white/5 rounded-lg text-gray-600 hover:text-primary hover:bg-primary/10 transition-all"
                           >
-                            <UserPlus className="w-5.5 h-5.5" />
+                            <UserPlus className="w-3.5 h-3.5" />
                           </button>
                           <button 
-                            title="Registry Vault"
-                            onClick={(e) => { e.stopPropagation(); }}
-                            className="p-3.5 bg-white/5 rounded-2xl text-gray-600 hover:text-white hover:bg-white/10 transition-all border border-transparent hover:border-white/15"
+                            className="p-1.5 bg-white/5 rounded-lg text-gray-600 hover:text-white hover:bg-white/10 transition-all"
                           >
-                            <FileText className="w-5.5 h-5.5" />
+                            <FileText className="w-3.5 h-3.5" />
                           </button>
-                          <button 
-                            title={comp.text === 'BLOCKED' ? 'Unblock Asset' : 'Emergency Block'}
-                            onClick={(e) => { e.stopPropagation(); }}
-                            className={`p-3.5 bg-white/5 rounded-2xl text-gray-600 transition-all border border-transparent ${
-                               comp.text === 'BLOCKED' ? 'hover:text-emerald-500 hover:bg-emerald-500/10 hover:border-emerald-500/25' : 'hover:text-rose-500 hover:bg-rose-500/10 hover:border-rose-500/25'
-                            }`}
-                          >
-                            {comp.text === 'BLOCKED' ? <Unlock className="w-5.5 h-5.5" /> : <Ban className="w-5.5 h-5.5" />}
-                          </button>
-                          <div className="w-px h-10 bg-white/10 mx-3" />
-                          <ChevronRight className="w-7 h-7 text-gray-800 group-hover:text-primary transition-all translate-x-0 group-hover:translate-x-1" />
+                          <ChevronRight className="w-4 h-4 text-gray-800 group-hover:text-primary transition-all" />
                         </div>
                       </td>
                     </tr>
@@ -431,6 +485,8 @@ export const FleetList: React.FC = () => {
               )}
             </tbody>
           </table>
+        </div>
+      </div>
         </div>
       </div>
     </div>

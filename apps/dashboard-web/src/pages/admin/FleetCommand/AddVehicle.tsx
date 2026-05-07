@@ -1,7 +1,22 @@
-import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import api from '../../../services/api';
+import { 
+  ArrowLeft, 
+  ChevronRight, 
+  Plus, 
+  Trash2, 
+  ShieldCheck, 
+  Cpu, 
+  Activity, 
+  Globe, 
+  Zap,
+  Truck,
+  Settings,
+  Info,
+  Badge,
+  AlertTriangle
+} from 'lucide-react';
+import apiClient from '../../../services/apiClient';
 import { FUEL_TYPES, ODOMETER_UNITS, OWNERSHIP_TYPES, VEHICLE_TYPES } from './constants';
 import { toKm } from './utils';
 
@@ -53,10 +68,10 @@ export default function AddVehicle() {
   const fetchMetadata = async () => {
     try {
       const [dResp, bResp, cResp, tResp] = await Promise.all([
-        api.get('/admin/drivers?limit=500'),
-        api.get('/admin/branches'),
-        api.get('/admin/cost-centers'),
-        api.get('/ui/settings/gps-types'),
+        apiClient.get('/admin/drivers?limit=500'),
+        apiClient.get('/admin/branches'),
+        apiClient.get('/admin/cost-centers'),
+        apiClient.get('/ui/settings/gps-types'),
       ]);
 
       const ensureArray = (resp: any, key?: string) => {
@@ -73,11 +88,11 @@ export default function AddVehicle() {
           value: d.id,
           label: `${d.first_name || ''} ${d.last_name || ''}`.trim() || d.name || d.id,
         })),
-        branches: ensureArray(bResp, 'branches').map((b: any) => ({
+        branches: ensureArray(bResp, 'data').map((b: any) => ({
           value: b.id,
           label: b.name,
         })),
-        costCenters: ensureArray(cResp, 'cost_centers').map((c: any) => ({
+        costCenters: ensureArray(cResp, 'data').map((c: any) => ({
           value: c.id,
           label: c.name,
         })),
@@ -96,8 +111,8 @@ export default function AddVehicle() {
     setFormData((prev) => ({ ...prev, [name]: val }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setError('');
 
     if (!formData.registration_number) {
@@ -121,105 +136,148 @@ export default function AddVehicle() {
         odometer: Math.round(
           toKm(parseFloat(formData.odometer) || 0, formData.odometer_unit) * 1000
         ),
-        // Filter out empty UUID strings to prevent backend decoding errors
         branch_id: formData.branch_id || undefined,
         cost_center_id: formData.cost_center_id || undefined,
         current_driver_id: formData.current_driver_id || undefined,
       };
-      await api.createVehicle(payload);
+      await apiClient.post('/admin/vehicles', payload);
       navigate('/admin/vehicles');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to initialize vehicle node');
+      setError(err.response?.data?.error || err.message || 'Failed to initialize vehicle node');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="p-10 max-w-7xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-xs text-text-muted mb-1">
-            <Link to="/admin/vehicles" className="hover:text-white">
-              Fleet
-            </Link>
-            <span>/</span>
-            <span className="text-primary font-medium">Add</span>
+    <div className="flex-1 flex flex-col bg-background-dark overflow-hidden font-sans relative">
+      {/* --- Standardized Header --- */}
+      <header className="h-16 flex items-center justify-between px-6 border-b border-border-color bg-surface-darker flex-shrink-0 z-30">
+        <div className="flex items-center gap-4">
+          <Link to="/admin/vehicles" className="p-2 hover:bg-white/5 rounded-full transition-colors text-text-muted">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div>
+            <div className="flex items-center gap-2 text-[10px] text-text-muted uppercase tracking-[0.2em] font-black mb-0.5">
+              <span>Fleet Management</span>
+              <ChevronRight className="w-3 h-3 opacity-30" />
+              <span className="text-white">Add New Vehicle</span>
+            </div>
+            <h2 className="text-white text-lg font-bold flex items-center gap-2 uppercase tracking-tight">
+              Register New Vehicle
+              <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border bg-primary/10 text-primary border-primary/20">
+                New
+              </span>
+            </h2>
           </div>
-          <h1 className="text-2xl font-bold text-white">Add Vehicle</h1>
         </div>
         <div className="flex items-center gap-3">
           <Link
             to="/admin/vehicles"
-            className="px-4 py-2 bg-surface-dark hover:bg-surface-darker border border-border-color text-text-muted hover:text-white text-xs font-semibold rounded transition-colors"
+            className="px-4 py-2 bg-surface-dark border border-border-color text-text-muted hover:text-white text-xs font-semibold rounded-lg transition-all"
           >
             Cancel
           </Link>
           <button
-            onClick={() => handleSubmit(new Event('submit') as unknown as React.FormEvent)}
+            onClick={() => handleSubmit()}
             disabled={loading}
-            className="px-4 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
+            className="px-6 py-2 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded-lg flex items-center gap-2 shadow-lg shadow-primary/20 transition-all disabled:opacity-50"
           >
-            <span className="material-symbols-outlined text-[16px]">add</span>
-            {loading ? 'Initializing...' : 'Create Vehicle'}
+            {loading ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+            {loading ? 'Processing...' : 'Save Vehicle'}
           </button>
         </div>
-      </div>
+      </header>
 
-      {error && (
-        <div className="p-4 bg-danger/10 border border-danger/20 rounded-lg flex items-center gap-2 text-danger text-sm">
-          <XMarkIcon className="w-5 h-5" />
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-6 pb-12">
-        {/* ── Registry Identity ── */}
-        <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
-          <div className="px-6 py-4 border-b border-border-color bg-surface-darker flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-              <span className="material-symbols-outlined text-sm">app_registration</span>
-            </div>
-            <div>
-              <h3 className="text-white text-sm font-semibold">Registry Identity</h3>
-              <p className="text-xs text-text-muted mt-0.5">
-                Core identification and RTO registration details
-              </p>
-            </div>
-          </div>
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                Registration Number <span className="text-danger">*</span>
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
-                  <span className="material-symbols-outlined text-[18px]">badge</span>
-                </span>
-                <input
-                  type="text"
-                  name="registration_number"
-                  value={formData.registration_number}
-                  onChange={handleChange}
-                  placeholder="e.g. MH01AB1234"
-                  className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none placeholder-text-muted/50"
-                />
+      {/* --- Main Area --- */}
+      <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+        <div className="max-w-6xl mx-auto space-y-6 pb-32">
+          
+          {/* Signal Summary Cards (Parity with VehicleDetail) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-2">
+            <div className="bg-surface-dark border border-border-color p-5 rounded-xl flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-primary/10 text-primary">
+                <Truck className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="text-[10px] text-text-muted uppercase font-bold tracking-widest mb-1">Registration</div>
+                <div className="text-xl font-bold text-white uppercase">{formData.registration_number || 'AWAITING'}</div>
               </div>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                Registry Classification <span className="text-danger">*</span>
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
-                  <span className="material-symbols-outlined text-[18px]">category</span>
-                </span>
+
+            <div className="bg-surface-dark border border-border-color p-5 rounded-xl flex items-center gap-4">
+              <div className={`p-3 rounded-xl ${formData.gps_enabled ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                <Zap className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="text-[10px] text-text-muted uppercase font-bold tracking-widest mb-1">Tracking</div>
+                <div className={`text-xl font-bold ${formData.gps_enabled ? 'text-emerald-500' : 'text-rose-500'}`}>{formData.gps_enabled ? 'ENABLED' : 'OFF'}</div>
+              </div>
+            </div>
+
+            <div className="bg-surface-dark border border-border-color p-5 rounded-xl flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-amber-500/10 text-amber-500">
+                <Fuel className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="text-[10px] text-text-muted uppercase font-bold tracking-widest mb-1">Fuel Type</div>
+                <div className="text-xl font-bold text-white uppercase">{formData.fuel_type || 'DIESEL'}</div>
+              </div>
+            </div>
+
+            <div className="bg-surface-dark border border-border-color p-5 rounded-xl flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-white/5 text-white">
+                <Scale className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="text-[10px] text-text-muted uppercase font-bold tracking-widest mb-1">Capacity</div>
+                <div className="text-xl font-bold text-white uppercase">{formData.capacity_tonnage || '0'} <span className="text-sm font-normal text-text-muted uppercase tracking-widest">TON</span></div>
+              </div>
+            </div>
+          </div>
+
+          {error && (
+            <div className="p-4 bg-danger/10 border border-danger/20 rounded-xl flex items-center gap-3 text-danger text-[10px] font-black uppercase tracking-widest animate-in fade-in slide-in-from-top-2">
+              <AlertTriangle className="w-5 h-5" />
+              {error}
+            </div>
+          )}
+
+          <div className="grid grid-cols-12 gap-6">
+            {/* Form Side */}
+            <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
+        {/* 1. Vehicle Details */}
+        <section className="bg-surface-dark border border-border-color rounded-xl overflow-hidden shadow-xl">
+           <div className="px-6 py-4 border-b border-border-color bg-white/[0.02] flex items-center gap-3">
+              <Truck className="w-5 h-5 text-primary" />
+              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Vehicle Details</h3>
+           </div>
+           <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest block">
+                  Registration Number <span className="text-danger">*</span>
+                </label>
+                <div className="relative">
+                  <Badge className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <input
+                    type="text"
+                    name="registration_number"
+                    value={formData.registration_number}
+                    onChange={handleChange}
+                    placeholder="e.g. MH01AB1234"
+                    className="w-full bg-black/40 border border-white/5 rounded-xl py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-primary transition-all placeholder-gray-800"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest block">
+                  Vehicle Type <span className="text-danger">*</span>
+                </label>
                 <select
                   name="vehicle_type"
                   value={formData.vehicle_type}
                   onChange={handleChange}
-                  className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-10 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none"
+                  className="w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-primary transition-all appearance-none cursor-pointer"
                 >
                   <option value="">Select Type</option>
                   {VEHICLE_TYPES.map((opt) => (
@@ -228,24 +286,16 @@ export default function AddVehicle() {
                     </option>
                   ))}
                 </select>
-                <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-text-muted">
-                  <span className="material-symbols-outlined text-[18px]">expand_more</span>
-                </span>
               </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                Financial Model
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
-                  <span className="material-symbols-outlined text-[18px]">payments</span>
-                </span>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest block">
+                  Financial Model
+                </label>
                 <select
                   name="ownership_type"
                   value={formData.ownership_type}
                   onChange={handleChange}
-                  className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-10 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none"
+                  className="w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-primary transition-all appearance-none cursor-pointer"
                 >
                   {OWNERSHIP_TYPES.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -253,24 +303,16 @@ export default function AddVehicle() {
                     </option>
                   ))}
                 </select>
-                <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-text-muted">
-                  <span className="material-symbols-outlined text-[18px]">expand_more</span>
-                </span>
               </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                Energy Protocol
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
-                  <span className="material-symbols-outlined text-[18px]">ev_station</span>
-                </span>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest block">
+                  Fuel Type
+                </label>
                 <select
                   name="fuel_type"
                   value={formData.fuel_type}
                   onChange={handleChange}
-                  className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-10 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none"
+                  className="w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-primary transition-all appearance-none cursor-pointer"
                 >
                   {FUEL_TYPES.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -278,378 +320,330 @@ export default function AddVehicle() {
                     </option>
                   ))}
                 </select>
-                <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-text-muted">
-                  <span className="material-symbols-outlined text-[18px]">expand_more</span>
-                </span>
               </div>
-            </div>
-          </div>
-        </div>
+           </div>
+        </section>
 
-        {/* ── Engineering Metadata ── */}
-        <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
-          <div className="px-6 py-4 border-b border-border-color bg-surface-darker flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20">
-              <span className="material-symbols-outlined text-sm">precision_manufacturing</span>
-            </div>
-            <div>
-              <h3 className="text-white text-sm font-semibold">Engineering Metadata</h3>
-              <p className="text-xs text-text-muted mt-0.5">
-                Technical specifications and hardware vectors
-              </p>
-            </div>
-          </div>
-          <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                Manufacturer
-              </label>
-              <input
-                type="text"
-                name="make"
-                value={formData.make}
-                onChange={handleChange}
-                placeholder="e.g. Tata"
-                className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                Variant / Model
-              </label>
-              <input
-                type="text"
-                name="model"
-                value={formData.model}
-                onChange={handleChange}
-                placeholder="e.g. 407 Gold"
-                className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                Deployment Year
-              </label>
-              <input
-                type="number"
-                name="year"
-                value={formData.year}
-                onChange={handleChange}
-                className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
-              />
-            </div>
-            <div className="space-y-1.5 md:col-span-2">
-              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                VIN Signal (17 Digits)
-              </label>
-              <input
-                type="text"
-                name="vin_number"
-                value={formData.vin_number}
-                onChange={handleChange}
-                placeholder="Enter Chassis VIN"
-                className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                Engine Number
-              </label>
-              <input
-                type="text"
-                name="engine_number"
-                value={formData.engine_number}
-                onChange={handleChange}
-                placeholder="ERX-12345"
-                className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
-              />
-            </div>
-          </div>
-        </div>
+        {/* 2. Performance Details */}
+        <section className="bg-surface-dark border border-border-color rounded-xl overflow-hidden shadow-xl">
+           <div className="px-6 py-4 border-b border-border-color bg-white/[0.02] flex items-center gap-3">
+              <Cpu className="w-5 h-5 text-amber-500" />
+              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Performance Details</h3>
+           </div>
+           <div className="p-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+                 <div className="space-y-1.5">
+                   <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest block">Manufacturer</label>
+                   <input
+                     type="text"
+                     name="make"
+                     value={formData.make}
+                     onChange={handleChange}
+                     placeholder="e.g. Tata"
+                     className="w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-primary transition-all"
+                   />
+                 </div>
+                 <div className="space-y-1.5">
+                   <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest block">Variant / Model</label>
+                   <input
+                     type="text"
+                     name="model"
+                     value={formData.model}
+                     onChange={handleChange}
+                     placeholder="e.g. 407 Gold"
+                     className="w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-primary transition-all"
+                   />
+                 </div>
+                 <div className="space-y-1.5">
+                   <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest block">Deployment Year</label>
+                   <input
+                     type="number"
+                     name="year"
+                     value={formData.year}
+                     onChange={handleChange}
+                     className="w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-primary transition-all"
+                   />
+                 </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                 <div className="space-y-1.5">
+                   <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest block">VIN Number (17 Digits)</label>
+                   <input
+                     type="text"
+                     name="vin_number"
+                     value={formData.vin_number}
+                     onChange={handleChange}
+                     placeholder="Enter Chassis VIN"
+                     className="w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-primary transition-all"
+                   />
+                 </div>
+                 <div className="space-y-1.5">
+                   <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest block">Chassis Number</label>
+                   <input
+                     type="text"
+                     name="engine_number"
+                     value={formData.engine_number}
+                     onChange={handleChange}
+                     placeholder="ERX-12345"
+                     className="w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-primary transition-all"
+                   />
+                 </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-10 border-t border-white/5">
+                 <div className="space-y-1.5">
+                   <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest block">Payload (Tons)</label>
+                   <input
+                     type="number"
+                     name="capacity_tonnage"
+                     value={formData.capacity_tonnage}
+                     onChange={handleChange}
+                     placeholder="0.0"
+                     step="0.1"
+                     className="w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-primary transition-all"
+                   />
+                 </div>
+                 <div className="space-y-1.5">
+                   <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest block">Fuel Res (L)</label>
+                   <input
+                     type="number"
+                     name="fuel_tank_capacity"
+                     value={formData.fuel_tank_capacity}
+                     onChange={handleChange}
+                     placeholder="0"
+                     className="w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-primary transition-all"
+                   />
+                 </div>
+                 <div className="space-y-1.5">
+                   <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest block">Initial Odometer</label>
+                   <div className="grid grid-cols-3 gap-2">
+                     <input
+                       type="number"
+                       name="odometer"
+                       value={formData.odometer}
+                       onChange={handleChange}
+                       placeholder="0"
+                       className="col-span-2 bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-primary transition-all"
+                     />
+                     <select
+                       name="odometer_unit"
+                       value={formData.odometer_unit}
+                       onChange={handleChange}
+                       className="bg-black/40 border border-white/5 rounded-xl py-3 px-2 text-[10px] font-black text-white focus:outline-none focus:border-primary transition-all appearance-none text-center cursor-pointer"
+                     >
+                       {ODOMETER_UNITS.map((opt) => (
+                         <option key={opt.value} value={opt.value}>{opt.label}</option>
+                       ))}
+                     </select>
+                   </div>
+                 </div>
+                 <div className="space-y-1.5">
+                   <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest block">Speed Limit (km/h)</label>
+                   <input
+                     type="number"
+                     name="speed_limit"
+                     value={formData.speed_limit}
+                     onChange={handleChange}
+                     placeholder="80"
+                     className="w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-primary transition-all"
+                   />
+                 </div>
+              </div>
+           </div>
+        </section>
 
-        {/* ── Operational Metrics ── */}
-        <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
-          <div className="px-6 py-4 border-b border-border-color bg-surface-darker flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-400 border border-amber-500/20">
-              <span className="material-symbols-outlined text-sm">monitoring</span>
-            </div>
-            <div>
-              <h3 className="text-white text-sm font-semibold">Operational Metrics</h3>
-              <p className="text-xs text-text-muted mt-0.5">
-                Capacity limits and telemetry baselines
-              </p>
-            </div>
-          </div>
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                Net Capacity (Tonnes)
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
-                  <span className="material-symbols-outlined text-[18px]">weight</span>
-                </span>
-                <input
-                  type="number"
-                  name="capacity_tonnage"
-                  value={formData.capacity_tonnage}
-                  onChange={handleChange}
-                  placeholder="0.0"
-                  step="0.1"
-                  className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
-                />
+        {/* 3. Telemetry Uplink */}
+        <section className="bg-surface-dark border border-border-color rounded-xl overflow-hidden shadow-xl">
+           <div className="px-6 py-4 border-b border-border-color bg-white/[0.02] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                 <Activity className="w-5 h-5 text-emerald-500" />
+                 <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Tracking Configuration</h3>
               </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                Fuel Reservoir (Litres)
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
-                  <span className="material-symbols-outlined text-[18px]">oil_barrel</span>
-                </span>
-                <input
-                  type="number"
-                  name="fuel_tank_capacity"
-                  value={formData.fuel_tank_capacity}
-                  onChange={handleChange}
-                  placeholder="0"
-                  className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
-                />
+           </div>
+           <div className="p-8 space-y-8">
+              <div className="p-8 rounded-2xl bg-primary/5 border border-primary/20 flex items-center justify-between">
+                 <div className="space-y-1">
+                    <h4 className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                       <Globe className="w-4 h-4 text-primary" /> Tracking Gateway
+                    </h4>
+                    <p className="text-[10px] text-gray-600 uppercase font-bold tracking-widest leading-none">Enable real-time positional broadcast</p>
+                 </div>
+                 <label className="relative inline-flex items-center cursor-pointer">
+                   <input
+                     type="checkbox"
+                     name="gps_enabled"
+                     checked={formData.gps_enabled}
+                     onChange={handleChange}
+                     className="sr-only peer"
+                   />
+                   <div className="w-11 h-6 bg-black/40 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-700 after:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-checked:after:bg-white shadow-inner transition-all"></div>
+                 </label>
               </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                Initial Odometer
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                <input
-                  type="number"
-                  name="odometer"
-                  value={formData.odometer}
-                  onChange={handleChange}
-                  placeholder="0"
-                  className="col-span-2 bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
-                />
+
+              {formData.gps_enabled && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest block">Device IMEI</label>
+                    <input
+                      type="text"
+                      name="gps_device_id"
+                      value={formData.gps_device_id}
+                      onChange={handleChange}
+                      placeholder="15-digit IMEI"
+                      className="w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-primary transition-all placeholder-gray-800"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest block">Device Type</label>
+                    <select
+                      name="gps_device_type"
+                      value={formData.gps_device_type}
+                      onChange={handleChange}
+                      className="w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-primary transition-all appearance-none cursor-pointer"
+                    >
+                      {gpsDeviceTypes.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+           </div>
+        </section>
+
+        {/* 4. Hierarchy & Custody */}
+        <section className="bg-surface-dark border border-border-color rounded-xl overflow-hidden shadow-xl">
+           <div className="px-6 py-4 border-b border-border-color bg-white/[0.02] flex items-center gap-3">
+              <Settings className="w-5 h-5 text-indigo-400" />
+              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Assignment & Branch</h3>
+           </div>
+           <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest block">Operational Branch</label>
                 <select
-                  name="odometer_unit"
-                  value={formData.odometer_unit}
+                  name="branch_id"
+                  value={formData.branch_id}
                   onChange={handleChange}
-                  className="bg-surface-darker border border-border-color rounded-lg py-2.5 px-2 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                  className="w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-primary transition-all appearance-none cursor-pointer"
                 >
-                  {ODOMETER_UNITS.map((opt) => (
+                  <option value="">Ungrouped</option>
+                  {dropdowns.branches.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
                     </option>
                   ))}
                 </select>
               </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                Neural Speed Limit (km/h)
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-muted">
-                  <span className="material-symbols-outlined text-[18px]">speed</span>
-                </span>
-                <input
-                  type="number"
-                  name="speed_limit"
-                  value={formData.speed_limit}
-                  onChange={handleChange}
-                  placeholder="80"
-                  className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Telemetry Uplink ── */}
-        <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
-          <div className="px-6 py-4 border-b border-border-color bg-surface-darker flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20">
-                <span className="material-symbols-outlined text-sm">sensors</span>
-              </div>
-              <div>
-                <h3 className="text-white text-sm font-semibold">Telemetry Uplink</h3>
-                <p className="text-xs text-text-muted mt-0.5">
-                  Broadcast positional data to the control tower
-                </p>
-              </div>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                name="gps_enabled"
-                checked={formData.gps_enabled}
-                onChange={handleChange}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-surface-darker peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-text-muted after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary peer-checked:after:bg-white"></div>
-            </label>
-          </div>
-          {formData.gps_enabled && (
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-2 duration-300">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                  Device Serial (IMEI)
-                </label>
-                <input
-                  type="text"
-                  name="gps_device_id"
-                  value={formData.gps_device_id}
-                  onChange={handleChange}
-                  placeholder="15-digit IMEI"
-                  className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                  Link Protocol
-                </label>
+                <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest block">Cost Allocation</label>
                 <select
-                  name="gps_device_type"
-                  value={formData.gps_device_type}
+                  name="cost_center_id"
+                  value={formData.cost_center_id}
                   onChange={handleChange}
-                  className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                  className="w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-primary transition-all appearance-none cursor-pointer"
                 >
-                  {gpsDeviceTypes.map((opt) => (
+                  <option value="">Default</option>
+                  {dropdowns.costCenters.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
                     </option>
                   ))}
                 </select>
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── Hierarchy & Custody ── */}
-        <div className="bg-surface-dark rounded-xl border border-border-color overflow-hidden">
-          <div className="px-6 py-4 border-b border-border-color bg-surface-darker flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-400 border border-cyan-500/20">
-              <span className="material-symbols-outlined text-sm">account_tree</span>
-            </div>
-            <div>
-              <h3 className="text-white text-sm font-semibold">Hierarchy & Custody</h3>
-              <p className="text-xs text-text-muted mt-0.5">
-                Organizational placement and primary custodian
-              </p>
-            </div>
-          </div>
-          <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                Operational Branch
-              </label>
-              <select
-                name="branch_id"
-                value={formData.branch_id}
-                onChange={handleChange}
-                className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none"
-              >
-                <option value="">Ungrouped</option>
-                {dropdowns.branches.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                Cost Allocation
-              </label>
-              <select
-                name="cost_center_id"
-                value={formData.cost_center_id}
-                onChange={handleChange}
-                className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none"
-              >
-                <option value="">Default</option>
-                {dropdowns.costCenters.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                Guardian Driver
-              </label>
-              <select
-                name="current_driver_id"
-                value={formData.current_driver_id}
-                onChange={handleChange}
-                className="w-full bg-surface-darker border border-border-color rounded-lg py-2.5 px-4 text-sm text-white focus:ring-1 focus:ring-primary focus:border-primary outline-none appearance-none"
-              >
-                <option value="">Unassigned</option>
-                {dropdowns.drivers.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Asset Visualization ── (Integrated Preview) */}
-        <div className="bg-gradient-to-br from-primary/5 to-purple-500/5 rounded-2xl border border-primary/10 p-8 flex flex-col items-center justify-center relative overflow-hidden group">
-          <div className="absolute top-4 left-6 flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
-              Real-time Visualization engine
-            </span>
-          </div>
-
-          <div className="w-full max-w-sm space-y-6 relative z-10">
-            <div className="flex flex-col items-center">
-              <div className="bg-white px-6 py-2 rounded-md shadow-lg border border-black/10 flex items-center gap-3 mb-4 transform -rotate-1">
-                <div className="w-2 h-2 rounded-full bg-blue-600" />
-                <span className="text-black font-mono font-black text-xl tracking-tight">
-                  {formData.registration_number.toUpperCase() || 'MH 01 AB 1234'}
-                </span>
-              </div>
-              <h4 className="text-sm font-bold text-white tracking-wide">
-                {formData.make} {formData.model}
-              </h4>
-              <p className="text-[10px] text-text-muted uppercase font-bold tracking-widest mt-1">
-                {formData.vehicle_type || 'Awaiting Classification'}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl bg-surface-dark/50 border border-white/5 backdrop-blur-sm">
-                <span className="text-[10px] text-text-muted font-bold uppercase block mb-1">
-                  Payload
-                </span>
-                <span className="text-lg font-black text-white">
-                  {formData.capacity_tonnage || '0'}
-                  <span className="text-xs font-medium ml-1 text-text-muted">TONS</span>
-                </span>
-              </div>
-              <div className="p-4 rounded-xl bg-surface-dark/50 border border-white/5 backdrop-blur-sm">
-                <span className="text-[10px] text-text-muted font-bold uppercase block mb-1">
-                  Telemetry
-                </span>
-                <span
-                  className={`text-[10px] font-black uppercase flex items-center gap-1 ${formData.gps_enabled ? 'text-emerald-400' : 'text-amber-400'}`}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest block">Assigned Driver</label>
+                <select
+                  name="current_driver_id"
+                  value={formData.current_driver_id}
+                  onChange={handleChange}
+                  className="w-full bg-black/40 border border-white/5 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-primary transition-all appearance-none cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[14px]">
-                    {formData.gps_enabled ? 'wifi' : 'wifi_off'}
+                  <option value="">Unassigned</option>
+                  {dropdowns.drivers.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+           </div>
+        </section>
+
+            </div>
+
+            {/* Preview Side */}
+            <div className="col-span-12 lg:col-span-4 space-y-6">
+              <section className="bg-surface-dark border border-border-color rounded-xl overflow-hidden shadow-xl p-8 relative overflow-hidden group min-h-[400px] flex flex-col justify-center items-center text-center">
+                <div className="absolute top-6 left-8 flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[10px] font-black text-white uppercase tracking-[0.3em]">
+                    Live Vehicle Preview
                   </span>
-                  {formData.gps_enabled ? 'Online' : 'Offline'}
-                </span>
-              </div>
+                </div>
+
+                <div className="w-full space-y-8 relative z-10">
+                  <div className="space-y-4">
+                    <div className="bg-white px-8 py-3 rounded-lg shadow-2xl border-4 border-black/80 flex items-center justify-center gap-4 mx-auto w-fit transform -rotate-1 group-hover:rotate-0 transition-transform duration-500">
+                      <div className="w-3 h-3 rounded-full bg-blue-600" />
+                      <span className="text-black font-mono font-black text-3xl tracking-tight leading-none">
+                        {formData.registration_number.toUpperCase() || 'MH 01 AB 1234'}
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-black text-white uppercase tracking-tight">
+                        {formData.make || 'MANUFACTURER'} {formData.model || 'MODEL'}
+                      </h4>
+                      <div className="inline-block px-3 py-1 bg-white/5 rounded text-[10px] font-black text-gray-400 uppercase tracking-widest mt-2">
+                        {formData.vehicle_type || 'Awaiting Classification'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 rounded-xl bg-black/40 border border-white/5 backdrop-blur-md">
+                      <span className="text-[9px] text-gray-600 font-black uppercase tracking-widest block mb-1">
+                        Capacity
+                      </span>
+                      <span className="text-lg font-black text-white">
+                        {formData.capacity_tonnage || '0.0'}
+                        <span className="text-[8px] font-bold ml-1 text-gray-700">TON</span>
+                      </span>
+                    </div>
+                    <div className="p-4 rounded-xl bg-black/40 border border-white/5 backdrop-blur-md">
+                      <span className="text-[9px] text-gray-600 font-black uppercase tracking-widest block mb-1">
+                        Status
+                      </span>
+                      <span className="text-lg font-black text-emerald-500">ACTIVE</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+              </section>
+
+              <section className="bg-surface-dark border border-border-color rounded-xl p-6 shadow-xl">
+                 <h3 className="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] flex items-center gap-2 mb-6">
+                    <Settings className="w-4 h-4" />
+                    Verification Status
+                 </h3>
+                 <div className="space-y-4">
+                    {[
+                      { label: 'Details Verified', val: formData.registration_number ? 'YES' : 'PENDING', s: formData.registration_number ? 'ok' : 'warn' },
+                      { label: 'Telemetry Hook', val: formData.gps_enabled ? 'ARMED' : 'DISABLED', s: formData.gps_enabled ? 'ok' : 'warn' },
+                      { label: 'Branch Assigned', val: formData.branch_id ? 'YES' : 'UNGROUPED', s: formData.branch_id ? 'ok' : 'warn' },
+                    ].map((h, i) => (
+                      <div key={i} className="flex justify-between items-center">
+                         <span className="text-[10px] text-text-muted font-bold uppercase tracking-tight">{h.label}</span>
+                         <span className={`text-[10px] font-black uppercase tracking-tighter ${h.s === 'ok' ? 'text-emerald-500' : 'text-amber-500'}`}>{h.val}</span>
+                      </div>
+                    ))}
+                 </div>
+              </section>
             </div>
           </div>
         </div>
-      </form>
+      </div>
     </div>
-  );
+);
 }

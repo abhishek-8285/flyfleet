@@ -7,7 +7,7 @@ import { FleetList } from "../../../modules/fleet/components/FleetList";
  */
 export const VehicleList: React.FC = () => {
   return (
-    <div className="h-full">
+    <div className="flex-1 flex flex-col overflow-hidden">
       <FleetList />
     </div>
   );
