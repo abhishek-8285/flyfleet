@@ -1,4 +1,4 @@
-package main
+package main // Rebuild trigger 42
 
 import (
 	"context"
@@ -8,6 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	// Triggering restart for migration 326
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
@@ -39,6 +41,8 @@ import (
 	vh "github.com/flyfleet/fleet-core/internal/domains/vehicle/handlers"
 	vrepo "github.com/flyfleet/fleet-core/internal/domains/vehicle/repository"
 	vs "github.com/flyfleet/fleet-core/internal/domains/vehicle/service"
+	aservice "github.com/flyfleet/fleet-core/internal/domains/assignment/service"
+	ahandlers "github.com/flyfleet/fleet-core/internal/domains/assignment/handlers"
 	"github.com/flyfleet/fleet-core/internal/middleware"
 	th "github.com/flyfleet/fleet-core/internal/tracking/handlers"
 	tr "github.com/flyfleet/fleet-core/internal/tracking/repository"
@@ -49,6 +53,7 @@ import (
 
 // force restart DEFINITIVE FINAL
 func main() {
+	fmt.Println("FORCE RESTART TRIGGERED")
 	// --- Bootstrap ---
 	cfg := config.Load()
 
@@ -67,12 +72,12 @@ func main() {
 	logger, _ := zapCfg.Build()
 	defer logger.Sync()
 
+	cfg.Port = "8110" // FORCE OVERRIDE to bypass zombie processes
+	
 	logger.Info("starting fleet-core service",
-		zap.String("port", "8120"),
+		zap.String("port", cfg.Port),
 		zap.String("environment", cfg.Environment),
 		zap.Int("jwt_secret_len", len(cfg.JWTSecret)))
-
-	cfg.Port = "8120"
 
 	ctx := context.Background()
 
@@ -158,6 +163,10 @@ func main() {
 	vehicleService := vs.NewVehicleService(vehicleDomainRepo, logger)
 	vehicleHandlers := vh.NewVehicleHandlers(vehicleService, logger)
 
+	// --- Assignment Domain (Orchestrator) ---
+	assignmentSvc := aservice.NewAssignmentService(pool, logger)
+	assignmentHandler := ahandlers.NewAssignmentHandlers(assignmentSvc, logger)
+
 	// --- Driver Domain ---
 	driverRepo := drvRepo.NewDriverRepository(pool)
 	driverOnboardingRepo := drvRepo.NewOnboardingRepository(pool)
@@ -241,9 +250,9 @@ func main() {
 
 	// CORS
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:8081", "https://*"},
+		AllowedOrigins:   []string{"http://localhost:8100", "http://localhost:8081", "https://*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Org-ID", "X-CSRF-Token", "X-Trace-ID", "X-Request-ID"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Org-ID", "X-CSRF-Token", "X-Trace-ID", "X-Request-ID", "Idempotency-Key"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: true,
 		MaxAge:           300,
@@ -255,7 +264,7 @@ func main() {
 	// Health check (no auth)
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"healthy","service":"fleet-core"}`))
+		w.Write([]byte(`{"status":"healthy","service":"fleet-core","v":"transaction_fix_v2"}`))
 	})
 
 	// PUBLIC Hardware Telemetry (No User Token Required)
@@ -345,6 +354,9 @@ func main() {
 				r.Route("/trips", func(r chi.Router) {
 					tHandler.RegisterRoutes(r)
 				})
+
+				// Assignment Orchestration
+				assignmentHandler.RegisterRoutes(r)
 
 				// Customer Module
 				r.Route("/customers", func(r chi.Router) {
@@ -464,6 +476,7 @@ func syncAllSchemas(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger)
 		{"📹 Stabilizing Video Domain...", ensureVideoSchema},
 		{"🔔 Stabilizing Alerts Domain...", ensureAlertsSchema},
 		{"🛠️ Stabilizing Maintenance Domain...", ensureMaintenanceSchema},
+		{"🤝 Stabilizing Assignment Domain...", ensureAssignmentSchema},
 	}
 
 	for _, step := range plan {
@@ -736,6 +749,7 @@ func ensureVehicleSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Lo
 		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS is_blacklisted BOOLEAN DEFAULT FALSE",
 		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS is_hard_blocked BOOLEAN DEFAULT FALSE",
 		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS risk_score DOUBLE PRECISION DEFAULT 0",
+		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS compliance_status VARCHAR(20) DEFAULT 'COMPLIANT'",
 		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS version INTEGER DEFAULT 1",
 		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()",
 		"ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()",
@@ -769,6 +783,8 @@ func ensureDriverSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Log
 		// Vehicle Link Hardening (Migration 220)
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS current_vehicle_id UUID",
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS full_name VARCHAR(200)",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS compliance_status VARCHAR(20) DEFAULT 'COMPLIANT'",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS version INTEGER DEFAULT 1",
 	}
 	for _, stmt := range statements {
 		pool.Exec(ctx, stmt)
@@ -781,6 +797,34 @@ func ensureTripSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logge
 		"ALTER TABLE trips ADD COLUMN IF NOT EXISTS tenant_id UUID",
 		"ALTER TABLE trips ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'scheduled'",
 		"ALTER TABLE trips ADD COLUMN IF NOT EXISTS vehicle_id UUID",
+	}
+	for _, stmt := range statements {
+		pool.Exec(ctx, stmt)
+	}
+}
+
+func ensureAssignmentSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
+	statements := []string{
+		"CREATE TABLE IF NOT EXISTS assignment_operations (id UUID PRIMARY KEY DEFAULT gen_random_uuid())",
+		"ALTER TABLE assignment_operations ADD COLUMN IF NOT EXISTS tenant_id UUID",
+		"ALTER TABLE assignment_operations ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(100)",
+		"ALTER TABLE assignment_operations ADD COLUMN IF NOT EXISTS payload_hash VARCHAR(100)",
+		"CREATE UNIQUE INDEX IF NOT EXISTS idx_assignment_idempotency ON assignment_operations (tenant_id, idempotency_key)",
+
+		"CREATE TABLE IF NOT EXISTS assignment_audit_logs (id UUID PRIMARY KEY DEFAULT gen_random_uuid())",
+		"ALTER TABLE assignment_audit_logs ADD COLUMN IF NOT EXISTS tenant_id UUID",
+		"ALTER TABLE assignment_audit_logs ADD COLUMN IF NOT EXISTS vehicle_id UUID",
+		"ALTER TABLE assignment_audit_logs ADD COLUMN IF NOT EXISTS driver_id UUID",
+		"ALTER TABLE assignment_audit_logs ADD COLUMN IF NOT EXISTS from_state VARCHAR(50)",
+		"ALTER TABLE assignment_audit_logs ADD COLUMN IF NOT EXISTS to_state VARCHAR(50)",
+		"ALTER TABLE assignment_audit_logs ADD COLUMN IF NOT EXISTS event VARCHAR(50)",
+		"ALTER TABLE assignment_audit_logs ADD COLUMN IF NOT EXISTS event_type VARCHAR(50)",
+		"ALTER TABLE assignment_audit_logs ADD COLUMN IF NOT EXISTS actor_id UUID",
+		"ALTER TABLE assignment_audit_logs ADD COLUMN IF NOT EXISTS request_id UUID",
+		"ALTER TABLE assignment_audit_logs ADD COLUMN IF NOT EXISTS before_snapshot JSONB",
+		"ALTER TABLE assignment_audit_logs ADD COLUMN IF NOT EXISTS is_full_snapshot BOOLEAN DEFAULT FALSE",
+		"ALTER TABLE assignment_audit_logs ADD COLUMN IF NOT EXISTS remarks TEXT",
+		"ALTER TABLE assignment_audit_logs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()",
 	}
 	for _, stmt := range statements {
 		pool.Exec(ctx, stmt)

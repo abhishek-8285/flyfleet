@@ -15,7 +15,23 @@ const (
 	RoleKey           contextKey = "role"
 	RolesKey          contextKey = "user_roles"
 	PermissionMaskKey contextKey = "permission_mask"
+	RequestIDKey      contextKey = "request_id"
 )
+
+// GetRequestID safely extracts RequestID from context.
+func GetRequestID(ctx context.Context) (uuid.UUID, bool) {
+	if val := ctx.Value(RequestIDKey); val != nil {
+		if id, ok := val.(uuid.UUID); ok {
+			return id, true
+		}
+		if s, ok := val.(string); ok {
+			if id, err := uuid.Parse(s); err == nil {
+				return id, true
+			}
+		}
+	}
+	return uuid.Nil, false
+}
 
 // GetUserID safely extracts UserID from context, handling string and UUID types
 // across both the standardized internal key and the shared platform key.

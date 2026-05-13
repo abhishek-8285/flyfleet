@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/fleet-platform/shared/pkg/pagination"
@@ -36,11 +37,10 @@ type createDriverRequestDTO struct {
 	Address          models.Address          `json:"address" validate:"omitempty"`
 	EmergencyContact models.EmergencyContact `json:"emergency_contact" validate:"required"`
 
-	ExperienceYears  int                     `json:"experience_years" validate:"gte=0,lte=50"`
-	JoiningDate      string                  `json:"joining_date" validate:"omitempty"`
-	Metadata         map[string]interface{}  `json:"metadata"`
+	ExperienceYears int                    `json:"experience_years" validate:"gte=0,lte=50"`
+	JoiningDate     string                 `json:"joining_date" validate:"omitempty"`
+	Metadata        map[string]interface{} `json:"metadata"`
 }
-
 
 type updateDriverRequestDTO struct {
 	FirstName        *string                  `json:"first_name,omitempty" validate:"omitempty,max=50"`
@@ -230,7 +230,6 @@ func parseDate(dateStr string) (time.Time, error) {
 	return time.Parse("2006-01-02", dateStr)
 }
 
-
 // CreateDriver godoc
 func (h *DriverHandler) CreateDriver(w http.ResponseWriter, r *http.Request) {
 	var dto createDriverRequestDTO
@@ -280,7 +279,6 @@ func (h *DriverHandler) CreateDriver(w http.ResponseWriter, r *http.Request) {
 		Metadata:         dto.Metadata,
 	}
 
-
 	tenantID := h.getTenantID(r)
 	if tenantID == uuid.Nil {
 		h.writeErrorResponse(w, http.StatusUnauthorized, "Organization ID not found", nil)
@@ -291,7 +289,7 @@ func (h *DriverHandler) CreateDriver(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.logger.Error("failed to create driver", zap.Error(err))
 		statusCode := http.StatusInternalServerError
-		if err.Error() == "license has expired" || err.Error() == "driver with license number "+dto.LicenseNumber+" already exists" {
+		if strings.Contains(err.Error(), "license has expired") || strings.Contains(err.Error(), "already exists") {
 			statusCode = http.StatusBadRequest
 		}
 		h.writeErrorResponse(w, statusCode, err.Error(), nil)
@@ -402,7 +400,7 @@ func (h *DriverHandler) UpdateDriver(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.logger.Error("failed to update driver", zap.String("driver_id", driverID), zap.Error(err))
 		statusCode := http.StatusInternalServerError
-		if err.Error() == "driver not found: no rows in result set" {
+		if strings.Contains(err.Error(), "no rows in result set") || strings.Contains(err.Error(), "not found") {
 			statusCode = http.StatusNotFound
 		}
 		h.writeErrorResponse(w, statusCode, err.Error(), nil)
@@ -432,10 +430,10 @@ func (h *DriverHandler) DeleteDriver(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.logger.Error("failed to delete driver", zap.String("driver_id", driverID), zap.Error(err))
 		statusCode := http.StatusInternalServerError
-		if err.Error() == "driver not found: no rows in result set" {
+		if strings.Contains(err.Error(), "no rows in result set") || strings.Contains(err.Error(), "not found") {
 			statusCode = http.StatusNotFound
-		} else if err.Error() == "cannot delete driver with active vehicle assignment" ||
-			err.Error() == "cannot delete driver with active trip" {
+		} else if strings.Contains(err.Error(), "active vehicle assignment") ||
+			strings.Contains(err.Error(), "active trip") {
 			statusCode = http.StatusConflict
 		}
 		h.writeErrorResponse(w, statusCode, err.Error(), nil)
@@ -487,10 +485,11 @@ func (h *DriverHandler) AssignVehicle(w http.ResponseWriter, r *http.Request) {
 			zap.String("vehicle_id", dto.VehicleID),
 			zap.Error(err))
 		statusCode := http.StatusInternalServerError
-		if err.Error() == "driver not found: no rows in result set" {
+		if strings.Contains(err.Error(), "no rows in result set") || strings.Contains(err.Error(), "not found") {
 			statusCode = http.StatusNotFound
-		} else if err.Error() == "driver is not active" ||
-			err.Error() == "driver already has a vehicle assigned" {
+		} else if strings.Contains(err.Error(), "not active") ||
+			strings.Contains(err.Error(), "already has a vehicle assigned") ||
+			strings.Contains(err.Error(), "please unmap first") {
 			statusCode = http.StatusConflict
 		}
 		h.writeErrorResponse(w, statusCode, err.Error(), nil)
@@ -525,9 +524,9 @@ func (h *DriverHandler) UnassignVehicle(w http.ResponseWriter, r *http.Request) 
 			zap.String("driver_id", driverID),
 			zap.Error(err))
 		statusCode := http.StatusInternalServerError
-		if err.Error() == "driver not found: no rows in result set" {
+		if strings.Contains(err.Error(), "no rows in result set") || strings.Contains(err.Error(), "not found") {
 			statusCode = http.StatusNotFound
-		} else if err.Error() == "driver has no vehicle assigned" {
+		} else if strings.Contains(err.Error(), "no vehicle assigned") {
 			statusCode = http.StatusConflict
 		}
 		h.writeErrorResponse(w, statusCode, err.Error(), nil)
@@ -576,9 +575,9 @@ func (h *DriverHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 			zap.String("status", dto.Status),
 			zap.Error(err))
 		statusCode := http.StatusInternalServerError
-		if err.Error() == "driver not found: no rows in result set" {
+		if strings.Contains(err.Error(), "no rows in result set") || strings.Contains(err.Error(), "not found") {
 			statusCode = http.StatusNotFound
-		} else if err.Error() == "invalid status: "+dto.Status {
+		} else if strings.Contains(err.Error(), "invalid status") {
 			statusCode = http.StatusBadRequest
 		}
 		h.writeErrorResponse(w, statusCode, err.Error(), nil)
@@ -613,7 +612,7 @@ func (h *DriverHandler) GetBehaviorScore(w http.ResponseWriter, r *http.Request)
 			zap.String("driver_id", driverID),
 			zap.Error(err))
 		statusCode := http.StatusInternalServerError
-		if err.Error() == "driver not found: no rows in result set" {
+		if strings.Contains(err.Error(), "no rows in result set") || strings.Contains(err.Error(), "not found") {
 			statusCode = http.StatusNotFound
 		}
 		h.writeErrorResponse(w, statusCode, err.Error(), nil)
@@ -664,9 +663,9 @@ func (h *DriverHandler) UpdateBehaviorScore(w http.ResponseWriter, r *http.Reque
 			zap.String("reason", dto.Reason),
 			zap.Error(err))
 		statusCode := http.StatusInternalServerError
-		if err.Error() == "driver not found: no rows in result set" {
+		if strings.Contains(err.Error(), "no rows in result set") || strings.Contains(err.Error(), "not found") {
 			statusCode = http.StatusNotFound
-		} else if err.Error() == "score change must be between -20 and 20" {
+		} else if strings.Contains(err.Error(), "between -20 and 20") {
 			statusCode = http.StatusBadRequest
 		}
 		h.writeErrorResponse(w, statusCode, err.Error(), nil)
@@ -709,7 +708,7 @@ func (h *DriverHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) {
 			zap.String("driver_id", driverID),
 			zap.Error(err))
 		statusCode := http.StatusInternalServerError
-		if err.Error() == "driver not found: no rows in result set" {
+		if strings.Contains(err.Error(), "no rows in result set") || strings.Contains(err.Error(), "not found") {
 			statusCode = http.StatusNotFound
 		}
 		h.writeErrorResponse(w, statusCode, err.Error(), nil)
@@ -998,11 +997,11 @@ func (h *DriverHandler) GetOnboardingStatus(w http.ResponseWriter, r *http.Reque
 // CreateShift handles creating a new shift for a driver
 func (h *DriverHandler) CreateShift(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		DriverID  string    `json:"driver_id" validate:"required"`
+		DriverID   string    `json:"driver_id" validate:"required"`
 		ShiftStart time.Time `json:"shift_start" validate:"required"`
 		ShiftEnd   time.Time `json:"shift_end" validate:"required"`
 		ShiftType  string    `json:"shift_type"`
-		VehicleID *string   `json:"vehicle_id"`
+		VehicleID  *string   `json:"vehicle_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
@@ -1123,13 +1122,13 @@ func (h *DriverHandler) GetPayouts(w http.ResponseWriter, r *http.Request) {
 // SubmitRating handles submitting a rating for a driver
 func (h *DriverHandler) SubmitRating(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		DriverID        string  `json:"driver_id" validate:"required"`
-		TripID          string  `json:"trip_id" validate:"required"`
-		PunctualityScore int    `json:"punctuality_score"`
-		BehaviorScore   int     `json:"behavior_score"`
-		DrivingScore    int     `json:"driving_score"`
-		OverallRating   float64 `json:"overall_rating"`
-		Comments        string  `json:"comments"`
+		DriverID         string  `json:"driver_id" validate:"required"`
+		TripID           string  `json:"trip_id" validate:"required"`
+		PunctualityScore int     `json:"punctuality_score"`
+		BehaviorScore    int     `json:"behavior_score"`
+		DrivingScore     int     `json:"driving_score"`
+		OverallRating    float64 `json:"overall_rating"`
+		Comments         string  `json:"comments"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
@@ -1233,7 +1232,7 @@ func (h *DriverHandler) writeErrorResponse(w http.ResponseWriter, statusCode int
 
 func (h *DriverHandler) getTenantID(r *http.Request) uuid.UUID {
 	ctx := r.Context()
-	
+
 	// Check standardized TenantIDKey first
 	if val := ctx.Value(ctxkeys.TenantIDKey); val != nil {
 		switch v := val.(type) {
@@ -1273,11 +1272,19 @@ func (h *DriverHandler) verifyDriverOwnership(w http.ResponseWriter, r *http.Req
 	driver, err := h.service.GetByID(r.Context(), driverID)
 	if err != nil {
 		h.logger.Error("failed to get driver for ownership check", zap.String("driver_id", driverID), zap.Error(err))
-		statusCode := http.StatusInternalServerError
-		if err.Error() == "driver not found: no rows in result set" {
-			statusCode = http.StatusNotFound
+
+		// If service returns nil, nil (not found) or a wrapped not found error
+		if driver == nil || strings.Contains(err.Error(), "no rows in result set") || strings.Contains(err.Error(), "not found") {
+			h.writeErrorResponse(w, http.StatusNotFound, "Driver not found", err)
+			return nil, false
 		}
-		h.writeErrorResponse(w, statusCode, "Driver not found", err)
+
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Internal server error", err)
+		return nil, false
+	}
+
+	if driver == nil {
+		h.writeErrorResponse(w, http.StatusNotFound, "Driver not found", nil)
 		return nil, false
 	}
 

@@ -1,8 +1,0 @@
-HTTP/1.1 500 Internal Server Error
-Content-Type: application/json
-X-Request-Id: unknown/oDRYFivboU-000001
-X-Trace-Id: unknown/oDRYFivboU-000001
-Date: Sat, 07 Mar 2026 15:56:22 GMT
-Content-Length: 93
-
-{"details":"unauthorized access to driver data","error":"Failed to get performance summary"}

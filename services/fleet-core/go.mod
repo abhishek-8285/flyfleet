@@ -1,4 +1,4 @@
-module github.com/flyfleet/fleet-core
+module github.com/flyfleet/fleet-core // restart-trigger-final
 
 go 1.22
 

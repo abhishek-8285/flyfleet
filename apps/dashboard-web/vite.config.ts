@@ -27,7 +27,7 @@ const securityHeadersPlugin = () => ({
       // Images and media (includes tile servers)
       "img-src 'self' data: blob: https: http://localhost:3000",
       // Connections (API, WebSocket, analytics, geocoding, IP geolocation, Map tiles)
-      "connect-src 'self' ws: wss: http://localhost:8120 https://us.i.posthog.com https://*.trycloudflare.com wss://*.trycloudflare.com https://nominatim.openstreetmap.org http://ip-api.com https://ip-api.com https://*.basemaps.cartocdn.com https://img.icons8.com",
+      "connect-src 'self' ws: wss: http://localhost:8110 https://us.i.posthog.com https://*.trycloudflare.com wss://*.trycloudflare.com https://nominatim.openstreetmap.org http://ip-api.com https://ip-api.com https://*.basemaps.cartocdn.com https://img.icons8.com",
       // Workers for MapLibre
       "worker-src 'self' blob:",
       "child-src 'self' blob:",
@@ -76,22 +76,22 @@ export default defineConfig({
     },
     proxy: {
       '/api/v1/ws': {
-        target: 'ws://localhost:8120',
+        target: 'ws://localhost:8110',
         ws: true,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/v1\/ws/, '/ws/telemetry'),
       },
       '/api': {
-        target: 'http://localhost:8120',
+        target: 'http://localhost:8110',
         changeOrigin: true,
       },
       '/ws': {
-        target: 'ws://localhost:8120',
+        target: 'ws://localhost:8110',
         ws: true,
         changeOrigin: true,
       },
       '/auth': {
-        target: 'http://localhost:8120',
+        target: 'http://localhost:8110',
         changeOrigin: true,
       },
       '/carto-proxy': {
@@ -155,6 +155,7 @@ export default defineConfig({
     'process.env.REACT_APP_PUBLIC_POSTHOG_HOST': JSON.stringify(
       process.env.REACT_APP_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com'
     ),
+    'process.env.VITE_CSP_CONNECT_SRC': JSON.stringify("'self' http://localhost:8103 http://localhost:8081 http://localhost:3000 ws://localhost:3000"),
   },
   test: {
     globals: true,

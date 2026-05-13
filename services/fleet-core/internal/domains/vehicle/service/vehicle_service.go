@@ -36,6 +36,9 @@ type VehicleServiceInterface interface {
 
 	// Search
 	SearchVehicles(ctx context.Context, params models.VehicleSearchParams) ([]models.Vehicle, int64, error)
+
+	// Audit
+	GetAuditLogs(ctx context.Context, vehicleID uuid.UUID) ([]models.VehicleAuditLog, error)
 }
 
 type VehicleService struct {
@@ -480,4 +483,7 @@ func normalizeStatus(s string) models.VehicleStatus {
 		return models.StatusDecommissioned
 	}
 	return models.VehicleStatus(strings.ToUpper(s))
+}
+func (s *VehicleService) GetAuditLogs(ctx context.Context, vehicleID uuid.UUID) ([]models.VehicleAuditLog, error) {
+	return s.repo.GetAuditLogs(ctx, vehicleID)
 }

@@ -106,6 +106,7 @@ func (h *VehicleHandlers) RegisterRoutes(r chi.Router) {
 		r.Delete("/", h.DeleteVehicle)
 		r.Post("/assign-driver", h.AssignDriver)
 		r.Post("/unassign-driver", h.UnassignDriver)
+		r.Get("/audit", h.GetAudit)
 	})
 }
 
@@ -174,25 +175,54 @@ func (h *VehicleHandlers) CreateVehicle(w http.ResponseWriter, r *http.Request) 
 // GetVehicle godoc
 func (h *VehicleHandlers) GetVehicle(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
-	vehicleID, err := uuid.Parse(idStr)
-	if err != nil {
-		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid vehicle ID format", err)
-		return
-	}
+	tenantID := h.getTenantID(r.Context())
 
-	vehicle, err := h.service.GetVehicle(r.Context(), vehicleID)
-	if err != nil {
-		if err.Error() == "vehicle not found" {
-			h.writeErrorResponse(w, http.StatusNotFound, "Vehicle not found", nil)
+	var vehicle *models.Vehicle
+	var err error
+
+	vehicleID, parseErr := uuid.Parse(idStr)
+	if parseErr != nil {
+		// Fallback: Try searching by registration number if it's not a UUID
+		h.logger.Info("Attempting registration number fallback for vehicle", zap.String("input", idStr))
+		
+		params := models.VehicleSearchParams{
+			Query:    idStr,
+			TenantID: &tenantID,
+			Limit:    1,
+			Page:     1,
+		}
+		
+		// Use the service's search capability if available
+		type searchable interface {
+			SearchVehicles(ctx context.Context, params models.VehicleSearchParams) ([]models.Vehicle, int64, error)
+		}
+		
+		if svc, ok := h.service.(searchable); ok {
+			vehicles, total, searchErr := svc.SearchVehicles(r.Context(), params)
+			if searchErr == nil && total > 0 {
+				vehicle = &vehicles[0]
+			}
+		}
+		
+		if vehicle == nil {
+			h.writeErrorResponse(w, http.StatusNotFound, "Vehicle not found (invalid UUID and no matching registration)", parseErr)
 			return
 		}
-		h.logger.Error("failed to get vehicle", zap.Error(err))
-		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to get vehicle", err)
-		return
+	} else {
+		// Standard UUID lookup
+		vehicle, err = h.service.GetVehicle(r.Context(), vehicleID)
+		if err != nil {
+			if err.Error() == "vehicle not found" {
+				h.writeErrorResponse(w, http.StatusNotFound, "Vehicle not found", nil)
+				return
+			}
+			h.logger.Error("failed to get vehicle", zap.Error(err))
+			h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to get vehicle", err)
+			return
+		}
 	}
 
 	// SECURITY FIX: Verify vehicle belongs to authenticated organization (CWE-639)
-	tenantID := h.getTenantID(r.Context())
 	if vehicle.TenantID != tenantID {
 		h.writeErrorResponse(w, http.StatusNotFound, "Vehicle not found or access denied", nil)
 		return
@@ -516,4 +546,20 @@ func (h *VehicleHandlers) getTenantID(ctx context.Context) uuid.UUID {
 		return id
 	}
 	return uuid.Nil
+}
+func (h *VehicleHandlers) GetAudit(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	vehicleID, err := uuid.Parse(idStr)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid vehicle ID", err)
+		return
+	}
+
+	logs, err := h.service.GetAuditLogs(r.Context(), vehicleID)
+	if err != nil {
+		h.writeErrorResponse(w, http.StatusInternalServerError, "Failed to fetch audit logs", err)
+		return
+	}
+
+	h.writeJSONResponse(w, http.StatusOK, map[string]interface{}{"data": logs})
 }

@@ -86,6 +86,8 @@ export const VehicleDetail: React.FC = () => {
   const [command, setCommand] = useState<CommandType>('none');
   const [commandData, setCommandData] = useState<any>(null);
   const [userRole, setUserRole] = useState<UserRole>('FLEET_ADMIN'); // Simulated RBAC context
+  const [conflictData, setConflictData] = useState<any>(null);
+  const [policyViolation, setPolicyViolation] = useState<any>(null);
   
   // --- Escalation & Recovery State ---
   const [escalations, setEscalations] = useState<any[]>([
@@ -108,14 +110,16 @@ export const VehicleDetail: React.FC = () => {
   ]);
 
   // --- Search & Selection (Pilot Assignment) ---
-  const [drivers, setDrivers] = useState<any[]>([]);
+  const [allDrivers, setAllDrivers] = useState<any[]>([]);
+  console.log("[VehicleDetail] Render - allDrivers count:", allDrivers.length);
   const [searchQuery, setSearchQuery] = useState("");
   const filteredDrivers = useMemo(() => {
-    return drivers.filter(d => 
+    console.log("[VehicleDetail] Filtering drivers. Source count:", allDrivers.length, "Query:", searchQuery);
+    return allDrivers.filter(d => 
       d.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
       d.phone?.includes(searchQuery)
     );
-  }, [drivers, searchQuery]);
+  }, [allDrivers, searchQuery]);
 
   const telemetry = useSelector((state: RootState) => state.telemetry.vehicles[id || ""]);
 
@@ -133,6 +137,28 @@ export const VehicleDetail: React.FC = () => {
       blockReason
     };
   }, [registryDocs, vehicle?.status]);
+
+  const fetchAuditLogs = async () => {
+    try {
+      const res: any = await apiClient.get(`/admin/vehicles/${id}/audit`);
+      const data = res.data || res;
+      if (Array.isArray(data)) {
+        const logs: AuditLog[] = data.map((l: any) => ({
+          id: l.id,
+          time: new Date(l.timestamp).toLocaleTimeString('en-GB', { hour12: false }),
+          event: l.action,
+          actor: l.user_id ? 'Admin' : 'System',
+          desc: l.new_value ? `${l.field_name} updated to ${l.new_value}` : l.action,
+          severity: 'normal' as const,
+          nodeId: l.id.substring(0, 8).toUpperCase(),
+          sessionId: 'BACKEND'
+        }));
+        setAuditLogs(logs);
+      }
+    } catch (e) {
+      console.error("Failed to fetch audit logs:", e);
+    }
+  };
 
   const hasGps = !!vehicle?.gps_device_id;
   const isGpsOnline = hasGps && telemetry?.status !== 'offline';
@@ -156,28 +182,62 @@ export const VehicleDetail: React.FC = () => {
   useEffect(() => {
     fetchVehicle();
     fetchDrivers();
+    fetchAuditLogs();
   }, [id]);
+
+  // Refresh drivers when opening the assign modal
+  useEffect(() => {
+    if (command === 'assign') {
+      fetchDrivers();
+    }
+  }, [command]);
 
   const fetchVehicle = async () => {
     try {
       const res = await apiClient.get(`/admin/vehicles/${id}`);
-      setVehicle(res.data);
-      if (res.data?.current_driver_id) {
-        const driverRes = await apiClient.get("/admin/drivers?limit=500");
-        const ds = driverRes.data?.drivers || [];
-        setDrivers(ds);
-        const d = ds.find((driver: any) => String(driver.id) === String(res.data.current_driver_id));
-        if (d) setCurrentDriver(d);
-      }
-    } catch (error) { console.error(error); } finally { setLoading(false); setIsSyncing(false); }
+      // Robust extraction: backend returns {"data": vehicle}
+      const vData = res.data || res;
+      setVehicle(vData);
+    } catch (error) { 
+      console.error("[VehicleDetail] fetchVehicle error:", error); 
+    } finally { 
+      setLoading(false); 
+      setIsSyncing(false); 
+    }
   };
 
   const fetchDrivers = async () => {
     try {
-      const res = await apiClient.get("/admin/drivers?limit=500");
-      setDrivers(res.data?.drivers || []);
-    } catch (e) { console.error(e); }
+      console.log("[VehicleDetail] Fetching drivers...");
+      const response: any = await apiClient.get("/admin/drivers?limit=500");
+      console.log("[VehicleDetail] fetchDrivers raw response:", response);
+      
+      // Highly robust extraction: handle wrapped, unwrapped, or named property structures
+      let ds = [];
+      if (response && response.data && Array.isArray(response.data)) {
+        ds = response.data;
+      } else if (Array.isArray(response)) {
+        ds = response;
+      } else if (response && response.drivers && Array.isArray(response.drivers)) {
+        ds = response.drivers;
+      }
+      
+      console.log("[VehicleDetail] setAllDrivers with count:", ds.length);
+      setAllDrivers(ds);
+    } catch (e) { 
+      console.error("[VehicleDetail] fetchDrivers error:", e); 
+    }
   };
+
+  // Sync current driver when either vehicle or drivers list updates
+  useEffect(() => {
+    if (vehicle?.current_driver_id && allDrivers.length > 0) {
+      const d = allDrivers.find((driver: any) => String(driver.id) === String(vehicle.current_driver_id));
+      if (d) {
+        setCurrentDriver(d);
+      }
+    }
+  }, [vehicle?.current_driver_id, allDrivers]);
 
   // --- Automated Escalation Surveillance ---
   useEffect(() => {
@@ -217,8 +277,8 @@ export const VehicleDetail: React.FC = () => {
 
   // --- Command Handlers ---
   const addAudit = (event: string, desc: string, severity: AuditLog['severity'] = 'normal', actor: string = 'Admin') => {
-    setAuditLogs(prev => [{ 
-      id: Date.now().toString(), 
+    const newLog: AuditLog = { 
+      id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`, 
       time: new Date().toLocaleTimeString('en-GB', { hour12: false }), 
       event, 
       actor, 
@@ -226,27 +286,157 @@ export const VehicleDetail: React.FC = () => {
       severity,
       nodeId: `NODE-${Math.floor(Math.random() * 900) + 100}`,
       sessionId: `SESS-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
-    }, ...prev]);
+    };
+    setAuditLogs(prev => [newLog, ...prev]);
   };
 
-  const handleAssignPilot = async (driver: any) => {
-    setLoading(true);
-    try {
-      // Logic for assignment would go here
-      setCurrentDriver(driver);
-      addAudit('PILOT_ASSIGNED', `Asset control transferred to ${driver.name}. Credentials verified.`, 'normal');
-      setCommand('none');
-    } catch (e) { console.error(e); } finally { setLoading(false); }
-  };
-  const handleAssignDriver = async (driver: any) => {
+
+  const handleAssignDriver = async (driver: any, bypass: boolean = false, bypassReason: string = "") => {
+    if (!driver?.id) {
+      console.error("Cannot assign driver without a valid identifier");
+      return;
+    }
     try {
       setIsSyncing(true);
-      await apiClient.post(`/fleet/vehicles/${id}/assign`, { driver_id: driver.id || driver.name });
-      setVehicle((prev: any) => ({ ...prev, current_driver: driver }));
-      addAudit('DRIVER_ASSIGNED', `Asset control transferred to ${driver.name}. Credentials verified.`, 'normal', 'CentralOps');
+      const idempotencyKey = `assign_${id}_${driver.id}_${Date.now()}`;
+      
+      const payload = { 
+        vehicle_id: id,
+        vehicle_version: vehicle.version || 0,
+        driver_id: driver.id,
+        driver_version: driver.version || 0,
+        remarks: bypass ? `Bypass: ${bypassReason}` : "Standard operational assignment",
+        bypass_policy: bypass,
+        bypass_reason: bypassReason
+      };
+
+      await apiClient.post(`/admin/assignments/assign`, payload, {
+        headers: { 'Idempotency-Key': idempotencyKey }
+      });
+      
+      addAudit('Assignment.Created', `Asset control transferred to ${driver.name}. Version validation complete.`, 'normal', 'CentralOps');
       setCommand('none');
-    } catch (err) {
-      console.error("Assignment failed:", err);
+      setPolicyViolation(null);
+      setConflictData(null);
+      
+      await fetchVehicle();
+      await fetchDrivers();
+      await fetchAuditLogs();
+    } catch (err: any) {
+      const status = err.response?.status;
+      const data = err.response?.data;
+
+      if (status === 409) {
+        setConflictData({ driver, serverState: data });
+        addAudit('Assignment.ConflictDetected', "OCC version mismatch detected.", 'critical', 'System');
+      } else if (status === 400 && data?.error?.toLowerCase().includes("policy")) {
+        setPolicyViolation({ driver, message: data.error });
+      } else {
+        alert(data?.error || "Assignment failed");
+      }
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // --- Modal Components ---
+  const ConflictResolutionModal = () => (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+      <div className="w-full max-w-lg bg-zinc-900 border border-rose-500/30 rounded-3xl overflow-hidden shadow-2xl shadow-rose-500/10">
+        <div className="p-6 border-b border-white/5 bg-rose-500/10">
+          <div className="flex items-center gap-3 text-rose-400 mb-2">
+            <ShieldAlert className="w-6 h-6" />
+            <h3 className="text-xl font-bold">Divergence Detected</h3>
+          </div>
+          <p className="text-zinc-400 text-sm">The asset state has changed since you opened this view. To prevent corruption, please reconcile.</p>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+              <span className="text-[10px] uppercase tracking-widest text-zinc-500 block mb-1">Your View</span>
+              <div className="font-mono text-xs text-white">v{vehicle.version}</div>
+            </div>
+            <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/20">
+              <span className="text-[10px] uppercase tracking-widest text-rose-500 block mb-1">Live Server</span>
+              <div className="font-mono text-xs text-rose-400">v{conflictData.serverState.CurrentVersions?.vehicle}</div>
+            </div>
+          </div>
+          <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-xs text-zinc-400 leading-relaxed">
+            Re-syncing will refresh the versions and allow you to re-attempt assignment safely.
+          </div>
+        </div>
+        <div className="p-6 bg-white/[0.02] border-t border-white/5 flex gap-3">
+          <button onClick={() => setConflictData(null)} className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-medium transition-all">Cancel</button>
+          <button 
+            onClick={() => {
+              fetchVehicle();
+              fetchDrivers();
+              setConflictData(null);
+            }} 
+            className="flex-1 py-3 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-bold transition-all shadow-lg shadow-rose-500/20"
+          >
+            Sync & Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const PolicyBypassModal = () => {
+    const [reason, setReason] = useState("");
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div className="w-full max-w-lg bg-zinc-900 border border-amber-500/30 rounded-3xl overflow-hidden shadow-2xl shadow-amber-500/10">
+          <div className="p-6 border-b border-white/5 bg-amber-500/10">
+            <div className="flex items-center gap-3 text-amber-400 mb-2">
+              <AlertTriangle className="w-6 h-6" />
+              <h3 className="text-xl font-bold">Compliance Override</h3>
+            </div>
+            <p className="text-zinc-400 text-sm">Policy engine blocked assignment: {policyViolation.message}</p>
+          </div>
+          <div className="p-6 space-y-4">
+            <label className="block">
+              <span className="text-xs text-zinc-500 uppercase tracking-widest mb-2 block">Bypass Rationale (Required)</span>
+              <textarea 
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Explain why this safety block is being bypassed..."
+                className="w-full h-32 bg-white/5 border border-white/10 rounded-2xl p-4 text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/50 transition-all resize-none"
+              />
+            </label>
+          </div>
+          <div className="p-6 bg-white/[0.02] border-t border-white/5 flex gap-3">
+            <button onClick={() => setPolicyViolation(null)} className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-medium transition-all">Abort</button>
+            <button 
+              disabled={!reason.trim()}
+              onClick={() => handleAssignDriver(policyViolation.driver, true, reason)} 
+              className="flex-1 py-3 rounded-xl bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-amber-400 text-black font-bold transition-all shadow-lg shadow-amber-500/20"
+            >
+              Force Assign
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const handleUnassignDriver = async () => {
+    try {
+      setIsSyncing(true);
+      await apiClient.post(`/admin/assignments/unassign`, { 
+        vehicle_id: id,
+        remarks: "Manual operational unassignment"
+      });
+      
+      addAudit('Assignment.Released', `Asset control revoked from ${currentDriver?.name || 'Pilot'}.`, 'warn', 'CentralOps');
+      
+      await fetchVehicle();
+      await fetchDrivers();
+      await fetchAuditLogs();
+    } catch (err: any) {
+      console.error("Unassignment failed:", err);
+      const msg = err.response?.data?.error || err.message || "Unassignment failed";
+      addAudit('UNASSIGN_FAILURE', msg, 'critical', 'System');
     } finally {
       setIsSyncing(false);
     }
@@ -303,7 +493,7 @@ export const VehicleDetail: React.FC = () => {
                     {command === 'maintenance' && <Toolbox className="w-4 h-4 text-amber-500" />}
                     {command === 'provision' && <Zap className="w-4 h-4 text-primary" />}
                     {command === 'builder' && <Plus className="w-4 h-4 text-primary" />}
-                    {command.toUpperCase()} COMMAND CENTER
+                    {command === 'assign' ? 'Assign Driver' : `${command.toUpperCase()} COMMAND CENTER`}
                  </h3>
                  <button onClick={() => setCommand('none')} className="p-2 hover:bg-white/5 rounded-full transition-all text-gray-500 hover:text-white">
                     <X className="w-4 h-4" />
@@ -316,23 +506,23 @@ export const VehicleDetail: React.FC = () => {
                        <div className="space-y-4">
                           <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest block">Recommended Drivers</label>
                           <div className="grid grid-cols-1 gap-2">
-                             {[
-                               { name: 'Rajesh Kumar', tag: 'Last Known Driver', region: 'Local' },
-                               { name: 'Suresh Raina', tag: 'Idle In Region', region: 'North' }
-                             ].map((rec, i) => (
-                               <div key={i} onClick={() => handleAssignDriver(rec)} className="flex items-center justify-between p-4 rounded-xl bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-all group cursor-pointer text-left">
+                             {allDrivers.slice(0, 2).map((rec) => (
+                               <div key={rec.id || `rec-${rec.name}`} onClick={() => handleAssignDriver(rec)} className="flex items-center justify-between p-4 rounded-xl bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-all group cursor-pointer text-left">
                                   <div className="flex items-center gap-4">
                                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black uppercase text-xs">
-                                        {rec.name.charAt(0)}
+                                        {rec.name?.charAt(0) || 'D'}
                                      </div>
                                      <div>
-                                        <div className="text-xs font-black text-white uppercase">{rec.name}</div>
-                                        <div className="text-[9px] text-primary uppercase font-bold tracking-widest">{rec.tag}</div>
+                                        <div className="text-xs font-black text-white uppercase">{rec.name || 'Unknown Driver'}</div>
+                                        <div className="text-[9px] text-primary uppercase font-bold tracking-widest">{rec.id === vehicle?.current_driver_id ? 'Current Pilot' : 'Recommended'}</div>
                                      </div>
                                   </div>
-                                  <span className="text-[8px] font-black text-gray-700 uppercase border border-white/5 px-1.5 py-0.5 rounded">{rec.region}</span>
+                                  <span className="text-[8px] font-black text-gray-700 uppercase border border-white/5 px-1.5 py-0.5 rounded">{rec.status || 'Available'}</span>
                                </div>
                              ))}
+                             {allDrivers.length === 0 && (
+                               <div className="text-[10px] text-gray-600 uppercase font-bold text-center py-4">No available drivers found</div>
+                             )}
                           </div>
                        </div>
 
@@ -351,7 +541,7 @@ export const VehicleDetail: React.FC = () => {
                        </div>
                        
                        <div className="max-h-[200px] overflow-y-auto custom-scrollbar space-y-2">
-                          {filteredDrivers.filter(d => !['Rajesh Kumar', 'Suresh Raina'].includes(d.name)).map(d => (
+                          {filteredDrivers.filter(d => !allDrivers.slice(0, 2).map(rd => rd.id).includes(d.id)).map(d => (
                             <div key={d.id} onClick={() => handleAssignDriver(d)} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:border-primary/40 hover:bg-white/[0.05] cursor-pointer transition-all group">
                                <div className="flex items-center gap-4">
                                   <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-gray-500 font-black uppercase text-[10px]">
@@ -782,13 +972,24 @@ export const VehicleDetail: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-surface-dark border border-border-color p-5 rounded-xl flex items-center gap-4 cursor-pointer hover:bg-surface-darker transition-all" onClick={() => setCommand('assign')}>
-            <div className={`p-3 rounded-xl ${currentDriver ? 'bg-primary/10 text-primary' : 'bg-amber-500/10 text-amber-500'}`}>
+          <div className="bg-surface-dark border border-border-color p-5 rounded-xl flex items-center gap-4 cursor-pointer hover:bg-surface-darker transition-all group" onClick={() => setCommand('assign')}>
+            <div className={`p-3 rounded-xl transition-all ${currentDriver ? 'bg-primary/10 text-primary group-hover:bg-primary/20' : 'bg-amber-500/10 text-amber-500 group-hover:bg-amber-500/20'}`}>
               <User className="w-6 h-6" />
             </div>
-            <div>
+            <div className="flex-1">
               <div className="text-[10px] text-text-muted uppercase font-bold tracking-widest mb-1">Assigned Driver</div>
-              <div className="text-xl font-bold text-white uppercase ">{currentDriver ? currentDriver.name?.split(' ')[0] : 'VACANT'}</div>
+              <div className="flex items-center justify-between">
+                <div className="text-xl font-bold text-white uppercase ">{currentDriver ? currentDriver.name?.split(' ')[0] : 'VACANT'}</div>
+                {currentDriver && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleUnassignDriver(); }}
+                    className="p-1.5 hover:bg-rose-500/10 text-gray-700 hover:text-rose-500 rounded transition-all"
+                    title="Unassign Driver"
+                  >
+                    <Ban className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1104,6 +1305,9 @@ export const VehicleDetail: React.FC = () => {
             </div>
          </div>
       </footer>
+
+      {conflictData && <ConflictResolutionModal />}
+      {policyViolation && <PolicyBypassModal />}
     </div>
   );
 };

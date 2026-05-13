@@ -10,11 +10,14 @@ interface Vehicle {
   model: string;
   status: string;
   vin_number?: string;
+  current_driver_id?: string;
   current_driver_name?: string;
   metadata?: {
     licensePlate?: string;
   };
 }
+
+const ZERO_UUID = '00000000-0000-0000-0000-000000000000';
 
 interface VehicleSelectionModalProps {
   isOpen: boolean;
@@ -122,20 +125,38 @@ export const VehicleSelectionModal: React.FC<VehicleSelectionModalProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-2.5">
-              {vehicles.map((vehicle) => (
+              {vehicles.map((vehicle) => {
+                const isReserved = vehicle.current_driver_id && vehicle.current_driver_id !== ZERO_UUID;
+                
+                return (
                 <button
                   key={vehicle.id}
-                  onClick={() => onSelect(vehicle.id)}
+                  onClick={() => {
+                    if (isReserved && !window.confirm(`This vehicle is RESERVED for ${vehicle.current_driver_name || 'another driver'}. Are you sure you want to override?`)) {
+                      return;
+                    }
+                    onSelect(vehicle.id);
+                  }}
                   disabled={vehicle.id === currentVehicleId}
                   className={`flex items-center justify-between p-4 rounded-2xl border transition-all group text-left ${
                     vehicle.id === currentVehicleId 
                       ? 'bg-primary/5 border-primary/20 opacity-60 cursor-not-allowed' 
-                      : 'bg-slate-900/40 border-white/5 hover:border-primary/40 hover:bg-primary/5 active:scale-[0.98]'
+                      : isReserved
+                        ? 'bg-amber-500/5 border-amber-500/10 hover:border-amber-500/30'
+                        : 'bg-slate-900/40 border-white/5 hover:border-primary/40 hover:bg-primary/5 active:scale-[0.98]'
                   }`}
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-xl border ${vehicle.id === currentVehicleId ? 'bg-primary text-white' : 'bg-slate-950/50 text-slate-500 group-hover:text-primary transition-colors border-white/5 group-hover:border-primary/20'}`}>
-                      <span className="material-symbols-outlined text-2xl">local_shipping</span>
+                    <div className={`p-3 rounded-xl border ${
+                      vehicle.id === currentVehicleId 
+                        ? 'bg-primary text-white' 
+                        : isReserved
+                          ? 'bg-amber-500/20 text-amber-400 border-amber-500/20'
+                          : 'bg-slate-950/50 text-slate-500 group-hover:text-primary transition-colors border-white/5 group-hover:border-primary/20'
+                    }`}>
+                      <span className="material-symbols-outlined text-2xl">
+                        {isReserved ? 'lock_person' : 'local_shipping'}
+                      </span>
                     </div>
                     <div>
                       <div className="flex items-center gap-2 mb-1">
@@ -145,15 +166,21 @@ export const VehicleSelectionModal: React.FC<VehicleSelectionModalProps> = ({
                         {vehicle.id === currentVehicleId && (
                             <span className="text-[10px] font-bold uppercase text-primary bg-primary/10 px-1.5 py-0.5 rounded leading-none">Current</span>
                         )}
+                        {isReserved && (
+                            <span className="text-[10px] font-bold uppercase text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded leading-none flex items-center gap-1 border border-amber-500/20">
+                              <span className="material-symbols-outlined text-[10px]">lock</span>
+                              Reserved
+                            </span>
+                        )}
                       </div>
                       <div className="text-[11px] text-slate-400 font-medium">
                         {vehicle.make} {vehicle.model} 
                         {vehicle.vin_number && <span className="text-slate-600 font-mono ml-2">VIN: {vehicle.vin_number}</span>}
                       </div>
-                      {vehicle.current_driver_name && (
-                         <div className="mt-1 text-[10px] text-orange-400 font-bold uppercase flex items-center gap-1">
+                      {isReserved && (
+                         <div className="mt-1 text-[10px] text-amber-400/60 font-bold uppercase flex items-center gap-1">
                            <span className="material-symbols-outlined text-[12px]">person</span>
-                           Assigned to: {vehicle.current_driver_name}
+                           Occupied by: {vehicle.current_driver_name || 'Anonymous Pilot'}
                          </div>
                       )}
                     </div>
@@ -162,10 +189,13 @@ export const VehicleSelectionModal: React.FC<VehicleSelectionModalProps> = ({
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${getStatusColor(vehicle.status)}`}>
                       {vehicle.status || 'Active'}
                     </span>
-                    <span className="material-symbols-outlined text-slate-700 group-hover:text-primary transition-colors">chevron_right</span>
+                    <span className={`material-symbols-outlined transition-colors ${isReserved ? 'text-amber-900 group-hover:text-amber-400' : 'text-slate-700 group-hover:text-primary'}`}>
+                      chevron_right
+                    </span>
                   </div>
                 </button>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

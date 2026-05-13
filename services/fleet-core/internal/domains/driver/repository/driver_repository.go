@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -75,7 +76,8 @@ func (r *DriverRepository) Create(ctx context.Context, driver *models.Driver) er
 
 // GetByEmail retrieves a driver by email address
 func (r *DriverRepository) GetByEmail(ctx context.Context, email string) (*models.Driver, error) {
-	query := `SELECT id, tenant_id, first_name, last_name, full_name, email, status, created_at
+	query := `SELECT id, tenant_id, COALESCE(first_name, ''), COALESCE(last_name, ''), COALESCE(full_name, ''), 
+	                 COALESCE(email, ''), COALESCE(status, 'active'), created_at
 	          FROM drivers WHERE email = $1 AND deleted_at IS NULL LIMIT 1`
 	var driver models.Driver
 	start := time.Now()
@@ -85,7 +87,7 @@ func (r *DriverRepository) GetByEmail(ctx context.Context, email string) (*model
 	)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to get driver by email: %w", err)
@@ -95,7 +97,8 @@ func (r *DriverRepository) GetByEmail(ctx context.Context, email string) (*model
 
 // GetByLicenseNumber retrieves a driver by license number
 func (r *DriverRepository) GetByLicenseNumber(ctx context.Context, licenseNumber string) (*models.Driver, error) {
-	query := `SELECT id, tenant_id, first_name, last_name, full_name, email, license_number, status, created_at
+	query := `SELECT id, tenant_id, COALESCE(first_name, ''), COALESCE(last_name, ''), COALESCE(full_name, ''), 
+	                 COALESCE(email, ''), COALESCE(license_number, ''), COALESCE(status, 'active'), created_at
 	          FROM drivers WHERE license_number = $1 AND deleted_at IS NULL LIMIT 1`
 	var driver models.Driver
 	start := time.Now()
@@ -105,7 +108,7 @@ func (r *DriverRepository) GetByLicenseNumber(ctx context.Context, licenseNumber
 	)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to get driver by license number: %w", err)
@@ -116,16 +119,17 @@ func (r *DriverRepository) GetByLicenseNumber(ctx context.Context, licenseNumber
 // GetByID retrieves a driver by its ID
 func (r *DriverRepository) GetByID(ctx context.Context, id string) (*models.Driver, error) {
 	query := `
-		SELECT d.id, d.tenant_id, d.first_name, d.last_name, d.full_name, d.email, d.phone,
-		       d.employee_code, d.aadhaar_number, d.pan_number,
-		       d.license_number, d.license_type, d.license_issue_date, d.license_expiry, d.license_authority,
-		       d.date_of_birth, d.address, d.emergency_contact, d.status, d.employment_type, d.current_vehicle_id,
-		       d.current_trip_id, d.joining_date, d.resignation_date, d.experience_years,
-		       d.rating, d.total_trips, d.total_distance_km, d.total_hours_driven,
-		       d.behavior_score, d.documents, d.metadata, d.created_at, d.updated_at, d.deleted_at,
+		SELECT d.id, d.tenant_id, COALESCE(d.first_name, ''), COALESCE(d.last_name, ''), COALESCE(d.full_name, ''), 
+		       COALESCE(d.email, ''), COALESCE(d.phone, ''),
+		       '' as employee_code, '' as aadhaar_number, '' as pan_number,
+		       COALESCE(d.license_number, ''), COALESCE(d.license_type, ''), d.license_issue_date, d.license_expiry, COALESCE(d.license_authority, ''),
+		       d.date_of_birth, d.address, d.emergency_contact, COALESCE(d.status, 'active'), COALESCE(d.employment_type, ''), d.current_vehicle_id,
+		       d.current_trip_id, COALESCE(d.joining_date, '0001-01-01'), d.resignation_date, COALESCE(d.experience_years, 0),
+		       COALESCE(d.rating, 0.0), COALESCE(d.total_trips, 0), COALESCE(d.total_distance_km, 0.0), COALESCE(d.total_hours_driven, 0.0),
+		       COALESCE(d.behavior_score, 100), d.documents, d.metadata, d.created_at, d.updated_at, d.deleted_at,
 		       v.registration_number as current_vehicle_registration
 		FROM drivers d
-		LEFT JOIN vehicles v ON d.current_vehicle_id::uuid = v.id
+		LEFT JOIN vehicles v ON d.current_vehicle_id = v.id
 		WHERE d.id = $1 AND d.deleted_at IS NULL`
 
 	var driver models.Driver
@@ -148,7 +152,7 @@ func (r *DriverRepository) GetByID(ctx context.Context, id string) (*models.Driv
 	metrics.RecordDBQuery(query, time.Since(start))
 
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to get driver by ID: %w", err)
@@ -176,6 +180,11 @@ func (r *DriverRepository) GetByID(ctx context.Context, id string) (*models.Driv
 	if len(documentsJSON) > 0 {
 		if err := json.Unmarshal(documentsJSON, &driver.Documents); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal documents: %w", err)
+		}
+	}
+	if len(metadataJSON) > 0 {
+		if err := json.Unmarshal(metadataJSON, &driver.Metadata); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
 		}
 	}
 	// Fetch attendance and schedules from normalized tables
@@ -208,6 +217,9 @@ func (r *DriverRepository) GetAttendance(ctx context.Context, driverID string) (
 	rows, err := r.db.Query(ctx, query, driverID)
 	metrics.RecordDBQuery(query, time.Since(start))
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("failed to query attendance: %w", err)
 	}
 	defer rows.Close()
@@ -423,12 +435,13 @@ func (r *DriverRepository) GetSchedules(ctx context.Context, driverID string) ([
 // List retrieves drivers with filtering and pagination
 func (r *DriverRepository) List(ctx context.Context, filter models.DriverListFilter) ([]*models.Driver, int, error) {
 	baseQuery := `
-		SELECT d.id, d.tenant_id, d.first_name, d.last_name, d.full_name, d.email, d.phone,
-		       d.license_number, d.license_type, d.status, d.current_vehicle_id,
-		       d.rating, d.total_trips, d.behavior_score, d.created_at, d.updated_at,
+		SELECT d.id, d.tenant_id, COALESCE(d.first_name, ''), COALESCE(d.last_name, ''), COALESCE(d.full_name, ''), 
+		       COALESCE(d.email, ''), COALESCE(d.phone, ''),
+		       COALESCE(d.license_number, ''), COALESCE(d.license_type, ''), COALESCE(d.status, 'active'), d.current_vehicle_id,
+		       COALESCE(d.rating, 0.0), COALESCE(d.total_trips, 0), COALESCE(d.behavior_score, 100), d.created_at, d.updated_at,
 		       v.registration_number as current_vehicle_registration
 		FROM drivers d
-		LEFT JOIN vehicles v ON d.current_vehicle_id::uuid = v.id
+		LEFT JOIN vehicles v ON d.current_vehicle_id = v.id
 		WHERE d.deleted_at IS NULL`
 
 	countQuery := `SELECT COUNT(*) FROM drivers d WHERE d.deleted_at IS NULL`
@@ -556,6 +569,12 @@ func (r *DriverRepository) Update(ctx context.Context, id string, updates map[st
 		return nil
 	}
 
+	// SECURITY: current_vehicle_id must NOT be updated via generic map.
+	// It requires transactional logic in AssignVehicle.
+	if _, hasVehicle := updates["current_vehicle_id"]; hasVehicle {
+		return fmt.Errorf("current_vehicle_id cannot be updated via generic Update; use AssignVehicle instead")
+	}
+
 	// Handle normalized table updates separately
 	if attendanceVal, hasAttendance := updates["attendance_records"]; hasAttendance {
 		// Delete existing attendance records for this driver and insert new ones
@@ -629,6 +648,9 @@ func (r *DriverRepository) replaceAttendance(ctx context.Context, driverID strin
 	var tenantID uuid.UUID
 	err := r.db.QueryRow(ctx, `SELECT tenant_id FROM drivers WHERE id = $1`, driverID).Scan(&tenantID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("driver not found")
+		}
 		return fmt.Errorf("failed to get driver tenant_id: %w", err)
 	}
 
@@ -689,6 +711,9 @@ func (r *DriverRepository) replaceSchedules(ctx context.Context, driverID string
 	var tenantID uuid.UUID
 	err := r.db.QueryRow(ctx, `SELECT tenant_id FROM drivers WHERE id = $1`, driverID).Scan(&tenantID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("driver not found")
+		}
 		return fmt.Errorf("failed to get driver tenant_id: %w", err)
 	}
 
@@ -745,7 +770,9 @@ func (r *DriverRepository) replaceSchedules(ctx context.Context, driverID string
 
 // Delete performs soft delete of a driver
 func (r *DriverRepository) Delete(ctx context.Context, id string) error {
-	query := "UPDATE drivers SET deleted_at = NOW(), status = 'inactive' WHERE id = $1 AND deleted_at IS NULL"
+	// Note: Cleanup of associated vehicle assignments should be orchestrated by AssignmentService.
+	// We perform a simple soft-delete here to maintain entity isolation.
+	query := "UPDATE drivers SET deleted_at = NOW(), status = 'inactive', current_vehicle_id = NULL WHERE id = $1 AND deleted_at IS NULL"
 	start := time.Now()
 	result, err := r.db.Exec(ctx, query, id)
 	metrics.RecordDBQuery(query, time.Since(start))
@@ -772,6 +799,9 @@ func (r *DriverRepository) AssignVehicle(ctx context.Context, driverID, vehicleI
 	var tenantID string
 	err = tx.QueryRow(ctx, `SELECT tenant_id FROM drivers WHERE id = $1`, driverID).Scan(&tenantID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("driver not found")
+		}
 		return fmt.Errorf("failed to get driver tenant_id: %w", err)
 	}
 
@@ -779,7 +809,9 @@ func (r *DriverRepository) AssignVehicle(ctx context.Context, driverID, vehicleI
 	var existingVehicleID *string
 	err = tx.QueryRow(ctx, `SELECT current_vehicle_id FROM drivers WHERE id = $1 AND tenant_id = $2`, driverID, tenantID).Scan(&existingVehicleID)
 	if err != nil {
-		return fmt.Errorf("failed to check driver assignment: %w", err)
+		if !errors.Is(err, pgx.ErrNoRows) && !errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("failed to check driver assignment: %w", err)
+		}
 	}
 	if existingVehicleID != nil && *existingVehicleID != "" && *existingVehicleID != vehicleID {
 		return fmt.Errorf("driver is already assigned to another vehicle; please unmap first")
@@ -789,7 +821,9 @@ func (r *DriverRepository) AssignVehicle(ctx context.Context, driverID, vehicleI
 	var existingDriverID *string
 	err = tx.QueryRow(ctx, `SELECT current_driver_id FROM vehicles WHERE id = $1 AND tenant_id = $2`, vehicleID, tenantID).Scan(&existingDriverID)
 	if err != nil {
-		return fmt.Errorf("failed to check vehicle assignment: %w", err)
+		if !errors.Is(err, pgx.ErrNoRows) && !errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("failed to check vehicle assignment: %w", err)
+		}
 	}
 	if existingDriverID != nil && *existingDriverID != "" && *existingDriverID != driverID {
 		return fmt.Errorf("vehicle is already assigned to another driver; please unmap first")
@@ -832,7 +866,9 @@ func (r *DriverRepository) UnassignVehicle(ctx context.Context, driverID string)
 	var vehicleID *string
 	err = tx.QueryRow(ctx, `SELECT current_vehicle_id FROM drivers WHERE id = $1`, driverID).Scan(&vehicleID)
 	if err != nil {
-		return fmt.Errorf("failed to get current assignment: %w", err)
+		if !errors.Is(err, pgx.ErrNoRows) && !errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("failed to get current assignment: %w", err)
+		}
 	}
 
 	// 2. Clear assignment in drivers table
@@ -941,7 +977,7 @@ func (r *DriverRepository) GetDriverAnalytics(ctx context.Context, driverID stri
 	metrics.RecordDBQuery(query, time.Since(start))
 
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to get driver analytics: %w", err)

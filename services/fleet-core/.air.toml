@@ -1,8 +1,8 @@
 # Air configuration for FlyFleet fleet-core service
 #:schema https://json.schemastore.org/any.json
 
-# Load environment variables from the project root .env file
-env_files = ["../../.env"]
+# Load environment variables from the local .env file
+env_files = [".env"]
 
 root = "."
 testdata_dir = "testdata"
@@ -10,10 +10,10 @@ tmp_dir = "tmp"
 
 [build]
   args_bin = []
-  bin = "tmp/fleet-core"
-  cmd = "go run ./cmd"
-  delay = 1000
-  entrypoint = ["./tmp/fleet-core"]
+  bin = "./tmp/main"
+  cmd = "go build -o ./tmp/main ./cmd"
+  delay = 2000
+  entrypoint = ["./tmp/main"]
   exclude_dir = ["assets", "tmp", "vendor", "testdata", "bin", ".git", "node_modules", "uploads", "nats-data", "pgdata"]
   exclude_file = []
   exclude_regex = ["_test.go", "_integration_test.go"]

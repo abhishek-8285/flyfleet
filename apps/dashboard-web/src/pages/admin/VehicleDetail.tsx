@@ -14,6 +14,7 @@ import {
   FileText
 } from "lucide-react";
 import { api } from "../../services/api";
+import { DriverSelectionModal } from "../../components/vehicles/DriverSelectionModal";
 
 interface Vehicle {
   id: string;
@@ -42,6 +43,9 @@ export const VehicleDetail: React.FC = () => {
   const navigate = useNavigate();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const loadVehicle = useCallback(async () => {
     if (!id) return;
@@ -59,6 +63,41 @@ export const VehicleDetail: React.FC = () => {
   useEffect(() => {
     loadVehicle();
   }, [loadVehicle]);
+
+  const handleAssignDriver = async (driverId: string) => {
+    if (!id) return;
+    setIsProcessing(true);
+    try {
+      await api.assignVehicle(driverId, id);
+      setToast({ message: "Pilot linked successfully", type: 'success' });
+      setIsModalOpen(false);
+      loadVehicle();
+    } catch (error: any) {
+      console.error("Failed to assign driver:", error);
+      setToast({ message: error.response?.data?.error || "Failed to link pilot", type: 'error' });
+    } finally {
+      setIsProcessing(false);
+      setTimeout(() => setToast(null), 3000);
+    }
+  };
+
+  const handleUnassignDriver = async () => {
+    if (!id || !vehicle?.current_driver_id) return;
+    if (!window.confirm("Are you sure you want to unlink this pilot?")) return;
+
+    setIsProcessing(true);
+    try {
+      await api.unassignVehicle(vehicle.current_driver_id);
+      setToast({ message: "Pilot unlinked successfully", type: 'success' });
+      loadVehicle();
+    } catch (error: any) {
+      console.error("Failed to unassign driver:", error);
+      setToast({ message: error.response?.data?.error || "Failed to unlink pilot", type: 'error' });
+    } finally {
+      setIsProcessing(false);
+      setTimeout(() => setToast(null), 3000);
+    }
+  };
 
   if (loading) return (
     <div className="flex h-screen items-center justify-center bg-surface-dark text-white">
@@ -204,20 +243,42 @@ export const VehicleDetail: React.FC = () => {
            <div className="bg-surface-dark border border-border-color p-6 rounded-2xl space-y-6">
               <h3 className="text-xs font-bold text-white uppercase tracking-widest">Active Assignment</h3>
               {driverName ? (
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                    {driverName[0]}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                      {driverName[0]}
+                    </div>
+                    <div>
+                      <div className="font-bold text-white">{driverName}</div>
+                      <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mt-0.5">Assigned Pilot</p>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-bold text-white">{driverName}</div>
-                    <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mt-0.5">Assigned Pilot</p>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => navigate(`/admin/drivers/${vehicle.current_driver?.id || vehicle.current_driver_id}`)}
+                      className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[10px] font-bold text-white uppercase tracking-widest transition-all"
+                    >
+                      View Profile
+                    </button>
+                    <button 
+                      onClick={handleUnassignDriver}
+                      disabled={isProcessing}
+                      className="flex-1 py-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-lg text-[10px] font-bold text-rose-500 uppercase tracking-widest transition-all disabled:opacity-50"
+                    >
+                      {isProcessing ? 'Releasing...' : 'Unlink Pilot'}
+                    </button>
                   </div>
                 </div>
               ) : (
                 <div className="text-center py-6 bg-white/5 rounded-xl border border-dashed border-border-color">
                    <User className="w-8 h-8 text-gray-700 mx-auto mb-2" />
                    <p className="text-[10px] font-bold text-gray-600 uppercase">No Pilot Assigned</p>
-                   <button className="mt-3 text-[10px] font-bold text-primary uppercase hover:underline">Link Pilot</button>
+                   <button 
+                    onClick={() => setIsModalOpen(true)}
+                    className="mt-3 text-[10px] font-bold text-primary uppercase hover:underline"
+                   >
+                    Link Pilot
+                   </button>
                 </div>
               )}
            </div>
@@ -244,6 +305,31 @@ export const VehicleDetail: React.FC = () => {
            </div>
         </div>
       </div>
+
+      <DriverSelectionModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSelect={handleAssignDriver}
+        currentDriverId={vehicle.current_driver?.id || vehicle.current_driver_id}
+      />
+
+      {/* Local Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-8 right-8 z-[100] animate-in slide-in-from-bottom-10 duration-300">
+           <div className={`px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border ${
+             toast.type === 'success' 
+               ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+               : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+           } backdrop-blur-xl`}>
+             <div className={`p-1 rounded-full ${toast.type === 'success' ? 'bg-emerald-500/20' : 'bg-rose-500/20'}`}>
+                <span className="material-symbols-outlined text-sm">
+                   {toast.type === 'success' ? 'check_circle' : 'error'}
+                </span>
+             </div>
+             <p className="font-bold text-sm tracking-tight">{toast.message}</p>
+           </div>
+        </div>
+      )}
     </div>
   );
 };

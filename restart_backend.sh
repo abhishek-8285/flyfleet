@@ -5,8 +5,9 @@ echo "Stopping stale processes..."
 pkill -9 -f air || true
 pkill -9 -f fleet-core || true
 pkill -9 -f 'go run' || true
-fuser -k 8084/tcp || true
-fuser -k 8100/tcp || true
+fuser -k 8120/tcp || true
+fuser -k 8999/tcp || true
+fuser -k 8109/tcp || true
 sleep 1
 
 # Install air if missing
@@ -37,18 +38,19 @@ go run ./cmd/migrate up
 echo "Checking compilation..."
 go build -o bin/fleet-core ./cmd
 
+# Detect port from .env
+TARGET_PORT=$(grep "^PORT=" .env | cut -d'=' -f2)
+TARGET_PORT=${TARGET_PORT:-8084}
+export PORT=$TARGET_PORT
+
 if [ $? -eq 0 ]; then
-    echo "Compilation successful. Launching with hot-reload..."
+    echo "Compilation successful. Launching with hot-reload on port $PORT..."
     $AIR_CMD > air.log 2>&1 &
 else
     echo "Compilation FAILED. Check errors in terminal."
     exit 1
 fi
 
-# Detect port from .env
-TARGET_PORT=$(grep "^PORT=" .env | cut -d'=' -f2)
-TARGET_PORT=${TARGET_PORT:-8084}
-export PORT=$TARGET_PORT
 
 echo "Waiting for service to start on port $TARGET_PORT..."
 for i in {1..20}; do

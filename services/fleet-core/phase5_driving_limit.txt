@@ -1,8 +1,0 @@
-HTTP/1.1 500 Internal Server Error
-Content-Type: application/json
-X-Request-Id: unknown/CYgOI1zcBx-000002
-X-Trace-Id: unknown/CYgOI1zcBx-000002
-Date: Sat, 07 Mar 2026 17:05:57 GMT
-Content-Length: 68
-
-{"error":"failed to get latest duty status: no rows in result set"}

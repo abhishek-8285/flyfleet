@@ -40,6 +40,12 @@ func (r *VehicleRepository) Create(ctx context.Context, vehicle *models.Vehicle)
 	if err != nil { return err }
 	defer tx.Rollback(ctx)
 
+	// Note: Assignment sync is now handled by AssignmentService. 
+	// CreateVehicle should ideally only be called with nil CurrentDriverID 
+	// if we follow the strict orchestrator pattern, but we allow it here 
+	// for backward compatibility, knowing it won't sync the driver cache 
+	// unless orchestrated.
+
 	query := `
 		INSERT INTO vehicles (
 			tenant_id, registration_number, chassis_number, engine_number, vin_number,
@@ -60,6 +66,7 @@ func (r *VehicleRepository) Create(ctx context.Context, vehicle *models.Vehicle)
 		vehicle.IsBlacklisted, vehicle.IsHardBlocked, vehicle.RiskScore,
 	).Scan(&vehicle.ID, &vehicle.CreatedAt, &vehicle.UpdatedAt, &vehicle.Version)
 	if err != nil { return err }
+
 
 	// 3. Side Effects (Audit + Outbox)
 	r.txLogAudit(ctx, tx, vehicle.TenantID, vehicle.ID, uuid.Nil, models.ActionCreate, "ALL", "", "Vehicle Created")
@@ -463,9 +470,13 @@ func (r *VehicleRepository) Search(ctx context.Context, params models.VehicleSea
 }
 
 func (r *VehicleRepository) Delete(ctx context.Context, id, tenantID uuid.UUID) error {
-	query := `UPDATE vehicles SET deleted_at = NOW() WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`
+	// Note: Cleanup of associated driver assignments should be orchestrated by AssignmentService.
+	// We perform a simple soft-delete here to maintain entity isolation.
+	query := `UPDATE vehicles SET deleted_at = NOW(), current_driver_id = NULL WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`
 	_, err := r.db.Exec(ctx, query, id, tenantID)
-	return err
+	if err != nil { return fmt.Errorf("failed to delete vehicle: %w", err) }
+
+	return nil
 }
 
 func (r *VehicleRepository) AssignDriver(ctx context.Context, vehicleID, tenantID, driverID uuid.UUID) error {
@@ -473,22 +484,54 @@ func (r *VehicleRepository) AssignDriver(ctx context.Context, vehicleID, tenantI
 	if err != nil { return err }
 	defer tx.Rollback(ctx)
 
+	// 1. Check if the driver is already assigned to another vehicle
 	var existingVehicleID uuid.UUID
 	err = tx.QueryRow(ctx, `SELECT id FROM vehicles WHERE current_driver_id = $1 AND deleted_at IS NULL AND id != $2`, driverID, vehicleID).Scan(&existingVehicleID)
 	if err == nil {
-		return fmt.Errorf("driver is already assigned to vehicle %s", existingVehicleID)
+		return fmt.Errorf("driver is already assigned to vehicle %s; please unmap first", existingVehicleID)
 	}
 
+	// 2. Check if the vehicle already has a driver assigned
+	var existingDriverID uuid.UUID
+	err = tx.QueryRow(ctx, `SELECT current_driver_id FROM vehicles WHERE id = $1 AND deleted_at IS NULL`, vehicleID).Scan(&existingDriverID)
+	if err == nil && existingDriverID != uuid.Nil && existingDriverID != driverID {
+		return fmt.Errorf("vehicle is already assigned to another driver; please unmap first")
+	}
+
+	// 3. Update the vehicle record
 	_, err = tx.Exec(ctx, `UPDATE vehicles SET current_driver_id = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3`, driverID, vehicleID, tenantID)
-	if err != nil { return err }
+	if err != nil { return fmt.Errorf("failed to update vehicle: %w", err) }
+
+	// 4. Update the driver record (Bidirectional Sync)
+	_, err = tx.Exec(ctx, `UPDATE drivers SET current_vehicle_id = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3`, vehicleID, driverID, tenantID)
+	if err != nil { return fmt.Errorf("failed to update driver: %w", err) }
 
 	return tx.Commit(ctx)
 }
 
 func (r *VehicleRepository) UnassignDriver(ctx context.Context, vehicleID, tenantID uuid.UUID) error {
-	query := `UPDATE vehicles SET current_driver_id = NULL, updated_at = NOW() WHERE id = $1 AND tenant_id = $2`
-	_, err := r.db.Exec(ctx, query, vehicleID, tenantID)
-	return err
+	tx, err := r.db.Begin(ctx)
+	if err != nil { return err }
+	defer tx.Rollback(ctx)
+
+	// 1. Get current driver to unassign from driver side too
+	var driverID *uuid.UUID
+	err = tx.QueryRow(ctx, `SELECT current_driver_id FROM vehicles WHERE id = $1 AND tenant_id = $2`, vehicleID, tenantID).Scan(&driverID)
+	if err != nil && err != pgx.ErrNoRows {
+		return fmt.Errorf("failed to get current driver: %w", err)
+	}
+
+	// 2. Clear vehicle record
+	_, err = tx.Exec(ctx, `UPDATE vehicles SET current_driver_id = NULL, updated_at = NOW() WHERE id = $1 AND tenant_id = $2`, vehicleID, tenantID)
+	if err != nil { return fmt.Errorf("failed to update vehicle: %w", err) }
+
+	// 3. Clear driver record (Bidirectional Sync)
+	if driverID != nil && *driverID != uuid.Nil {
+		_, err = tx.Exec(ctx, `UPDATE drivers SET current_vehicle_id = NULL, updated_at = NOW() WHERE id = $1 AND tenant_id = $2`, *driverID, tenantID)
+		if err != nil { return fmt.Errorf("failed to update driver: %w", err) }
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *VehicleRepository) GetStats(ctx context.Context) (*models.VehicleStats, error) {
@@ -529,4 +572,27 @@ func (r *VehicleRepository) IsGPSAvailable(ctx context.Context, tenantID uuid.UU
 	if err != nil { return false, "", err }
 
 	return false, fmt.Sprintf("GPS device already in use by vehicle %s", id), nil
+}
+
+func (r *VehicleRepository) GetAuditLogs(ctx context.Context, vehicleID uuid.UUID) ([]models.VehicleAuditLog, error) {
+	query := `SELECT id, tenant_id, vehicle_id, user_id, action, field_name, old_value, new_value, timestamp 
+	          FROM vehicle_audit_logs 
+	          WHERE vehicle_id = $1 
+	          ORDER BY timestamp DESC`
+	rows, err := r.db.Query(ctx, query, vehicleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var logs []models.VehicleAuditLog
+	for rows.Next() {
+		var l models.VehicleAuditLog
+		err := rows.Scan(&l.ID, &l.TenantID, &l.VehicleID, &l.UserID, &l.Action, &l.FieldName, &l.OldValue, &l.NewValue, &l.Timestamp)
+		if err != nil {
+			return nil, err
+		}
+		logs = append(logs, l)
+	}
+	return logs, nil
 }
