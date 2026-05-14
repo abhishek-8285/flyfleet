@@ -132,7 +132,7 @@ export const DriverDetail: React.FC = () => {
             </div>
             <p className="text-white/30 font-black uppercase tracking-[0.2em] flex items-center justify-center md:justify-start gap-3 text-xs">
                 <Briefcase className="w-4 h-4 text-primary" />
-                {driver.employment_type || 'EXECUTIVE PILOT'} • ID: {driver.employee_code || 'FF-IDX-902'}
+                {driver.employment_type || 'EXECUTIVE PILOT'} • ID: {driver.employee_code || 'AWAITING_CODE'}
             </p>
           </div>
 
@@ -190,23 +190,23 @@ export const DriverDetail: React.FC = () => {
                     <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Credential Class</p>
                     <p className="text-xl font-black text-white uppercase tracking-tighter">{driver.license_type || 'HEAVY_TRANSPORT'}</p>
                   </div>
-                  <div className="space-y-2">
+                   <div className="space-y-2">
                     <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Safety Score</p>
                     <div className="flex items-end gap-2">
-                      <span className="text-3xl font-black text-emerald-400">98.4</span>
+                      <span className="text-3xl font-black text-emerald-400">{driver.behavior_score ?? '100'}</span>
                       <span className="text-[10px] font-black text-white/20 uppercase mb-1">/ 100</span>
                     </div>
                   </div>
                </div>
 
-               <div className="pt-10 border-t border-white/5 grid grid-cols-1 md:grid-cols-3 gap-12">
+                <div className="pt-10 border-t border-white/5 grid grid-cols-1 md:grid-cols-3 gap-12">
                   <div className="space-y-1">
                     <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Aadhaar Node</p>
-                    <p className="text-sm font-bold text-white/60 font-mono tracking-widest">**** **** 9201</p>
+                    <p className="text-sm font-bold text-white/60 font-mono tracking-widest">{driver.aadhaar_number || 'NOT_LINKED'}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Taxation Hash (PAN)</p>
-                    <p className="text-sm font-bold text-white/60 font-mono tracking-widest">XXXXX 901 F</p>
+                    <p className="text-sm font-bold text-white/60 font-mono tracking-widest">{driver.pan_number || 'NOT_LINKED'}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Incidents (L365D)</p>
@@ -217,23 +217,23 @@ export const DriverDetail: React.FC = () => {
 
             {/* Performance Context */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-[#0a0a0a] border border-white/5 p-8 rounded-[2rem] space-y-2 group hover:border-primary/20 transition-all">
-                   <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Fleet Tenure</p>
-                   <h4 className="text-4xl font-black text-white tracking-tighter">{driver.experience_years || '4.2'}<span className="text-xs font-bold text-white/20 ml-2 uppercase tracking-widest">Years</span></h4>
-                   <div className="w-full h-1 bg-white/5 rounded-full mt-4 overflow-hidden">
-                      <div className="w-2/3 h-full bg-primary/40" />
-                   </div>
-                </div>
-                <div className="bg-[#0a0a0a] border border-white/5 p-8 rounded-[2rem] space-y-2 group hover:border-emerald-500/20 transition-all">
-                   <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Safety Index</p>
-                   <h4 className="text-4xl font-black text-emerald-500 tracking-tighter">99%</h4>
-                   <p className="text-[9px] font-bold text-emerald-500/40 uppercase tracking-widest">TOP 1% OF PILOTS</p>
-                </div>
-                <div className="bg-[#0a0a0a] border border-white/5 p-8 rounded-[2rem] space-y-2 group hover:border-sky-500/20 transition-all">
-                   <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Total Trips</p>
-                   <h4 className="text-4xl font-black text-white tracking-tighter">1,248</h4>
-                   <p className="text-[9px] font-bold text-white/20 uppercase tracking-widest">Operational Load</p>
-                </div>
+               <div className="bg-[#0a0a0a] border border-white/5 p-8 rounded-[2rem] space-y-2 group hover:border-primary/20 transition-all">
+                  <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Fleet Tenure</p>
+                  <h4 className="text-4xl font-black text-white tracking-tighter">{driver.experience_years ?? '0'}<span className="text-xs font-bold text-white/20 ml-2 uppercase tracking-widest">Years</span></h4>
+                  <div className="w-full h-1 bg-white/5 rounded-full mt-4 overflow-hidden">
+                     <div className="w-2/3 h-full bg-primary/40" />
+                  </div>
+               </div>
+               <div className="bg-[#0a0a0a] border border-white/5 p-8 rounded-[2rem] space-y-2 group hover:border-emerald-500/20 transition-all">
+                  <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Safety Index</p>
+                  <h4 className="text-4xl font-black text-emerald-500 tracking-tighter">{driver.behavior_score ?? '100'}%</h4>
+                  <p className="text-[9px] font-bold text-emerald-500/40 uppercase tracking-widest">LIVE BEHAVIOR FEED</p>
+               </div>
+               <div className="bg-[#0a0a0a] border border-white/5 p-8 rounded-[2rem] space-y-2 group hover:border-sky-500/20 transition-all">
+                  <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Total Trips</p>
+                  <h4 className="text-4xl font-black text-white tracking-tighter">{driver.total_trips ?? '0'}</h4>
+                  <p className="text-[9px] font-bold text-white/20 uppercase tracking-widest">Operational Load</p>
+               </div>
             </div>
         </div>
 
@@ -242,13 +242,13 @@ export const DriverDetail: React.FC = () => {
             <div className="bg-[#0a0a0a] border border-white/5 p-8 rounded-[2rem] space-y-8">
                <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Bio Telemetry</h3>
                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
+                   <div className="flex items-center justify-between">
                      <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Blood Type</span>
-                     <span className="text-sm font-black text-primary bg-primary/10 px-2 py-0.5 rounded-lg border border-primary/20">{driver.metadata?.blood_group || 'O+'}</span>
+                     <span className="text-sm font-black text-primary bg-primary/10 px-2 py-0.5 rounded-lg border border-primary/20">{driver.metadata?.blood_group || 'UNK'}</span>
                   </div>
                   <div className="flex items-center justify-between">
                      <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Shift Logic</span>
-                     <span className="text-sm font-black text-white uppercase tracking-tighter italic">{driver.metadata?.shift_type || 'OVERNIGHT_GRID'}</span>
+                     <span className="text-sm font-black text-white uppercase tracking-tighter italic">{driver.metadata?.shift_type || 'NOT_SET'}</span>
                   </div>
                   <div className="flex items-center justify-between">
                      <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Neural Link</span>

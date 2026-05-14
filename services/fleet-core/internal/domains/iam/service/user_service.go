@@ -163,9 +163,9 @@ func (s *UserService) GetUserAuditLog(ctx context.Context, userID uuid.UUID, lim
 	return s.auditRepo.GetUserAuditLog(ctx, userID, limit)
 }
 
-// UpdateUserPreferences updates user UI preferences (sidebar state, language).
-func (s *UserService) UpdateUserPreferences(ctx context.Context, userID, tenantID uuid.UUID, sidebarCollapsed *bool, language *string, actorID uuid.UUID) error {
-	if err := s.userRepo.UpdatePreferences(ctx, userID, tenantID, sidebarCollapsed, language); err != nil {
+// UpdateUserPreferences updates user UI preferences (sidebar state, language, theme).
+func (s *UserService) UpdateUserPreferences(ctx context.Context, userID, tenantID uuid.UUID, sidebarCollapsed *bool, language *string, theme *string, actorID uuid.UUID) error {
+	if err := s.userRepo.UpdatePreferences(ctx, userID, tenantID, sidebarCollapsed, language, theme); err != nil {
 		return err
 	}
 
@@ -177,12 +177,19 @@ func (s *UserService) UpdateUserPreferences(ctx context.Context, userID, tenantI
 			"target_user_id":    userID.String(),
 			"sidebar_collapsed": sidebarCollapsed,
 			"language":          language,
+			"theme":             theme,
 		},
 	})
 
 	s.log.Info("user_preferences_updated",
 		zap.String("user_id", userID.String()),
 		zap.Bool("sidebar_collapsed", sidebarCollapsed != nil && *sidebarCollapsed),
+		zap.String("theme", func() string {
+			if theme == nil {
+				return "nil"
+			}
+			return *theme
+		}()),
 		zap.String("actor_id", actorID.String()),
 	)
 	return nil

@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import axios from "axios";
 import apiClient from "../services/apiClient";
-import { store } from "../store";
+import { store, type RootState } from "../store";
 import { setToken, setUser as setReduxUser, setLoading } from "../store/authSlice";
 import type { User } from "../types/index";
+import PreferenceService from "../services/PreferenceService";
 
 // Redux is the single source of truth for auth state (token, user, loading, isAuthenticated).
 // AuthProvider only provides action functions and persists to localStorage.
@@ -15,6 +17,7 @@ interface AuthContextType {
   toggleTheme: () => Promise<void>;
   setLanguage: (lang: string) => Promise<void>;
   toggleSidebar: () => Promise<void>;
+  theme: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,6 +36,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [authError, setAuthError] = useState<string | null>(null);
+  const user = useSelector((state: RootState) => state.auth.user);
+  const theme = user?.theme || localStorage.getItem("theme") || "light";
+
+  // Side-effect: sync 'dark' class with document root whenever theme changes
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
 
   const hydrateUser = (data: any) => {
     const userPayload = data.user || data;
@@ -284,6 +294,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const updatedUser = { ...user, theme: newTheme };
     store.dispatch(setReduxUser(updatedUser));
     localStorage.setItem('user_data', JSON.stringify(updatedUser));
+    
+    // Sync with backend
+    await PreferenceService.updateTheme(newTheme);
   };
 
   const setLanguage = async (lang: string) => {
@@ -293,6 +306,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const updatedUser = { ...user, language: lang };
     store.dispatch(setReduxUser(updatedUser));
     localStorage.setItem('user_data', JSON.stringify(updatedUser));
+    
+    // Sync with backend
+    await PreferenceService.updateLanguage(lang);
   };
 
   const toggleSidebar = async () => {
@@ -303,6 +319,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const updatedUser = { ...user, sidebar_collapsed: newCollapsed };
     store.dispatch(setReduxUser(updatedUser));
     localStorage.setItem('user_data', JSON.stringify(updatedUser));
+    
+    // Sync with backend
+    await PreferenceService.updatePreferences({ sidebar_collapsed: newCollapsed });
   };
 
   return (
@@ -314,6 +333,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         toggleTheme,
         setLanguage,
         toggleSidebar,
+        theme,
       }}
     >
       {children}

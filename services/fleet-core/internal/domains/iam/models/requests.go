@@ -91,6 +91,7 @@ type UpdateUserStatusRequest struct {
 type UpdateUserPreferencesRequest struct {
 	SidebarCollapsed *bool   `json:"sidebar_collapsed,omitempty"`
 	Language         *string `json:"language,omitempty"`
+	Theme            *string `json:"theme,omitempty"`
 }
 
 type CreateRoleRequest struct {
@@ -143,9 +144,11 @@ type SwitchTenantRequest struct {
 }
 
 type ProfileUpdateRequest struct {
-	Name  string `json:"name,omitempty"`
-	Phone string `json:"phone,omitempty"`
+	Name      string `json:"name,omitempty"`
+	Phone     string `json:"phone,omitempty"`
 	AvatarURL string `json:"avatar_url,omitempty"`
+	Theme     string `json:"theme,omitempty"`
+	Language  string `json:"language,omitempty"`
 }
 
 type ListUsersParams struct {
@@ -212,6 +215,8 @@ type ProfileResponse struct {
 	CurrentTenant *TenantInfo `json:"current_tenant,omitempty"`
 	Tenants       []TenantInfo `json:"tenants"`
 	Permissions   []string    `json:"permissions"`
+	Theme         string      `json:"theme"`
+	Language      string      `json:"language"`
 	LastLoginAt   *string     `json:"last_login_at,omitempty"`
 }
 

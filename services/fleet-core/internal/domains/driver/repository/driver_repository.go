@@ -584,6 +584,10 @@ func (r *DriverRepository) Update(ctx context.Context, id string, updates map[st
 		delete(updates, "attendance_records")
 	}
 
+	// Remove updated_at from updates map to prevent duplicate assignment 
+	// (we handle it explicitly below with NOW())
+	delete(updates, "updated_at")
+
 	if schedulesVal, hasSchedules := updates["schedules"]; hasSchedules {
 		// Delete existing schedules for this driver and insert new ones
 		if err := r.replaceSchedules(ctx, id, schedulesVal); err != nil {
@@ -622,7 +626,7 @@ func (r *DriverRepository) Update(ctx context.Context, id string, updates map[st
 		argIndex++
 	}
 
-	args = append(args, id)
+	args = append(args, time.Now(), id)
 	query := fmt.Sprintf("UPDATE drivers SET %s, updated_at = $%d WHERE id = $%d AND deleted_at IS NULL",
 		strings.Join(setParts, ", "), argIndex, argIndex+1)
 

@@ -130,7 +130,7 @@ func (m *mockUserService) GetUser(ctx context.Context, id uuid.UUID) (*models.Us
 func (m *mockUserService) UpdateUserStatus(ctx context.Context, userID, tenantID uuid.UUID, status string, actorID uuid.UUID) error {
 	return m.statusErr
 }
-func (m *mockUserService) UpdateUserPreferences(ctx context.Context, userID, tenantID uuid.UUID, sidebarCollapsed *bool, language *string, actorID uuid.UUID) error {
+func (m *mockUserService) UpdateUserPreferences(ctx context.Context, userID, tenantID uuid.UUID, sidebarCollapsed *bool, language *string, theme *string, actorID uuid.UUID) error {
 	return nil
 }
 func (m *mockUserService) DeleteUser(ctx context.Context, userID, tenantID uuid.UUID, actorID uuid.UUID) error {
@@ -265,10 +265,10 @@ type mockUserRepo struct {
 func (m *mockUserRepo) GetByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	return m.userResp, m.userErr
 }
-func (m *mockUserRepo) UpdateProfile(ctx context.Context, id uuid.UUID, name, phone, avatarURL string) error {
+func (m *mockUserRepo) UpdateProfile(ctx context.Context, id uuid.UUID, name, phone, avatarURL, theme, language string) error {
 	return m.updateErr
 }
-func (m *mockUserRepo) UpdatePreferences(ctx context.Context, id, tenantID uuid.UUID, sidebarCollapsed *bool, language *string) error {
+func (m *mockUserRepo) UpdatePreferences(ctx context.Context, id, tenantID uuid.UUID, sidebarCollapsed *bool, language *string, theme *string) error {
 	return nil
 }
 func (m *mockUserRepo) GetTenants(ctx context.Context, id uuid.UUID) ([]models.TenantInfo, error) {

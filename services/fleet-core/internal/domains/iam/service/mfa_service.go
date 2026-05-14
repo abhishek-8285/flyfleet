@@ -203,7 +203,7 @@ func (s *MFAService) SetupSMS(ctx context.Context, userID uuid.UUID, phone strin
 	}
 
 	// Update user's phone number
-	if err := s.userRepo.UpdateProfile(ctx, userID, "", phone, ""); err != nil {
+	if err := s.userRepo.UpdateProfile(ctx, userID, "", phone, "", "", ""); err != nil {
 		return err
 	}
 

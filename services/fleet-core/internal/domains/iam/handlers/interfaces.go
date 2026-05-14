@@ -60,7 +60,7 @@ type userService interface {
 	ListUsers(ctx context.Context, params models.ListUsersParams) (*models.ListUsersResponse, error)
 	GetUser(ctx context.Context, id uuid.UUID) (*models.User, error)
 	UpdateUserStatus(ctx context.Context, userID, tenantID uuid.UUID, status string, actorID uuid.UUID) error
-	UpdateUserPreferences(ctx context.Context, userID, tenantID uuid.UUID, sidebarCollapsed *bool, language *string, actorID uuid.UUID) error
+	UpdateUserPreferences(ctx context.Context, userID, tenantID uuid.UUID, sidebarCollapsed *bool, language *string, theme *string, actorID uuid.UUID) error
 	DeleteUser(ctx context.Context, userID, tenantID uuid.UUID, actorID uuid.UUID) error
 	GetUserAuditLog(ctx context.Context, userID uuid.UUID, limit int) ([]models.AuditLog, error)
 	CreateUser(ctx context.Context, tenantID uuid.UUID, req models.CreateUserRequest, actorID uuid.UUID) (*models.User, error)
@@ -83,8 +83,8 @@ type mfaService interface {
 
 type userRepo interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*models.User, error)
-	UpdateProfile(ctx context.Context, id uuid.UUID, name, phone, avatarURL string) error
-	UpdatePreferences(ctx context.Context, id, tenantID uuid.UUID, sidebarCollapsed *bool, language *string) error
+	UpdateProfile(ctx context.Context, id uuid.UUID, name, phone, avatarURL, theme, language string) error
+	UpdatePreferences(ctx context.Context, id, tenantID uuid.UUID, sidebarCollapsed *bool, language *string, theme *string) error
 	GetTenants(ctx context.Context, id uuid.UUID) ([]models.TenantInfo, error)
 }
 

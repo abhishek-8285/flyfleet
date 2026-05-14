@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Search, Check, AlertCircle, Lock, UserMinus } from 'lucide-react';
 import Modal from "../common/Modal";
 import { api } from "../../services/api";
 import { LoadingSpinner } from "../common/LoadingSpinner";
@@ -12,7 +13,10 @@ interface Driver {
   phone: string;
   status: string;
   current_vehicle_id?: string;
-  current_vehicle_registration?: string;
+  current_vehicle?: {
+    id: string;
+    registration_number: string;
+  };
 }
 
 const ZERO_UUID = '00000000-0000-0000-0000-000000000000';
@@ -76,7 +80,7 @@ export const DriverSelectionModal: React.FC<DriverSelectionModalProps> = ({
       <div className="flex flex-col gap-6">
         <div className="relative">
           <div className={`absolute left-4 top-1/2 -translate-y-1/2 transition-all ${loading ? 'opacity-0' : 'opacity-100'}`}>
-            <span className="material-symbols-outlined text-slate-500">search</span>
+            <Search className="w-5 h-5 text-slate-500" />
           </div>
           {loading && (
             <div className="absolute left-4 top-1/2 -translate-y-1/2">
@@ -93,7 +97,31 @@ export const DriverSelectionModal: React.FC<DriverSelectionModalProps> = ({
           />
         </div>
 
-        <div className="min-h-[400px] max-h-[50vh] overflow-y-auto custom-scrollbar pr-2">
+        {/* Unassign Option */}
+        {currentDriverId && currentDriverId !== ZERO_UUID && (
+          <div className="mb-6 pb-6 border-b border-white/5">
+            <button
+              onClick={() => {
+                onSelect(ZERO_UUID);
+                onClose();
+              }}
+              className="w-full flex items-center justify-between p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 transition-all group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-500">
+                  <UserMinus className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-black text-white uppercase tracking-tight">Unlink Current Pilot</p>
+                  <p className="text-[10px] text-rose-500/60 font-bold uppercase tracking-widest">Release assignment</p>
+                </div>
+              </div>
+              <Check className="w-5 h-5 text-rose-900 group-hover:text-rose-500 transition-all" />
+            </button>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
           {loading && drivers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
               <LoadingSpinner />
@@ -107,13 +135,15 @@ export const DriverSelectionModal: React.FC<DriverSelectionModalProps> = ({
           ) : (
             <div className="grid grid-cols-1 gap-2.5">
               {drivers.map((driver) => {
-                const isReserved = driver.current_vehicle_id && driver.current_vehicle_id !== ZERO_UUID;
+                const isReserved = (driver.current_vehicle?.id && driver.current_vehicle.id !== ZERO_UUID) || 
+                                 (driver.current_vehicle_id && driver.current_vehicle_id !== ZERO_UUID);
+                const assetReg = driver.current_vehicle?.registration_number || 'Another Vehicle';
                 
                 return (
                 <button
                   key={driver.id}
                   onClick={() => {
-                    if (isReserved && !window.confirm(`This pilot is RESERVED for asset ${driver.current_vehicle_registration || 'another vehicle'}. Are you sure you want to override?`)) {
+                    if (isReserved && !window.confirm(`This pilot is RESERVED for asset ${assetReg}. Are you sure you want to override?`)) {
                       return;
                     }
                     onSelect(driver.id);
@@ -160,7 +190,7 @@ export const DriverSelectionModal: React.FC<DriverSelectionModalProps> = ({
                       {isReserved && (
                          <div className="mt-1 text-[10px] text-amber-400/60 font-bold uppercase flex items-center gap-1">
                            <span className="material-symbols-outlined text-[12px]">local_shipping</span>
-                           Asset: {driver.current_vehicle_registration || 'Unknown Vehicle'}
+                           Asset: {assetReg}
                          </div>
                       )}
                     </div>

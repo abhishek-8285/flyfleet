@@ -33,6 +33,7 @@ type User struct {
 	PermissionMask  int64      `json:"-"`
 	SidebarCollapsed bool      `json:"sidebar_collapsed"`
 	Language         string     `json:"language"`
+	Theme            string     `json:"theme"`
 	MustResetPassword bool      `json:"must_reset_password"`
 	Roles            []string   `json:"roles"`
 	CreatedAt       time.Time  `json:"created_at"`

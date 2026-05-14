@@ -42,8 +42,11 @@ import {
   Search,
   Loader2,
   ChevronDown,
-  Info
+  Info,
+  UserMinus
 } from "lucide-react";
+
+const ZERO_UUID = '00000000-0000-0000-0000-000000000000';
 
 // --- Types ---
 interface ComplianceDoc {
@@ -500,26 +503,64 @@ export const VehicleDetail: React.FC = () => {
                  </button>
               </div>
 
-              <div className="p-8">
+               <div className="p-8 space-y-6">
                   {command === 'assign' && (
                     <div className="space-y-6">
+                       {/* Unassign Option if pilot currently exists */}
+                       {(vehicle?.current_driver_id && vehicle?.current_driver_id !== ZERO_UUID) && (
+                         <div className="space-y-3 pb-6 border-b border-white/5">
+                            <label className="text-[10px] font-black text-rose-500 uppercase tracking-widest block">Release Control</label>
+                            <button 
+                              onClick={handleUnassignDriver}
+                              className="w-full flex items-center justify-between p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 transition-all group"
+                            >
+                               <div className="flex items-center gap-4">
+                                  <div className="w-10 h-10 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-500">
+                                     <UserMinus className="w-5 h-5" />
+                                  </div>
+                                  <div className="text-left">
+                                     <div className="text-xs font-black text-white uppercase tracking-tight">Unlink Current Pilot</div>
+                                     <div className="text-[9px] text-rose-500/60 uppercase font-bold tracking-widest">Release asset for reassignment</div>
+                                  </div>
+                               </div>
+                               <ChevronRight className="w-4 h-4 text-rose-900 group-hover:text-rose-500 transition-all" />
+                            </button>
+                         </div>
+                       )}
+
                        <div className="space-y-4">
                           <label className="text-[10px] font-black text-gray-600 uppercase tracking-widest block">Recommended Drivers</label>
                           <div className="grid grid-cols-1 gap-2">
-                             {allDrivers.slice(0, 2).map((rec) => (
-                               <div key={rec.id || `rec-${rec.name}`} onClick={() => handleAssignDriver(rec)} className="flex items-center justify-between p-4 rounded-xl bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-all group cursor-pointer text-left">
-                                  <div className="flex items-center gap-4">
-                                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black uppercase text-xs">
-                                        {rec.name?.charAt(0) || 'D'}
-                                     </div>
-                                     <div>
-                                        <div className="text-xs font-black text-white uppercase">{rec.name || 'Unknown Driver'}</div>
-                                        <div className="text-[9px] text-primary uppercase font-bold tracking-widest">{rec.id === vehicle?.current_driver_id ? 'Current Pilot' : 'Recommended'}</div>
-                                     </div>
-                                  </div>
-                                  <span className="text-[8px] font-black text-gray-700 uppercase border border-white/5 px-1.5 py-0.5 rounded">{rec.status || 'Available'}</span>
-                               </div>
-                             ))}
+                             {allDrivers.slice(0, 2).map((rec) => {
+                                const isReserved = (rec.current_vehicle?.id && rec.current_vehicle.id !== ZERO_UUID) || 
+                                                 (rec.current_vehicle_id && rec.current_vehicle_id !== ZERO_UUID);
+                                const assetReg = rec.current_vehicle?.registration_number || 'Reserved';
+                                
+                                return (
+                                <div key={rec.id || `rec-${rec.name}`} onClick={() => {
+                                   if (isReserved && !window.confirm(`This pilot is RESERVED for asset ${assetReg}. Are you sure you want to override?`)) return;
+                                   handleAssignDriver(rec);
+                                }} className={`flex items-center justify-between p-4 rounded-xl border transition-all group cursor-pointer text-left ${
+                                   isReserved ? 'bg-amber-500/5 border-amber-500/20 hover:bg-amber-500/10' : 'bg-primary/5 border-primary/20 hover:bg-primary/10'
+                                }`}>
+                                   <div className="flex items-center gap-4">
+                                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black uppercase text-xs ${
+                                         isReserved ? 'bg-amber-500/20 text-amber-500' : 'bg-primary/10 text-primary'
+                                      }`}>
+                                         {rec.name?.charAt(0) || 'D'}
+                                      </div>
+                                      <div>
+                                         <div className="text-xs font-black text-white uppercase">{rec.name || 'Unknown Driver'}</div>
+                                         <div className={`text-[9px] uppercase font-bold tracking-widest ${isReserved ? 'text-amber-500' : 'text-primary'}`}>
+                                            {rec.id === vehicle?.current_driver_id ? 'Current Pilot' : isReserved ? `Reserved • ${assetReg}` : 'Recommended'}
+                                         </div>
+                                      </div>
+                                   </div>
+                                   <span className={`text-[8px] font-black uppercase border px-1.5 py-0.5 rounded ${
+                                      isReserved ? 'text-amber-500 border-amber-500/20' : 'text-gray-700 border-white/5'
+                                   }`}>{rec.status || 'Available'}</span>
+                                </div>
+                                )})}
                              {allDrivers.length === 0 && (
                                <div className="text-[10px] text-gray-600 uppercase font-bold text-center py-4">No available drivers found</div>
                              )}
@@ -541,25 +582,39 @@ export const VehicleDetail: React.FC = () => {
                        </div>
                        
                        <div className="max-h-[200px] overflow-y-auto custom-scrollbar space-y-2">
-                          {filteredDrivers.filter(d => !allDrivers.slice(0, 2).map(rd => rd.id).includes(d.id)).map(d => (
-                            <div key={d.id} onClick={() => handleAssignDriver(d)} className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:border-primary/40 hover:bg-white/[0.05] cursor-pointer transition-all group">
+                          {filteredDrivers.filter(d => !allDrivers.slice(0, 2).map(rd => rd.id).includes(d.id)).map(d => {
+                             const isReserved = (d.current_vehicle?.id && d.current_vehicle.id !== ZERO_UUID) || 
+                                              (d.current_vehicle_id && d.current_vehicle_id !== ZERO_UUID);
+                             const assetReg = d.current_vehicle?.registration_number || 'Reserved';
+
+                             return (
+                             <div key={d.id} onClick={() => {
+                                if (isReserved && !window.confirm(`This pilot is RESERVED for asset ${assetReg}. Are you sure you want to override?`)) return;
+                                handleAssignDriver(d);
+                             }} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all group ${
+                                isReserved ? 'bg-amber-500/5 border-amber-500/10 hover:border-amber-500/30' : 'bg-white/[0.02] border-white/5 hover:border-primary/40 hover:bg-white/[0.05]'
+                             }`}>
                                <div className="flex items-center gap-4">
-                                  <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-gray-500 font-black uppercase text-[10px]">
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black uppercase text-[10px] ${
+                                      isReserved ? 'bg-amber-500/20 text-amber-500' : 'bg-white/5 text-gray-500'
+                                   }`}>
                                      {d.name?.charAt(0)}
                                   </div>
                                   <div>
                                      <div className="text-xs font-black text-white uppercase">{d.name}</div>
-                                     <div className="text-[9px] text-gray-700 uppercase font-bold tracking-widest">{d.phone || 'NO_VOICE_LINK'}</div>
-                                  </div>
-                               </div>
-                               <ChevronRight className="w-4 h-4 text-gray-800 group-hover:text-primary transition-all" />
-                            </div>
-                          ))}
-                       </div>
-                    </div>
-                  )}
+                                      <div className={`text-[9px] uppercase font-bold tracking-widest ${isReserved ? 'text-amber-500' : 'text-gray-700'}`}>
+                                         {isReserved ? `Reserved • ${assetReg}` : (d.phone || 'NO_VOICE_LINK')}
+                                      </div>
+                                   </div>
+                                </div>
+                                <ChevronRight className={`w-4 h-4 transition-all ${isReserved ? 'text-amber-900 group-hover:text-amber-500' : 'text-gray-800 group-hover:text-primary'}`} />
+                             </div>
+                           )})}
+                        </div>
+                     </div>
+                   )}
 
-                  {command === 'provision' && (
+                   {command === 'provision' && (
                     <div className="space-y-8">
                        <div className="flex items-center justify-between mb-8">
                           {[1, 2, 3].map(s => (

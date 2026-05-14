@@ -67,6 +67,9 @@ func (h *ProfileHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	resp.Theme = user.Theme
+	resp.Language = user.Language
+
 	// Fallback role from JWT claims
 	if resp.Role == "" {
 		resp.Role = GetRole(r)
@@ -98,7 +101,7 @@ func (h *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.userRepo.UpdateProfile(r.Context(), userID, req.Name, req.Phone, req.AvatarURL); err != nil {
+	if err := h.userRepo.UpdateProfile(r.Context(), userID, req.Name, req.Phone, req.AvatarURL, req.Theme, req.Language); err != nil {
 		h.log.Error("failed to update profile", zap.Error(err), zap.String("user_id", userID.String()))
 		h.writeError(w, http.StatusInternalServerError, "internal_error", "Failed to update profile", r)
 		return

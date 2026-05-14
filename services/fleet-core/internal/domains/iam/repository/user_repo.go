@@ -27,14 +27,14 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.
 		       COALESCE(mfa_backup_codes, '[]'::jsonb), COALESCE(status, 'active'), COALESCE(email_verified, false),
 		       COALESCE(failed_logins, 0), locked_until, last_login_at,
 		       COALESCE(last_login_ip, '')::text, COALESCE(permission_mask, 0),
-		       COALESCE(sidebar_collapsed, false), COALESCE(language, 'en'),
+		       COALESCE(sidebar_collapsed, false), COALESCE(language, 'en'), COALESCE(theme, 'light'),
 		       COALESCE(must_reset_password, false),
 		       created_at, updated_at
 		FROM users WHERE email = $1`, email).Scan(
 		&u.ID, &u.Email, &u.PasswordHash, &u.Name, &u.Phone, &u.AvatarURL,
 		&u.MFAEnabled, &u.MFASecret, &u.MFABackupCodes, &u.Status, &u.EmailVerified,
 		&u.FailedLogins, &u.LockedUntil, &u.LastLoginAt, &u.LastLoginIP,
-		&u.PermissionMask, &u.SidebarCollapsed, &u.Language, &u.MustResetPassword, &u.CreatedAt, &u.UpdatedAt,
+		&u.PermissionMask, &u.SidebarCollapsed, &u.Language, &u.Theme, &u.MustResetPassword, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -52,14 +52,14 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Use
 		       COALESCE(mfa_backup_codes, '[]'::jsonb), COALESCE(status, 'active'), COALESCE(email_verified, false),
 		       COALESCE(failed_logins, 0), locked_until, last_login_at,
 		       COALESCE(last_login_ip, '')::text, COALESCE(permission_mask, 0),
-		       COALESCE(sidebar_collapsed, false), COALESCE(language, 'en'),
+		       COALESCE(sidebar_collapsed, false), COALESCE(language, 'en'), COALESCE(theme, 'light'),
 		       COALESCE(must_reset_password, false),
 		       created_at, updated_at
 		FROM users WHERE id = $1`, id).Scan(
 		&u.ID, &u.Email, &u.PasswordHash, &u.Name, &u.Phone, &u.AvatarURL,
 		&u.MFAEnabled, &u.MFASecret, &u.MFABackupCodes, &u.Status, &u.EmailVerified,
 		&u.FailedLogins, &u.LockedUntil, &u.LastLoginAt, &u.LastLoginIP,
-		&u.PermissionMask, &u.SidebarCollapsed, &u.Language, &u.MustResetPassword, &u.CreatedAt, &u.UpdatedAt,
+		&u.PermissionMask, &u.SidebarCollapsed, &u.Language, &u.Theme, &u.MustResetPassword, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -126,33 +126,42 @@ func (r *UserRepository) UpdateLastLogin(ctx context.Context, id uuid.UUID, ip s
 	return err
 }
 
-func (r *UserRepository) UpdateProfile(ctx context.Context, id uuid.UUID, name, phone, avatarURL string) error {
+func (r *UserRepository) UpdateProfile(ctx context.Context, id uuid.UUID, name, phone, avatarURL, theme, language string) error {
 	_, err := r.pool.Exec(ctx,
-		"UPDATE users SET name = COALESCE(NULLIF($1, ''), name), phone = COALESCE(NULLIF($2, ''), phone), avatar_url = COALESCE(NULLIF($3, ''), avatar_url), updated_at = NOW() WHERE id = $4",
-		name, phone, avatarURL, id,
+		`UPDATE users SET 
+			name = COALESCE(NULLIF($1, ''), name), 
+			phone = COALESCE(NULLIF($2, ''), phone), 
+			avatar_url = COALESCE(NULLIF($3, ''), avatar_url),
+			theme = COALESCE(NULLIF($4, ''), theme),
+			language = COALESCE(NULLIF($5, ''), language),
+			updated_at = NOW() 
+		WHERE id = $6`,
+		name, phone, avatarURL, theme, language, id,
 	)
 	return err
 }
 
-func (r *UserRepository) UpdatePreferences(ctx context.Context, id, tenantID uuid.UUID, sidebarCollapsed *bool, language *string) error {
+func (r *UserRepository) UpdatePreferences(ctx context.Context, id, tenantID uuid.UUID, sidebarCollapsed *bool, language *string, theme *string) error {
 	var err error
 	if tenantID != uuid.Nil {
 		_, err = r.pool.Exec(ctx,
 			`UPDATE users SET
 				sidebar_collapsed = COALESCE($1, sidebar_collapsed),
 				language = COALESCE($2, language),
+				theme = COALESCE($3, theme),
 				updated_at = NOW()
-			WHERE id = $3 AND id IN (SELECT user_id FROM user_tenants WHERE tenant_id = $4)`,
-			sidebarCollapsed, language, id, tenantID,
+			WHERE id = $4 AND id IN (SELECT user_id FROM user_tenants WHERE tenant_id = $5)`,
+			sidebarCollapsed, language, theme, id, tenantID,
 		)
 	} else {
 		_, err = r.pool.Exec(ctx,
 			`UPDATE users SET
 				sidebar_collapsed = COALESCE($1, sidebar_collapsed),
 				language = COALESCE($2, language),
+				theme = COALESCE($3, theme),
 				updated_at = NOW()
-			WHERE id = $3`,
-			sidebarCollapsed, language, id,
+			WHERE id = $4`,
+			sidebarCollapsed, language, theme, id,
 		)
 	}
 	return err

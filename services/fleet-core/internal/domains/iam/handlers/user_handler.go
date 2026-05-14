@@ -193,7 +193,7 @@ func (h *UserHandler) UpdatePreferences(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if req.SidebarCollapsed == nil && req.Language == nil {
+	if req.SidebarCollapsed == nil && req.Language == nil && req.Theme == nil {
 		h.writeError(w, http.StatusBadRequest, "missing_fields", "At least one preference field must be provided", r)
 		return
 	}
@@ -201,7 +201,7 @@ func (h *UserHandler) UpdatePreferences(w http.ResponseWriter, r *http.Request) 
 	actorID := GetUserIDUUID(r)
 	tenantID := GetTenantUUID(r)
 
-	if err := h.userSvc.UpdateUserPreferences(r.Context(), userID, tenantID, req.SidebarCollapsed, req.Language, actorID); err != nil {
+	if err := h.userSvc.UpdateUserPreferences(r.Context(), userID, tenantID, req.SidebarCollapsed, req.Language, req.Theme, actorID); err != nil {
 		h.log.Error("failed to update user preferences", zap.Error(err), zap.String("user_id", idStr))
 		h.writeError(w, http.StatusInternalServerError, "internal_error", "Failed to update user preferences", r)
 		return

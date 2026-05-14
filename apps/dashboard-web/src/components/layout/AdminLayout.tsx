@@ -6,7 +6,7 @@ import { Sidebar } from './Sidebar';
 
 export const AdminLayout: React.FC = () => {
   const { uiStrings } = useUIStrings('layout_common');
-  const { logout } = useAuth();
+  const { logout, toggleTheme, theme } = useAuth();
   return (
     <div className="flex h-screen w-full bg-background-dark text-white font-display overflow-hidden">
       <Sidebar />
@@ -55,7 +55,16 @@ export const AdminLayout: React.FC = () => {
                   {uiStrings?.system_admin || 'System Administrator'}
                 </span>
               </div>
-              <button onClick={logout} className="ml-auto text-text-muted hover:text-white">
+              <button 
+                onClick={toggleTheme} 
+                className="text-text-muted hover:text-white transition-colors flex items-center justify-center"
+                title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              >
+                <span className="material-symbols-outlined text-[20px]">
+                  {theme === 'dark' ? 'light_mode' : 'dark_mode'}
+                </span>
+              </button>
+              <button onClick={logout} className="text-text-muted hover:text-white">
                 <span className="material-symbols-outlined text-[20px]">logout</span>
               </button>
             </div>

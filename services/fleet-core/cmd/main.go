@@ -693,6 +693,8 @@ func ensureIAMSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger
 		"ALTER TABLE user_roles ADD COLUMN IF NOT EXISTS tenant_id UUID",
 		"ALTER TABLE invitations ADD COLUMN IF NOT EXISTS tenant_id UUID",
 		"ALTER TABLE users ADD COLUMN IF NOT EXISTS must_reset_password BOOLEAN DEFAULT FALSE",
+		"ALTER TABLE users ADD COLUMN IF NOT EXISTS theme TEXT DEFAULT 'light'",
+		"ALTER TABLE users ADD COLUMN IF NOT EXISTS language TEXT DEFAULT 'en'",
 		"UPDATE users SET email_verified = FALSE WHERE email_verified IS NULL",
 		"ALTER TABLE users ALTER COLUMN email_verified SET DEFAULT FALSE",
 		"ALTER TABLE users ALTER COLUMN email_verified SET NOT NULL",
