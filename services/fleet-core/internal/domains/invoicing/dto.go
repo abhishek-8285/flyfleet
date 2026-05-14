@@ -114,6 +114,7 @@ func (r CreateInvoiceRequest) ToDomain() *Invoice {
 			UnitPrice:      item.UnitPrice,
 			TaxPercent:     item.TaxPercent,
 			Amount:         item.Quantity * item.UnitPrice,
+			Total:          item.Quantity * item.UnitPrice, // Simplified for now, or could include tax if desired, but matches backend logic
 			HSNSAC:         item.HSNSAC,
 			Unit:           item.Unit,
 			ListPrice:      item.ListPrice,

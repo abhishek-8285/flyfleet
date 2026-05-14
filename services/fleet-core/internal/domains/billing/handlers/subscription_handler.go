@@ -11,8 +11,7 @@ import (
 func (h *BillingHandler) ListPlans(w http.ResponseWriter, r *http.Request) {
 	plans, err := h.subService.ListPlans(r.Context())
 	if err != nil {
-		h.logger.Error("Failed to list plans", zap.Error(err))
-		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
+		h.errorJSON(w, r, "Failed to list plans: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	h.json(w, plans, http.StatusOK)
@@ -28,7 +27,7 @@ func (h *BillingHandler) GetSubscription(w http.ResponseWriter, r *http.Request)
 	sub, err := h.subService.GetSubscription(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("Failed to get subscription", zap.Error(err))
-		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
+		h.errorJSON(w, r, "Failed to get subscription: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -106,7 +105,7 @@ func (h *BillingHandler) CancelSubscription(w http.ResponseWriter, r *http.Reque
 	err := h.subService.CancelSubscription(r.Context(), tenantID, req.Immediate)
 	if err != nil {
 		h.logger.Error("Failed to cancel subscription", zap.Error(err))
-		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
+		h.errorJSON(w, r, "Failed to cancel subscription: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

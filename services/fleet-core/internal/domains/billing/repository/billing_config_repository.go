@@ -24,13 +24,13 @@ func NewBillingConfigRepository(db *pgxpool.Pool) *BillingConfigRepository {
 // GetByTenantID retrieves billing config for an organization
 func (r *BillingConfigRepository) GetByTenantID(ctx context.Context, tenantID uuid.UUID) (*models.BillingConfiguration, error) {
 	query := `
-		SELECT id, tenant_id, company_name, company_address, company_gstin, company_pan,
-		       company_email, company_phone, company_website, company_logo_url,
-		       primary_color, secondary_color, theme,
-		       bank_name, bank_account_name, bank_account_number, bank_ifsc, bank_branch, bank_upi,
-		       invoice_prefix, invoice_terms, invoice_notes, show_hsn, show_qr_code, show_payment_info,
-		       default_currency, default_tax_calculation, default_payment_terms_days,
-		       is_active, created_at, created_by, updated_at, updated_by
+		SELECT id, tenant_id, COALESCE(company_name, ''), COALESCE(company_address, ''), COALESCE(company_gstin, ''), COALESCE(company_pan, ''),
+		       COALESCE(company_email, ''), COALESCE(company_phone, ''), COALESCE(company_website, ''), COALESCE(company_logo_url, ''),
+		       COALESCE(primary_color, ''), COALESCE(secondary_color, ''), COALESCE(theme, 'modern'),
+		       COALESCE(bank_name, ''), COALESCE(bank_account_name, ''), COALESCE(bank_account_number, ''), COALESCE(bank_ifsc, ''), COALESCE(bank_branch, ''), COALESCE(bank_upi, ''),
+		       COALESCE(invoice_prefix, 'INV'), invoice_terms, COALESCE(invoice_notes, ''), COALESCE(show_hsn, true), COALESCE(show_qr_code, true), COALESCE(show_payment_info, true),
+		       COALESCE(default_currency, 'INR'), COALESCE(default_tax_calculation, 'exclusive'), COALESCE(default_payment_terms_days, 30),
+		       is_active, created_at, COALESCE(created_by, '00000000-0000-0000-0000-000000000000'), updated_at, COALESCE(updated_by, '00000000-0000-0000-0000-000000000000')
 		FROM billing_configurations
 		WHERE tenant_id = $1 AND is_active = true`
 

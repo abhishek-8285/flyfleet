@@ -203,7 +203,7 @@ const InvoiceDetail: React.FC = () => {
                       {uiStrings?.invoice_title || 'Invoice'}
                     </h2>
                     <p className="text-gray-500 font-mono text-sm tracking-widest">
-                      #{invoice?.id.toUpperCase()}
+                      #{invoice?.id?.toUpperCase()}
                     </p>
                   </div>
                   <div
@@ -307,11 +307,11 @@ const InvoiceDetail: React.FC = () => {
                         <td className="py-4 text-gray-300 font-medium">{item?.description}</td>
                         <td className="py-4 text-gray-400 text-center">{item?.quantity}</td>
                         <td className="py-4 text-gray-400 text-right">
-                          ₹{item?.unit_price.toLocaleString('en-IN')}
+                          ₹{item?.unit_price?.toLocaleString('en-IN')}
                         </td>
                         <td className="py-4 text-gray-400 text-right">{item?.tax_percent}%</td>
                         <td className="py-4 text-white font-semibold text-right">
-                          ₹{item?.total.toLocaleString('en-IN')}
+                          ₹{item?.total?.toLocaleString('en-IN')}
                         </td>
                       </tr>
                     ))}
@@ -403,13 +403,13 @@ const InvoiceDetail: React.FC = () => {
               <div className="space-y-6">
                 <HistoryItem
                   title={uiStrings?.hist_created || 'Invoice Created'}
-                  date={new Date(invoice?.created_at).toLocaleString()}
+                  date={invoice?.created_at ? new Date(invoice.created_at).toLocaleString() : 'N/A'}
                   active={true}
                 />
                 {invoice?.amount_paid > 0 && (
                   <HistoryItem
                     title={uiStrings?.hist_payment || 'Payment Recorded'}
-                    date={new Date(invoice.updated_at).toLocaleString()}
+                    date={invoice?.updated_at ? new Date(invoice.updated_at).toLocaleString() : 'N/A'}
                     active={true}
                     color="green"
                   />
@@ -455,19 +455,19 @@ const InvoiceDetail: React.FC = () => {
                   />
                   <p className="text-xs text-gray-500 italic">
                     {uiStrings?.msg_remaining_balance || 'Remaining balance:'} ₹
-                    {invoice.balance_due.toLocaleString()}
+                    {invoice?.balance_due?.toLocaleString() || '0'}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <button
-                    onClick={() => setPaymentAmount(invoice.balance_due)}
+                    onClick={() => setPaymentAmount(invoice?.balance_due || 0)}
                     className="px-4 py-2 bg-white/5 text-gray-300 rounded-lg text-sm hover:bg-white/10 transition-colors"
                   >
                     {uiStrings?.btn_full_amount || 'Full Amount'}
                   </button>
                   <button
-                    onClick={() => setPaymentAmount(invoice.balance_due / 2)}
+                    onClick={() => setPaymentAmount((invoice?.balance_due || 0) / 2)}
                     className="px-4 py-2 bg-white/5 text-gray-300 rounded-lg text-sm hover:bg-white/10 transition-colors"
                   >
                     {uiStrings?.btn_split_half || 'Split Half'}

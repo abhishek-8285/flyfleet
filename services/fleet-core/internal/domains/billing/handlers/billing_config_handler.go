@@ -48,7 +48,7 @@ func (h *BillingConfigHandler) GetConfig(w http.ResponseWriter, r *http.Request)
 	config, err := h.svc.GetConfig(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("Failed to get billing config", zap.Error(err))
-		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
+		h.errorJSON(w, r, "Failed to get billing configuration: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -80,7 +80,7 @@ func (h *BillingConfigHandler) UpdateConfig(w http.ResponseWriter, r *http.Reque
 	config, err := h.svc.UpdateConfig(r.Context(), tenantID, userID, &req)
 	if err != nil {
 		h.logger.Error("Failed to update billing config", zap.Error(err))
-		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
+		h.errorJSON(w, r, "Failed to update billing configuration: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -97,7 +97,7 @@ func (h *BillingConfigHandler) DeleteConfig(w http.ResponseWriter, r *http.Reque
 
 	if err := h.svc.DeleteConfig(r.Context(), tenantID); err != nil {
 		h.logger.Error("Failed to delete billing config", zap.Error(err))
-		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
+		h.errorJSON(w, r, "Failed to get tax settings: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

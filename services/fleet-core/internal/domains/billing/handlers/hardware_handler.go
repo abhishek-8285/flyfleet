@@ -13,7 +13,7 @@ func (h *BillingHandler) ListHardwareProducts(w http.ResponseWriter, r *http.Req
 	products, err := h.hwService.ListProducts(r.Context())
 	if err != nil {
 		h.logger.Error("Failed to list hardware products", zap.Error(err))
-		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
+		h.errorJSON(w, r, "Failed to list hardware products: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

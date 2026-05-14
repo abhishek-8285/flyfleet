@@ -28,19 +28,19 @@ func (r *InvoiceRepository) Create(ctx context.Context, inv *invoicing.Invoice) 
 	query := `
 		INSERT INTO invoices (
 			tenant_id, invoice_number, customer_name, customer_email, customer_phone, billing_address,
-			invoice_date, due_date, status, subtotal, tax_amount, total_amount, currency, notes,
+			invoice_date, due_date, status, subtotal, tax_amount, total_amount, total, balance_due, amount_paid, currency, notes,
 			template_type, trip_id, vehicle_no, driver_name, driver_mobile, pickup_location, drop_location,
 			pickup_time, drop_time, map_url, billed_distance, place_of_supply, reverse_charge,
 			gstin_seller, pan_seller, eway_bill_no, eway_bill_date, irn, ack_no, ack_date,
 			bank_name, account_no, ifsc_code, branch_name, beneficiary_name,
 			created_by, updated_by
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44)
 		RETURNING id, created_at, updated_at
 	`
 
 	err = tx.QueryRow(ctx, query,
 		inv.TenantID, inv.InvoiceNumber, inv.CustomerName, inv.CustomerEmail, inv.CustomerPhone, inv.BillingAddress,
-		inv.InvoiceDate, inv.DueDate, inv.Status, inv.Subtotal, inv.TaxAmount, inv.TotalAmount, inv.Currency, inv.Notes,
+		inv.InvoiceDate, inv.DueDate, inv.Status, inv.Subtotal, inv.TaxAmount, inv.TotalAmount, inv.TotalAmount, inv.BalanceDue, inv.AmountPaid, inv.Currency, inv.Notes,
 		inv.TemplateType, inv.TripID, inv.VehicleNo, inv.DriverName, inv.DriverMobile, inv.PickupLocation, inv.DropLocation,
 		inv.PickupTime, inv.DropTime, inv.MapUrl, inv.BilledDistance, inv.PlaceOfSupply, inv.ReverseCharge,
 		inv.GstinSeller, inv.PanSeller, inv.EWayBillNo, inv.EWayBillDate, inv.IRN, inv.AckNo, inv.AckDate,
@@ -57,9 +57,9 @@ func (r *InvoiceRepository) Create(ctx context.Context, inv *invoicing.Invoice) 
 		var placeholders []string
 		for i, item := range inv.Items {
 			item.ID = uuid.New()
-			pBase := i * 14
-			placeholders = append(placeholders, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)", 
-				pBase+1, pBase+2, pBase+3, pBase+4, pBase+5, pBase+6, pBase+7, pBase+8, pBase+9, pBase+10, pBase+11, pBase+12, pBase+13, pBase+14))
+			pBase := i * 15
+			placeholders = append(placeholders, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)", 
+				pBase+1, pBase+2, pBase+3, pBase+4, pBase+5, pBase+6, pBase+7, pBase+8, pBase+9, pBase+10, pBase+11, pBase+12, pBase+13, pBase+14, pBase+15))
 			args = append(args,
 				item.ID,
 				inv.TenantID,
@@ -68,6 +68,7 @@ func (r *InvoiceRepository) Create(ctx context.Context, inv *invoicing.Invoice) 
 				item.Quantity,
 				item.UnitPrice,
 				item.TaxPercent,
+				item.Amount,
 				item.Amount,
 				item.HSNSAC,
 				item.Unit,
@@ -78,7 +79,7 @@ func (r *InvoiceRepository) Create(ctx context.Context, inv *invoicing.Invoice) 
 			)
 		}
 		batchQuery := fmt.Sprintf(
-			"INSERT INTO invoice_items (id, tenant_id, invoice_id, description, quantity, unit_price, tax_percent, amount, hsn_sac, unit, list_price, discount_amount, created_by, updated_by) VALUES %s",
+			"INSERT INTO invoice_items (id, tenant_id, invoice_id, description, quantity, unit_price, tax_percent, amount, total, hsn_sac, unit, list_price, discount_amount, created_by, updated_by) VALUES %s",
 			strings.Join(placeholders, ", "),
 		)
 		_, err = tx.Exec(ctx, batchQuery, args...)
@@ -101,7 +102,7 @@ func (r *InvoiceRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID)
 		       COALESCE(customer_email, '') as customer_email, 
 		       COALESCE(customer_phone, '') as customer_phone, 
 		       COALESCE(billing_address, '') as billing_address,
-		       invoice_date, due_date, status, subtotal, tax_amount, total_amount, amount_paid, amount_remaining,
+		       invoice_date, due_date, status, COALESCE(subtotal, 0), COALESCE(tax_amount, 0), COALESCE(total_amount, 0), COALESCE(amount_paid, 0), COALESCE(balance_due, 0),
 		       COALESCE(currency, 'INR') as currency, COALESCE(notes, '') as notes,
 		       COALESCE(template_type, 'TAX_INVOICE'), trip_id, 
 		       COALESCE(vehicle_no, ''), COALESCE(driver_name, ''), COALESCE(driver_mobile, ''),
@@ -121,7 +122,7 @@ func (r *InvoiceRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID)
 	inv := &invoicing.Invoice{}
 	err := r.pool.QueryRow(ctx, query, id, tenantID).Scan(
 		&inv.ID, &inv.TenantID, &inv.InvoiceNumber, &inv.CustomerName, &inv.CustomerEmail, &inv.CustomerPhone, &inv.BillingAddress,
-		&inv.InvoiceDate, &inv.DueDate, &inv.Status, &inv.Subtotal, &inv.TaxAmount, &inv.TotalAmount, &inv.AmountPaid, &inv.AmountRemaining,
+		&inv.InvoiceDate, &inv.DueDate, &inv.Status, &inv.Subtotal, &inv.TaxAmount, &inv.TotalAmount, &inv.AmountPaid, &inv.BalanceDue,
 		&inv.Currency, &inv.Notes,
 		&inv.TemplateType, &inv.TripID, &inv.VehicleNo, &inv.DriverName, &inv.DriverMobile,
 		&inv.PickupLocation, &inv.DropLocation, &inv.PickupTime, &inv.DropTime,
@@ -140,9 +141,9 @@ func (r *InvoiceRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID)
 
 	// Fetch items
 	itemQuery := `
-		SELECT id, invoice_id, description, quantity, unit_price, tax_percent, amount,
+		SELECT id, invoice_id, COALESCE(description, ''), COALESCE(quantity, 0), COALESCE(unit_price, 0), COALESCE(tax_percent, 0), COALESCE(amount, 0), COALESCE(total, 0),
 		       COALESCE(hsn_sac, ''), COALESCE(unit, ''), COALESCE(list_price, 0), COALESCE(discount_amount, 0),
-		       created_at, created_by, updated_at, updated_by
+		       created_at, COALESCE(created_by, '00000000-0000-0000-0000-000000000000') as created_by, updated_at, COALESCE(updated_by, '00000000-0000-0000-0000-000000000000') as updated_by
 		FROM invoice_items
 		WHERE invoice_id = $1 AND tenant_id = $2 AND is_deleted = false
 	`
@@ -155,7 +156,7 @@ func (r *InvoiceRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID)
 	for rows.Next() {
 		var item invoicing.InvoiceItem
 		err := rows.Scan(
-			&item.ID, &item.InvoiceID, &item.Description, &item.Quantity, &item.UnitPrice, &item.TaxPercent, &item.Amount,
+			&item.ID, &item.InvoiceID, &item.Description, &item.Quantity, &item.UnitPrice, &item.TaxPercent, &item.Amount, &item.Total,
 			&item.HSNSAC, &item.Unit, &item.ListPrice, &item.DiscountAmount,
 			&item.CreatedAt, &item.CreatedBy, &item.UpdatedAt, &item.UpdatedBy,
 		)
@@ -179,7 +180,7 @@ func (r *InvoiceRepository) List(ctx context.Context, tenantID uuid.UUID, limit,
 	query := `
 		SELECT id, tenant_id, COALESCE(invoice_number, '') as invoice_number, 
 		       COALESCE(customer_name, '') as customer_name, 
-		       status, total_amount, due_date, created_at, 
+		       status, COALESCE(total_amount, 0), invoice_date, due_date, created_at, 
 		       COALESCE(created_by, '00000000-0000-0000-0000-000000000000') as created_by, 
 		       updated_at, COALESCE(updated_by, '00000000-0000-0000-0000-000000000000') as updated_by
 		FROM invoices
@@ -196,7 +197,7 @@ func (r *InvoiceRepository) List(ctx context.Context, tenantID uuid.UUID, limit,
 	var invoices []invoicing.Invoice
 	for rows.Next() {
 		var inv invoicing.Invoice
-		err := rows.Scan(&inv.ID, &inv.TenantID, &inv.InvoiceNumber, &inv.CustomerName, &inv.Status, &inv.TotalAmount, &inv.DueDate, &inv.CreatedAt, &inv.CreatedBy, &inv.UpdatedAt, &inv.UpdatedBy)
+		err := rows.Scan(&inv.ID, &inv.TenantID, &inv.InvoiceNumber, &inv.CustomerName, &inv.Status, &inv.TotalAmount, &inv.InvoiceDate, &inv.DueDate, &inv.CreatedAt, &inv.CreatedBy, &inv.UpdatedAt, &inv.UpdatedBy)
 		if err != nil {
 			return nil, 0, err
 		}

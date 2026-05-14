@@ -26,7 +26,7 @@ func NewBillingRepository(db *pgxpool.Pool) *BillingRepository {
 func (r *BillingRepository) ListInvoices(ctx context.Context, tenantID uuid.UUID, page, size int) ([]models.Invoice, int, error) {
 	offset := (page - 1) * size
 
-	query := `SELECT id, tenant_id, invoice_number, customer_name, invoice_date, due_date, status, currency, total_amount, amount_paid, balance_due, created_at, updated_at
+	query := `SELECT id, tenant_id, COALESCE(invoice_number, ''), COALESCE(customer_name, ''), invoice_date, due_date, status, COALESCE(currency, 'INR'), COALESCE(total_amount, 0), COALESCE(amount_paid, 0), COALESCE(balance_due, 0), created_at, updated_at
 	          FROM invoices WHERE tenant_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT $2 OFFSET $3`
 
 	start := time.Now()
@@ -120,7 +120,7 @@ func (r *BillingRepository) GetInvoice(ctx context.Context, id uuid.UUID) (*mode
 	var i models.Invoice
 	var notes sql.NullString
 	var customFields []byte
-	query := `SELECT id, tenant_id, invoice_number, customer_name, invoice_date, due_date, status, currency, total_amount, amount_paid, balance_due, notes, custom_fields, created_at, updated_at
+	query := `SELECT id, tenant_id, COALESCE(invoice_number, ''), COALESCE(customer_name, ''), invoice_date, due_date, status, COALESCE(currency, 'INR'), COALESCE(total_amount, 0), COALESCE(amount_paid, 0), COALESCE(balance_due, 0), notes, custom_fields, created_at, updated_at
 	          FROM invoices WHERE id = $1 AND deleted_at IS NULL`
 
 	start := time.Now()
@@ -141,7 +141,7 @@ func (r *BillingRepository) GetInvoice(ctx context.Context, id uuid.UUID) (*mode
 	}
 
 	// Fetch items
-	itemsQuery := "SELECT id, invoice_id, description, quantity, unit_price, tax_percent, total, created_at, updated_at FROM invoice_items WHERE invoice_id = $1 ORDER BY id"
+	itemsQuery := "SELECT id, invoice_id, COALESCE(description, ''), COALESCE(quantity, 0), COALESCE(unit_price, 0), COALESCE(tax_percent, 0), COALESCE(total, 0), created_at, updated_at FROM invoice_items WHERE invoice_id = $1 ORDER BY id"
 	start2 := time.Now()
 	rows, err := r.db.Query(ctx, itemsQuery, id)
 	metrics.RecordDBQuery(itemsQuery, time.Since(start2))
@@ -233,7 +233,7 @@ func (r *BillingRepository) DeleteInvoice(ctx context.Context, id uuid.UUID) err
 
 func (r *BillingRepository) GetSettings(ctx context.Context, tenantID uuid.UUID) (*models.BillingSettings, error) {
 	var s models.BillingSettings
-	query := `SELECT tenant_id, default_tax_rate, base_currency, grace_period_days, auto_invoicing_enabled, tax_country, tax_state, invoice_prefix, next_invoice_number, render_config, created_at, updated_at
+	query := `SELECT tenant_id, COALESCE(default_tax_rate, 0), COALESCE(base_currency, 'INR'), COALESCE(grace_period_days, 14), auto_invoicing_enabled, COALESCE(tax_country, 'India'), COALESCE(tax_state, ''), COALESCE(invoice_prefix, 'INV'), COALESCE(next_invoice_number, 1), render_config, created_at, updated_at
 	          FROM billing_settings WHERE tenant_id = $1`
 
 	start := time.Now()

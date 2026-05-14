@@ -54,7 +54,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	inv, err := h.service.CreateInvoice(ctx, tenantID, req.ToDomain())
 	if err != nil {
-		http.Error(w, "internal server error: "+uuid.New().String(), http.StatusInternalServerError)
+		http.Error(w, "internal server error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -99,7 +99,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"items": invoices,
+		"invoices": invoices,
 		"total": total,
 		"page":  page,
 		"limit": limit,

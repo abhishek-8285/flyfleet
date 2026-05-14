@@ -46,7 +46,7 @@ func (r *AccountingRepository) UpdateExportStatus(ctx context.Context, id uuid.U
 
 func (r *AccountingRepository) GetExportHistory(ctx context.Context, tenantID uuid.UUID, limit int) ([]models.AccountingExport, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT id, tenant_id, external_system, export_type, status, file_key, records_count, error_message, created_at, completed_at, created_by
+		SELECT id, tenant_id, external_system, export_type, status, COALESCE(file_key, ''), COALESCE(records_count, 0), COALESCE(error_message, ''), created_at, completed_at, created_by
 		FROM billing_accounting_exports
 		WHERE tenant_id = $1
 		ORDER BY created_at DESC

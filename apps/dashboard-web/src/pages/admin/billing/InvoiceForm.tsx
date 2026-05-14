@@ -73,6 +73,14 @@ const InvoiceForm: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [billingMeta, setBillingMeta] = useState<any>(null);
+  const [showErrors, setShowErrors] = useState(false);
+
+  const isFieldMissing = (value: any) => {
+    if (value === null || value === undefined) return true;
+    if (typeof value === "string") return value.trim() === "";
+    if (Array.isArray(value)) return value.length === 0;
+    return false;
+  };
 
   useEffect(() => {
     fetch("/api/v1/ui/global_config")
@@ -191,6 +199,25 @@ const InvoiceForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate required fields
+    const hasMissingFields = 
+      isFieldMissing(formData.customer_name) ||
+      isFieldMissing(formData.customer_phone) ||
+      isFieldMissing(formData.billing_address) ||
+      isFieldMissing(formData.invoice_date) ||
+      isFieldMissing(formData.due_date) ||
+      (formData.items || []).some(item => 
+        isFieldMissing(item.description) || 
+        item.quantity <= 0 || 
+        item.unit_price <= 0
+      );
+
+    if (hasMissingFields) {
+      setShowErrors(true);
+      return;
+    }
+
     setLoading(true);
     try {
       const subtotal = calculateSubtotal();
@@ -297,22 +324,25 @@ const InvoiceForm: React.FC = () => {
               <label className="text-sm font-medium text-gray-400 flex items-center gap-2">
                 <User className="w-4 h-4" />{" "}
                 {uiStrings?.label_customer_name || "Customer Name"}
+                <span className="text-red-500">*</span>
               </label>
-              <CustomerSearch 
-                defaultValue={formData.customer_name}
-                onSelect={handleCustomerSelect}
-              />
+              <div className={showErrors && isFieldMissing(formData.customer_name) ? "ring-1 ring-red-500 rounded-lg" : ""}>
+                <CustomerSearch 
+                  defaultValue={formData.customer_name}
+                  onSelect={handleCustomerSelect}
+                />
+              </div>
             </div>
             
             <div className="grid grid-cols-2 gap-4">
                <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-400 flex items-center gap-2">
                   <Phone className="w-4 h-4" /> Mobile Number
+                  <span className="text-red-500">*</span>
                 </label>
                 <input
-                  required
                   type="text"
-                  value={formData.customer_phone}
+                  value={formData?.customer_phone || ""}
                   onChange={(e) => setFormData(prev => ({ ...prev, customer_phone: e.target.value }))}
                   onBlur={(e) => {
                     let val = e.target.value.replace(/\s/g, "");
@@ -320,7 +350,9 @@ const InvoiceForm: React.FC = () => {
                       setFormData(prev => ({ ...prev, customer_phone: `+91 ${val.substring(0, 5)} ${val.substring(5)}` }));
                     }
                   }}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary transition-colors"
+                  className={`w-full bg-white/5 border rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary transition-colors ${
+                    showErrors && isFieldMissing(formData.customer_phone) ? "border-red-500" : "border-white/10"
+                  }`}
                 />
               </div>
               <div className="space-y-2">
@@ -329,7 +361,7 @@ const InvoiceForm: React.FC = () => {
                 </label>
                 <input
                   type="email"
-                  value={formData.customer_email}
+                  value={formData?.customer_email || ""}
                   onChange={(e) => setFormData({ ...formData, customer_email: e.target.value })}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary transition-colors"
                 />
@@ -339,11 +371,14 @@ const InvoiceForm: React.FC = () => {
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-400 flex items-center gap-2">
                 <MapPin className="w-4 h-4" /> Billing Address
+                <span className="text-red-500">*</span>
               </label>
               <textarea
-                value={formData.billing_address}
+                value={formData?.billing_address || ""}
                 onChange={(e) => setFormData(prev => ({ ...prev, billing_address: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-primary transition-colors h-20 resize-none"
+                className={`w-full bg-white/5 border rounded-lg px-4 py-2 text-white text-sm focus:outline-none focus:border-primary transition-colors h-20 resize-none ${
+                  showErrors && isFieldMissing(formData.billing_address) ? "border-red-500" : "border-white/10"
+                }`}
               />
             </div>
           </div>
@@ -352,30 +387,34 @@ const InvoiceForm: React.FC = () => {
               <label className="text-sm font-medium text-gray-400 flex items-center gap-2">
                 <Calendar className="w-4 h-4" />{" "}
                 {uiStrings?.label_invoice_date || "Invoice Date"}
+                <span className="text-red-500">*</span>
               </label>
               <input
-                required
                 type="date"
                 value={formData.invoice_date?.split("T")[0]}
                 onChange={(e) =>
                   setFormData({ ...formData, invoice_date: e.target.value })
                 }
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary transition-colors"
+                className={`w-full bg-white/5 border rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary transition-colors ${
+                  showErrors && isFieldMissing(formData.invoice_date) ? "border-red-500" : "border-white/10"
+                }`}
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-400 flex items-center gap-2">
                 <Calendar className="w-4 h-4" />{" "}
                 {uiStrings?.label_due_date || "Due Date"}
+                <span className="text-red-500">*</span>
               </label>
               <input
-                required
                 type="date"
                 value={formData.due_date?.split("T")[0]}
                 onChange={(e) =>
                   setFormData({ ...formData, due_date: e.target.value })
                 }
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary transition-colors"
+                className={`w-full bg-white/5 border rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary transition-colors ${
+                  showErrors && isFieldMissing(formData.due_date) ? "border-red-500" : "border-white/10"
+                }`}
               />
             </div>
             <div className="col-span-2 space-y-2 pt-4 border-t border-white/5">
@@ -479,7 +518,7 @@ const InvoiceForm: React.FC = () => {
                 <label className="text-xs font-medium text-gray-500 uppercase">Vehicle Register No.</label>
                 <input
                   type="text"
-                  value={formData.vehicle_no}
+                  value={formData?.vehicle_no || ""}
                   onChange={(e) => setFormData(prev => ({ ...prev, vehicle_no: e.target.value.toUpperCase() }))}
                   placeholder="KA-01-AB-1234"
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary transition-colors"
@@ -489,7 +528,7 @@ const InvoiceForm: React.FC = () => {
                 <label className="text-xs font-medium text-gray-500 uppercase">E-Way Bill No.</label>
                 <input
                   type="text"
-                  value={formData.eway_bill_no}
+                  value={formData?.eway_bill_no || ""}
                   onChange={(e) => setFormData(prev => ({ ...prev, eway_bill_no: e.target.value }))}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary transition-colors"
                 />
@@ -498,7 +537,7 @@ const InvoiceForm: React.FC = () => {
                 <label className="text-xs font-medium text-gray-500 uppercase">Billed Distance (KM)</label>
                 <input
                   type="number"
-                  value={formData.billed_distance}
+                  value={formData?.billed_distance || 0}
                   onChange={(e) => setFormData(prev => ({ ...prev, billed_distance: parseFloat(e.target.value) }))}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-primary transition-colors"
                 />
@@ -510,7 +549,7 @@ const InvoiceForm: React.FC = () => {
                 <label className="text-xs font-medium text-gray-500 uppercase">Pickup Location</label>
                 <input
                   type="text"
-                  value={formData.pickup_location}
+                  value={formData?.pickup_location || ""}
                   onChange={(e) => setFormData(prev => ({ ...prev, pickup_location: e.target.value }))}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm"
                 />
@@ -519,7 +558,7 @@ const InvoiceForm: React.FC = () => {
                 <label className="text-xs font-medium text-gray-500 uppercase">Drop Location</label>
                 <input
                   type="text"
-                  value={formData.drop_location}
+                  value={formData?.drop_location || ""}
                   onChange={(e) => setFormData(prev => ({ ...prev, drop_location: e.target.value }))}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm"
                 />
@@ -553,15 +592,17 @@ const InvoiceForm: React.FC = () => {
                 <div className="col-span-12 md:col-span-5 space-y-2">
                   <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
                     {uiStrings?.th_desc || "Description"}
+                    <span className="text-red-500 ml-1">*</span>
                   </label>
                   <input
-                    required
                     type="text"
                     value={item.description}
                     onChange={(e) =>
                       handleItemChange(index, "description", e.target.value)
                     }
-                    className="w-full bg-black/20 border border-white/5 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-primary/50"
+                    className={`w-full bg-black/20 border rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-primary/50 ${
+                      showErrors && isFieldMissing(item.description) ? "border-red-500" : "border-white/5"
+                    }`}
                     placeholder="e.g. Full Load Transport"
                   />
                 </div>
@@ -581,9 +622,9 @@ const InvoiceForm: React.FC = () => {
                 <div className="col-span-4 md:col-span-1 space-y-2">
                   <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Qty
+                    <span className="text-red-500 ml-1">*</span>
                   </label>
                   <input
-                    required
                     type="number"
                     min="1"
                     value={item.quantity}
@@ -594,7 +635,9 @@ const InvoiceForm: React.FC = () => {
                         parseFloat(e.target.value) || 0,
                       )
                     }
-                    className="w-full bg-black/20 border border-white/5 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-primary/50"
+                    className={`w-full bg-black/20 border rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-primary/50 ${
+                      showErrors && item.quantity <= 0 ? "border-red-500" : "border-white/5"
+                    }`}
                   />
                 </div>
                 <div className="col-span-4 md:col-span-1 space-y-2">
@@ -617,11 +660,11 @@ const InvoiceForm: React.FC = () => {
                 <div className="col-span-4 md:col-span-2 space-y-2">
                   <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Rate
+                    <span className="text-red-500 ml-1">*</span>
                   </label>
-                  <div className="relative">
+                  <div className={`relative border rounded-lg ${showErrors && item.unit_price <= 0 ? "border-red-500" : "border-transparent"}`}>
                     <IndianRupee className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-500" />
                     <input
-                      required
                       type="number"
                       value={item.unit_price}
                       onChange={(e) =>

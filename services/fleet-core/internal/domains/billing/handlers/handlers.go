@@ -230,7 +230,7 @@ func (h *BillingHandler) ListInvoices(w http.ResponseWriter, r *http.Request) {
 	invoices, total, err := h.service.ListInvoices(r.Context(), tenantID, page, size)
 	if err != nil {
 		h.logger.Error("Failed to list invoices", zap.Error(err))
-		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
+		h.errorJSON(w, r, "Failed to list invoices: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -275,7 +275,7 @@ func (h *BillingHandler) CreateInvoice(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.service.CreateInvoice(r.Context(), &inv); err != nil {
 		h.logger.Error("Failed to create invoice", zap.Error(err))
-		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
+		h.errorJSON(w, r, "Failed to create invoice: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -292,7 +292,7 @@ func (h *BillingHandler) GetInvoice(w http.ResponseWriter, r *http.Request) {
 	invoice, err := h.service.GetInvoice(r.Context(), id)
 	if err != nil {
 		h.logger.Error("Failed to get invoice", zap.Error(err))
-		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
+		h.errorJSON(w, r, "Failed to get invoice: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -327,7 +327,7 @@ func (h *BillingHandler) UpdateInvoice(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.service.UpdateInvoice(r.Context(), &inv); err != nil {
 		h.logger.Error("Failed to update invoice", zap.Error(err))
-		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
+		h.errorJSON(w, r, "Failed to update invoice: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -343,7 +343,7 @@ func (h *BillingHandler) DeleteInvoice(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.service.DeleteInvoice(r.Context(), id); err != nil {
 		h.logger.Error("Failed to delete invoice", zap.Error(err))
-		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
+		h.errorJSON(w, r, "Failed to delete invoice: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -372,7 +372,7 @@ func (h *BillingHandler) RecordPayment(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.service.RecordPayment(r.Context(), id, req.Amount); err != nil {
 		h.logger.Error("Failed to record payment", zap.Error(err))
-		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
+		h.errorJSON(w, r, "Failed to record payment: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -416,7 +416,7 @@ func (h *BillingHandler) UpdateSettings(w http.ResponseWriter, r *http.Request) 
 
 	if err := h.service.UpdateSettings(r.Context(), &settings); err != nil {
 		h.logger.Error("Failed to update settings", zap.Error(err))
-		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
+		h.errorJSON(w, r, "Failed to update settings: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -433,7 +433,7 @@ func (h *BillingHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 	metrics, err := h.service.GetMetrics(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("Failed to get metrics", zap.Error(err))
-		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
+		h.errorJSON(w, r, "Failed to get metrics: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -457,7 +457,7 @@ func (h *BillingHandler) DownloadInvoicePDF(w http.ResponseWriter, r *http.Reque
 	invoice, err := h.service.GetInvoice(r.Context(), id)
 	if err != nil {
 		h.logger.Error("Failed to get invoice for PDF", zap.Error(err))
-		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
+		h.errorJSON(w, r, "Failed to download invoice PDF: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -563,7 +563,7 @@ func (h *BillingHandler) GetUsageSummary(w http.ResponseWriter, r *http.Request)
 	usage, err := h.meterService.GetUnbilledUsageByOrg(r.Context(), tenantID)
 	if err != nil {
 		h.logger.Error("Failed to get usage summary", zap.Error(err))
-		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
+		h.errorJSON(w, r, "Failed to get usage summary: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

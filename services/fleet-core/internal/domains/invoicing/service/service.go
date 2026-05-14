@@ -57,14 +57,21 @@ func (s *InvoicingService) CreateInvoice(ctx context.Context, tenantID uuid.UUID
 	inv.TaxAmount = totalTax
 	inv.TotalAmount = inv.Subtotal + inv.TaxAmount
 	inv.AmountPaid = 0
-	inv.AmountRemaining = inv.TotalAmount
+	inv.BalanceDue = inv.TotalAmount
 
 	// 3. Persist
 	return s.repo.Create(ctx, inv)
 }
 
 func (s *InvoicingService) GetInvoice(ctx context.Context, tenantID, id uuid.UUID) (*invoicing.Invoice, error) {
-	return s.repo.GetByID(ctx, tenantID, id)
+	inv, err := s.repo.GetByID(ctx, tenantID, id)
+	if err == nil && inv != nil {
+		// Backfill BalanceDue if it's 0 but there's a total (for older records or sync issues)
+		if inv.BalanceDue == 0 && inv.TotalAmount > 0 && inv.AmountPaid == 0 {
+			inv.BalanceDue = inv.TotalAmount
+		}
+	}
+	return inv, err
 }
 
 func (s *InvoicingService) ListInvoices(ctx context.Context, tenantID uuid.UUID, limit, offset int) ([]invoicing.Invoice, int64, error) {

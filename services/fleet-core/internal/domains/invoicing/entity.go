@@ -39,7 +39,7 @@ type Invoice struct {
 	TaxAmount       float64       `json:"tax_amount" db:"tax_amount"`
 	TotalAmount     float64       `json:"total_amount" db:"total_amount"`
 	AmountPaid      float64       `json:"amount_paid" db:"amount_paid"`
-	AmountRemaining float64       `json:"amount_remaining" db:"amount_remaining"`
+	BalanceDue      float64       `json:"balance_due" db:"balance_due"`
 	// Template control
 	TemplateType TemplateType `json:"template_type" db:"template_type"`
 
@@ -91,6 +91,7 @@ type InvoiceItem struct {
 	UnitPrice   float64   `json:"unit_price" db:"unit_price"`
 	TaxPercent  float64   `json:"tax_percent" db:"tax_percent"`
 	Amount      float64   `json:"amount" db:"amount"`
+	Total       float64   `json:"total" db:"total"`
 
 	// New fields
 	HSNSAC         string  `json:"hsn_sac,omitempty" db:"hsn_sac"`

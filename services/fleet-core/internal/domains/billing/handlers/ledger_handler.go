@@ -23,7 +23,7 @@ func (h *BillingHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
 	balance, err := h.ledgerService.GetBalance(r.Context(), tenantID, currency)
 	if err != nil {
 		h.logger.Error("Failed to get balance", zap.Error(err))
-		h.errorJSON(w, r, "Internal Server Error", http.StatusInternalServerError)
+		h.errorJSON(w, r, "Failed to get balance: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

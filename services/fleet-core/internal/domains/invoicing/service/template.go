@@ -96,10 +96,27 @@ func renderTaxInvoice(inv *invoicing.Invoice) string {
         
         .footer-declaration { margin-top: 40px; font-size: 9px; color: #64748b; line-height: 1.6; }
         .qr-code { float: right; width: 80px; height: 80px; }
+        .paid-watermark {
+            position: absolute;
+            top: 50%%;
+            left: 50%%;
+            transform: translate(-50%%, -50%%) rotate(-45deg);
+            font-size: 150px;
+            font-weight: 900;
+            color: rgba(34, 197, 94, 0.15);
+            border: 15px solid rgba(34, 197, 94, 0.15);
+            padding: 10px 40px;
+            text-transform: uppercase;
+            z-index: 0;
+            pointer-events: none;
+            white-space: nowrap;
+            border-radius: 20px;
+        }
     </style>
 </head>
 <body>
-    <div class="invoice-box">
+    <div class="invoice-box" style="position: relative;">
+        %s
         <table class="header-table">
             <tr>
                 <td>
@@ -206,6 +223,7 @@ func renderTaxInvoice(inv *invoicing.Invoice) string {
     </div>
 </body>
 </html>`,
+		getPaidWatermark(inv),
 		inv.GstinSeller, inv.BillingAddress, inv.GstinSeller, inv.PanSeller,
 		inv.InvoiceNumber, inv.InvoiceDate.Format("02 Jan 2006"),
 		inv.VehicleNo, inv.DriverName, inv.PlaceOfSupply,
@@ -217,6 +235,13 @@ func renderTaxInvoice(inv *invoicing.Invoice) string {
 		inv.Subtotal, inv.TaxAmount, inv.TotalAmount,
 		qrCode,
 	)
+}
+
+func getPaidWatermark(inv *invoicing.Invoice) string {
+	if inv.Status == invoicing.StatusPaid {
+		return `<div class="paid-watermark">PAID</div>`
+	}
+	return ""
 }
 
 func renderTripNote(inv *invoicing.Invoice) string {
@@ -244,10 +269,27 @@ func renderTripNote(inv *invoicing.Invoice) string {
         .total-badge { position: absolute; top: -30px; right: 30px; background: #0f172a; color: white; padding: 20px 30px; border-radius: 24px; text-align: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2); }
         .label { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; margin-bottom: 4px; }
         .val { font-weight: 700; color: #1e293b; }
+        .paid-watermark {
+            position: absolute;
+            top: 50%%;
+            left: 50%%;
+            transform: translate(-50%%, -50%%) rotate(-45deg);
+            font-size: 100px;
+            font-weight: 900;
+            color: rgba(34, 197, 94, 0.1);
+            border: 10px solid rgba(34, 197, 94, 0.1);
+            padding: 10px 30px;
+            text-transform: uppercase;
+            z-index: 0;
+            pointer-events: none;
+            white-space: nowrap;
+            border-radius: 15px;
+        }
     </style>
 </head>
 <body>
-    <div class="card">
+    <div class="card" style="position: relative;">
+        %s
         <div class="header">
             <div style="font-size: 28px; font-weight: 900; color: #2563eb;">FLYFLEET</div>
             <div style="margin-top: 10px; font-weight: 600; color: #64748b;">Consignment Note / Trip Summary</div>
@@ -302,6 +344,7 @@ func renderTripNote(inv *invoicing.Invoice) string {
     </div>
 </body>
 </html>`,
+		getPaidWatermark(inv),
 		inv.TotalAmount,
 		inv.MapUrl,
 		inv.VehicleNo,

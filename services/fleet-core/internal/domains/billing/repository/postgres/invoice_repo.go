@@ -29,15 +29,15 @@ func (r *InvoiceRepository) Create(ctx context.Context, inv *invoice.Invoice) (*
 	query := `
 		INSERT INTO invoices (
 			tenant_id, invoice_number, customer_name, customer_email, billing_address,
-			due_date, status, subtotal, tax_amount, total_amount, currency, notes,
+			due_date, status, subtotal, tax_amount, total_amount, total, currency, notes,
 			created_by, updated_by
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING id, created_at, updated_at
 	`
 
 	err = tx.QueryRow(ctx, query,
 		inv.TenantID, inv.InvoiceNumber, inv.CustomerName, inv.CustomerEmail, inv.BillingAddress,
-		inv.DueDate, inv.Status, inv.Subtotal, inv.TaxAmount, inv.TotalAmount, inv.Currency, inv.Notes,
+		inv.DueDate, inv.Status, inv.Subtotal, inv.TaxAmount, inv.TotalAmount, inv.TotalAmount, inv.Currency, inv.Notes,
 		inv.CreatedBy, inv.UpdatedBy,
 	).Scan(&inv.ID, &inv.CreatedAt, &inv.UpdatedAt)
 
@@ -54,7 +54,7 @@ func (r *InvoiceRepository) Create(ctx context.Context, inv *invoice.Invoice) (*
 			item.CreatedAt = time.Now()
 			item.UpdatedAt = time.Now()
 
-			placeholders = append(placeholders, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)", i*10+1, i*10+2, i*10+3, i*10+4, i*10+5, i*10+6, i*10+7, i*10+8, i*10+9, i*10+10))
+			placeholders = append(placeholders, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)", i*11+1, i*11+2, i*11+3, i*11+4, i*11+5, i*11+6, i*11+7, i*11+8, i*11+9, i*11+10, i*11+11))
 			args = append(args,
 				item.ID,
 				inv.TenantID,
@@ -63,6 +63,7 @@ func (r *InvoiceRepository) Create(ctx context.Context, inv *invoice.Invoice) (*
 				item.Quantity,
 				item.UnitPrice,
 				item.Amount,
+				item.Amount,
 				inv.CreatedBy,
 				inv.UpdatedBy,
 				item.CreatedAt,
@@ -70,7 +71,7 @@ func (r *InvoiceRepository) Create(ctx context.Context, inv *invoice.Invoice) (*
 		}
 		// Note: created_at defaults to NOW() in schema, so we don't need to provide it
 		batchQuery := fmt.Sprintf(
-			"INSERT INTO invoice_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount, created_by, updated_by) VALUES %s",
+			"INSERT INTO invoice_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount, total, created_by, updated_by, created_at) VALUES %s",
 			strings.Join(placeholders, ", "),
 		)
 		_, err = tx.Exec(ctx, batchQuery, args...)
@@ -88,9 +89,9 @@ func (r *InvoiceRepository) Create(ctx context.Context, inv *invoice.Invoice) (*
 
 func (r *InvoiceRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID) (*invoice.Invoice, error) {
 	query := `
-		SELECT id, tenant_id, invoice_number, customer_name, customer_email, billing_address,
-		       due_date, status, subtotal, tax_amount, total_amount, amount_paid, amount_remaining,
-		       currency, notes, created_at, created_by, updated_at, updated_by
+		SELECT id, tenant_id, COALESCE(invoice_number, ''), COALESCE(customer_name, ''), COALESCE(customer_email, ''), COALESCE(billing_address, ''),
+		       due_date, status, COALESCE(subtotal, 0), COALESCE(tax_amount, 0), COALESCE(total_amount, 0), COALESCE(amount_paid, 0), COALESCE(amount_remaining, 0),
+		       COALESCE(currency, 'INR'), COALESCE(notes, ''), created_at, COALESCE(created_by, '00000000-0000-0000-0000-000000000000'), updated_at, COALESCE(updated_by, '00000000-0000-0000-0000-000000000000')
 		FROM invoices
 		WHERE id = $1 AND tenant_id = $2 AND is_deleted = false
 	`
@@ -106,7 +107,7 @@ func (r *InvoiceRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID)
 
 	// Fetch items
 	itemQuery := `
-		SELECT id, invoice_id, description, quantity, unit_price, amount, created_at, created_by, updated_at, updated_by
+		SELECT id, invoice_id, COALESCE(description, ''), COALESCE(quantity, 0), COALESCE(unit_price, 0), COALESCE(amount, 0), created_at, COALESCE(created_by, '00000000-0000-0000-0000-000000000000'), updated_at, COALESCE(updated_by, '00000000-0000-0000-0000-000000000000')
 		FROM invoice_items
 		WHERE invoice_id = $1 AND tenant_id = $2 AND is_deleted = false
 	`
@@ -137,7 +138,7 @@ func (r *InvoiceRepository) List(ctx context.Context, tenantID uuid.UUID, limit,
 	}
 
 	query := `
-		SELECT id, tenant_id, invoice_number, customer_name, status, total_amount, due_date, created_at, created_by, updated_at, updated_by
+		SELECT id, tenant_id, COALESCE(invoice_number, ''), COALESCE(customer_name, ''), status, COALESCE(total_amount, 0), due_date, created_at, COALESCE(created_by, '00000000-0000-0000-0000-000000000000'), updated_at, COALESCE(updated_by, '00000000-0000-0000-0000-000000000000')
 		FROM invoices
 		WHERE tenant_id = $1 AND is_deleted = false
 		ORDER BY created_at DESC
