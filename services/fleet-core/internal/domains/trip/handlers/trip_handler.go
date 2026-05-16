@@ -19,7 +19,7 @@ import (
 // DTOs for request payloads (separate from models to prevent mass assignment)
 type createTripRequestDTO struct {
 	VehicleID            string              `json:"vehicle_id" validate:"required,uuid4"`
-	DriverID             string              `json:"driver_id" validate:"required,uuid4"`
+	DriverID             string              `json:"driver_id" validate:"omitempty,uuid4"`
 	Title                string              `json:"title" validate:"required,max=100"`
 	Description          string              `json:"description" validate:"max=500"`
 	PlannedRoute         []models.Waypoint   `json:"planned_route" validate:"required,min=2"`
@@ -38,6 +38,7 @@ type createTripRequestDTO struct {
 	DropGeo              *models.Location    `json:"drop_geo" validate:"omitempty"`
 	EWayBillNo           string              `json:"eway_bill_no" validate:"omitempty"`
 	GSTClassification    string              `json:"gst_classification" validate:"omitempty"`
+	TripType             string              `json:"trip_type" validate:"omitempty,oneof=delivery service long_haul standard local return"`
 }
 
 type updateTripRequestDTO struct {
@@ -158,8 +159,12 @@ func (h *TripHandler) CreateTrip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate request (if validator is used; the original code didn't validate, but we can add)
-	// Note: Original didn't call validate.Struct; but we could. However to preserve behavior, I won't add extra validation unless present before.
+	// Validate request
+	if err := h.validate.Struct(dto); err != nil {
+		h.logger.Error("invalid request data", zap.Error(err))
+		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid request data: "+err.Error(), nil)
+		return
+	}
 	// Map DTO to model
 	req := &models.CreateTripRequest{
 		VehicleID:            dto.VehicleID,
@@ -182,6 +187,7 @@ func (h *TripHandler) CreateTrip(w http.ResponseWriter, r *http.Request) {
 		DropGeo:              dto.DropGeo,
 		EWayBillNo:           dto.EWayBillNo,
 		GSTClassification:    dto.GSTClassification,
+		TripType:             dto.TripType,
 	}
 
 	trip, err := h.service.Create(r.Context(), tenantID, req)

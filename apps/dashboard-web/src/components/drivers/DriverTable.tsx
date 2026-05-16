@@ -48,7 +48,7 @@ export const DriverTable: React.FC<DriverTableProps> = ({
               </th>
             )}
             <th className="px-6 py-4">Personnel</th>
-            <th className="px-6 py-4">Credentials</th>
+            <th className="px-6 py-4">License Info</th>
             <th className="px-6 py-4">Status</th>
             <th className="px-6 py-4">Assigned Asset</th>
             <th className="px-6 py-4 text-right pr-10">Actions</th>

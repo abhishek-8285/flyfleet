@@ -20,6 +20,9 @@ const (
 type LiveCacheRepository interface {
 	SetLiveLocation(ctx context.Context, loc *models.LiveLocation) error
 	GetLiveLocation(ctx context.Context, vehicleID uuid.UUID) (*models.LiveLocation, error)
+	// Cache device registry lookups
+	SetDeviceMapping(ctx context.Context, deviceID string, vehicleID uuid.UUID, tenantID uuid.UUID) error
+	GetDeviceMapping(ctx context.Context, deviceID string) (vehicleID uuid.UUID, tenantID uuid.UUID, err error)
 }
 
 // RedisLiveCacheRepository stores live vehicle locations as Redis Hashes.
@@ -76,6 +79,33 @@ func (r *RedisLiveCacheRepository) GetLiveLocation(ctx context.Context, vehicleI
 	loc.Ignition = data["ignition"] == "true"
 	loc.LastSeen, _ = time.Parse(time.RFC3339, data["last_seen"])
 	return loc, nil
+}
+
+func (r *RedisLiveCacheRepository) SetDeviceMapping(ctx context.Context, deviceID string, vehicleID uuid.UUID, tenantID uuid.UUID) error {
+	key := fmt.Sprintf("device:%s:mapping", deviceID)
+	fields := map[string]interface{}{
+		"vehicle_id": vehicleID.String(),
+		"tenant_id":  tenantID.String(),
+	}
+	// Cache for 1 hour
+	if err := r.client.HSet(ctx, key, fields).Err(); err != nil {
+		return err
+	}
+	return r.client.Expire(ctx, key, 1*time.Hour).Err()
+}
+
+func (r *RedisLiveCacheRepository) GetDeviceMapping(ctx context.Context, deviceID string) (uuid.UUID, uuid.UUID, error) {
+	key := fmt.Sprintf("device:%s:mapping", deviceID)
+	data, err := r.client.HGetAll(ctx, key).Result()
+	if err != nil {
+		return uuid.Nil, uuid.Nil, err
+	}
+	if len(data) == 0 {
+		return uuid.Nil, uuid.Nil, nil
+	}
+	vID, _ := uuid.Parse(data["vehicle_id"])
+	tID, _ := uuid.Parse(data["tenant_id"])
+	return vID, tID, nil
 }
 
 func boolStr(b bool) string {

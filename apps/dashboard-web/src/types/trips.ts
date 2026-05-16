@@ -4,14 +4,20 @@
 // Trip status values
 export type TripStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 
+export interface Location {
+  latitude: number;
+  longitude: number;
+  address: string;
+}
+
 // Core Trip model
 export interface Trip {
   id: string;
   trip_id: string; // Pattern: TR-YYYY-NNNN
   vehicle_id: string;
   driver_id?: string | null;
-  start_location: string;
-  end_location: string;
+  start_location: string | Location;
+  end_location: string | Location;
   start_time: string; // ISO 8601 date-time
   end_time?: string | null;
   distance: number;
@@ -19,6 +25,8 @@ export interface Trip {
   organization_id: string;
   created_at: string;
   updated_at: string;
+  vehicle_registration?: string;
+  driver_name?: string;
 }
 
 // Request to create a new trip

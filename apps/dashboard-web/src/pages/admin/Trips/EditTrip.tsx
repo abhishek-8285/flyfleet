@@ -28,10 +28,14 @@ export default function EditTrip() {
     try {
       const data = await api.getTrip(id!);
       setTripId(data.trip_id);
+      
+      const startLoc = typeof data.start_location === "object" ? data.start_location.address : data.start_location;
+      const endLoc = typeof data.end_location === "object" ? data.end_location.address : data.end_location;
+
       setFormData({
         status: data.status || "",
-        start_location: data.start_location || "",
-        end_location: data.end_location || "",
+        start_location: startLoc || "",
+        end_location: endLoc || "",
         distance: data.distance?.toString() || "",
       });
     } catch (error) {

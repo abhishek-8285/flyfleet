@@ -4,13 +4,19 @@ import { TripFilters, TripFilterState } from "../../../components/trips/TripFilt
 import { useUIStrings } from "../../../hooks/useUIStrings";
 import api from "../../../services/api";
 
+interface Location {
+  latitude: number;
+  longitude: number;
+  address: string;
+}
+
 interface Trip {
   id: string;
   trip_id: string;
   vehicle_id: string;
   driver_id?: string;
-  start_location: string;
-  end_location: string;
+  start_location: string | Location;
+  end_location: string | Location;
   start_time: string;
   distance: number;
   status: string;
@@ -127,14 +133,16 @@ export default function TripsList() {
     const q = keyword.toLowerCase();
     return trips.filter((t) => {
       const vehicleName = vehicleMap[t.vehicle_id]?.toLowerCase() || "";
+      const startLoc = formatLocation(t.start_location).toLowerCase();
+      const endLoc = formatLocation(t.end_location).toLowerCase();
       return (
         t.trip_id.toLowerCase().includes(q) ||
         t.vehicle_id.toLowerCase().includes(q) ||
         vehicleName.includes(q) ||
         (t.driver_id || "").toLowerCase().includes(q) ||
         (t.customer_name || "").toLowerCase().includes(q) ||
-        t.start_location.toLowerCase().includes(q) ||
-        t.end_location.toLowerCase().includes(q)
+        startLoc.includes(q) ||
+        endLoc.includes(q)
       );
     });
   }, [trips, keyword, vehicleMap]);
@@ -212,6 +220,12 @@ function formatDate(dateStr: string) {
   });
 }
 
+function formatLocation(loc: string | Location) {
+  if (!loc) return "Unknown Location";
+  if (typeof loc === "string") return loc;
+  return loc.address || `${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)}`;
+}
+
 /* ── Board View (Kanban) ── */
 function BoardView({
   columns,
@@ -284,9 +298,9 @@ function BoardView({
                         </div>
                       </div>
                       <div className="text-[11px] font-bold text-white mb-3 line-clamp-2 leading-relaxed">
-                        {trip.start_location} 
+                        {formatLocation(trip.start_location)} 
                         <span className="material-symbols-outlined text-[10px] mx-1 text-on-surface-variant">arrow_forward</span> 
-                        {trip.end_location}
+                        {formatLocation(trip.end_location)}
                       </div>
                       <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-on-surface-variant border-t border-outline/30 pt-3 mt-3 group-hover:border-primary/20 transition-colors">
                         <span className="flex items-center gap-1.5" title={trip.vehicle_id}>
@@ -414,7 +428,7 @@ function ListView({
                     </div>
                   </td>
                   <td className="px-6 py-4 text-on-surface-variant font-bold text-xs max-w-[240px] truncate">
-                    {trip.start_location} <span className="text-white/20 mx-1">→</span> {trip.end_location}
+                    {formatLocation(trip.start_location)} <span className="text-white/20 mx-1">→</span> {formatLocation(trip.end_location)}
                   </td>
                   <td className="px-6 py-4 text-on-surface-variant font-bold text-xs whitespace-nowrap">
                     {formatDate(trip.start_time)}

@@ -122,10 +122,10 @@ func (r *VehicleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.
 			WHERE vehicle_id = v.id AND status = 'ACTIVE'
 		) alerts ON true
 		LEFT JOIN LATERAL (
-			SELECT recorded_at, ignition_status, latitude, longitude
-			FROM telemetry_points
+			SELECT time as recorded_at, (CASE WHEN ignition THEN 'ON' ELSE 'OFF' END) as ignition_status, latitude, longitude
+			FROM gps_locations
 			WHERE vehicle_id = v.id
-			ORDER BY recorded_at DESC
+			ORDER BY time DESC
 			LIMIT 1
 		) t ON true
 		LEFT JOIN LATERAL (
@@ -358,10 +358,10 @@ func (r *VehicleRepository) Search(ctx context.Context, params models.VehicleSea
 			WHERE vehicle_id = v.id AND status = 'ACTIVE'
 		) alerts ON true
 		LEFT JOIN LATERAL (
-			SELECT recorded_at, ignition_status, latitude, longitude
-			FROM telemetry_points
+			SELECT time as recorded_at, (CASE WHEN ignition THEN 'ON' ELSE 'OFF' END) as ignition_status, latitude, longitude
+			FROM gps_locations
 			WHERE vehicle_id = v.id
-			ORDER BY recorded_at DESC
+			ORDER BY time DESC
 			LIMIT 1
 		) t ON true
 		LEFT JOIN LATERAL (

@@ -59,8 +59,8 @@ export const DriverList: React.FC = () => {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Personnel Management</h1>
-          <p className="text-gray-400 text-sm">Manage and track your active personnel</p>
+          <h1 className="text-2xl font-bold text-white">Driver Management</h1>
+          <p className="text-gray-400 text-sm">Manage and track your drivers</p>
         </div>
         <div className="flex gap-4">
           <button className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 text-white rounded-lg hover:bg-white/10 transition-all font-semibold">

@@ -38,9 +38,79 @@ export const DispatchCenter: React.FC = () => {
   // Auto-switch to dark layer if theme is dark and layer is roadmap
   const effectiveLayer = (currentLayer === 'roadmap' && theme === 'dark') ? 'dark' : currentLayer;
 
+  // Staleness threshold: 30 seconds
+  const [registryVehicles, setRegistryVehicles] = useState<any[]>([]);
+  const [geofences, setGeofences] = useState<any[]>([]);
+  const [tick, setTick] = useState(0);
+
+  // Force re-evaluation of staleness every 5 seconds
+  useEffect(() => {
+    const timer = setInterval(() => setTick(t => t + 1), 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Fetch registry to map registrations to telemetry
+  useEffect(() => {
+    const fetchRegistry = async () => {
+      try {
+        const { api } = await import('../../services/api');
+        const res = await api.getVehicles({ limit: 100 });
+        const data = res?.data || res;
+        setRegistryVehicles(Array.isArray(data) ? data : data?.vehicles || []);
+      } catch (err) {
+        console.error('Failed to fetch registry for map:', err);
+      }
+    };
+    fetchRegistry();
+  }, []);
+
+  // Fetch geofences
+  useEffect(() => {
+    const fetchGeofences = async () => {
+      try {
+        const { api } = await import('../../services/api');
+        const res = await api.getGeofences();
+        const data = res?.data || res;
+        setGeofences(Array.isArray(data) ? data : data?.geofences || []);
+      } catch (err) {
+        console.error('Failed to fetch geofences for map:', err);
+      }
+    };
+    fetchGeofences();
+  }, []);
+
+  const combinedVehicles = React.useMemo(() => {
+    const now = Date.now();
+    const OFFLINE_TIMEOUT = 30000;
+    return registryVehicles.map((v) => {
+      const live = telemetryVehicles[v.id];
+      
+      // Calculate derived status based on speed and staleness
+      const lastUpdateTs = live?.lastUpdate ? new Date(live.lastUpdate).getTime() : (v.summary?.last_seen ? new Date(v.summary.last_seen).getTime() : 0);
+      const isStale = (now - lastUpdateTs) > OFFLINE_TIMEOUT;
+      
+      let status: 'active' | 'idle' | 'offline' = 'idle';
+      if (isStale) {
+        status = 'offline';
+      } else if ((live?.speed ?? 0) > 2) {
+        status = 'active';
+      }
+
+      return {
+        id: v.id,
+        lat: live?.latitude || v.summary?.last_location_lat || 0,
+        lng: live?.longitude || v.summary?.last_location_lng || 0,
+        status: status as any,
+        label: v.registration_number || v.registrationNumber || v.id.substring(0, 8),
+        heading: live?.heading || 0,
+        lastSeen: lastUpdateTs,
+      };
+    });
+  }, [telemetryVehicles, registryVehicles, tick]);
+
   useEffect(() => {
     const token = localStorage.getItem('access_token') || '';
-    const wsUrl = `ws://localhost:8084/ws/telemetry?token=${token}`;
+    const wsUrl = `ws://localhost:8110/ws/telemetry?token=${token}`;
     connectTelemetry(wsUrl);
   }, [connectTelemetry]);
 
@@ -98,13 +168,8 @@ export const DispatchCenter: React.FC = () => {
         {/* Main Map Workspace */}
         <div className="flex-1 relative bg-background-dark dark:bg-black overflow-hidden">
           <LiveOperationsMap
-            vehicles={Object.values(telemetryVehicles).map((v) => ({
-              id: v.id,
-              lat: v.latitude,
-              lng: v.longitude,
-              status: (v.speed ?? 0) > 0 ? 'active' : 'idle',
-              label: v.registrationNumber || v.id.substring(0, 8),
-            }))}
+            vehicles={combinedVehicles}
+            geofences={geofences}
             height="100%"
             selectedId={selectedId}
             className="rounded-none"

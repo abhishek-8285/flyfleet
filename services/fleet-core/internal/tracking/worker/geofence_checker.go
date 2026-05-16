@@ -11,7 +11,6 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
-	"github.com/flyfleet/fleet-core/internal/database"
 	"github.com/flyfleet/fleet-core/internal/tracking/models"
 	"github.com/flyfleet/fleet-core/internal/tracking/repository"
 )
@@ -102,6 +101,9 @@ func (w *GeofenceChecker) checkAllOrgs(ctx context.Context) {
 // CheckVehicle checks a single vehicle's position against all active
 // geofences, logging events on state changes.
 func (w *GeofenceChecker) CheckVehicle(ctx context.Context, vehicleID uuid.UUID, tenantID uuid.UUID, lat, lng float64) error {
+	if w == nil || w.geoRepo == nil {
+		return nil // Defensive check for nil checker or repo
+	}
 	// 1. Get all active geofences for this org
 	geofences, err := w.geoRepo.GetOrgGeofences(ctx, tenantID)
 	if err != nil {
@@ -191,6 +193,7 @@ func (w *GeofenceChecker) publishGeofenceAlert(
 	geofenceName string,
 ) {
 	msg, err := json.Marshal(models.GeofenceWSMessage{
+		ID:           event.ID.String(),
 		VehicleID:    event.VehicleID.String(),
 		EventType:    event.EventType,
 		GeofenceID:   event.GeofenceID.String(),
@@ -198,6 +201,7 @@ func (w *GeofenceChecker) publishGeofenceAlert(
 		OccurredAt:   event.OccurredAt.Format(time.RFC3339),
 		Latitude:     event.Latitude,
 		Longitude:    event.Longitude,
+		AlertSent:    event.AlertSent,
 		Message: fmt.Sprintf("Vehicle %s %s %s at %s",
 			event.VehicleID.String()[:8],
 			event.EventType,
@@ -209,7 +213,7 @@ func (w *GeofenceChecker) publishGeofenceAlert(
 		return
 	}
 
-	channel := database.RedisChannelForOrg(tenantID.String())
+	channel := fmt.Sprintf("org:%s:geofence_alerts", tenantID.String())
 	if err := w.redis.Publish(ctx, channel, msg).Err(); err != nil {
 		w.logger.Warn("failed to publish geofence alert", zap.Error(err))
 	}

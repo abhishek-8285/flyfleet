@@ -16,6 +16,16 @@ const (
 	TripStatusFailed    = "FAILED"
 )
 
+// Trip Type Constants
+const (
+	TripTypeDelivery  = "delivery"
+	TripTypeService   = "service"
+	TripTypeLongHaul  = "long_haul"
+	TripTypeStandard  = "standard"
+	TripTypeLocal     = "local"
+	TripTypeReturn    = "return"
+)
+
 // Validation constants
 const (
 	MaxTitleLength        = 100
@@ -36,10 +46,13 @@ const (
 // Trip represents a vehicle journey
 type Trip struct {
 	ID                   string       `json:"id" db:"id"`
+	TripID               string       `json:"trip_id" db:"-"`
 	TenantID                string       `json:"tenant_id" db:"tenant_id"`
 	VehicleID            string       `json:"vehicle_id" db:"vehicle_id"`
+	VehicleRegistration  string       `json:"vehicle_registration" db:"-"`
 	DriverID             *string      `json:"driver_id" db:"driver_id"`
-	Status               string       `json:"status" db:"status"` // planned, in_progress, paused, completed, cancelled
+	DriverName           string       `json:"driver_name" db:"-"`
+	Status               string       `json:"status" db:"status"` // scheduled, in_progress, completed, cancelled
 	TripType             string       `json:"trip_type" db:"trip_type"` // delivery, service, long_haul, standard, local, return
 	Title                string       `json:"title" db:"title"`
 	Description          string       `json:"description" db:"description"`
@@ -49,6 +62,7 @@ type Trip struct {
 	ActualRoute          []Waypoint   `json:"actual_route" db:"actual_route"`
 	Waypoints            []Waypoint   `json:"waypoints" db:"waypoints"`
 	PlannedDistance      float64      `json:"planned_distance" db:"planned_distance"`
+	Distance             float64      `json:"distance" db:"-"`
 	TotalDistance        *float64     `json:"total_distance" db:"total_distance"`
 	EstimatedDurationMin int          `json:"estimated_duration_min" db:"estimated_duration_min"`
 	ActualDurationMin    *int         `json:"actual_duration_min" db:"actual_duration_min"`
@@ -167,7 +181,7 @@ type Recipient struct {
 // CreateTripRequest represents the request body for creating a trip
 type CreateTripRequest struct {
 	VehicleID            string       `json:"vehicle_id" validate:"required,uuid4"`
-	DriverID             string       `json:"driver_id" validate:"required,uuid4"`
+	DriverID             string       `json:"driver_id" validate:"omitempty,uuid4"`
 	Title                string       `json:"title" validate:"required,max=100"`
 	Description          string       `json:"description" validate:"max=500"`
 	PlannedRoute         []Waypoint   `json:"planned_route" validate:"required,min=2"`
@@ -187,7 +201,8 @@ type CreateTripRequest struct {
 	PickupGeo         *Location `json:"pickup_geo" validate:"omitempty"`
 	DropGeo           *Location `json:"drop_geo" validate:"omitempty"`
 	EWayBillNo        string    `json:"eway_bill_no" validate:"omitempty"`
-	GSTClassification string    `json:"gst_classification" validate:"omitempty"`
+	GSTClassification    string       `json:"gst_classification" validate:"omitempty"`
+	TripType             string       `json:"trip_type" validate:"omitempty,oneof=delivery service long_haul standard local return"`
 }
 
 // UpdateTripRequest represents the request body for updating a trip

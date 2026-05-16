@@ -118,7 +118,27 @@ func main() {
 
 	// --- Services ---
 	tenantChecker := &pgTenantChecker{pool: pool}
-	ingestionSvc := ts.NewIngestionService(telemRepo, liveCache, rdb, logger)
+	// --- Geofence Checker ---
+	var geofenceChecker *worker.GeofenceChecker
+	if cfg.Flags.GeofenceAlerts {
+		geofenceChecker = worker.NewGeofenceChecker(
+			telemRepo, geoRepo, liveCache, rdb, logger, 10*time.Second)
+		go geofenceChecker.Start()
+		logger.Info("geofence alerts enabled, checker started")
+	}
+
+	// --- Ingestion Service with interface safety ---
+	var gChecker interface {
+		CheckVehicle(context.Context, uuid.UUID, uuid.UUID, float64, float64) error
+	}
+	if geofenceChecker != nil {
+		gChecker = geofenceChecker
+		logger.Info("Geofence checker assigned to ingestion service")
+	} else {
+		logger.Warn("Geofence checker is NIL, alerts will be disabled")
+	}
+
+	ingestionSvc := ts.NewIngestionService(telemRepo, liveCache, gChecker, rdb, logger)
 	ingestionSvc.SetHMACSecret(cfg.TelemetryHMACSecret)
 	querySvc := ts.NewTelemetryQueryService(telemRepo, liveCache, tenantChecker, logger)
 	batchSvc := ts.NewBatchLocationService(vehicleRepo, liveCache, telemRepo, logger, cfg.Flags.MaxVehiclesOnMap)
@@ -236,15 +256,6 @@ func main() {
 	invoicingService := invoicingSvc.NewInvoicingService(invRepo)
 	invoicingHandler := invoicingHandlers.NewHandler(invoicingService)
 
-	// --- Geofence Worker (conditional) ---
-	var geofenceChecker *worker.GeofenceChecker
-	if cfg.Flags.GeofenceAlerts {
-		geofenceChecker = worker.NewGeofenceChecker(
-			telemRepo, geoRepo, liveCache, rdb, logger, 10*time.Second)
-		go geofenceChecker.Start()
-		logger.Info("geofence alerts enabled, checker started")
-	}
-
 	// --- Router ---
 	r := chi.NewRouter()
 
@@ -334,12 +345,13 @@ func main() {
 				// Handled below if needed
 			}
 
-			// Geofences
-			r.Get("/geofences", geofenceHandler.ServeHTTP)
-			r.Post("/geofences", geofenceHandler.ServeHTTP)
-
 			// Administrative Unified Router
 			r.Route("/admin", func(r chi.Router) {
+				// Geofences
+				r.Get("/geofences", geofenceHandler.ServeHTTP)
+				r.Post("/geofences", geofenceHandler.ServeHTTP)
+				r.Delete("/geofences/{id}", geofenceHandler.ServeHTTP)
+
 				// Vehicle CRUD
 				r.Route("/vehicles", func(r chi.Router) {
 					vehicleHandlers.RegisterRoutes(r)
@@ -411,6 +423,12 @@ func main() {
 
 	if geofenceChecker != nil {
 		geofenceChecker.Stop()
+	}
+
+	// Flush and stop the telemetry batcher
+	if ingestionSvc != nil {
+		logger.Info("flushing telemetry batches...")
+		ingestionSvc.Stop()
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -1071,6 +1089,7 @@ func ensureTrackingSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.L
 		"CREATE TABLE IF NOT EXISTS geofences (id UUID PRIMARY KEY DEFAULT gen_random_uuid())",
 		"ALTER TABLE geofences ADD COLUMN IF NOT EXISTS tenant_id UUID",
 		"ALTER TABLE geofences ADD COLUMN IF NOT EXISTS name VARCHAR(100)",
+		"ALTER TABLE geofences ADD COLUMN IF NOT EXISTS description TEXT",
 		"ALTER TABLE geofences ADD COLUMN IF NOT EXISTS type VARCHAR(20)",
 		"ALTER TABLE geofences ADD COLUMN IF NOT EXISTS enabled BOOLEAN DEFAULT TRUE",
 		"ALTER TABLE geofences ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE",
@@ -1078,6 +1097,8 @@ func ensureTrackingSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.L
 		"ALTER TABLE geofences ADD COLUMN IF NOT EXISTS center_lat DOUBLE PRECISION",
 		"ALTER TABLE geofences ADD COLUMN IF NOT EXISTS center_lng DOUBLE PRECISION",
 		"ALTER TABLE geofences ADD COLUMN IF NOT EXISTS radius_m DOUBLE PRECISION",
+		"ALTER TABLE geofences ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()",
+		"ALTER TABLE geofences ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()",
 
 		// Geofence Events (Migration 301)
 		"CREATE TABLE IF NOT EXISTS geofence_events (id UUID PRIMARY KEY DEFAULT gen_random_uuid())",
@@ -1156,12 +1177,9 @@ func runSeedData(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
 	}
 
 	if exists {
-		var vehicleCount int
-		pool.QueryRow(ctx, "SELECT COUNT(*) FROM vehicles WHERE tenant_id = '550e8400-e29b-41d4-a716-446655440000'").Scan(&vehicleCount)
-		if vehicleCount > 0 {
-			logger.Info("🧹 Truncating vehicles to force clean dev seed...")
-			pool.Exec(ctx, "TRUNCATE vehicles CASCADE")
-		}
+		// Non-destructive seeding: we only add data if it's missing.
+		// The user explicitly requested to eliminate the destructive TRUNCATE logic.
+		logger.Info("♻️ Skipping truncate, proceeding with idempotent seeding...")
 	}
 
 	logger.Info("🚀 Applying complete dev data seed (single block)...")
@@ -1198,12 +1216,13 @@ func runSeedData(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
 	pool.QueryRow(ctx, "SELECT COUNT(*) FROM vehicles").Scan(&vCount)
 	
 	// Final High-Assurance Verification
-	var vCountFinal, dCount, cCount, sCount, aCount int
+	var vCountFinal, dCount, cCount, sCount, aCount, tripCount int
 	pool.QueryRow(ctx, "SELECT count(*) FROM vehicles").Scan(&vCountFinal)
 	pool.QueryRow(ctx, "SELECT count(*) FROM drivers").Scan(&dCount)
 	pool.QueryRow(ctx, "SELECT count(*) FROM customers").Scan(&cCount)
 	pool.QueryRow(ctx, "SELECT count(*) FROM shipments").Scan(&sCount)
 	pool.QueryRow(ctx, "SELECT count(*) FROM alerts").Scan(&aCount)
+	pool.QueryRow(ctx, "SELECT count(*) FROM trips").Scan(&tripCount)
 	
 	logger.Info("🛡️ FINAL VERIFICATION COMPLETE", 
 		zap.Int("vehicles", vCountFinal),
@@ -1211,9 +1230,10 @@ func runSeedData(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
 		zap.Int("customers", cCount),
 		zap.Int("shipments", sCount),
 		zap.Int("alerts", aCount),
+		zap.Int("trips", tripCount),
 	)
 
-	logger.Info("📊 Seed Verification", zap.Int("tenants", tCount), zap.Int("users", uCount), zap.Int("vehicles", vCount))
+	logger.Info("📊 Seed Verification", zap.Int("tenants", tCount), zap.Int("users", uCount), zap.Int("vehicles", vCount), zap.Int("trips", tripCount))
 
 	// Specifically check delta.io admin
 	var adminStatus string

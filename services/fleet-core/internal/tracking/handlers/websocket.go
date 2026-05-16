@@ -191,7 +191,7 @@ func (h *WebSocketHandler) subscribeToOrgUpdates(ctx context.Context, client *WS
 
 			// Envelope the geofence alert
 			envelope := models.WSMessage{
-				Type: models.WSMsgGeofenceAlert,
+				Type: models.WSMsgGeofenceEvent,
 				Data: json.RawMessage(msg.Payload),
 			}
 			payload, _ := json.Marshal(envelope)

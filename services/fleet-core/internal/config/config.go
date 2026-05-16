@@ -73,7 +73,7 @@ func Load() *Config {
 	// Feature flag defaults
 	v.SetDefault("feature_flags.vehicle_map_enabled", true)
 	v.SetDefault("feature_flags.real_time_updates", true)
-	v.SetDefault("feature_flags.geofence_alerts", false)
+	v.SetDefault("feature_flags.geofence_alerts", true)
 	v.SetDefault("feature_flags.history_trail", true)
 	v.SetDefault("feature_flags.max_vehicles_on_map", 500)
 

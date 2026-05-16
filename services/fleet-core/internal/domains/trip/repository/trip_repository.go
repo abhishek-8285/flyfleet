@@ -124,28 +124,32 @@ func (r *PostgresTripRepository) Create(ctx context.Context, trip *models.Trip) 
 func (r *PostgresTripRepository) GetByID(ctx context.Context, id string) (*models.Trip, error) {
 	query := `
 		SELECT
-			id, tenant_id, COALESCE(vehicle_id, '00000000-0000-0000-0000-000000000000') as vehicle_id, 
-			driver_id, status, COALESCE(trip_type, 'standard') as trip_type, 
-			COALESCE(title, '') as title, 
-			COALESCE(description, '') as description,
-			pickup_lat, pickup_lng, drop_lat, drop_lng,
-			planned_route, actual_route, waypoints,
-			COALESCE(planned_distance, 0.0) as planned_distance, total_distance, 
-			COALESCE(estimated_duration_min, 0) as estimated_duration_min, actual_duration_min,
-			cargo_details, COALESCE(scheduled_start, now()) as scheduled_start, start_time, end_time,
-			start_odometer, end_odometer, fuel_level_snapshot, fuel_used, idling_time_minutes,
-			COALESCE(eway_bill_no, '') as eway_bill_no, 
-			COALESCE(gst_classification, '') as gst_classification, 
-			permit_verified, ais140_compliant,
-			COALESCE(customer_name, '') as customer_name, 
-			COALESCE(customer_phone, '') as customer_phone, 
-			COALESCE(customer_email, '') as customer_email, 
-			COALESCE(cancellation_reason, '') as cancellation_reason,
-			version, 
-			COALESCE(created_at, now()) as created_at, 
-			COALESCE(updated_at, now()) as updated_at
-		FROM trips
-		WHERE id = $1 AND is_deleted = FALSE`
+			t.id, t.tenant_id, COALESCE(t.vehicle_id, '00000000-0000-0000-0000-000000000000') as vehicle_id, 
+			t.driver_id, t.status, COALESCE(t.trip_type, 'standard') as trip_type, 
+			COALESCE(t.title, '') as title, 
+			COALESCE(t.description, '') as description,
+			t.pickup_lat, t.pickup_lng, t.drop_lat, t.drop_lng,
+			t.planned_route, t.actual_route, t.waypoints,
+			COALESCE(t.planned_distance, 0.0) as planned_distance, t.total_distance, 
+			COALESCE(t.estimated_duration_min, 0) as estimated_duration_min, t.actual_duration_min,
+			t.cargo_details, COALESCE(t.scheduled_start, now()) as scheduled_start, t.start_time, t.end_time,
+			t.start_odometer, t.end_odometer, t.fuel_level_snapshot, t.fuel_used, t.idling_time_minutes,
+			COALESCE(t.eway_bill_no, '') as eway_bill_no, 
+			COALESCE(t.gst_classification, '') as gst_classification, 
+			t.permit_verified, t.ais140_compliant,
+			COALESCE(t.customer_name, '') as customer_name, 
+			COALESCE(t.customer_phone, '') as customer_phone, 
+			COALESCE(t.customer_email, '') as customer_email, 
+			COALESCE(t.cancellation_reason, '') as cancellation_reason,
+			t.version, 
+			COALESCE(t.created_at, now()) as created_at, 
+			COALESCE(t.updated_at, now()) as updated_at,
+			COALESCE(v.registration_number, '') as vehicle_reg,
+			COALESCE(d.full_name, 'Unassigned') as driver_name
+		FROM trips t
+		LEFT JOIN vehicles v ON t.vehicle_id = v.id
+		LEFT JOIN drivers d ON t.driver_id = d.id
+		WHERE t.id = $1 AND t.is_deleted = FALSE`
 
 	var trip models.Trip
 	var pLat, pLng, dLat, dLng sql.NullFloat64
@@ -157,6 +161,8 @@ func (r *PostgresTripRepository) GetByID(ctx context.Context, id string) (*model
 	var idlingTimeMinutes sql.NullInt32
 
 	var plannedDist sql.NullFloat64
+	var vReg, dName sql.NullString
+
 	start := time.Now()
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&trip.ID, &trip.TenantID, &trip.VehicleID, &trip.DriverID, &trip.Status, &trip.TripType, &trip.Title, &trip.Description,
@@ -168,10 +174,35 @@ func (r *PostgresTripRepository) GetByID(ctx context.Context, id string) (*model
 		&trip.EWayBillNo, &trip.GSTClassification, &trip.PermitVerified, &trip.AIS140Compliant,
 		&trip.CustomerName, &trip.CustomerPhone, &trip.CustomerEmail, &cancellationReason,
 		&trip.Version, &trip.CreatedAt, &trip.UpdatedAt,
+		&vReg, &dName,
 	)
 	if err == nil && plannedDist.Valid {
 		trip.PlannedDistance = plannedDist.Float64
 	}
+	
+	// Populate Location objects from scanned coordinates
+	if pLat.Valid && pLng.Valid {
+		trip.StartLocation = models.Location{
+			Latitude:  pLat.Float64,
+			Longitude: pLng.Float64,
+			Address:   "", 
+		}
+	}
+	if dLat.Valid && dLng.Valid {
+		trip.EndLocation = models.Location{
+			Latitude:  dLat.Float64,
+			Longitude: dLng.Float64,
+			Address:   "",
+		}
+	}
+
+	if vReg.Valid {
+		trip.VehicleRegistration = vReg.String
+	}
+	if dName.Valid {
+		trip.DriverName = dName.String
+	}
+
 	metrics.RecordDBQuery(query, time.Since(start))
 
 	if err != nil {
@@ -180,6 +211,12 @@ func (r *PostgresTripRepository) GetByID(ctx context.Context, id string) (*model
 
 	if cancellationReason.Valid {
 		trip.CancellationReason = cancellationReason.String
+	}
+	if vReg.Valid {
+		trip.VehicleRegistration = vReg.String
+	}
+	if dName.Valid {
+		trip.DriverName = dName.String
 	}
 
 	// Parse JSON fields
@@ -191,9 +228,45 @@ func (r *PostgresTripRepository) GetByID(ctx context.Context, id string) (*model
 	// Populate Geo fields from numeric columns
 	if pLat.Valid && pLng.Valid {
 		trip.PickupGeo = &models.Location{Latitude: pLat.Float64, Longitude: pLng.Float64}
+		trip.StartLocation = &models.Location{Latitude: pLat.Float64, Longitude: pLng.Float64}
 	}
 	if dLat.Valid && dLng.Valid {
 		trip.DropGeo = &models.Location{Latitude: dLat.Float64, Longitude: dLng.Float64}
+		trip.EndLocation = &models.Location{Latitude: dLat.Float64, Longitude: dLng.Float64}
+	}
+
+	// Normalize Status for Frontend
+	rawStatus := strings.ToUpper(trip.Status)
+	switch rawStatus {
+	case "CREATED", "SCHEDULED":
+		trip.Status = "scheduled"
+	case "STARTED", "RESUMED", "PAUSED", "ACTIVE":
+		trip.Status = "in_progress"
+	case "COMPLETED":
+		trip.Status = "completed"
+	case "CANCELLED", "FAILED":
+		trip.Status = "cancelled"
+	default:
+		trip.Status = strings.ToLower(trip.Status)
+	}
+
+	// Populate TripID (short ID for frontend)
+	if len(trip.ID) >= 8 {
+		trip.TripID = strings.ToUpper(trip.ID[:8])
+	} else {
+		trip.TripID = trip.ID
+	}
+
+	// Populate Distance
+	if trip.TotalDistance != nil && *trip.TotalDistance > 0 {
+		trip.Distance = *trip.TotalDistance
+	} else {
+		trip.Distance = trip.PlannedDistance
+	}
+
+	// Ensure StartTime is populated for frontend formatting
+	if trip.StartTime == nil {
+		trip.StartTime = &trip.ScheduledStart
 	}
 
 	return &trip, nil
@@ -203,19 +276,24 @@ func (r *PostgresTripRepository) GetByID(ctx context.Context, id string) (*model
 func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripListFilter) ([]*models.Trip, int, error) {
 	baseQuery := `
 		SELECT
-			id, tenant_id, COALESCE(vehicle_id, '00000000-0000-0000-0000-000000000000') as vehicle_id, 
-			driver_id, status, COALESCE(trip_type, 'standard') as trip_type, 
-			COALESCE(title, '') as title, 
-			COALESCE(description, '') as description,
-			COALESCE(planned_distance, 0.0) as planned_distance, 
-			COALESCE(total_distance, 0.0) as total_distance, 
-			COALESCE(estimated_duration_min, 0) as estimated_duration_min, 
-			COALESCE(actual_duration_min, 0) as actual_duration_min,
-			COALESCE(scheduled_start, now()) as scheduled_start, 
-			start_time, end_time,
-			COALESCE(customer_name, '') as customer_name, created_at, updated_at
-		FROM trips
-		WHERE tenant_id = $1 AND is_deleted = FALSE`
+			t.id, t.tenant_id, COALESCE(t.vehicle_id, '00000000-0000-0000-0000-000000000000') as vehicle_id, 
+			t.driver_id, t.status, COALESCE(t.trip_type, 'standard') as trip_type, 
+			COALESCE(t.title, '') as title, 
+			COALESCE(t.description, '') as description,
+			COALESCE(t.planned_distance, 0.0) as planned_distance, 
+			COALESCE(t.total_distance, 0.0) as total_distance, 
+			COALESCE(t.estimated_duration_min, 0) as estimated_duration_min, 
+			COALESCE(t.actual_duration_min, 0) as actual_duration_min,
+			COALESCE(t.scheduled_start, now()) as scheduled_start, 
+			t.start_time, t.end_time,
+			t.pickup_lat, t.pickup_lng, t.drop_lat, t.drop_lng,
+			COALESCE(t.customer_name, '') as customer_name, t.created_at, t.updated_at,
+			COALESCE(v.registration_number, '') as vehicle_reg,
+			COALESCE(d.full_name, 'Unassigned') as driver_name
+		FROM trips t
+		LEFT JOIN vehicles v ON t.vehicle_id = v.id
+		LEFT JOIN drivers d ON t.driver_id = d.id
+		WHERE t.tenant_id = $1 AND t.is_deleted = FALSE`
 
 	countQuery := `SELECT COUNT(*) FROM trips WHERE tenant_id = $1 AND is_deleted = FALSE`
 
@@ -224,9 +302,21 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 	argIndex := 2
 
 	if filter.Status != "" {
-		conditions = append(conditions, fmt.Sprintf("status = $%d", argIndex))
-		args = append(args, filter.Status)
-		argIndex++
+		status := strings.ToLower(filter.Status)
+		switch status {
+		case "scheduled":
+			conditions = append(conditions, fmt.Sprintf("status IN ('CREATED', 'SCHEDULED')"))
+		case "in_progress":
+			conditions = append(conditions, fmt.Sprintf("status IN ('STARTED', 'RESUMED', 'PAUSED', 'ACTIVE')"))
+		case "completed":
+			conditions = append(conditions, fmt.Sprintf("status = 'COMPLETED'"))
+		case "cancelled":
+			conditions = append(conditions, fmt.Sprintf("status IN ('CANCELLED', 'FAILED')"))
+		default:
+			conditions = append(conditions, fmt.Sprintf("status = $%d", argIndex))
+			args = append(args, filter.Status)
+			argIndex++
+		}
 	}
 
 	if filter.TripType != "" {
@@ -288,7 +378,8 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 
 	orderBy := "created_at DESC"
 	listSQL := baseQuery + whereClause + " ORDER BY " + orderBy + limitClause
-
+	fmt.Printf("DEBUG: Executing List query for tenant %s: %s with args: %v\n", filter.TenantID, listSQL, args)
+	
 	start = time.Now()
 	rows, err := r.db.Query(ctx, listSQL, args...)
 	metrics.RecordDBQuery(listSQL, time.Since(start))
@@ -307,16 +398,21 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 		var schedStart time.Time
 		var startedAt sql.NullTime
 		var endedAt sql.NullTime
+		var pLat, pLng, dLat, dLng sql.NullFloat64
 		var custName sql.NullString
+		var vReg, dName sql.NullString
 
 		err := rows.Scan(
 			&trip.ID, &trip.TenantID, &trip.VehicleID, &trip.DriverID, &trip.Status, &trip.TripType,
 			&trip.Title, &trip.Description,
 			&plannedDist, &totalDist, &estDur, &actDur,
 			&schedStart, &startedAt, &endedAt,
+			&pLat, &pLng, &dLat, &dLng,
 			&custName, &trip.CreatedAt, &trip.UpdatedAt,
+			&vReg, &dName,
 		)
 		if err != nil {
+			fmt.Printf("DEBUG: Scan failed for trip: %v\n", err)
 			return nil, 0, err
 		}
 		
@@ -336,6 +432,36 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 			t := startedAt.Time
 			trip.StartTime = &t
 		}
+		if endedAt.Time.After(time.Time{}) {
+			t := endedAt.Time
+			trip.EndTime = &t
+		}
+
+		// Populate Location objects from scanned coordinates
+		if pLat.Valid && pLng.Valid {
+			trip.StartLocation = models.Location{
+				Latitude:  pLat.Float64,
+				Longitude: pLng.Float64,
+				Address:   "", // Address not stored in separate columns in this version
+			}
+		}
+		if dLat.Valid && dLng.Valid {
+			trip.EndLocation = models.Location{
+				Latitude:  dLat.Float64,
+				Longitude: dLng.Float64,
+				Address:   "",
+			}
+		}
+
+		if custName.Valid {
+			trip.CustomerName = custName.String
+		}
+		if vReg.Valid {
+			trip.VehicleRegistration = vReg.String
+		}
+		if dName.Valid {
+			trip.DriverName = dName.String
+		}
 		if endedAt.Valid {
 			t := endedAt.Time
 			trip.EndTime = &t
@@ -343,10 +469,59 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 		if custName.Valid {
 			trip.CustomerName = custName.String
 		}
+		if vReg.Valid {
+			trip.VehicleRegistration = vReg.String
+		}
+		if dName.Valid {
+			trip.DriverName = dName.String
+		}
+
+		// Map Geo fields
+		if pLat.Valid && pLng.Valid {
+			trip.StartLocation = &models.Location{Latitude: pLat.Float64, Longitude: pLng.Float64}
+		}
+		if dLat.Valid && dLng.Valid {
+			trip.EndLocation = &models.Location{Latitude: dLat.Float64, Longitude: dLng.Float64}
+		}
+
+		// Normalize Status for Frontend
+		rawStatus := strings.ToUpper(trip.Status)
+		switch rawStatus {
+		case "CREATED", "SCHEDULED":
+			trip.Status = "scheduled"
+		case "STARTED", "RESUMED", "PAUSED", "ACTIVE":
+			trip.Status = "in_progress"
+		case "COMPLETED":
+			trip.Status = "completed"
+		case "CANCELLED", "FAILED":
+			trip.Status = "cancelled"
+		default:
+			trip.Status = strings.ToLower(trip.Status)
+		}
+
+		// Populate TripID (short ID for frontend)
+		if len(trip.ID) >= 8 {
+			trip.TripID = strings.ToUpper(trip.ID[:8])
+		} else {
+			trip.TripID = trip.ID
+		}
+
+		// Populate Distance
+		if trip.TotalDistance != nil && *trip.TotalDistance > 0 {
+			trip.Distance = *trip.TotalDistance
+		} else {
+			trip.Distance = trip.PlannedDistance
+		}
+
+		// Ensure StartTime is populated for frontend formatting
+		if trip.StartTime == nil {
+			trip.StartTime = &trip.ScheduledStart
+		}
 		
 		trips = append(trips, &trip)
 	}
 
+	fmt.Printf("DEBUG: Returning %d trips for tenant %s\n", len(trips), filter.TenantID)
 	return trips, totalCount, nil
 }
 
@@ -650,9 +825,14 @@ func (r *PostgresTripRepository) CheckOverlappingTrips(ctx context.Context, vehi
 			  )
 		)`
 
+	var driverIDParam interface{} = driverID
+	if driverID == "" {
+		driverIDParam = nil
+	}
+
 	var exists bool
 	queryStart := time.Now()
-	err := r.db.QueryRow(ctx, query, vehicleID, driverID, start, end).Scan(&exists)
+	err := r.db.QueryRow(ctx, query, vehicleID, driverIDParam, start, end).Scan(&exists)
 	metrics.RecordDBQuery(query, time.Since(queryStart))
 	return exists, err
 }

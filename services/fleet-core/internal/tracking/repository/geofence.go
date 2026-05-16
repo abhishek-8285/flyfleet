@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 
@@ -25,9 +26,9 @@ func NewGeofenceRepository(pool *pgxpool.Pool) *GeofenceRepository {
 func (r *GeofenceRepository) GetOrgGeofences(ctx context.Context, tenantID uuid.UUID) ([]models.Geofence, error) {
 	q := `SELECT id, tenant_id, name, COALESCE(description,''), type,
 	         center_lat, center_lng, radius_m,
-	         COALESCE(polygon_wkt, ''), enabled, created_at, updated_at
+	         COALESCE(coordinates::text, ''), enabled, created_at, updated_at
 	      FROM geofences
-	      WHERE tenant_id = $1 AND enabled = true
+	      WHERE tenant_id = $1 AND enabled = true AND is_deleted = false
 	      ORDER BY name`
 
 	rows, err := r.pool.Query(ctx, q, tenantID)
@@ -80,9 +81,9 @@ func (r *GeofenceRepository) CreateGeofence(ctx context.Context, g *models.Geofe
 		return err
 	}
 
-	// Polygon — store WKT as text
-	q := `INSERT INTO geofences (id, tenant_id, name, description, type, polygon_wkt, enabled, created_at, updated_at)
-	      VALUES ($1,$2,$3,$4,$5,$6,true,NOW(),NOW())`
+	// Polygon — store coordinates as JSONB text
+	q := `INSERT INTO geofences (id, tenant_id, name, description, type, coordinates, enabled, created_at, updated_at)
+	      VALUES ($1,$2,$3,$4,$5,$6::jsonb,true,NOW(),NOW())`
 	_, err := r.pool.Exec(ctx, q,
 		g.ID, g.TenantID, g.Name, g.Description, g.Type, g.PolygonWKT,
 	)
@@ -122,24 +123,53 @@ func (r *GeofenceRepository) CheckPointInGeofences(ctx context.Context, tenantID
 				}
 			}
 		case models.GeofencePolygon:
-			// Without PostGIS, we can't do server-side point-in-polygon.
-			// Return all polygon geofences — the geofence engine does
-			// client-side ST_Contains via PostGIS in production.
-			// For plain Postgres, we skip polygons here (the NATS-based
-			// geofence engine handles this separately).
+			if isPointInPolygon(lat, lng, g.PolygonWKT) {
+				results = append(results, g)
+			}
 		}
 	}
 	return results, nil
 }
 
+// isPointInPolygon implements a simple ray-casting algorithm for geofencing.
+// Coordinates in polygonWKT are expected as JSON: [[lat, lng], [lat, lng], ...]
+func isPointInPolygon(lat, lng float64, polygonJSON string) bool {
+	var points [][]float64
+	if err := json.Unmarshal([]byte(polygonJSON), &points); err != nil {
+		return false
+	}
+	if len(points) < 3 {
+		return false
+	}
+
+	inside := false
+	x, y := lng, lat
+	for i, j := 0, len(points)-1; i < len(points); j, i = i, i+1 {
+		yi, xi := points[i][0], points[i][1] // [lat, lng]
+		yj, xj := points[j][0], points[j][1]
+
+		if ((yi > y) != (yj > y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi) {
+			inside = !inside
+		}
+	}
+	return inside
+}
+
 // LogGeofenceEvent records an entry or exit event.
 func (r *GeofenceRepository) LogGeofenceEvent(ctx context.Context, event *models.GeofenceEvent) error {
-	q := `INSERT INTO geofence_events (id, geofence_id, vehicle_id, event_type, occurred_at, latitude, longitude, alert_sent, alert_channels, created_at)
+	q := `INSERT INTO geofence_events (id, geofence_id, vehicle_id, event_type, time, lat, lng, alert_sent, alert_channels, created_at)
 	      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())`
 	_, err := r.pool.Exec(ctx, q,
 		event.ID, event.GeofenceID, event.VehicleID, event.EventType,
 		event.OccurredAt, event.Latitude, event.Longitude,
 		event.AlertSent, event.AlertChannels,
 	)
+	return err
+}
+
+// DeleteGeofence disables a geofence (soft delete).
+func (r *GeofenceRepository) DeleteGeofence(ctx context.Context, id uuid.UUID) error {
+	q := `UPDATE geofences SET enabled = false, updated_at = NOW() WHERE id = $1`
+	_, err := r.pool.Exec(ctx, q, id)
 	return err
 }

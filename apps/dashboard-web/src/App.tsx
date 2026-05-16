@@ -158,6 +158,8 @@ const WorkOrderManagement = lazy(() => import('./pages/admin/maintenance/WorkOrd
 const ForecastingDashboard = lazy(() => import('./pages/admin/revenue/ForecastingDashboard'));
 const RouteOptimization = lazy(() => import('./pages/admin/RouteOptimization'));
 const VideoTelematics = lazy(() => import('./pages/admin/VideoTelematics'));
+const GeofenceManagement = lazy(() => import('./pages/admin/GeofenceManagement'));
+const AddGeofence = lazy(() => import('./pages/admin/AddGeofence'));
 const AuditCenter = lazy(() => import('./pages/audit/AuditCenter'));
 const DeviceApproval = lazy(() => import('./pages/DeviceApproval'));
 const DeviceDashboard = lazy(() => import('./pages/devices/DeviceDashboard'));
@@ -630,6 +632,24 @@ function App() {
 
                 {/* Integrations Module */}
                 <Route path="integrations" element={<IntegrationHub />} />
+
+                {/* Geofencing Module */}
+                <Route
+                  path="geofences"
+                  element={
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <GeofenceManagement />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="geofences/new"
+                  element={
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <AddGeofence />
+                    </Suspense>
+                  }
+                />
 
                 {/* Fuel Module */}
                 <Route path="fuel/add" element={<AddFuelLog />} />

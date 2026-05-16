@@ -1,6 +1,5 @@
 import {
   ArrowDownRightIcon,
-  ArrowLeftIcon,
   ArrowUpRightIcon,
   BanknotesIcon,
   CalendarDaysIcon,
@@ -24,44 +23,22 @@ const BillingDashboard: React.FC = () => {
   const { uiStrings } = useUIStrings('admin_billing');
   const [billingData, setBillingData] = useState<any>(null); // Assuming billingData is needed for new stat cards
   const [activeTab, setActiveTab] = useState('Overview'); // For new tab navigation
-  const [historyPage, setHistoryPage] = useState(1);
-  const [historyTotal, setHistoryTotal] = useState(0);
-  const [historyInvoices, setHistoryInvoices] = useState<Invoice[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    if (activeTab === 'Invoice History') {
-      fetchHistory();
-    }
-  }, [activeTab, historyPage]);
-
-  const fetchHistory = async () => {
-    setHistoryLoading(true);
-    try {
-      const data = await invoicingV2Service.listInvoices(10, (historyPage - 1) * 10);
-      setHistoryInvoices(data.invoices || []);
-      setHistoryTotal(data.total || 0);
-    } catch (error) {
-      console.error('Failed to fetch invoice history', error);
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
-
   const fetchData = async () => {
     try {
-      const [v2InvoicesData, metricsData, settingsData] = await Promise.all([
+      const [invoicesData, v2InvoicesData, metricsData, settingsData] = await Promise.all([
+        billingService.getInvoices(1, 10),
         invoicingV2Service.listInvoices(10, 0),
         billingService.getMetrics(),
         billingService.getSettings(),
       ]);
 
-      // Sort by date descending
-      const allInvoices = [...(v2InvoicesData?.invoices || [])].sort(
+      // Merge and sort by date descending
+      const allInvoices = [...(invoicesData?.data || []), ...(v2InvoicesData?.invoices || [])].sort(
         (a, b) => new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime()
       );
 
@@ -97,89 +74,13 @@ const BillingDashboard: React.FC = () => {
       </div>
     );
 
-  const InvoicesTable: React.FC<{ data: Invoice[]; emptyMsg?: string }> = ({ data, emptyMsg }) => (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left">
-        <thead className="bg-surface-darker border-b border-border-color">
-          <tr>
-            <th className="px-6 py-4 text-left text-xs font-bold text-text-muted uppercase tracking-widest">
-              {uiStrings?.th_invoice_id || 'Invoice ID'}
-            </th>
-            <th className="px-6 py-4 text-left text-xs font-bold text-text-muted uppercase tracking-widest">
-              Category
-            </th>
-            <th className="px-6 py-4 text-left text-xs font-bold text-text-muted uppercase tracking-widest">
-              {uiStrings?.th_date || 'Date'}
-            </th>
-            <th className="px-6 py-4 text-left text-xs font-bold text-text-muted uppercase tracking-widest">
-              {uiStrings?.th_amount || 'Amount'}
-            </th>
-            <th className="px-6 py-4 text-left text-xs font-bold text-text-muted uppercase tracking-widest">
-              {uiStrings?.th_status || 'Status'}
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-white/5">
-          {data.map((invoice) => (
-            <tr
-              key={invoice.id}
-              onClick={() => navigate(`/admin/billing/invoices/${invoice.id}`)}
-              className="hover:bg-white/5 transition-colors cursor-pointer"
-            >
-              <td className="px-6 py-4">
-                <span className="text-white font-medium">
-                  #{invoice?.id?.substring(0, 8).toUpperCase()}
-                </span>
-              </td>
-              <td className="px-6 py-4">
-                <span
-                  className={`text-xs px-2 py-0.5 rounded border ${
-                    invoice.category === 'Miscellaneous'
-                      ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-                      : 'bg-white/5 text-gray-400 border-white/10'
-                  }`}
-                >
-                  {invoice.category || 'Transportation'}
-                </span>
-              </td>
-              <td className="px-6 py-4">
-                <span className="text-gray-400">
-                  {new Date(invoice.invoice_date).toLocaleDateString()}
-                </span>
-              </td>
-              <td className="px-6 py-4">
-                <span className="text-white font-semibold">
-                  ₹{invoice?.total_amount?.toLocaleString('en-IN') || '0.00'}
-                </span>
-              </td>
-              <td className="px-6 py-4">
-                <span
-                  className={`px-2.5 py-1 rounded-full text-xs font-medium border ${statusColors[invoice?.status || 'PENDING']}`}
-                >
-                  {invoice.status}
-                </span>
-              </td>
-            </tr>
-          ))}
-          {data.length === 0 && (
-            <tr>
-              <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                {emptyMsg || uiStrings?.msg_no_invoices || 'No invoices found.'}
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
-
   return (
     <div className="p-8">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-white text-3xl font-bold mb-1">
-            {uiStrings?.title || 'Billing & Invoicing'}
+            {uiStrings?.title || 'Billing & invoicing'}
           </h1>
           <p className="text-text-muted">
             {uiStrings?.subtitle || 'Manage payment methods, invoices, and service tiers'}
@@ -193,7 +94,7 @@ const BillingDashboard: React.FC = () => {
             {uiStrings?.btn_create_invoice || 'Create Invoice'}
           </button>
           {/* <button className="bg-primary text-white px-6 py-2 rounded-xl font-bold hover:bg-primary-hover transition-colors">
-            {uiStrings?.btn_manage || 'Manage Subscription'}
+            {uiStrings?.btn_manage || "Manage Subscription"}
           </button> */}
         </div>
       </div>
@@ -283,47 +184,95 @@ const BillingDashboard: React.FC = () => {
                 {uiStrings?.title_recent_invoices || 'Recent Invoices'}
               </h2>
               <button
-                onClick={() => setActiveTab('Invoice History')}
+                onClick={() => navigate('/admin/billing/invoices')}
                 className="text-primary hover:underline text-sm font-medium"
               >
                 {uiStrings?.btn_view_all || 'View All'}
               </button>
             </div>
 
-            <InvoicesTable data={invoices} emptyMsg={uiStrings?.msg_no_invoices || 'No recent invoices found.'} />
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-surface-darker border-b border-border-color">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-text-muted uppercase tracking-widest">
+                      {uiStrings?.th_invoice_id || 'Invoice ID'}
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-text-muted uppercase tracking-widest">
+                      Category
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-text-muted uppercase tracking-widest">
+                      {uiStrings?.th_date || 'Date'}
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-text-muted uppercase tracking-widest">
+                      {uiStrings?.th_amount || 'Amount'}
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-text-muted uppercase tracking-widest">
+                      {uiStrings?.th_status || 'Status'}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {invoices.map((invoice) => (
+                    <tr
+                      key={invoice.id}
+                      onClick={() => navigate(`/admin/billing/invoices/${invoice.id}`)}
+                      className="hover:bg-white/5 transition-colors cursor-pointer"
+                    >
+                      <td className="px-6 py-4">
+                        <span className="text-white font-medium">
+                          #{invoice.id.substring(0, 8).toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded border ${
+                            invoice.category === 'Miscellaneous'
+                              ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                              : 'bg-white/5 text-gray-400 border-white/10'
+                          }`}
+                        >
+                          {invoice.category || 'Transportation'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-gray-400">
+                          {new Date(invoice.invoice_date).toLocaleDateString()}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-white font-semibold">
+                          ₹{invoice.total_amount.toLocaleString('en-IN')}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-xs font-medium border ${statusColors[invoice.status]}`}
+                        >
+                          {invoice.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {invoices.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                        {uiStrings?.msg_no_invoices || 'No recent invoices found.'}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </>
       )}
 
       {activeTab === 'Invoice History' && (
         <div className="bg-gray-900/50 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden min-h-[400px]">
-          <div className="p-6 border-b border-white/10 flex items-center justify-between">
-            <h2 className="text-white font-semibold">Invoice History</h2>
-            <div className="flex items-center gap-2">
-              <button
-                disabled={historyPage === 1 || historyLoading}
-                onClick={() => setHistoryPage((p) => p - 1)}
-                className="p-2 hover:bg-white/5 rounded-lg disabled:opacity-30 text-white"
-              >
-                <ArrowLeftIcon className="h-5 w-5" />
-              </button>
-              <span className="text-sm text-text-muted">
-                Page {historyPage} of {Math.ceil(historyTotal / 10) || 1}
-              </span>
-              <button
-                disabled={historyPage * 10 >= historyTotal || historyLoading}
-                onClick={() => setHistoryPage((p) => p + 1)}
-                className="p-2 hover:bg-white/5 rounded-lg disabled:opacity-30 text-white"
-              >
-                <ArrowUpRightIcon className="h-5 w-5 rotate-45" />
-              </button>
-            </div>
+          <div className="p-12 text-center text-text-muted">
+            History content will be paginated here.
           </div>
-          {historyLoading ? (
-            <div className="p-12 text-center text-text-muted">Loading history...</div>
-          ) : (
-            <InvoicesTable data={historyInvoices} emptyMsg="No historical invoices found." />
-          )}
         </div>
       )}
 

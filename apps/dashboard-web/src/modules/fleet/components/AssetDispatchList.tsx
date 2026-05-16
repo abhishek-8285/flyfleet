@@ -18,6 +18,13 @@ export const AssetDispatchList: React.FC = () => {
   const [registryVehicles, setRegistryVehicles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [tick, setTick] = useState(0);
+
+  // Periodic refresh for staleness
+  React.useEffect(() => {
+    const timer = setInterval(() => setTick(t => t + 1), 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   React.useEffect(() => {
     const fetchRegistry = async () => {
@@ -35,17 +42,26 @@ export const AssetDispatchList: React.FC = () => {
   }, []);
 
   const combinedAssets = useMemo(() => {
+    const now = Date.now();
+    const OFFLINE_TIMEOUT = 30000;
+
     return registryVehicles.map(v => {
       const live = telemetryVehicles[v.id] || {};
+      
+      // Reactive staleness detection
+      const lastUpdateTs = live.lastUpdate ? new Date(live.lastUpdate).getTime() : (v.summary?.last_seen ? new Date(v.summary.last_seen).getTime() : 0);
+      const isStale = (now - lastUpdateTs) > OFFLINE_TIMEOUT;
+
       return {
         ...v,
         ...live,
         id: v.id,
+        isOffline: isStale,
         registrationNumber: v.registration_number || live.registrationNumber,
         driver_name: v.current_driver?.name || v.current_driver_name || live.driver_name,
       };
     });
-  }, [registryVehicles, telemetryVehicles]);
+  }, [registryVehicles, telemetryVehicles, tick]);
 
   const filteredAssets = combinedAssets.filter(v => 
     v.registrationNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -99,7 +115,9 @@ export const AssetDispatchList: React.FC = () => {
               const isSelected = selectedId === asset.id;
               const speed = Math.round(asset.speed ?? 0);
               const isMoving = speed > 2;
-              const hasTelemetry = !!asset.latitude;
+              const lat = asset.latitude || asset.summary?.last_location_lat;
+              const lng = asset.longitude || asset.summary?.last_location_lng;
+              const hasPosition = !!lat;
               
               return (
                 <div 
@@ -117,12 +135,8 @@ export const AssetDispatchList: React.FC = () => {
                       <Video className="w-4.5 h-4.5 text-gray-400 fill-gray-400/20" />
                     </div>
                     
-                    {hasTelemetry && (
-                      <div className={`px-2.5 py-0.5 rounded-md text-[11px] font-black border flex items-center gap-1.5 shadow-sm transition-all ${
-                        isMoving 
-                          ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-emerald-100 dark:border-emerald-500/20 shadow-emerald-500/5' 
-                          : 'bg-emerald-50/50 dark:bg-white/5 text-emerald-500/80 dark:text-gray-500 border-emerald-100/50 dark:border-white/5'
-                      }`}>
+                    {isMoving && (
+                      <div className="px-2.5 py-0.5 rounded-md text-[11px] font-black border flex items-center gap-1.5 shadow-sm bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-emerald-100 dark:border-emerald-500/20 shadow-emerald-500/5">
                         {speed} MPH
                       </div>
                     )}
@@ -136,8 +150,8 @@ export const AssetDispatchList: React.FC = () => {
                         <Target className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
                       )}
                       <span className="text-[12px] font-bold text-gray-500 dark:text-gray-400 leading-tight">
-                        {asset.latitude && asset.longitude 
-                          ? `${asset.latitude.toFixed(5)}, ${asset.longitude.toFixed(5)} (Active)`
+                        {hasPosition 
+                          ? `${lat.toFixed(5)}, ${lng.toFixed(5)} ${asset.isOffline ? '(Offline)' : '(Active)'}`
                           : 'Awaiting Position...'}
                       </span>
                     </div>

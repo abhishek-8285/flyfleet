@@ -2,10 +2,12 @@
 
 import { VehicleStatus } from '../types/tracking';
 
-const statusColorMap: Record<VehicleStatus, string> = {
+const statusColorMap: Record<string, string> = {
+    active: '#22c55e',   // Green
     moving: '#22c55e',   // Green
     idle: '#f59e0b',     // Amber
     stopped: '#ef4444',  // Red
+    stale: '#6b7280',    // Gray
     offline: '#6b7280',  // Gray
 };
 

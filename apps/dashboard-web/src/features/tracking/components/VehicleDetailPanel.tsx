@@ -11,18 +11,30 @@ export const VehicleDetailPanel: React.FC = () => {
     const selectedVehicleId = useSelector((state: RootState) => state.telemetry.selectedVehicleId);
     const vehicles = useSelector((state: RootState) => state.telemetry.vehicles);
 
+    // Heartbeat for reactive status updates - MUST be at top level
+    const [tick, setTick] = React.useState(0);
+    React.useEffect(() => {
+        const timer = setInterval(() => setTick(t => t + 1), 5000);
+        return () => clearInterval(timer);
+    }, []);
+
     if (!selectedVehicleId || !vehicles[selectedVehicleId]) {
         return null;
     }
 
     const vehicle = vehicles[selectedVehicleId];
     
-    // Determine the operational status: if it has 0,0 coordinates, it's effectively offline/no-data
+    // Determine the operational status with staleness check
+    const now = Date.now();
+    const OFFLINE_TIMEOUT = 30000;
+    const lastUpdateTs = new Date(vehicle.lastUpdate || vehicle.last_update || 0).getTime();
+    const isStale = (now - lastUpdateTs) > OFFLINE_TIMEOUT;
+
     const isNoData = !vehicle.latitude || !vehicle.longitude || (Number(vehicle.latitude) === 0 && Number(vehicle.longitude) === 0);
-    const operationalStatus = isNoData ? 'offline' : (vehicle.derived_status || vehicle.status || 'offline');
+    const operationalStatus = (isNoData || isStale) ? 'offline' : (vehicle.derived_status || vehicle.status || 'active');
     
     const color = statusColor(operationalStatus as any);
-    const label = isNoData ? "NO DATA RECEIVED" : statusLabel(operationalStatus as any);
+    const label = isNoData ? "NO DATA RECEIVED" : (isStale ? "OFFLINE (SIGNAL LOST)" : statusLabel(operationalStatus as any));
 
     return (
         <div className="fixed right-0 top-0 h-full w-[450px] bg-surface-container border-l border-outline shadow-2xl z-20 flex flex-col overflow-hidden animate-in slide-in-from-right duration-500">

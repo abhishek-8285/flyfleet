@@ -10,6 +10,7 @@ import (
 	"github.com/flyfleet/fleet-core/internal/middleware"
 	"github.com/flyfleet/fleet-core/internal/tracking/models"
 	"github.com/flyfleet/fleet-core/internal/tracking/repository"
+	"github.com/go-chi/chi/v5"
 )
 
 // GeofenceHandler handles GET/POST /api/v1/geofences
@@ -28,6 +29,8 @@ func (h *GeofenceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handleGet(w, r)
 	case http.MethodPost:
 		h.handlePost(w, r)
+	case http.MethodDelete:
+		h.handleDelete(w, r)
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -103,3 +106,26 @@ func (h *GeofenceHandler) handlePost(w http.ResponseWriter, r *http.Request) {
 		"data": g,
 	})
 }
+
+func (h *GeofenceHandler) handleDelete(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	if idStr == "" {
+		http.Error(w, `{"error":"id is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	id, err := uuid.FromString(idStr)
+	if err != nil {
+		http.Error(w, `{"error":"invalid uuid"}`, http.StatusBadRequest)
+		return
+	}
+
+	if err := h.geoRepo.DeleteGeofence(r.Context(), id); err != nil {
+		h.logger.Error("failed to delete geofence", zap.Error(err))
+		http.Error(w, `{"error":"internal error"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+

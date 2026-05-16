@@ -66,6 +66,42 @@ func (r *TelemetryRepository) Write(ctx context.Context, event *models.Telemetry
 	return nil
 }
 
+// BulkIngest inserts multiple telemetry points efficiently using pgx.CopyFrom.
+func (r *TelemetryRepository) BulkIngest(ctx context.Context, events []models.TelemetryEvent) error {
+	if len(events) == 0 {
+		return nil
+	}
+
+	rows := make([][]any, len(events))
+	for i, e := range events {
+		rows[i] = []any{
+			e.RecordedAt,
+			e.DeviceID,
+			e.TenantID,
+			e.EventID,
+			e.Lat,
+			e.Lng,
+			e.Speed,
+			e.VehicleID,
+			time.Now(), // received_at
+		}
+	}
+
+	_, err := r.pool.CopyFrom(ctx,
+		pgx.Identifier{"telemetry_points"},
+		[]string{
+			"recorded_at", "device_id", "tenant_id", "event_id", "lat", "lng", "speed", "vehicle_id", "received_at",
+		},
+		pgx.CopyFromRows(rows),
+	)
+
+	if err != nil {
+		r.logger.Error("bulk ingest failed", zap.Int("count", len(events)), zap.Error(err))
+		return fmt.Errorf("bulk ingest: %w", err)
+	}
+	return nil
+}
+
 // GetLatestByVehicle returns the most recent telemetry point for a
 // single vehicle. Used as DB fallback when Redis cache misses.
 func (r *TelemetryRepository) GetLatestByVehicle(ctx context.Context, vehicleID uuid.UUID) (*models.TelemetryEvent, error) {

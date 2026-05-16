@@ -120,11 +120,20 @@ func (s *TripService) Create(ctx context.Context, tenantID string, req *models.C
 		return nil, fmt.Errorf("overlapping trip detected for vehicle or driver in this time window")
 	}
 
+	if req.TripType == "" {
+		req.TripType = models.TripTypeStandard
+	}
+
+	var driverIDPtr *string
+	if req.DriverID != "" {
+		driverIDPtr = &req.DriverID
+	}
+
 	trip := &models.Trip{
 		ID:                   uuid.New().String(),
 		TenantID:                tenantID,
 		VehicleID:            req.VehicleID,
-		DriverID:             &req.DriverID,
+		DriverID:             driverIDPtr,
 		Status:               models.TripStatusCreated,
 		Title:                req.Title,
 		Description:          req.Description,
@@ -139,6 +148,7 @@ func (s *TripService) Create(ctx context.Context, tenantID string, req *models.C
 		PlannedETA:           req.PlannedETA,
 		EWayBillNo:           req.EWayBillNo,
 		GSTClassification:    req.GSTClassification,
+		TripType:             req.TripType,
 		CustomerName:         req.CustomerName,
 		CustomerPhone:        req.CustomerPhone,
 		CustomerEmail:        req.CustomerEmail,

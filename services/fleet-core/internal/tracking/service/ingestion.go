@@ -19,11 +19,17 @@ import (
 	"github.com/flyfleet/fleet-core/internal/tracking/repository"
 )
 
+type geofenceChecker interface {
+	CheckVehicle(ctx context.Context, vehicleID uuid.UUID, tenantID uuid.UUID, lat, lng float64) error
+}
+
 // IngestionService validates, stores, and broadcasts incoming
 // telemetry events from GPS devices.
 type IngestionService struct {
 	telemRepo  repository.TelemetryRepositoryer
 	liveCache  repository.LiveCacher
+	geoChecker geofenceChecker
+	batcher    *TelemetryBatcher // Added for high-throughput batching
 	redis      *redis.Client
 	logger     *zap.Logger
 	hmacSecret string
@@ -32,14 +38,29 @@ type IngestionService struct {
 func NewIngestionService(
 	telemRepo repository.TelemetryRepositoryer,
 	liveCache repository.LiveCacher,
+	geoChecker geofenceChecker,
 	rdb *redis.Client,
 	logger *zap.Logger,
 ) *IngestionService {
+	// Initialize the batcher with 1000 items or 5 seconds flush interval.
+	// In a production app, these should come from the config.
+	batcher := NewTelemetryBatcher(telemRepo, logger, 1000, 5*time.Second)
+	batcher.Start()
+
 	return &IngestionService{
-		telemRepo: telemRepo,
-		liveCache: liveCache,
-		redis:     rdb,
-		logger:    logger,
+		telemRepo:  telemRepo,
+		liveCache:  liveCache,
+		geoChecker: geoChecker,
+		batcher:    batcher,
+		redis:      rdb,
+		logger:     logger,
+	}
+}
+
+// Stop shuts down the internal batcher gracefully.
+func (s *IngestionService) Stop() {
+	if s.batcher != nil {
+		s.batcher.Stop()
 	}
 }
 
@@ -83,10 +104,8 @@ func (s *IngestionService) Ingest(ctx context.Context, event *models.TelemetryEv
 		return fmt.Errorf("invalid longitude: %f", event.Lng)
 	}
 
-	// Write to TimescaleDB
-	if err := s.telemRepo.Write(ctx, event); err != nil {
-		return fmt.Errorf("write telemetry: %w", err)
-	}
+	// Write to TimescaleDB asynchronously via the batcher
+	s.batcher.Add(*event)
 
 	// Update Redis live cache
 	status := models.CalculateStatus(event.Speed, event.Ignition, event.RecordedAt)
@@ -115,6 +134,15 @@ func (s *IngestionService) Ingest(ctx context.Context, event *models.TelemetryEv
 			zap.String("vehicle_id", event.VehicleID.String()),
 			zap.Error(err))
 		// Non-fatal — core ingest succeeded
+	}
+
+	// Trigger geofence checks
+	if s.geoChecker != nil {
+		if err := s.geoChecker.CheckVehicle(ctx, event.VehicleID, event.TenantID, event.Lat, event.Lng); err != nil {
+			s.logger.Error("geofence check failed",
+				zap.String("vehicle_id", event.VehicleID.String()),
+				zap.Error(err))
+		}
 	}
 
 	s.logger.Info("telemetry ingested successfully",

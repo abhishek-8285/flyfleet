@@ -30,6 +30,7 @@ type PositionUpdate struct {
 
 // GeofenceWSMessage is pushed when a geofence event occurs.
 type GeofenceWSMessage struct {
+	ID          string  `json:"id"`
 	VehicleID   string  `json:"vehicle_id"`
 	Registration string `json:"registration"`
 	GeofenceID  string  `json:"geofence_id"`
@@ -39,6 +40,7 @@ type GeofenceWSMessage struct {
 	Latitude    float64 `json:"latitude"`
 	Longitude   float64 `json:"longitude"`
 	Message     string  `json:"message"`
+	AlertSent   bool    `json:"alert_sent"`
 }
 
 // SubscribeRequest is sent from client to server to filter

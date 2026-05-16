@@ -29,6 +29,7 @@ type LiveCacher interface {
 // TelemetryRepositoryer defines the interface for telemetry data access.
 type TelemetryRepositoryer interface {
 	Write(ctx context.Context, event *models.TelemetryEvent) error
+	BulkIngest(ctx context.Context, events []models.TelemetryEvent) error
 	GetLatestByVehicle(ctx context.Context, vehicleID uuid.UUID) (*models.TelemetryEvent, error)
 	GetBatchLatest(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]models.TelemetryEvent, error)
 	GetHistoryBucket(ctx context.Context, vehicleID uuid.UUID, start, end time.Time, bucketInterval string) ([]models.TelemetryEvent, error)
@@ -40,6 +41,7 @@ type GeofenceRepositoryer interface {
 	CreateGeofence(ctx context.Context, g *models.Geofence) error
 	CheckPointInGeofences(ctx context.Context, tenantID uuid.UUID, lat, lng float64) ([]models.Geofence, error)
 	LogGeofenceEvent(ctx context.Context, event *models.GeofenceEvent) error
+	DeleteGeofence(ctx context.Context, id uuid.UUID) error
 }
 
 // TenantChecker verifies that a vehicle belongs to an organization.
