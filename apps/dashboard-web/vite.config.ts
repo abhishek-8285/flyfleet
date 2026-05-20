@@ -27,7 +27,7 @@ const securityHeadersPlugin = () => ({
       // Images and media (includes tile servers)
       "img-src 'self' data: blob: https: http://localhost:3000",
       // Connections (API, WebSocket, analytics, geocoding, IP geolocation, Map tiles)
-      "connect-src 'self' ws: wss: http://localhost:8110 https://us.i.posthog.com https://*.trycloudflare.com wss://*.trycloudflare.com https://nominatim.openstreetmap.org http://ip-api.com https://ip-api.com https://*.basemaps.cartocdn.com https://img.icons8.com",
+      "connect-src 'self' ws: wss: http://localhost:8110 https://us.i.posthog.com https://*.trycloudflare.com wss://*.trycloudflare.com https://nominatim.openstreetmap.org http://ip-api.com https://ip-api.com https://*.basemaps.cartocdn.com https://img.icons8.com https://router.project-osrm.org http://router.project-osrm.org",
       // Workers for MapLibre
       "worker-src 'self' blob:",
       "child-src 'self' blob:",

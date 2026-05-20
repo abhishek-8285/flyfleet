@@ -209,11 +209,32 @@ const GeofenceLayers: React.FC<{ geofences: Geofence[] }> = ({ geofences }) => {
           );
         }
         
-        if (gf.type === 'polygon' && gf.polygon && gf.polygon.length > 0) {
+        let polygonCoords = gf.polygon;
+        if (!polygonCoords && gf.polygon_wkt) {
+          try {
+            const cleanWkt = gf.polygon_wkt.trim();
+            if (cleanWkt.startsWith('[')) {
+              polygonCoords = JSON.parse(cleanWkt);
+            } else if (cleanWkt.toUpperCase().startsWith('POLYGON')) {
+              const match = cleanWkt.match(/\(\((.*)\)\)/);
+              if (match && match[1]) {
+                const points = match[1].split(',');
+                polygonCoords = points.map(pt => {
+                  const parts = pt.trim().split(/\s+/);
+                  return [parseFloat(parts[1]), parseFloat(parts[0])] as [number, number]; // convert [lng, lat] WKT to [lat, lng] Leaflet
+                });
+              }
+            }
+          } catch (e) {
+            console.error('Failed to parse polygon_wkt:', e);
+          }
+        }
+
+        if (gf.type === 'polygon' && polygonCoords && polygonCoords.length > 0) {
           return (
             <Polygon
               key={gf.id}
-              positions={gf.polygon.map(p => [p[0], p[1]] as [number, number])}
+              positions={polygonCoords.map(p => [p[0], p[1]] as [number, number])}
               pathOptions={{
                 fillColor: color,
                 fillOpacity: 0.15,
@@ -251,6 +272,7 @@ const LiveOperationsMap: React.FC<{
   tileLayerUrl = "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
 }) => {
   const center: [number, number] = [20.5937, 78.9629]; // Default center (India)
+  const [showGeofences, setShowGeofences] = React.useState(true);
 
   return (
     <div className={`bg-gray-900 overflow-hidden relative ${className}`} style={{ height }}>
@@ -277,6 +299,21 @@ const LiveOperationsMap: React.FC<{
               </div>
               <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-tight leading-none">Offline or not moving</span>
             </div>
+
+            {geofences && geofences.length > 0 && (
+              <div className="flex items-center justify-between pt-3 mt-1 border-t border-gray-100 dark:border-white/5">
+                <span className="text-[11px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-tight">Show Geofences</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={showGeofences} 
+                    onChange={(e) => setShowGeofences(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-8 h-4 bg-gray-200 dark:bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -300,7 +337,7 @@ const LiveOperationsMap: React.FC<{
         <ResizeHandler />
         <MapController vehicles={vehicles} selectedId={selectedId} />
         
-        <GeofenceLayers geofences={geofences} />
+        {showGeofences && <GeofenceLayers geofences={geofences} />}
 
         {vehicles.length > 10 ? (
           <MarkerClusterGroup chunkedLoading maxClusterRadius={60}>

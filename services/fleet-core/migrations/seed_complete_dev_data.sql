@@ -175,8 +175,10 @@ BEGIN
     
     -- Vehicle 1
     IF NOT EXISTS (SELECT 1 FROM vehicles WHERE id = '550e8400-e29b-41d4-a716-446655440001') THEN
-        INSERT INTO vehicles (id, tenant_id, registration_number, status, vehicle_type, make, model, year)
-        VALUES ('550e8400-e29b-41d4-a716-446655440001', t_id, 'DL01AB1234', 'ACTIVE', 'TRUCK', 'FlyFleet', 'FleetMaster Pro', 2024);
+        INSERT INTO vehicles (id, tenant_id, registration_number, status, vehicle_type, make, model, year, gps_device_id)
+        VALUES ('550e8400-e29b-41d4-a716-446655440001', t_id, 'DL01AB1234', 'ACTIVE', 'TRUCK', 'FlyFleet', 'FleetMaster Pro', 2024, 'DEV-DEVICE-001');
+    ELSE
+        UPDATE vehicles SET gps_device_id = 'DEV-DEVICE-001' WHERE id = '550e8400-e29b-41d4-a716-446655440001';
     END IF;
 
     -- Vehicle 2

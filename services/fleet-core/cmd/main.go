@@ -1,7 +1,8 @@
-package main // Rebuild trigger 42
+package main // Rebuild trigger 43
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/gofrs/uuid/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 
 	"github.com/flyfleet/fleet-core/internal/config"
@@ -48,6 +50,9 @@ import (
 	tr "github.com/flyfleet/fleet-core/internal/tracking/repository"
 	ts "github.com/flyfleet/fleet-core/internal/tracking/service"
 	"github.com/flyfleet/fleet-core/internal/tracking/worker"
+	routeHandlers "github.com/flyfleet/fleet-core/internal/domains/route/handlers"
+	routeRepo "github.com/flyfleet/fleet-core/internal/domains/route/repository"
+	routeSvc "github.com/flyfleet/fleet-core/internal/domains/route/service"
 )
 // force restart
 
@@ -256,6 +261,11 @@ func main() {
 	invoicingService := invoicingSvc.NewInvoicingService(invRepo)
 	invoicingHandler := invoicingHandlers.NewHandler(invoicingService)
 
+	// --- Route Optimization Domain ---
+	routeRepository := routeRepo.NewRouteOptimizationRepository(pool)
+	routeServiceInstance := routeSvc.NewRouteOptimizationService(routeRepository, "https://router.project-osrm.org")
+	routeHandler := routeHandlers.NewRouteOptimizationHandler(routeServiceInstance, logger)
+
 	// --- Router ---
 	r := chi.NewRouter()
 
@@ -272,10 +282,48 @@ func main() {
 	// Request logging
 	r.Use(requestLogger(logger))
 
-	// Health check (no auth)
+	// Deep health check (no auth)
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+
+		health := map[string]interface{}{
+			"service": "fleet-core",
+			"time":    time.Now().Format(time.RFC3339),
+		}
+
+		// 1. Check DB
+		if err := pool.Ping(ctx); err != nil {
+			health["database"] = "unhealthy"
+			health["db_error"] = err.Error()
+		} else {
+			health["database"] = "healthy"
+		}
+
+		// 2. Check Ingestion Service (Batcher + Redis)
+		ingestHealth := ingestionSvc.Health(ctx)
+		health["ingestion"] = ingestHealth
+
+		// Overall Status
+		status := http.StatusOK
+		if health["database"] != "healthy" || ingestHealth["status"] == "unhealthy" {
+			status = http.StatusServiceUnavailable
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+		json.NewEncoder(w).Encode(health)
+	})
+
+	// Prometheus Metrics (Knowledge)
+	r.Handle("/metrics", promhttp.Handler())
+
+	// Admin Control Endpoints (Control)
+	r.Post("/admin/ingest/flush", func(w http.ResponseWriter, r *http.Request) {
+		// In a real app, this would be protected by admin middleware
+		ingestionSvc.ForceFlush()
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"healthy","service":"fleet-core","v":"transaction_fix_v2"}`))
+		w.Write([]byte(`{"status":"success","message":"telemetry buffer flushed"}`))
 	})
 
 	// PUBLIC Hardware Telemetry (No User Token Required)
@@ -332,6 +380,11 @@ func main() {
 			if iamModule != nil {
 				iamModule.RegisterAuthRoutes(r, logger)
 			}
+
+			// Route Optimization Domain
+			r.Route("/routes", func(r chi.Router) {
+				routeHandler.RegisterRoutes(r)
+			})
 
 			// Tracking endpoints
 			if cfg.Flags.VehicleMapEnabled {
@@ -540,6 +593,11 @@ func ensureTelemetrySchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.
 		"CREATE TABLE IF NOT EXISTS consumption_events (id UUID PRIMARY KEY DEFAULT gen_random_uuid())",
 		"ALTER TABLE consumption_events ADD COLUMN IF NOT EXISTS tenant_id UUID",
 		"ALTER TABLE consumption_events ADD COLUMN IF NOT EXISTS vehicle_id UUID",
+		"ALTER TABLE consumption_events ADD COLUMN IF NOT EXISTS time TIMESTAMPTZ",
+		"ALTER TABLE consumption_events ADD COLUMN IF NOT EXISTS meter_code VARCHAR(100)",
+		"ALTER TABLE consumption_events ADD COLUMN IF NOT EXISTS amount DECIMAL(15, 4) DEFAULT 0.0000",
+		"ALTER TABLE consumption_events ADD COLUMN IF NOT EXISTS metadata JSONB",
+		"ALTER TABLE consumption_events ADD COLUMN IF NOT EXISTS processed_invoice_id UUID",
 	}
 	for _, stmt := range statements {
 		pool.Exec(ctx, stmt)
@@ -1006,6 +1064,14 @@ func ensureBillingSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Lo
 		"ALTER TABLE billing_configurations ADD COLUMN IF NOT EXISTS created_by UUID",
 		"ALTER TABLE billing_configurations ADD COLUMN IF NOT EXISTS updated_by UUID",
 		"CREATE UNIQUE INDEX IF NOT EXISTS idx_billing_configs_tenant ON billing_configurations(tenant_id)",
+		"CREATE TABLE IF NOT EXISTS usage_meters (id UUID PRIMARY KEY DEFAULT gen_random_uuid())",
+		"ALTER TABLE usage_meters ADD COLUMN IF NOT EXISTS code VARCHAR(50) UNIQUE",
+		"ALTER TABLE usage_meters ADD COLUMN IF NOT EXISTS name VARCHAR(100)",
+		"ALTER TABLE usage_meters ADD COLUMN IF NOT EXISTS description TEXT",
+		"ALTER TABLE usage_meters ADD COLUMN IF NOT EXISTS unit VARCHAR(20)",
+		"ALTER TABLE usage_meters ADD COLUMN IF NOT EXISTS unit_price DECIMAL(15, 4) DEFAULT 0.0000",
+		"ALTER TABLE usage_meters ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'USD'",
+		"ALTER TABLE usage_meters ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active'",
 	}
 	for _, stmt := range statements {
 		if _, err := pool.Exec(ctx, stmt); err != nil {

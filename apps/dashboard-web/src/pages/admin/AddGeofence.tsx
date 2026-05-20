@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   ChevronLeft, 
   Save, 
@@ -25,6 +25,10 @@ L.Icon.Default.mergeOptions({
 
 const AddGeofence: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const query = new URLSearchParams(location.search);
+  const editId = query.get('edit');
+
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -37,6 +41,64 @@ const AddGeofence: React.FC = () => {
   });
 
   const [mapCenter, setMapCenter] = useState<[number, number]>([28.6139, 77.2090]); // Delhi default
+
+  useEffect(() => {
+    if (editId) {
+      const loadGeofence = async () => {
+        try {
+          const res = await api.getGeofences();
+          const data = res?.data || res;
+          const list = Array.isArray(data) ? data : data?.geofences || [];
+          const gf = list.find((g: any) => g.id === editId);
+          if (gf) {
+            let polyCoords: [number, number][] = [];
+            if (gf.type === 'polygon') {
+              if (gf.polygon) {
+                polyCoords = gf.polygon;
+              } else if (gf.polygon_wkt) {
+                try {
+                  const cleanWkt = gf.polygon_wkt.trim();
+                  if (cleanWkt.startsWith('[')) {
+                    polyCoords = JSON.parse(cleanWkt);
+                  } else if (cleanWkt.toUpperCase().startsWith('POLYGON')) {
+                    const match = cleanWkt.match(/\(\((.*)\)\)/);
+                    if (match && match[1]) {
+                      const points = match[1].split(',');
+                      polyCoords = points.map((pt: string) => {
+                        const parts = pt.trim().split(/\s+/);
+                        return [parseFloat(parts[1]), parseFloat(parts[0])] as [number, number];
+                      });
+                    }
+                  }
+                } catch (e) {
+                  console.error('Failed to parse polygon_wkt:', e);
+                }
+              }
+            }
+
+            setFormData({
+              name: gf.name || '',
+              description: gf.description || '',
+              type: gf.type || 'circle',
+              radius_m: gf.radius_m || gf.radius || 500,
+              center_lat: gf.center_lat || gf.center?.lat || 0,
+              center_lng: gf.center_lng || gf.center?.lng || 0,
+              polygon: polyCoords
+            });
+
+            if (gf.center_lat) {
+              setMapCenter([gf.center_lat, gf.center_lng]);
+            } else if (polyCoords.length > 0) {
+              setMapCenter(polyCoords[0]);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to load geofence for editing:', err);
+        }
+      };
+      loadGeofence();
+    }
+  }, [editId]);
 
   const MapEvents = () => {
     useMapEvents({
@@ -75,20 +137,25 @@ const AddGeofence: React.FC = () => {
         enabled: true
       };
       
+      if (editId) {
+        // Delete original geofence first, then save the updated one
+        await api.deleteGeofence(editId);
+      }
       await api.createGeofence(payload);
       navigate('/admin/geofences');
     } catch (err) {
-      console.error('Failed to create geofence:', err);
-      alert('Failed to create geofence. Please check console.');
+      console.error('Failed to save geofence:', err);
+      alert('Failed to save geofence. Please check console.');
     } finally {
       setLoading(false);
     }
   };
 
   const clearPolygon = () => setFormData(prev => ({ ...prev, polygon: [] }));
+  const removeLastPoint = () => setFormData(prev => ({ ...prev, polygon: prev.polygon.slice(0, -1) }));
 
   return (
-    <div className="flex flex-col h-screen bg-[#f8fafc] dark:bg-black">
+    <div className="flex flex-col h-[calc(100vh-4rem)] bg-[#f8fafc] dark:bg-black">
       {/* Top Header */}
       <div className="h-16 bg-white dark:bg-white/[0.02] border-b border-gray-100 dark:border-white/5 flex items-center justify-between px-6 shrink-0">
         <div className="flex items-center gap-4">
@@ -100,9 +167,11 @@ const AddGeofence: React.FC = () => {
           </button>
           <div>
             <h1 className="text-lg font-black tracking-tighter text-gray-900 dark:text-white uppercase leading-none">
-              Create Geofence
+              {editId ? 'Edit Geofence' : 'Create Geofence'}
             </h1>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Design spatial monitoring zone</p>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">
+              {editId ? 'Modify spatial monitoring zone' : 'Design spatial monitoring zone'}
+            </p>
           </div>
         </div>
         <button 
@@ -110,7 +179,7 @@ const AddGeofence: React.FC = () => {
           disabled={loading}
           className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white px-5 py-2 rounded-xl font-bold transition-all shadow-lg shadow-emerald-600/20 text-xs uppercase tracking-tighter"
         >
-          {loading ? 'SAVING...' : <><Save size={16} /> SAVE GEOFENCE</>}
+          {loading ? 'SAVING...' : <><Save size={16} /> {editId ? 'UPDATE GEOFENCE' : 'SAVE GEOFENCE'}</>}
         </button>
       </div>
 
@@ -183,13 +252,24 @@ const AddGeofence: React.FC = () => {
               <div>
                 <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1.5">Polygon Points</label>
                 <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-3 border border-gray-100 dark:border-white/10">
-                  <p className="text-[10px] font-bold text-gray-500 mb-2">POINTS DEFINED: {formData.polygon.length}</p>
-                  <button 
-                    onClick={clearPolygon}
-                    className="w-full py-2 bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-red-100 transition-colors"
-                  >
-                    Clear Points
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      type="button"
+                      onClick={removeLastPoint}
+                      disabled={formData.polygon.length === 0}
+                      className="py-2.5 bg-gray-50 hover:bg-gray-100 dark:bg-white/5 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 rounded-xl text-[10px] font-black uppercase tracking-tighter disabled:opacity-50 transition-colors border border-gray-100 dark:border-white/5"
+                    >
+                      Undo Last
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={clearPolygon}
+                      disabled={formData.polygon.length === 0}
+                      className="py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 rounded-xl text-[10px] font-black uppercase tracking-tighter disabled:opacity-50 transition-colors border border-red-100/50 dark:border-red-500/10"
+                    >
+                      Clear All
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -200,10 +280,12 @@ const AddGeofence: React.FC = () => {
               <Info size={18} className="shrink-0" />
               <div>
                 <p className="text-[11px] font-black uppercase tracking-tighter leading-tight mb-1">How to define</p>
-                <p className="text-[10px] font-medium leading-normal opacity-80">
+                <p className="text-[10px] font-medium leading-normal opacity-80 whitespace-pre-line">
                   {formData.type === 'circle' 
                     ? 'Click on the map to place the center point of your circular zone.'
-                    : 'Click multiple points on the map to define the corners of your polygonal zone.'}
+                    : `• Click on the map to add new boundary corners.
+• Drag any blue point to adjust its position.
+• Double-click any blue point to delete it.`}
                 </p>
               </div>
             </div>
@@ -235,7 +317,34 @@ const AddGeofence: React.FC = () => {
             {formData.type === 'polygon' && formData.polygon.length > 0 && (
               <>
                 {formData.polygon.map((p, i) => (
-                  <Marker key={i} position={p} icon={L.divIcon({ className: 'bg-blue-600 w-2 h-2 rounded-full border border-white' })} />
+                  <Marker 
+                    key={i} 
+                    position={p} 
+                    draggable={true}
+                    eventHandlers={{
+                      dragend: (e) => {
+                        const marker = e.target;
+                        const position = marker.getLatLng();
+                        setFormData(prev => {
+                          const newPolygon = [...prev.polygon];
+                          newPolygon[i] = [position.lat, position.lng];
+                          return { ...prev, polygon: newPolygon };
+                        });
+                      },
+                      dblclick: () => {
+                        setFormData(prev => ({
+                          ...prev,
+                          polygon: prev.polygon.filter((_, idx) => idx !== i)
+                        }));
+                      }
+                    }}
+                    icon={L.divIcon({ 
+                      className: 'custom-polygon-vertex',
+                      html: `<div class="w-4 h-4 bg-blue-600 hover:bg-blue-500 rounded-full border-2 border-white shadow-lg cursor-move transition-transform hover:scale-125"></div>`,
+                      iconSize: [16, 16],
+                      iconAnchor: [8, 8]
+                    })} 
+                  />
                 ))}
                 {formData.polygon.length > 2 && (
                   <Polygon 

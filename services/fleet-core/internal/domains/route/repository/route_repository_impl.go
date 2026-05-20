@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/flyfleet/fleet-core/internal/domains/route/models"
@@ -133,7 +134,7 @@ func (r *RouteOptimizationRepositoryImpl) UpdateOptimizationRequest(ctx context.
 
 	args = append(args, id)
 	query := fmt.Sprintf("UPDATE route_optimization_requests SET %s WHERE id = $%d",
-		fmt.Sprintf("%s", setParts), argIndex)
+		strings.Join(setParts, ", "), argIndex)
 
 	_, err := r.db.Exec(ctx, query, args...)
 	if err != nil {
@@ -346,7 +347,7 @@ func (r *RouteOptimizationRepositoryImpl) UpdateOptimizationResult(ctx context.C
 
 	args = append(args, id)
 	query := fmt.Sprintf("UPDATE route_optimization_results SET %s WHERE id = $%d",
-		fmt.Sprintf("%s", setParts), argIndex)
+		strings.Join(setParts, ", "), argIndex)
 
 	_, err := r.db.Exec(ctx, query, args...)
 	if err != nil {
@@ -478,7 +479,7 @@ func (r *RouteOptimizationRepositoryImpl) UpdateOptimizationJob(ctx context.Cont
 
 	args = append(args, id)
 	query := fmt.Sprintf("UPDATE route_optimization_jobs SET %s WHERE id = $%d",
-		fmt.Sprintf("%s", setParts), argIndex)
+		strings.Join(setParts, ", "), argIndex)
 
 	_, err := r.db.Exec(ctx, query, args...)
 	if err != nil {

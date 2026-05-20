@@ -182,14 +182,14 @@ func (r *PostgresTripRepository) GetByID(ctx context.Context, id string) (*model
 	
 	// Populate Location objects from scanned coordinates
 	if pLat.Valid && pLng.Valid {
-		trip.StartLocation = models.Location{
+		trip.StartLocation = &models.Location{
 			Latitude:  pLat.Float64,
 			Longitude: pLng.Float64,
 			Address:   "", 
 		}
 	}
 	if dLat.Valid && dLng.Valid {
-		trip.EndLocation = models.Location{
+		trip.EndLocation = &models.Location{
 			Latitude:  dLat.Float64,
 			Longitude: dLng.Float64,
 			Address:   "",
@@ -439,14 +439,14 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 
 		// Populate Location objects from scanned coordinates
 		if pLat.Valid && pLng.Valid {
-			trip.StartLocation = models.Location{
+			trip.StartLocation = &models.Location{
 				Latitude:  pLat.Float64,
 				Longitude: pLng.Float64,
 				Address:   "", // Address not stored in separate columns in this version
 			}
 		}
 		if dLat.Valid && dLng.Valid {
-			trip.EndLocation = models.Location{
+			trip.EndLocation = &models.Location{
 				Latitude:  dLat.Float64,
 				Longitude: dLng.Float64,
 				Address:   "",

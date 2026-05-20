@@ -51,8 +51,8 @@ func NewRouteOptimizationService(repo repository.RouteOptimizationRepository, os
 		distanceProvider: distanceProvider,
 	}
 
-	// Upgrade to ClarkeWrightSolver for better savings-based routing
-	s.solver = &ClarkeWrightSolver{Service: s}
+	// Upgrade to MetaheuristicSolver for premium local-search and metaheuristic routing
+	s.solver = &MetaheuristicSolver{Service: s}
 	s.validationEngine = &DefaultValidationEngine{Service: s}
 	return s
 }
@@ -250,8 +250,8 @@ func (s *RouteOptimizationServiceImpl) validateOptimizationRequest(request *mode
 func (s *RouteOptimizationServiceImpl) processOptimizationJob(jobID string) {
 	ctx := context.Background()
 
-	// Update job status to running
-	err := s.repo.UpdateOptimizationJobStatus(ctx, jobID, "running", nil, nil)
+	// Update job status to processing
+	err := s.repo.UpdateOptimizationJobStatus(ctx, jobID, "processing", nil, nil)
 	if err != nil {
 		// Log error but continue
 		fmt.Printf("Error updating job status: %v\n", err)
@@ -298,6 +298,9 @@ func (s *RouteOptimizationServiceImpl) processOptimizationJob(jobID string) {
 		})
 		return
 	}
+
+	// Populate full polylines for beautiful frontend rendering
+	s.populateRoutePolylines(ctx, request, result)
 
 	// Save the optimization result
 	err = s.repo.CreateOptimizationResult(ctx, result)
@@ -792,5 +795,86 @@ func (s *RouteOptimizationServiceImpl) RecalculateRoute(ctx context.Context, res
 		return nil, err
 	}
 
+	// Populate full polylines for beautiful frontend rendering
+	s.populateRoutePolylines(ctx, subRequest, newResult)
+
 	return newResult, nil
+}
+
+// populateRoutePolylines generates complete road-network polylines for all routes in a result
+func (s *RouteOptimizationServiceImpl) populateRoutePolylines(ctx context.Context, request *models.RouteOptimizationRequest, result *models.RouteOptimizationResult) {
+	if result == nil {
+		return
+	}
+
+	// Create lookup maps
+	stopLookup := make(map[string]models.Stop)
+	for _, stop := range request.Stops {
+		stopLookup[stop.ID] = stop
+	}
+
+	vehicleLookup := make(map[string]models.VehicleProfile)
+	for _, vehicle := range request.Vehicles {
+		vehicleLookup[vehicle.ID] = vehicle
+	}
+
+	for i := range result.Routes {
+		route := &result.Routes[i]
+		if len(route.Stops) == 0 {
+			continue
+		}
+
+		vehicle, hasVehicle := vehicleLookup[route.VehicleID]
+		if !hasVehicle && len(request.Vehicles) > 0 {
+			vehicle = request.Vehicles[0]
+		}
+
+		// Reconstruct the sequence of points
+		points := []models.Location{}
+
+		// 1. Start location
+		startLoc := vehicle.StartLocation
+		if startLoc.Latitude == 0 && startLoc.Longitude == 0 && len(request.Depots) > 0 {
+			startLoc = request.Depots[0].Location
+		}
+		points = append(points, startLoc)
+
+		// 2. Stop locations in order
+		for _, rs := range route.Stops {
+			if stop, ok := stopLookup[rs.StopID]; ok {
+				points = append(points, models.Location{
+					Latitude:  stop.Latitude,
+					Longitude: stop.Longitude,
+				})
+			}
+		}
+
+		// 3. End location
+		endLoc := vehicle.EndLocation
+		if endLoc.Latitude == 0 && endLoc.Longitude == 0 && len(request.Depots) > 0 {
+			// Find nearest depot to the last stop or just use first depot
+			if len(route.Stops) > 0 {
+				lastStop := stopLookup[route.Stops[len(route.Stops)-1].StopID]
+				minDepotDist := math.MaxFloat64
+				bestEndLoc := request.Depots[0].Location
+				for _, d := range request.Depots {
+					dist := HaversineDistance(lastStop.Latitude, lastStop.Longitude, d.Location.Latitude, d.Location.Longitude)
+					if dist < minDepotDist {
+						minDepotDist = dist
+						bestEndLoc = d.Location
+					}
+				}
+				endLoc = bestEndLoc
+			} else {
+				endLoc = request.Depots[0].Location
+			}
+		}
+		points = append(points, endLoc)
+
+		// Fetch polyline
+		polyline, err := s.distanceProvider.GetRoutePolyline(ctx, points)
+		if err == nil {
+			route.Polyline = polyline
+		}
+	}
 }

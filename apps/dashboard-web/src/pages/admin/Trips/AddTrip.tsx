@@ -81,6 +81,19 @@ export default function AddTrip() {
   // Map locations
   const [pickup, setPickup] = useState<RouteMapPoint | null>(null);
   const [drop, setDrop] = useState<RouteMapPoint | null>(null);
+  const [roadDistance, setRoadDistance] = useState<number | null>(null);
+  const [roadDuration, setRoadDuration] = useState<number | null>(null);
+
+  const handleRouteCalculated = (distanceKm: number, durationMin: number) => {
+    setRoadDistance(distanceKm);
+    setRoadDuration(durationMin);
+    // Auto populate the input fields with the real OSRM road distance and duration if user hasn't explicitly overridden them
+    setFormData((prev) => ({
+      ...prev,
+      planned_distance: prev.planned_distance ? prev.planned_distance : distanceKm.toFixed(1),
+      estimated_duration_min: prev.estimated_duration_min ? prev.estimated_duration_min : durationMin.toString(),
+    }));
+  };
 
   // Documents
   const [uploadedDocs, setUploadedDocs] = useState<
@@ -154,6 +167,10 @@ export default function AddTrip() {
   // Sync map location to text input
   const handlePickupChange = (pt: RouteMapPoint) => {
     setPickup(pt);
+    if (!pt || pt.lat === 0) {
+      setRoadDistance(null);
+      setRoadDuration(null);
+    }
     setFormData((p) => ({
       ...p,
       start_location: pt.address || `${pt.lat.toFixed(5)}, ${pt.lng.toFixed(5)}`,
@@ -162,6 +179,10 @@ export default function AddTrip() {
 
   const handleDropChange = (pt: RouteMapPoint) => {
     setDrop(pt);
+    if (!pt || pt.lat === 0) {
+      setRoadDistance(null);
+      setRoadDuration(null);
+    }
     setFormData((p) => ({
       ...p,
       end_location: pt.address || `${pt.lat.toFixed(5)}, ${pt.lng.toFixed(5)}`,
@@ -217,12 +238,11 @@ export default function AddTrip() {
 
     try {
       // Calculate distance from map if available, else estimate
-      const distance = pickup && drop
-        ? calculateDistance(pickup, drop)
-        : (parseFloat(formData.planned_distance) || 100);
+      const distance = parseFloat(formData.planned_distance) ||
+        (roadDistance !== null ? roadDistance : (pickup && drop ? calculateDistance(pickup, drop) : 100));
 
       // Calculate duration in minutes from times if available
-      let durationMin = parseInt(formData.estimated_duration_min) || 0;
+      let durationMin = parseInt(formData.estimated_duration_min) || roadDuration || 0;
       if (!durationMin && formData.scheduled_start && formData.planned_eta) {
         const startMs = new Date(formData.scheduled_start).getTime();
         const endMs = new Date(formData.planned_eta).getTime();
@@ -568,6 +588,7 @@ export default function AddTrip() {
               drop={drop}
               onPickupChange={handlePickupChange}
               onDropChange={handleDropChange}
+              onRouteCalculated={handleRouteCalculated}
               height="h-72"
             />
 
@@ -586,9 +607,13 @@ export default function AddTrip() {
                     <p className="text-xs text-white truncate font-medium">{pickup.address || `${pickup.lat.toFixed(4)}, ${pickup.lng.toFixed(4)}`}</p>
                     <div className="flex items-center gap-3 mt-1">
                       <span className="text-xs text-text-muted font-mono">
-                        📏 {calculateDistance(pickup, drop).toFixed(1)} km
+                        📏 {roadDistance !== null ? roadDistance.toFixed(1) : calculateDistance(pickup, drop).toFixed(1)} km
                       </span>
-                      {formData.scheduled_start && formData.planned_eta && (
+                      {roadDuration !== null ? (
+                        <span className="text-xs text-text-muted font-mono">
+                          ⏱ {roadDuration} min
+                        </span>
+                      ) : formData.scheduled_start && formData.planned_eta && (
                         <span className="text-xs text-text-muted">
                           ⏱ {Math.round((new Date(formData.planned_eta).getTime() - new Date(formData.scheduled_start).getTime()) / 60000)} min
                         </span>

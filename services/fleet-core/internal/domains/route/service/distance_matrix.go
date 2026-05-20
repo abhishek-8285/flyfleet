@@ -14,6 +14,7 @@ import (
 // DistanceMatrixProvider defines the interface for fetching distance and travel time
 type DistanceMatrixProvider interface {
 	GetDistanceAndTime(ctx context.Context, origin, destination models.Location, vehicle *models.VehicleProfile) (float64, int, error)
+	GetRoutePolyline(ctx context.Context, points []models.Location) ([][]float64, error)
 }
 
 // OSRMDistanceProvider implements DistanceMatrixProvider using a self-hosted OSRM instance
@@ -43,7 +44,7 @@ func (p *OSRMDistanceProvider) GetDistanceAndTime(ctx context.Context, origin, d
 		return p.Fallback.GetDistanceAndTime(ctx, origin, destination, vehicle)
 	}
 
-	client := &http.Client{Timeout: 500 * time.Millisecond}
+	client := &http.Client{Timeout: 3000 * time.Millisecond}
 	resp, err := client.Do(req)
 	if err != nil {
 		return p.Fallback.GetDistanceAndTime(ctx, origin, destination, vehicle)
@@ -66,6 +67,76 @@ func (p *OSRMDistanceProvider) GetDistanceAndTime(ctx context.Context, origin, d
 	return distKM, durationMin, nil
 }
 
+func (p *OSRMDistanceProvider) GetRoutePolyline(ctx context.Context, points []models.Location) ([][]float64, error) {
+	if len(points) <= 1 {
+		return [][]float64{}, nil
+	}
+	if p.BaseURL == "" {
+		return p.fallbackPolyline(points), nil
+	}
+
+	// Build OSRM query
+	// Format: /route/v1/driving/lon1,lat1;lon2,lat2;...?overview=full&geometries=geojson
+	var coordsStr string
+	for i, pt := range points {
+		if i > 0 {
+			coordsStr += ";"
+		}
+		coordsStr += fmt.Sprintf("%f,%f", pt.Longitude, pt.Latitude)
+	}
+
+	url := fmt.Sprintf("%s/route/v1/driving/%s?overview=full&geometries=geojson", p.BaseURL, coordsStr)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return p.fallbackPolyline(points), nil
+	}
+
+	client := &http.Client{Timeout: 5000 * time.Millisecond}
+	resp, err := client.Do(req)
+	if err != nil {
+		return p.fallbackPolyline(points), nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return p.fallbackPolyline(points), nil
+	}
+
+	type osrmGeomResponse struct {
+		Code   string `json:"code"`
+		Routes []struct {
+			Geometry struct {
+				Coordinates [][]float64 `json:"coordinates"` // [[lon, lat], ...]
+			} `json:"geometry"`
+		} `json:"routes"`
+	}
+
+	var data osrmGeomResponse
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil || data.Code != "Ok" || len(data.Routes) == 0 {
+		return p.fallbackPolyline(points), nil
+	}
+
+	// Convert [lon, lat] from GeoJSON to [lat, lon] for Leaflet
+	geojsonCoords := data.Routes[0].Geometry.Coordinates
+	result := make([][]float64, len(geojsonCoords))
+	for i, coord := range geojsonCoords {
+		if len(coord) >= 2 {
+			result[i] = []float64{coord[1], coord[0]}
+		}
+	}
+	return result, nil
+}
+
+func (p *OSRMDistanceProvider) fallbackPolyline(points []models.Location) [][]float64 {
+	// Simple straight line fallback
+	result := make([][]float64, len(points))
+	for i, pt := range points {
+		result[i] = []float64{pt.Latitude, pt.Longitude}
+	}
+	return result
+}
+
 // HaversineDistanceProvider implements DistanceMatrixProvider using the Haversine formula
 type HaversineDistanceProvider struct{}
 
@@ -83,6 +154,14 @@ func (p *HaversineDistanceProvider) GetDistanceAndTime(ctx context.Context, orig
 	return dist, travelTime, nil
 }
 
+func (p *HaversineDistanceProvider) GetRoutePolyline(ctx context.Context, points []models.Location) ([][]float64, error) {
+	result := make([][]float64, len(points))
+	for i, pt := range points {
+		result[i] = []float64{pt.Latitude, pt.Longitude}
+	}
+	return result, nil
+}
+
 // MockTrafficProvider simulates a traffic-aware API
 type MockTrafficProvider struct {
 	Fallback *HaversineDistanceProvider
@@ -98,6 +177,10 @@ func (p *MockTrafficProvider) GetDistanceAndTime(ctx context.Context, origin, de
 	// In a real implementation, this would call Google or MapmyIndia
 	trafficFactor := 1.2
 	return dist, int(float64(travelTime) * trafficFactor), nil
+}
+
+func (p *MockTrafficProvider) GetRoutePolyline(ctx context.Context, points []models.Location) ([][]float64, error) {
+	return p.Fallback.GetRoutePolyline(ctx, points)
 }
 
 // HaversineDistance calculates the distance between two points in KM

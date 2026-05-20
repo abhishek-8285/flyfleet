@@ -28,7 +28,7 @@ func setupIngestTest(t *testing.T) (*IngestionService, *repository.MemTelemRepo,
 	telemRepo := repository.NewMemTelemRepo()
 	liveCache := repository.NewMemLiveCache()
 
-	svc := NewIngestionService(telemRepo, liveCache, rdb, zap.NewNop())
+	svc := NewIngestionService(telemRepo, liveCache, nil, rdb, zap.NewNop())
 	return svc, telemRepo, liveCache, mr
 }
 
@@ -41,7 +41,7 @@ func TestNewIngestionService(t *testing.T) {
 	telemRepo := repository.NewMemTelemRepo()
 	liveCache := repository.NewMemLiveCache()
 
-	svc := NewIngestionService(telemRepo, liveCache, rdb, zap.NewNop())
+	svc := NewIngestionService(telemRepo, liveCache, nil, rdb, zap.NewNop())
 	if svc == nil {
 		t.Fatal("expected non-nil service")
 	}

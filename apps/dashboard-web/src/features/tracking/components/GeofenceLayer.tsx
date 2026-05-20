@@ -44,19 +44,42 @@ export const GeofenceLayer: React.FC<GeofenceLayerProps> = ({ map }) => {
                         status: gf.status
                     }
                 });
-            } else if (gf.type === 'polygon' && gf.polygon) {
-                polygonFeatures.push({
-                    type: 'Feature',
-                    geometry: {
-                        type: 'Polygon',
-                        coordinates: [[...gf.polygon.map(p => [p[0], p[1]]), [...gf.polygon[0]]]]
-                    },
-                    properties: {
-                        id: gf.id,
-                        name: gf.name,
-                        status: gf.status
+            } else if (gf.type === 'polygon') {
+                let polygonCoords = (gf as any).polygon;
+                if (!polygonCoords && (gf as any).polygon_wkt) {
+                    try {
+                        const cleanWkt = (gf as any).polygon_wkt.trim();
+                        if (cleanWkt.startsWith('[')) {
+                            polygonCoords = JSON.parse(cleanWkt);
+                        } else if (cleanWkt.toUpperCase().startsWith('POLYGON')) {
+                            const match = cleanWkt.match(/\(\((.*)\)\)/);
+                            if (match && match[1]) {
+                                const points = match[1].split(',');
+                                polygonCoords = points.map(pt => {
+                                    const parts = pt.trim().split(/\s+/);
+                                    return [parseFloat(parts[1]), parseFloat(parts[0])] as [number, number];
+                                });
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse polygon_wkt:', e);
                     }
-                });
+                }
+
+                if (polygonCoords && polygonCoords.length > 0) {
+                    polygonFeatures.push({
+                        type: 'Feature',
+                        geometry: {
+                            type: 'Polygon',
+                            coordinates: [[...polygonCoords.map(p => [p[0], p[1]]), [...polygonCoords[0]]]]
+                        },
+                        properties: {
+                            id: gf.id,
+                            name: gf.name,
+                            status: gf.status
+                        }
+                    });
+                }
             }
         });
 

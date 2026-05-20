@@ -33,6 +33,7 @@ type TelemetryRepositoryer interface {
 	GetLatestByVehicle(ctx context.Context, vehicleID uuid.UUID) (*models.TelemetryEvent, error)
 	GetBatchLatest(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]models.TelemetryEvent, error)
 	GetHistoryBucket(ctx context.Context, vehicleID uuid.UUID, start, end time.Time, bucketInterval string) ([]models.TelemetryEvent, error)
+	ResolveDeviceAssignment(ctx context.Context, deviceID string) (uuid.UUID, uuid.UUID, error)
 }
 
 // GeofenceRepositoryer defines the interface for geofence data access.

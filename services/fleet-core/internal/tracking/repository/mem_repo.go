@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
@@ -166,10 +167,19 @@ type MemTelemRepo struct {
 	mu      sync.RWMutex
 	points  []models.TelemetryEvent
 	latest  map[uuid.UUID]models.TelemetryEvent
+	devices map[string]deviceAssignment
+}
+
+type deviceAssignment struct {
+	TenantID  uuid.UUID
+	VehicleID uuid.UUID
 }
 
 func NewMemTelemRepo() *MemTelemRepo {
-	return &MemTelemRepo{latest: make(map[uuid.UUID]models.TelemetryEvent)}
+	return &MemTelemRepo{
+		latest:  make(map[uuid.UUID]models.TelemetryEvent),
+		devices: make(map[string]deviceAssignment),
+	}
 }
 
 func (r *MemTelemRepo) Write(ctx context.Context, event *models.TelemetryEvent) error {
@@ -226,6 +236,37 @@ func (r *MemTelemRepo) Clear() {
 	defer r.mu.Unlock()
 	r.points = nil
 	r.latest = make(map[uuid.UUID]models.TelemetryEvent)
+	r.devices = make(map[string]deviceAssignment)
+}
+
+func (r *MemTelemRepo) BulkIngest(ctx context.Context, events []models.TelemetryEvent) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, event := range events {
+		r.points = append(r.points, event)
+		r.latest[event.VehicleID] = event
+	}
+	return nil
+}
+
+func (r *MemTelemRepo) SeedDeviceAssignment(deviceID string, tenantID, vehicleID uuid.UUID) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.devices == nil {
+		r.devices = make(map[string]deviceAssignment)
+	}
+	r.devices[deviceID] = deviceAssignment{TenantID: tenantID, VehicleID: vehicleID}
+}
+
+func (r *MemTelemRepo) ResolveDeviceAssignment(ctx context.Context, deviceID string) (uuid.UUID, uuid.UUID, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if r.devices != nil {
+		if ass, ok := r.devices[deviceID]; ok {
+			return ass.TenantID, ass.VehicleID, nil
+		}
+	}
+	return uuid.Nil, uuid.Nil, fmt.Errorf("device assignment not found in memory")
 }
 
 // MemGeofenceRepo is a thread-safe in-memory geofence store.

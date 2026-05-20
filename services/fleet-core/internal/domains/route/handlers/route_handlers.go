@@ -144,6 +144,12 @@ func (h *RouteOptimizationHandler) RecalculateRoute(w http.ResponseWriter, r *ht
 
 // CreateOptimizationRequest handles POST /api/v1/routes/requests
 func (h *RouteOptimizationHandler) CreateOptimizationRequest(w http.ResponseWriter, r *http.Request) {
+	tenantID := h.getTenantID(r)
+	if tenantID == uuid.Nil {
+		h.writeErrorResponse(w, http.StatusUnauthorized, "Tenant ID required", nil)
+		return
+	}
+
 	var dto createOptimizationRequestDTO
 	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		h.writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON", err)
@@ -157,6 +163,7 @@ func (h *RouteOptimizationHandler) CreateOptimizationRequest(w http.ResponseWrit
 
 	// Map DTO to model
 	req := &models.RouteOptimizationRequest{
+		TenantID:          tenantID,
 		Name:              dto.Name,
 		Description:       dto.Description,
 		StartTime:         dto.StartTime,

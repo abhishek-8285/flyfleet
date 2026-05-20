@@ -3,10 +3,12 @@ package repository
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
@@ -71,6 +73,11 @@ func (r *TelemetryRepository) BulkIngest(ctx context.Context, events []models.Te
 	if len(events) == 0 {
 		return nil
 	}
+
+	// CRITICAL TIMESCALEDB OPTIMIZATION: Sort chronologically to prevent chunk/page thrashing
+	sort.Slice(events, func(i, j int) bool {
+		return events[i].RecordedAt.Before(events[j].RecordedAt)
+	})
 
 	rows := make([][]any, len(events))
 	for i, e := range events {
@@ -265,4 +272,22 @@ func (r *TelemetryRepository) GetBatchLatest(ctx context.Context, vehicleIDs []u
 		result[t.VehicleID] = t
 	}
 	return result, nil
+}
+
+// ResolveDeviceAssignment resolves tenant_id and vehicle_id assigned to a device_id.
+func (r *TelemetryRepository) ResolveDeviceAssignment(ctx context.Context, deviceID string) (uuid.UUID, uuid.UUID, error) {
+	// 1. Try devices table
+	var tenantID, vehicleID uuid.UUID
+	err := r.pool.QueryRow(ctx, `SELECT tenant_id, vehicle_id FROM devices WHERE device_id = $1`, deviceID).Scan(&tenantID, &vehicleID)
+	if err == nil {
+		return tenantID, vehicleID, nil
+	}
+
+	// 2. Try vehicles table as fallback
+	err = r.pool.QueryRow(ctx, `SELECT tenant_id, id FROM vehicles WHERE gps_device_id = $1 AND deleted_at IS NULL`, deviceID).Scan(&tenantID, &vehicleID)
+	if err == nil {
+		return tenantID, vehicleID, nil
+	}
+
+	return uuid.Nil, uuid.Nil, fmt.Errorf("device assignment not found for device_id: %s", deviceID)
 }

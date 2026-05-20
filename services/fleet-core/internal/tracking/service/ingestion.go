@@ -42,9 +42,8 @@ func NewIngestionService(
 	rdb *redis.Client,
 	logger *zap.Logger,
 ) *IngestionService {
-	// Initialize the batcher with 1000 items or 5 seconds flush interval.
-	// In a production app, these should come from the config.
 	batcher := NewTelemetryBatcher(telemRepo, logger, 1000, 5*time.Second)
+	batcher.SetRedisClient(rdb)
 	batcher.Start()
 
 	return &IngestionService{
@@ -64,9 +63,46 @@ func (s *IngestionService) Stop() {
 	}
 }
 
+// ForceFlush triggers an immediate database write of all buffered telemetry events.
+func (s *IngestionService) ForceFlush() {
+	if s.batcher != nil {
+		s.batcher.ForceFlush()
+	}
+}
+
 // SetHMACSecret updates the HMAC secret for ingestion validation.
 func (s *IngestionService) SetHMACSecret(secret string) {
 	s.hmacSecret = secret
+}
+
+// Health returns the status of the ingestion service and its dependencies.
+func (s *IngestionService) Health(ctx context.Context) map[string]interface{} {
+	stats := make(map[string]interface{})
+	stats["status"] = "healthy"
+
+	// Check Batcher
+	if s.batcher != nil {
+		depth, capacity := s.batcher.QueueStats()
+		stats["batcher"] = map[string]interface{}{
+			"queue_depth":    depth,
+			"queue_capacity": capacity,
+			"queue_usage":    float64(depth) / float64(capacity),
+		}
+		if depth > int(float64(capacity)*0.9) {
+			stats["status"] = "degraded"
+			stats["reason"] = "telemetry_queue_near_capacity"
+		}
+	}
+
+	// Check Redis
+	if err := s.redis.Ping(ctx).Err(); err != nil {
+		stats["status"] = "unhealthy"
+		stats["redis"] = "disconnected"
+	} else {
+		stats["redis"] = "connected"
+	}
+
+	return stats
 }
 
 // verifyHMAC computes HMAC-SHA256(key, message) and compares with sig.
@@ -85,6 +121,17 @@ func (s *IngestionService) verifyHMAC(message, sig string) bool {
 // Ingest validates and persists a telemetry event, updates the Redis
 // live cache, and publishes a position update for WebSocket fans.
 func (s *IngestionService) Ingest(ctx context.Context, event *models.TelemetryEvent) error {
+	// Resolve VehicleID and TenantID if they are Nil (e.g. Protobuf/MQTT edge gateway ingestion)
+	if event.VehicleID == uuid.Nil || event.TenantID == uuid.Nil {
+		tenantID, vehicleID, err := s.telemRepo.ResolveDeviceAssignment(ctx, event.DeviceID)
+		if err != nil {
+			s.logger.Warn("Failed to resolve device assignment from database", zap.String("device_id", event.DeviceID), zap.Error(err))
+			return fmt.Errorf("resolve device assignment: %w", err)
+		}
+		event.TenantID = tenantID
+		event.VehicleID = vehicleID
+	}
+
 	// HMAC validation (if secret is configured)
 	if s.hmacSecret != "" {
 		if event.Signature == "" {

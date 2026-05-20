@@ -52,6 +52,7 @@ interface RouteMapProps {
   drop: RouteMapPoint | null;
   onPickupChange: (pt: RouteMapPoint) => void;
   onDropChange: (pt: RouteMapPoint) => void;
+  onRouteCalculated?: (distanceKm: number, durationMin: number) => void;
   height?: string;
 }
 
@@ -60,18 +61,59 @@ export default function RouteMap({
   drop,
   onPickupChange,
   onDropChange,
+  onRouteCalculated,
   height = "h-80",
 }: RouteMapProps) {
   const defaultCenter: [number, number] = [28.6139, 77.209];
+  const [routeCoords, setRouteCoords] = useState<[number, number][]>([]);
+
   const points = useMemo(() => {
     const pts: [number, number][] = [];
-    if (pickup) pts.push([pickup.lat, pickup.lng]);
-    if (drop) pts.push([drop.lat, drop.lng]);
+    if (pickup && pickup.lat !== 0) pts.push([pickup.lat, pickup.lng]);
+    if (drop && drop.lat !== 0) pts.push([drop.lat, drop.lng]);
     return pts;
   }, [pickup, drop]);
 
   const center = points.length > 0 ? points[0] : defaultCenter;
   const zoom = points.length >= 2 ? undefined : 5;
+
+  useEffect(() => {
+    if (pickup && pickup.lat !== 0 && drop && drop.lat !== 0) {
+      const url = `https://router.project-osrm.org/route/v1/driving/${pickup.lng},${pickup.lat};${drop.lng},${drop.lat}?overview=full&geometries=geojson`;
+      fetch(url)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.code === "Ok" && data.routes && data.routes[0]) {
+            const route = data.routes[0];
+            const coords = route.geometry.coordinates.map(
+              (c: [number, number]) => [c[1], c[0]] as [number, number]
+            );
+            setRouteCoords(coords);
+            
+            if (onRouteCalculated) {
+              const distanceKm = route.distance / 1000;
+              const durationMin = Math.round(route.duration / 60);
+              onRouteCalculated(distanceKm, durationMin);
+            }
+          } else {
+            // Fallback to straight line
+            setRouteCoords([[pickup.lat, pickup.lng], [drop.lat, drop.lng]]);
+            if (onRouteCalculated) {
+              onRouteCalculated(calculateDistance(pickup, drop), 0);
+            }
+          }
+        })
+        .catch((err) => {
+          console.error("OSRM Routing Error:", err);
+          setRouteCoords([[pickup.lat, pickup.lng], [drop.lat, drop.lng]]);
+          if (onRouteCalculated) {
+            onRouteCalculated(calculateDistance(pickup, drop), 0);
+          }
+        });
+    } else {
+      setRouteCoords([]);
+    }
+  }, [pickup, drop]);
 
   const handleMapClick = async (lat: number, lng: number) => {
     const address = await reverseGeocode(lat, lng);
@@ -104,13 +146,12 @@ export default function RouteMap({
         {points.length >= 2 && <FitBounds points={points} />}
 
         {/* Route line */}
-        {pickup && drop && (
+        {routeCoords.length > 0 && (
           <Polyline
-            positions={[[pickup.lat, pickup.lng], [drop.lat, drop.lng]]}
+            positions={routeCoords}
             color="#137fec"
             weight={4}
-            dashArray="8, 8"
-            opacity={0.8}
+            opacity={0.85}
           />
         )}
 

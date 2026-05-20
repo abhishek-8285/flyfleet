@@ -183,6 +183,7 @@ type RouteOptimizationResult struct {
 type Route struct {
 	VehicleID         string      `json:"vehicle_id"`
 	Stops             []RouteStop `json:"stops"`
+	Polyline          [][]float64 `json:"polyline"` // Array of [lat, lon] coordinates for rendering
 	Distance          float64     `json:"distance"` // in km
 	Time              int         `json:"time"`     // in minutes
 	Cost              float64     `json:"cost"`

@@ -758,6 +758,10 @@ class ApiService {
     return this.client.post("/routes/requests", data);
   }
 
+  async recalculateRoute(data: { result_id: string; vehicle_id: string; current_lat: number; current_lon: number }): Promise<any> {
+    return this.client.post("/routes/recalculate", data);
+  }
+
   async getOptimizationRequest(id: string): Promise<any> {
     return this.client.get(`/routes/requests/${id}`);
   }
@@ -776,6 +780,10 @@ class ApiService {
 
   async listOptimizationJobs(params?: any): Promise<any> {
     return this.client.get("/routes/jobs", { params });
+  }
+
+  async submitOptimizationJob(data: { request_id: string }): Promise<any> {
+    return this.client.post("/routes/jobs", data);
   }
 
   // Video Telematics
