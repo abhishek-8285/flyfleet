@@ -249,9 +249,11 @@ DECLARE
     trip_uuid UUID := '550e8400-e29b-41d4-a716-446655440020';
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'trips') THEN
-        INSERT INTO trips (id, tenant_id, vehicle_id, driver_id, status, title, is_deleted)
-        VALUES (trip_uuid, t_id, v_id, d_id, 'ACTIVE', 'Delhi to Jaipur Delivery', FALSE)
-        ON CONFLICT (id) DO UPDATE SET is_deleted = FALSE, status = EXCLUDED.status, title = EXCLUDED.title;
+        INSERT INTO trips (id, tenant_id, vehicle_id, driver_id, status, title, pickup_lat, pickup_lng, drop_lat, drop_lng, is_deleted)
+        VALUES (trip_uuid, t_id, v_id, d_id, 'ACTIVE', 'Delhi to Jaipur Delivery', 28.6139, 77.2090, 26.9124, 75.7873, FALSE)
+        ON CONFLICT (id) DO UPDATE SET is_deleted = FALSE, status = EXCLUDED.status, title = EXCLUDED.title,
+                                      pickup_lat = EXCLUDED.pickup_lat, pickup_lng = EXCLUDED.pickup_lng,
+                                      drop_lat = EXCLUDED.drop_lat, drop_lng = EXCLUDED.drop_lng;
         
         -- Handle trip_id (string version) if it exists
         IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'trips' AND column_name = 'trip_id') THEN
@@ -278,9 +280,11 @@ BEGIN
 END $$;
 
 -- 5. TRIPS (For Telemetry)
-INSERT INTO trips (id, vehicle_id, driver_id, status, tenant_id, is_deleted)
-VALUES ('550e8400-e29b-41d4-a716-446655440020', '550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440010', 'ACTIVE', '550e8400-e29b-41d4-a716-446655440000', FALSE)
-ON CONFLICT (id) DO UPDATE SET is_deleted = FALSE, status = EXCLUDED.status;
+INSERT INTO trips (id, vehicle_id, driver_id, status, tenant_id, pickup_lat, pickup_lng, drop_lat, drop_lng, is_deleted)
+VALUES ('550e8400-e29b-41d4-a716-446655440020', '550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440010', 'ACTIVE', '550e8400-e29b-41d4-a716-446655440000', 28.6139, 77.2090, 26.9124, 75.7873, FALSE)
+ON CONFLICT (id) DO UPDATE SET is_deleted = FALSE, status = EXCLUDED.status,
+                              pickup_lat = EXCLUDED.pickup_lat, pickup_lng = EXCLUDED.pickup_lng,
+                              drop_lat = EXCLUDED.drop_lat, drop_lng = EXCLUDED.drop_lng;
 
 DO $$
 DECLARE

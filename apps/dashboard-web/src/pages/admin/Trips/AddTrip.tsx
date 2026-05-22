@@ -278,6 +278,7 @@ export default function AddTrip() {
       const payload = {
         vehicle_id: formData.vehicle_id,
         driver_id: formData.driver_id || undefined,
+        trip_type: formData.trip_type === "pickup" ? "local" : formData.trip_type === "maintenance" ? "service" : formData.trip_type === "internal" ? "standard" : formData.trip_type,
         title: formData.title,
         description: formData.description || "",
         planned_route: waypoints,
@@ -295,7 +296,7 @@ export default function AddTrip() {
         },
         scheduled_start: new Date(formData.scheduled_start).toISOString(),
         customer_name: formData.customer_name,
-        customer_phone: formData.customer_phone,
+        customer_phone: (formData.customer_phone.startsWith("+") ? formData.customer_phone : `+91${formData.customer_phone}`).replace(/\s+/g, ""),
         customer_email: formData.customer_email || undefined,
         planned_eta: formData.planned_eta
           ? new Date(formData.planned_eta).toISOString()
@@ -582,15 +583,7 @@ export default function AddTrip() {
               />
             </div>
 
-            {/* Route Map */}
-            <RouteMap
-              pickup={pickup}
-              drop={drop}
-              onPickupChange={handlePickupChange}
-              onDropChange={handleDropChange}
-              onRouteCalculated={handleRouteCalculated}
-              height="h-72"
-            />
+
 
             {/* Route Summary */}
             {pickup && pickup.lat !== 0 && drop && drop.lat !== 0 && (
@@ -718,6 +711,14 @@ export default function AddTrip() {
                   />
                 </div>
               </div>
+            </div>
+
+            {/* Real-world Adjustments Notice */}
+            <div className="mt-6 p-4 rounded-xl border border-warning/15 bg-warning/5 text-text-muted flex items-start gap-3">
+              <span className="material-symbols-outlined text-warning text-lg mt-0.5">info</span>
+              <p className="text-xs leading-relaxed text-text-muted">
+                <span className="font-bold text-white">Note:</span> Although route distance and travel duration are calculated automatically based on geographic coordinates, you can manually adjust them to reflect real-world logistics scenarios (e.g., custom local shortcuts, traffic congestion, or required driver rest stops).
+              </p>
             </div>
           </div>
         </div>

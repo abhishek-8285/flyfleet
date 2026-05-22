@@ -237,20 +237,35 @@ export default function AddressInput({
           <span className="text-xs font-semibold text-white uppercase tracking-wider">{label}</span>
         </div>
         <div
-          onClick={openMap}
-          className={`flex items-center gap-3 bg-surface-darker border ${accentBorder} ${accentBg} rounded-xl px-4 py-3 cursor-pointer hover:border-primary/40 transition-colors`}
+          className={`flex items-center gap-3 bg-surface-darker border ${accentBorder} ${accentBg} rounded-xl px-4 py-2 hover:border-primary/40 transition-colors`}
         >
-          <span className="material-symbols-outlined text-text-muted text-lg">location_on</span>
-          {addressResolved ? (
-            <span className="text-sm text-white truncate flex-1">
-              {addressResolved.split(',').slice(0, 2).join(',')}
-            </span>
-          ) : (
-            <span className="text-sm text-text-muted/50 flex-1">
-              {isPickup ? 'Tap to set pickup location' : 'Tap to set drop location'}
-            </span>
-          )}
-          <span className="material-symbols-outlined text-text-muted text-lg">chevron_right</span>
+          <span 
+            className="material-symbols-outlined text-text-muted text-lg cursor-pointer hover:text-white transition-colors animate-pulse" 
+            onClick={openMap}
+            title="Pin on Map"
+          >
+            location_on
+          </span>
+          <input
+            type="text"
+            value={addressResolved}
+            onChange={(e) => {
+              const newAddr = e.target.value;
+              setAddressResolved(newAddr);
+              onLocationSelected(lat || mapCenter[0], lng || mapCenter[1], newAddr);
+            }}
+            placeholder={isPickup ? 'Enter pickup address...' : 'Enter drop address...'}
+            className="bg-transparent border-none outline-none text-sm text-white flex-1 min-w-0 font-medium placeholder:text-text-muted/30 focus:ring-0 focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={openMap}
+            className="px-3 py-1.5 bg-white/5 hover:bg-white/10 hover:border-primary/30 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 border border-white/5 active:scale-95 shadow-md"
+            title="Open Map Pin Selector"
+          >
+            <span className="material-symbols-outlined text-sm">map</span>
+            Pick from map
+          </button>
         </div>
       </div>
 

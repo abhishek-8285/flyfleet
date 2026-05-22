@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { TripFilters, TripFilterState } from "../../../components/trips/TripFilters";
 import { useUIStrings } from "../../../hooks/useUIStrings";
 import api from "../../../services/api";
@@ -107,8 +107,8 @@ export default function TripsList() {
       }
 
       const data = await api.getTrips(params);
-      setTrips(data.trips || []);
-      setTotal(data.total || 0);
+      setTrips(data.data || data.trips || []);
+      setTotal(data.total_count || data.total || 0);
     } catch (error) {
       console.error("Failed to load trips:", error);
     } finally {
@@ -147,10 +147,7 @@ export default function TripsList() {
     });
   }, [trips, keyword, vehicleMap]);
 
-  const boardTripsByStatus = COLUMNS.map((col) => ({
-    ...col,
-    trips: filtered.filter((t) => t.status === col.key),
-  }));
+
 
   return (
     <div className="p-6 space-y-4">
@@ -182,16 +179,58 @@ export default function TripsList() {
         onReset={handleResetFilters}
       />
 
-      {/* Board View (Kanban) */}
-      <BoardView
-        columns={boardTripsByStatus}
-        loading={loading}
-        keyword={keyword}
-        onKeywordChange={setKeyword}
-        formatDate={formatDate}
-        totalCount={filtered.length}
-        vehicleMap={vehicleMap}
-      />
+      {/* Status KPI Board (Case Numbers) */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mt-2">
+        {COLUMNS.map((col) => {
+          const count = trips.filter((t) => t.status === col.key).length;
+          const isSelected = filters.status === col.key;
+          
+          let activeStyle = "";
+          if (col.key === "in_progress") {
+            activeStyle = isSelected 
+              ? "border-amber-500 bg-amber-500/20 text-amber-400 ring-2 ring-amber-500/20 shadow-amber-500/5" 
+              : "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-amber-400/80 hover:text-amber-400";
+          } else if (col.key === "completed") {
+            activeStyle = isSelected 
+              ? "border-emerald-500 bg-emerald-500/20 text-emerald-400 ring-2 ring-emerald-500/20 shadow-emerald-500/5" 
+              : "border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-400/80 hover:text-emerald-400";
+          } else if (col.key === "cancelled") {
+            activeStyle = isSelected 
+              ? "border-rose-500 bg-rose-500/20 text-rose-400 ring-2 ring-rose-500/20 shadow-rose-500/5" 
+              : "border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10 text-rose-400/80 hover:text-rose-400";
+          } else {
+            activeStyle = isSelected 
+              ? "border-primary bg-primary/20 text-primary ring-2 ring-primary/20 shadow-primary/5" 
+              : "border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary/80 hover:text-primary";
+          }
+          
+          return (
+            <button 
+              key={col.key}
+              onClick={() => handleFilterChange({ 
+                ...filters, 
+                status: filters.status === col.key ? "" : col.key 
+              })}
+              className={`p-5 rounded-2xl border transition-all duration-300 flex items-center justify-between shadow-xl text-left ${activeStyle} active:scale-95`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-lg">{col.icon}</span>
+                </div>
+                <div>
+                  <h4 className="text-white text-[10px] font-black uppercase tracking-widest opacity-80">{col.label}</h4>
+                  <p className="text-[9px] font-bold text-on-surface-variant/80 mt-0.5">
+                    {isSelected ? "Click to clear filter" : "Filter detailed log"}
+                  </p>
+                </div>
+              </div>
+              <div className="text-3xl font-black tracking-tight text-white font-mono">
+                {count}
+              </div>
+            </button>
+          );
+        })}
+      </div>
 
       {/* List View (Table) */}
       <ListView
@@ -220,110 +259,40 @@ function formatDate(dateStr: string) {
   });
 }
 
+function getPredefinedAddress(lat: number, lng: number): string {
+  const roundedLat = parseFloat(lat.toFixed(3));
+  const roundedLng = parseFloat(lng.toFixed(3));
+
+  // Delhi NCR bounds
+  if (roundedLat >= 28.5 && roundedLat <= 28.9 && roundedLng >= 77.0 && roundedLng <= 77.3) {
+    if (roundedLat === 28.636 && roundedLng === 77.220) return "Connaught Place, New Delhi";
+    if (roundedLat === 28.614 && roundedLng === 77.209) return "New Delhi Hub";
+    return "Delhi Terminal Depot";
+  }
+  // Gorakhpur
+  if (roundedLat >= 26.6 && roundedLat <= 26.9 && roundedLng >= 83.2 && roundedLng <= 83.5) {
+    return "Gorakhpur Logistic Park";
+  }
+  // Siwan
+  if (roundedLat >= 26.0 && roundedLat <= 26.3 && roundedLng >= 84.2 && roundedLng <= 84.5) {
+    return "Siwan Distribution Center";
+  }
+  // Jaipur
+  if (roundedLat >= 26.8 && roundedLat <= 27.1 && roundedLng >= 75.6 && roundedLng <= 75.9) {
+    return "Jaipur Transport Nagar";
+  }
+
+  return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+}
+
 function formatLocation(loc: string | Location) {
   if (!loc) return "Unknown Location";
   if (typeof loc === "string") return loc;
-  return loc.address || `${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)}`;
+  if (loc.address && loc.address.trim() !== "") return loc.address;
+  return getPredefinedAddress(loc.latitude, loc.longitude);
 }
 
-/* ── Board View (Kanban) ── */
-function BoardView({
-  columns,
-  loading,
-  keyword,
-  onKeywordChange,
-  formatDate,
-  totalCount,
-  vehicleMap,
-}: {
-  columns: { key: string; label: string; icon: string; trips: Trip[] }[];
-  loading: boolean;
-  keyword: string;
-  onKeywordChange: (v: string) => void;
-  formatDate: (d: string) => string;
-  totalCount: number;
-  vehicleMap: Record<string, string>;
-}) {
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-4 mt-4 px-2">
-        <h2 className="text-white text-xs font-bold uppercase tracking-widest">Trips Board</h2>
-        <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider bg-surface-container px-2 py-0.5 rounded border border-outline">
-          {totalCount} Active Trips
-        </span>
-      </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-20 text-on-surface-variant">
-          <span className="material-symbols-outlined animate-spin mr-3">refresh</span>
-          <span className="text-[11px] font-bold uppercase tracking-widest">Initialising Board...</span>
-        </div>
-      ) : (
-        <div className="flex gap-4 overflow-x-auto pb-2">
-          {columns.map((col) => (
-            <div
-              key={col.key}
-              className="min-w-[280px] w-[280px] flex-shrink-0 flex flex-col"
-            >
-              <div className="flex items-center gap-2 mb-4 px-2">
-                <span className="material-symbols-outlined text-on-surface-variant text-[18px]">
-                  {col.icon}
-                </span>
-                <span className="text-[11px] font-black text-white uppercase tracking-wider">{col.label}</span>
-                <span className="bg-surface-container border border-outline text-on-surface-variant text-[10px] px-2 py-0.5 rounded font-black ml-auto">
-                  {col.trips.length}
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                {col.trips.length === 0 ? (
-                  <div className="text-center py-12 text-on-surface-variant text-[10px] font-bold uppercase tracking-widest border border-dashed border-outline rounded-2xl bg-surface-container/10">
-                    No Trips
-                  </div>
-                ) : (
-                  col.trips.map((trip) => (
-                    <Link
-                      key={trip.id}
-                      to={`/admin/trips/${trip.id}`}
-                      className={`block bg-surface-container border border-outline rounded-2xl p-4 hover:border-primary transition-all shadow-xl shadow-black/5 group ${
-                        statusColors[trip.status] || ""
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="font-mono text-white text-[11px] font-bold bg-black/20 px-2 py-0.5 rounded">
-                          #{trip.trip_id}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${statusDot[trip.status] || ""}`} />
-                        </div>
-                      </div>
-                      <div className="text-[11px] font-bold text-white mb-3 line-clamp-2 leading-relaxed">
-                        {formatLocation(trip.start_location)} 
-                        <span className="material-symbols-outlined text-[10px] mx-1 text-on-surface-variant">arrow_forward</span> 
-                        {formatLocation(trip.end_location)}
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-on-surface-variant border-t border-outline/30 pt-3 mt-3 group-hover:border-primary/20 transition-colors">
-                        <span className="flex items-center gap-1.5" title={trip.vehicle_id}>
-                          <span className="material-symbols-outlined text-[14px]">local_shipping</span>
-                          {vehicleMap[trip.vehicle_id] || trip.vehicle_id?.slice(0, 8) + "…"}
-                        </span>
-                        <span className="font-mono">{trip.distance?.toFixed(1) || "—"} KM</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[9px] font-bold text-on-surface-variant/70 mt-3 uppercase tracking-wider">
-                        <span className="truncate max-w-[120px]">{trip.customer_name || "Internal Fleet"}</span>
-                        <span>{formatDate(trip.start_time)}</span>
-                      </div>
-                    </Link>
-                  ))
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ── List View (Table) ── */
 function ListView({
@@ -351,6 +320,7 @@ function ListView({
   onKeywordChange: (v: string) => void;
   vehicleMap: Record<string, string>;
 }) {
+  const navigate = useNavigate();
   return (
     <div className="bg-surface-container border border-outline rounded-3xl overflow-hidden shadow-2xl mt-8">
       {/* Table Header with Search */}
@@ -414,10 +384,11 @@ function ListView({
               trips.map((trip) => (
                 <tr
                   key={trip.id}
-                  className="border-b border-outline/50 hover:bg-surface-container/40 transition-all group"
+                  onClick={() => navigate(`/admin/trips/${trip.id}`)}
+                  className="border-b border-outline/50 hover:bg-white/[0.06] transition-all group cursor-pointer"
                 >
                   <td className="px-6 py-4">
-                    <Link to={`/admin/trips/${trip.id}`} className="font-mono text-white font-bold bg-white/5 px-2 py-1 rounded hover:bg-primary/20 hover:text-primary transition-all">
+                    <Link to={`/admin/trips/${trip.id}`} className="font-mono text-white font-bold bg-white/5 px-2 py-1 rounded group-hover:bg-primary/20 group-hover:text-primary transition-all">
                       #{trip.trip_id}
                     </Link>
                   </td>

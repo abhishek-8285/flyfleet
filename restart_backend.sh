@@ -5,6 +5,7 @@ echo "Stopping stale processes..."
 pkill -9 -f air || true
 pkill -9 -f fleet-core || true
 pkill -9 -f 'go run' || true
+fuser -k 8110/tcp || true
 fuser -k 8120/tcp || true
 fuser -k 8999/tcp || true
 fuser -k 8109/tcp || true

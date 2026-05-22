@@ -1,4 +1,4 @@
-package main // Rebuild trigger 43
+package main // Rebuild trigger 44
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	// Triggering restart for migration 326
+	// Triggering restart for migration 403
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
@@ -873,7 +873,7 @@ func ensureTripSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logge
 	statements := []string{
 		"CREATE TABLE IF NOT EXISTS trips (id UUID PRIMARY KEY DEFAULT gen_random_uuid())",
 		"ALTER TABLE trips ADD COLUMN IF NOT EXISTS tenant_id UUID",
-		"ALTER TABLE trips ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'scheduled'",
+		"ALTER TABLE trips ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'CREATED'",
 		"ALTER TABLE trips ADD COLUMN IF NOT EXISTS vehicle_id UUID",
 	}
 	for _, stmt := range statements {

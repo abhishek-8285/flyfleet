@@ -6,7 +6,11 @@ export type TripStatus =
   | "RESUMED" 
   | "COMPLETED" 
   | "CANCELLED" 
-  | "FAILED";
+  | "FAILED"
+  | "scheduled"
+  | "in_progress"
+  | "completed"
+  | "cancelled";
 
 export interface Location {
   latitude: number;

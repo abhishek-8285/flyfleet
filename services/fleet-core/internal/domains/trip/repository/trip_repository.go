@@ -80,11 +80,11 @@ func (r *PostgresTripRepository) Create(ctx context.Context, trip *models.Trip) 
 			planned_route, waypoints, planned_distance, estimated_duration_min,
 			cargo_details, scheduled_start, start_odometer, fuel_level_snapshot,
 			eway_bill_no, gst_classification, customer_name, customer_phone,
-			customer_email, created_at, updated_at
+			customer_email, created_at, updated_at, is_deleted
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8,
 			$9, $10, $11, $12,
-			$13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27
+			$13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, false
 		)
 		RETURNING id, created_at, updated_at`
 
@@ -136,20 +136,20 @@ func (r *PostgresTripRepository) GetByID(ctx context.Context, id string) (*model
 			t.start_odometer, t.end_odometer, t.fuel_level_snapshot, t.fuel_used, t.idling_time_minutes,
 			COALESCE(t.eway_bill_no, '') as eway_bill_no, 
 			COALESCE(t.gst_classification, '') as gst_classification, 
-			t.permit_verified, t.ais140_compliant,
-			COALESCE(t.customer_name, '') as customer_name, 
+			COALESCE(t.permit_verified, false) as permit_verified, COALESCE(t.ais140_compliant, false) as ais140_compliant,
+			COALESCE(t.customer_name, '') as customer_name,  
 			COALESCE(t.customer_phone, '') as customer_phone, 
 			COALESCE(t.customer_email, '') as customer_email, 
 			COALESCE(t.cancellation_reason, '') as cancellation_reason,
-			t.version, 
-			COALESCE(t.created_at, now()) as created_at, 
+			COALESCE(t.version, 1) as version, 
+			COALESCE(t.created_at, now()) as created_at,  
 			COALESCE(t.updated_at, now()) as updated_at,
 			COALESCE(v.registration_number, '') as vehicle_reg,
 			COALESCE(d.full_name, 'Unassigned') as driver_name
 		FROM trips t
 		LEFT JOIN vehicles v ON t.vehicle_id = v.id
-		LEFT JOIN drivers d ON t.driver_id = d.id
-		WHERE t.id = $1 AND t.is_deleted = FALSE`
+		LEFT JOIN drivers d ON COALESCE(t.driver_id, v.current_driver_id) = d.id
+		WHERE t.id = $1 AND (t.is_deleted = FALSE OR t.is_deleted IS NULL)`
 
 	var trip models.Trip
 	var pLat, pLng, dLat, dLng sql.NullFloat64
@@ -292,10 +292,10 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 			COALESCE(d.full_name, 'Unassigned') as driver_name
 		FROM trips t
 		LEFT JOIN vehicles v ON t.vehicle_id = v.id
-		LEFT JOIN drivers d ON t.driver_id = d.id
-		WHERE t.tenant_id = $1 AND t.is_deleted = FALSE`
+		LEFT JOIN drivers d ON COALESCE(t.driver_id, v.current_driver_id) = d.id
+		WHERE t.tenant_id = $1 AND (t.is_deleted = FALSE OR t.is_deleted IS NULL)`
 
-	countQuery := `SELECT COUNT(*) FROM trips WHERE tenant_id = $1 AND is_deleted = FALSE`
+	countQuery := `SELECT COUNT(*) FROM trips WHERE tenant_id = $1 AND (is_deleted = FALSE OR is_deleted IS NULL)`
 
 	var conditions []string
 	args := []interface{}{filter.TenantID}
@@ -305,15 +305,15 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 		status := strings.ToLower(filter.Status)
 		switch status {
 		case "scheduled":
-			conditions = append(conditions, fmt.Sprintf("status IN ('CREATED', 'SCHEDULED')"))
+			conditions = append(conditions, fmt.Sprintf("UPPER(status) IN ('CREATED', 'SCHEDULED')"))
 		case "in_progress":
-			conditions = append(conditions, fmt.Sprintf("status IN ('STARTED', 'RESUMED', 'PAUSED', 'ACTIVE')"))
+			conditions = append(conditions, fmt.Sprintf("UPPER(status) IN ('STARTED', 'RESUMED', 'PAUSED', 'ACTIVE')"))
 		case "completed":
-			conditions = append(conditions, fmt.Sprintf("status = 'COMPLETED'"))
+			conditions = append(conditions, fmt.Sprintf("UPPER(status) = 'COMPLETED'"))
 		case "cancelled":
-			conditions = append(conditions, fmt.Sprintf("status IN ('CANCELLED', 'FAILED')"))
+			conditions = append(conditions, fmt.Sprintf("UPPER(status) IN ('CANCELLED', 'FAILED')"))
 		default:
-			conditions = append(conditions, fmt.Sprintf("status = $%d", argIndex))
+			conditions = append(conditions, fmt.Sprintf("UPPER(status) = UPPER($%d)", argIndex))
 			args = append(args, filter.Status)
 			argIndex++
 		}
@@ -379,6 +379,25 @@ func (r *PostgresTripRepository) List(ctx context.Context, filter models.TripLis
 	orderBy := "created_at DESC"
 	listSQL := baseQuery + whereClause + " ORDER BY " + orderBy + limitClause
 	fmt.Printf("DEBUG: Executing List query for tenant %s: %s with args: %v\n", filter.TenantID, listSQL, args)
+	
+	// --- DEBUG INJECTION ---
+	dbgRows, dbgErr := r.db.Query(ctx, "SELECT id, tenant_id, status, is_deleted, title FROM trips")
+	if dbgErr == nil {
+		fmt.Println("=== ALL TRIPS IN DB ===")
+		for dbgRows.Next() {
+			var id, tid, status string
+			var isDel bool
+			var title *string
+			if err := dbgRows.Scan(&id, &tid, &status, &isDel, &title); err == nil {
+				tStr := "nil"
+				if title != nil { tStr = *title }
+				fmt.Printf("TRIP: %s | Tenant: %s | Status: %s | Deleted: %v | Title: %s\n", id, tid, status, isDel, tStr)
+			}
+		}
+		dbgRows.Close()
+		fmt.Println("=======================")
+	}
+	// --- END DEBUG ---
 	
 	start = time.Now()
 	rows, err := r.db.Query(ctx, listSQL, args...)
