@@ -355,6 +355,19 @@ func (r *MemGeofenceRepo) Clear() {
 	r.events = nil
 }
 
+func (r *MemGeofenceRepo) DeleteGeofence(ctx context.Context, id uuid.UUID) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var out []models.Geofence
+	for _, g := range r.geofences {
+		if g.ID != id {
+			out = append(out, g)
+		}
+	}
+	r.geofences = out
+	return nil
+}
+
 // MemTenantChecker is an in-memory tenant checker for testing.
 type MemTenantChecker struct {
 	mu        sync.RWMutex

@@ -5,7 +5,7 @@ import {
   MapPin, User, Video, ListFilter, Target, ChevronDown
 } from 'lucide-react';
 import { RootState } from '../../../store';
-import { setSelectedVehicle } from '../../../store/telemetrySlice';
+import { setSelectedVehicle, updateVehicle } from '../../../store/telemetrySlice';
 import { api } from '../../../services/api';
 
 /**
@@ -31,7 +31,22 @@ export const AssetDispatchList: React.FC = () => {
       try {
         const res = await api.getVehicles({ limit: 100 });
         const data = res?.data || res;
-        setRegistryVehicles(Array.isArray(data) ? data : data?.vehicles || []);
+        const list = Array.isArray(data) ? data : data?.vehicles || [];
+        setRegistryVehicles(list);
+        list.forEach((v: any) => {
+          dispatch(updateVehicle({
+            id: v.id,
+            registrationNumber: v.registration_number || v.registrationNumber,
+            driver_name: v.current_driver?.name || v.current_driver_name || "",
+            driver_phone: v.current_driver?.phone || v.current_driver_phone || "",
+            latitude: v.summary?.last_location_lat || 12.9715987,
+            longitude: v.summary?.last_location_lng || 77.5945627,
+            status: "idling",
+            vehicleClass: v.vehicle_type || v.vehicleClass || "",
+            model: v.model || "",
+            make: v.make || ""
+          } as any));
+        });
       } catch (err) {
         console.error('Failed to fetch registry vehicles:', err);
       } finally {
@@ -39,7 +54,7 @@ export const AssetDispatchList: React.FC = () => {
       }
     };
     fetchRegistry();
-  }, []);
+  }, [dispatch]);
 
   const combinedAssets = useMemo(() => {
     const now = Date.now();

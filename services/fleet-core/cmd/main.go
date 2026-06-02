@@ -30,6 +30,7 @@ import (
 	customerSvc "github.com/flyfleet/fleet-core/internal/domains/customer/service"
 	driverHandlers "github.com/flyfleet/fleet-core/internal/domains/driver/handlers"
 	driverMiddleware "github.com/flyfleet/fleet-core/internal/domains/driver/middleware"
+	driverModels "github.com/flyfleet/fleet-core/internal/domains/driver/models"
 	drvRepo "github.com/flyfleet/fleet-core/internal/domains/driver/repository"
 	driverService "github.com/flyfleet/fleet-core/internal/domains/driver/service"
 	"github.com/flyfleet/fleet-core/internal/domains/iam"
@@ -45,6 +46,10 @@ import (
 	vs "github.com/flyfleet/fleet-core/internal/domains/vehicle/service"
 	aservice "github.com/flyfleet/fleet-core/internal/domains/assignment/service"
 	ahandlers "github.com/flyfleet/fleet-core/internal/domains/assignment/handlers"
+	dispatchHandlers "github.com/flyfleet/fleet-core/internal/domains/dispatch/handlers"
+	dispatchEngine "github.com/flyfleet/fleet-core/internal/domains/dispatch/engine"
+	dispatchSvc "github.com/flyfleet/fleet-core/internal/domains/dispatch/service"
+	googleuuid "github.com/google/uuid"
 	"github.com/flyfleet/fleet-core/internal/middleware"
 	th "github.com/flyfleet/fleet-core/internal/tracking/handlers"
 	tr "github.com/flyfleet/fleet-core/internal/tracking/repository"
@@ -235,6 +240,31 @@ func main() {
 	tService := tripService.NewTripService(tRepo, logger)
 	tHandler := tripHandlers.NewTripHandler(tService, logger)
 
+	// --- Dispatch Domain (Smart Proximity Routing Engine) ---
+	dispatchScoringSvc := dispatchSvc.NewScoringService()
+	osrmProvider := &routeSvc.OSRMDistanceProvider{
+		BaseURL:  "", // fallback will be used
+		Fallback: &routeSvc.HaversineDistanceProvider{},
+		Redis:    rdb,
+	}
+	
+	dispatchDriverAdapter := &dispatchDriverRepoAdapter{realRepo: driverRepo}
+	dispatchTripAdapter := &dispatchTripRepoAdapter{realRepo: tRepo}
+	dispatchLiveCacheAdapterInst := &dispatchLiveCacheAdapter{realCache: liveCache}
+
+	dispatchSuggestEng := dispatchEngine.NewSuggestionEngine(
+		vehicleDomainRepo,
+		dispatchDriverAdapter,
+		dispatchTripAdapter,
+		dispatchLiveCacheAdapterInst,
+		dispatchScoringSvc,
+		rdb,
+		osrmProvider,
+	)
+
+	dispatchServiceInst := dispatchSvc.NewDispatchService(nil)
+	dispatchHandler := dispatchHandlers.NewDispatchHandler(dispatchServiceInst, dispatchSuggestEng, logger)
+
 	// --- Custom Customer V2 Domain (Injected as needed) ---
 	cV2Repo := customerRepo.NewCustomerV2Repository(pool)
 	custV2Svc := customerSvc.NewCustomerService(cV2Repo)
@@ -423,6 +453,9 @@ func main() {
 				// Assignment Orchestration
 				assignmentHandler.RegisterRoutes(r)
 
+				// Dispatch & Allocation Suggestions
+				dispatchHandler.RegisterRoutes(r)
+
 				// Customer Module
 				r.Route("/customers", func(r chi.Router) {
 					custV2Handler.RegisterRoutes(r)
@@ -435,6 +468,10 @@ func main() {
 
 				// Tenant & Dashboard Intelligence (Registers /tenants, /branches, etc.)
 				tenantHandler.RegisterRoutes(r)
+
+				// SaaS Analytics and Sales Logs
+				r.Get("/saas/gate-logs", GetGateLogsHandler(pool, logger))
+				r.Get("/saas/fintech-transactions", GetFintechTransactionsHandler(pool, logger))
 			})
 
 			// Billing Module
@@ -541,6 +578,7 @@ func syncAllSchemas(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger)
 		{"💳 Stabilizing Billing Domain...", ensureBillingSchema},
 		{"🔌 Stabilizing Hardware Domain...", ensureHardwareBillingSchema},
 		{"📊 Stabilizing Analytics Domain...", ensureAnalyticsSchema},
+		{"💼 Stabilizing SaaS & Sampark Domain...", ensureSaaSSchema},
 		{"📍 Stabilizing Tracking Domain...", ensureTrackingSchema},
 		{"🇮🇳 Stabilizing India Regional Domain...", ensureIndiaSchema},
 		{"📡 Stabilizing Telemetry Domain...", ensureTelemetrySchema},
@@ -558,7 +596,7 @@ func syncAllSchemas(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger)
 	}
 
 	logger.Info("✅ System Stabilization Loop Complete. All domains harmonized.")
-	logger.Info("📋 Verification Summary: IAM, Vehicles, Trips, Drivers, Documents, Customers, Compliance, Invoicing, Billing, Hardware, Analytics, Tracking, India, Telemetry, Video, Alerts, Maintenance")
+	logger.Info("📋 Verification Summary: IAM, Vehicles, Trips, Drivers, Documents, Customers, Compliance, Invoicing, Billing, Hardware, Analytics, SaaS & Sampark, Tracking, India, Telemetry, Video, Alerts, Maintenance")
 }
 
 func ensureMaintenanceSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
@@ -851,8 +889,28 @@ func ensureDriverSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Log
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS address JSONB DEFAULT '{}'",
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS emergency_contact JSONB DEFAULT '{}'",
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS joining_date DATE",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS resignation_date DATE",
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS first_name VARCHAR(100)",
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS last_name VARCHAR(100)",
+		
+		// Driver Metadata and Compliance metrics
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS license_issue_date DATE",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS license_type VARCHAR(20)",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS experience_years INTEGER DEFAULT 0",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS rating DOUBLE PRECISION DEFAULT 0.0",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS total_trips INTEGER DEFAULT 0",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS total_distance_km DOUBLE PRECISION DEFAULT 0.0",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS total_hours_driven DOUBLE PRECISION DEFAULT 0.0",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS behavior_score INTEGER DEFAULT 100",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS employment_type VARCHAR(50)",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS employee_code VARCHAR(50)",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20)",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS pan_number VARCHAR(20)",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS documents JSONB DEFAULT '[]'::jsonb",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ",
 		
 		// Legacy compatibility for Migration 214
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS org_id UUID",
@@ -860,6 +918,7 @@ func ensureDriverSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Log
 
 		// Vehicle Link Hardening (Migration 220)
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS current_vehicle_id UUID",
+		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS current_trip_id UUID",
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS full_name VARCHAR(200)",
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS compliance_status VARCHAR(20) DEFAULT 'COMPLIANT'",
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS version INTEGER DEFAULT 1",
@@ -1146,6 +1205,61 @@ func ensureAnalyticsSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.
 	}
 }
 
+func ensureSaaSSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
+	statements := []string{
+		// Gated Entry/Exit Transactions
+		"CREATE TABLE IF NOT EXISTS yard_gate_logs (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id UUID NOT NULL, vehicle_id UUID NOT NULL, gate_name VARCHAR(100) NOT NULL, gatekeeper_id UUID, action_type VARCHAR(10) NOT NULL, cargo_status VARCHAR(50), weight_measured NUMERIC(10, 2), created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW())",
+		
+		// Fintech Commission Audit Ledger
+		"CREATE TABLE IF NOT EXISTS fintech_transactions (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id UUID NOT NULL, vehicle_id UUID NOT NULL, service_type VARCHAR(30) NOT NULL, transaction_amount NUMERIC(10, 2) NOT NULL, commission_earned NUMERIC(10, 2) NOT NULL, payment_status VARCHAR(20) NOT NULL, created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW())",
+	}
+	for _, stmt := range statements {
+		if _, err := pool.Exec(ctx, stmt); err != nil {
+			logger.Error("Failed to execute SaaS schema statement", zap.String("statement", stmt), zap.Error(err))
+		}
+	}
+
+	// Seed some mock data if empty
+	var count int
+	if err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM yard_gate_logs").Scan(&count); err == nil && count == 0 {
+		logger.Info("Seeding mock yard_gate_logs data...")
+		// Let's get a vehicle ID if exists, or generate a random one
+		var vehicleID string
+		err = pool.QueryRow(ctx, "SELECT id::text FROM vehicles LIMIT 1").Scan(&vehicleID)
+		if err != nil || vehicleID == "" {
+			vehicleID = "550e8400-e29b-41d4-a716-446655440001"
+		}
+		
+		seedStmts := []string{
+			fmt.Sprintf("INSERT INTO yard_gate_logs (tenant_id, vehicle_id, gate_name, action_type, cargo_status, weight_measured, created_at) VALUES ('8285521b-bfeb-4581-8072-000000000000', '%s', 'Gate 1 - Main Inbound', 'IN', 'LADEN', 42.5, NOW() - INTERVAL '2 hours')", vehicleID),
+			fmt.Sprintf("INSERT INTO yard_gate_logs (tenant_id, vehicle_id, gate_name, action_type, cargo_status, weight_measured, created_at) VALUES ('8285521b-bfeb-4581-8072-000000000000', '%s', 'Gate 2 - Main Outbound', 'OUT', 'EMPTY', 18.2, NOW() - INTERVAL '1 hours')", vehicleID),
+			fmt.Sprintf("INSERT INTO yard_gate_logs (tenant_id, vehicle_id, gate_name, action_type, cargo_status, weight_measured, created_at) VALUES ('8285521b-bfeb-4581-8072-000000000000', '%s', 'Gate 3 - Auxiliary', 'IN', 'LADEN', 38.9, NOW() - INTERVAL '30 minutes')", vehicleID),
+		}
+		for _, stmt := range seedStmts {
+			pool.Exec(ctx, stmt)
+		}
+	}
+
+	if err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM fintech_transactions").Scan(&count); err == nil && count == 0 {
+		logger.Info("Seeding mock fintech_transactions data...")
+		var vehicleID string
+		err = pool.QueryRow(ctx, "SELECT id::text FROM vehicles LIMIT 1").Scan(&vehicleID)
+		if err != nil || vehicleID == "" {
+			vehicleID = "550e8400-e29b-41d4-a716-446655440001"
+		}
+
+		seedStmts := []string{
+			fmt.Sprintf("INSERT INTO fintech_transactions (tenant_id, vehicle_id, service_type, transaction_amount, commission_earned, payment_status, created_at) VALUES ('8285521b-bfeb-4581-8072-000000000000', '%s', 'FASTAG', 450.00, 13.50, 'SUCCESS', NOW() - INTERVAL '1 day')", vehicleID),
+			fmt.Sprintf("INSERT INTO fintech_transactions (tenant_id, vehicle_id, service_type, transaction_amount, commission_earned, payment_status, created_at) VALUES ('8285521b-bfeb-4581-8072-000000000000', '%s', 'INSURANCE', 12500.00, 375.00, 'SUCCESS', NOW() - INTERVAL '12 hours')", vehicleID),
+			fmt.Sprintf("INSERT INTO fintech_transactions (tenant_id, vehicle_id, service_type, transaction_amount, commission_earned, payment_status, created_at) VALUES ('8285521b-bfeb-4581-8072-000000000000', '%s', 'CHALLAN', 1000.00, 30.00, 'SUCCESS', NOW() - INTERVAL '6 hours')", vehicleID),
+			fmt.Sprintf("INSERT INTO fintech_transactions (tenant_id, vehicle_id, service_type, transaction_amount, commission_earned, payment_status, created_at) VALUES ('8285521b-bfeb-4581-8072-000000000000', '%s', 'FASTAG', 350.00, 10.50, 'PENDING', NOW() - INTERVAL '2 hours')", vehicleID),
+		}
+		for _, stmt := range seedStmts {
+			pool.Exec(ctx, stmt)
+		}
+	}
+}
+
 func ensureTrackingSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
 	statements := []string{
 		"CREATE TABLE IF NOT EXISTS tracking_sessions (id UUID PRIMARY KEY DEFAULT gen_random_uuid())",
@@ -1317,4 +1431,59 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+type dispatchDriverRepoAdapter struct {
+	realRepo *drvRepo.DriverRepository
+}
+
+func (a *dispatchDriverRepoAdapter) GetByID(ctx context.Context, id googleuuid.UUID) (*driverModels.Driver, error) {
+	return a.realRepo.GetByID(ctx, id.String())
+}
+
+func (a *dispatchDriverRepoAdapter) List(ctx context.Context, filter driverModels.DriverListFilter) ([]*driverModels.Driver, int, error) {
+	return a.realRepo.List(ctx, filter)
+}
+
+type dispatchTripRepoAdapter struct {
+	realRepo tripRepo.TripRepository
+}
+
+func (a *dispatchTripRepoAdapter) GetActiveTripsForVehicle(ctx context.Context, vehicleID string) ([]interface{}, error) {
+	trips, err := a.realRepo.GetActiveTripsForVehicle(ctx, vehicleID)
+	if err != nil {
+		return nil, err
+	}
+	res := make([]interface{}, len(trips))
+	for i, t := range trips {
+		res[i] = t
+	}
+	return res, nil
+}
+
+type dispatchLiveCacheAdapter struct {
+	realCache *tr.LiveCacheRepository
+}
+
+func (a *dispatchLiveCacheAdapter) GetLiveLocation(ctx context.Context, vehicleID googleuuid.UUID) (*dispatchEngine.LiveLocation, error) {
+	gofrsID, err := uuid.FromString(vehicleID.String())
+	if err != nil {
+		return nil, err
+	}
+	loc, err := a.realCache.GetLiveLocation(ctx, gofrsID)
+	if err != nil {
+		return nil, err
+	}
+	if loc == nil {
+		return nil, nil
+	}
+	resID, err := googleuuid.Parse(loc.VehicleID.String())
+	if err != nil {
+		return nil, err
+	}
+	return &dispatchEngine.LiveLocation{
+		VehicleID: resID,
+		Lat:       loc.Lat,
+		Lng:       loc.Lng,
+	}, nil
 }

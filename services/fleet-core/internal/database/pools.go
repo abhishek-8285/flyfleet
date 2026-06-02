@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -93,37 +94,18 @@ func createPool(ctx context.Context, dbURL string, maxConns int32, appName strin
 			}
 		}()
 
-		// Try to extract Context claims robustly
+		// Try to extract Context claims robustly using standardized internal helper extractors
 		var tenantIDStr string
-		if val := ctx.Value(ctxkeys.TenantIDKey); val != nil {
-			switch v := val.(type) {
-			case string:
-				tenantIDStr = v
-			case fmt.Stringer:
-				tenantIDStr = v.String()
-			}
-		} else if val := ctx.Value(ctxkeys.TenantIDKey); val != nil {
-			if s, ok := val.(string); ok {
-				tenantIDStr = s
-			}
+		if tenantID, ok := ctxkeys.GetTenantID(ctx); ok && tenantID != uuid.Nil {
+			tenantIDStr = tenantID.String()
 		}
 
 		var userIDStr string
-		if val := ctx.Value(ctxkeys.UserIDKey); val != nil {
-			switch v := val.(type) {
-			case string:
-				userIDStr = v
-			case fmt.Stringer:
-				userIDStr = v.String()
-			}
+		if userID, ok := ctxkeys.GetUserID(ctx); ok && userID != uuid.Nil {
+			userIDStr = userID.String()
 		}
 
-		var roleStr string
-		if val := ctx.Value(ctxkeys.RoleKey); val != nil {
-			if s, ok := val.(string); ok {
-				roleStr = s
-			}
-		}
+		roleStr := ctxkeys.GetRole(ctx)
 
 		// SECURITY: Never bypass RLS setup - always enforce session variables
 		// We always set session variables based on the current context, regardless of previous state
@@ -139,11 +121,17 @@ func createPool(ctx context.Context, dbURL string, maxConns int32, appName strin
 		// during AfterRelease.
 		if tenantIDStr == "" {
 			_, err = conn.Exec(ctx, "SELECT set_config('flyfleet.current_tenant_id', '', false)")
+			if err == nil {
+				_, err = conn.Exec(ctx, "SELECT set_config('flyfleet.current_org_id', '', false)")
+			}
 		} else {
 			_, err = conn.Exec(ctx, "SELECT set_config('flyfleet.current_tenant_id', $1, false)", tenantIDStr)
+			if err == nil {
+				_, err = conn.Exec(ctx, "SELECT set_config('flyfleet.current_org_id', $1, false)", tenantIDStr)
+			}
 		}
 		if err != nil {
-			log.Printf("Failed to set org ID in connection: %v\n", err)
+			log.Printf("Failed to set tenant/org ID in connection: %v\n", err)
 			return true
 		}
 
@@ -187,14 +175,15 @@ func createPool(ctx context.Context, dbURL string, maxConns int32, appName strin
 	config.AfterRelease = func(conn *pgx.Conn) bool {
 		// Strictly clear all custom session variables before returning to the pool
 		_, errOrg := conn.Exec(context.Background(), "SELECT set_config('flyfleet.current_tenant_id', '', false)")
+		_, errOrg2 := conn.Exec(context.Background(), "SELECT set_config('flyfleet.current_org_id', '', false)")
 		_, errUser := conn.Exec(context.Background(), "SELECT set_config('flyfleet.current_user_id', '', false)")
 		_, errRole := conn.Exec(context.Background(), "SELECT set_config('flyfleet.current_role', '', false)")
 
 		connState.Delete(conn)
 
 		// If the reset fails, the connection is poisoned. Return false to destroy it.
-		if errOrg != nil || errUser != nil || errRole != nil {
-			log.Printf("level=FATAL event=connection_poisoned msg=\"[SECURITY] Connection poisoned during reset. Destroying physical socket to prevent cross-tenant data leak.\" errOrg=\"%v\" errUser=\"%v\" errRole=\"%v\"", errOrg, errUser, errRole)
+		if errOrg != nil || errOrg2 != nil || errUser != nil || errRole != nil {
+			log.Printf("level=FATAL event=connection_poisoned msg=\"[SECURITY] Connection poisoned during reset. Destroying physical socket to prevent cross-tenant data leak.\" errOrg=\"%v\" errOrg2=\"%v\" errUser=\"%v\" errRole=\"%v\"", errOrg, errOrg2, errUser, errRole)
 			return false
 		}
 		return true

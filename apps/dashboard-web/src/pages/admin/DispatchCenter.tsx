@@ -15,7 +15,8 @@ export const DispatchCenter: React.FC = () => {
   const { toggleSidebar } = useAuth();
   const [sidebarWidth, setSidebarWidth] = useState(400);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [showLegend, setShowLegend] = useState(true);
+  const [panelWidth, setPanelWidth] = useState(480);
+  const [showLegend, setShowLegend] = useState(false);
   const [showLayerPicker, setShowLayerPicker] = useState(false);
   const [currentLayer, setCurrentLayer] = useState('roadmap');
 
@@ -115,7 +116,7 @@ export const DispatchCenter: React.FC = () => {
   }, [connectTelemetry]);
 
   return (
-    <div className="flex h-screen w-full bg-background-dark dark:bg-black font-sans overflow-hidden transition-colors duration-500">
+    <div className="flex h-full w-full bg-background-dark dark:bg-black font-sans overflow-hidden transition-colors duration-500">
       <div className="flex h-full w-full relative z-10">
         {/* Left Sidebar: Registry */}
         <div
@@ -128,11 +129,11 @@ export const DispatchCenter: React.FC = () => {
         </div>
 
         {/* Resize Handle & Toggle Button Container */}
-        <div className="relative flex items-center">
+        <div className="relative flex items-center bg-gray-200 dark:bg-white/5">
           {/* Resize Handle */}
           {isSidebarOpen && (
             <div
-              className="w-1 h-full cursor-col-resize hover:bg-primary transition-colors z-30"
+              className="w-1 h-full cursor-col-resize hover:bg-primary transition-colors z-30 bg-gray-200 dark:bg-white/5"
               onMouseDown={(e) => {
                 const startX = e.pageX;
                 const startWidth = sidebarWidth;
@@ -164,6 +165,38 @@ export const DispatchCenter: React.FC = () => {
             </span>
           </button>
         </div>
+
+        {/* Vehicle Detail Panel: Rendered right of the vehicle list if active */}
+        {selectedVehicleId && telemetryVehicles[selectedVehicleId] && (
+          <>
+            <div
+              style={{ width: panelWidth }}
+              className="h-full flex flex-col bg-white dark:bg-[#0b1219] border-r border-gray-200 dark:border-white/5 z-20 overflow-hidden relative flex-shrink-0 animate-in slide-in-from-left duration-300"
+            >
+              <VehicleDetailPanel />
+            </div>
+
+            {/* Panel Resize Handle */}
+            <div
+              className="w-1 h-full cursor-col-resize hover:bg-primary transition-colors z-30 bg-gray-200 dark:bg-white/5"
+              onMouseDown={(e) => {
+                const startX = e.pageX;
+                const startWidth = panelWidth;
+                const onMouseMove = (moveEvent: MouseEvent) => {
+                  setPanelWidth(
+                    Math.max(400, Math.min(800, startWidth + (moveEvent.pageX - startX)))
+                  );
+                };
+                const onMouseUp = () => {
+                  document.removeEventListener('mousemove', onMouseMove);
+                  document.removeEventListener('mouseup', onMouseUp);
+                };
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+              }}
+            />
+          </>
+        )}
 
         {/* Main Map Workspace */}
         <div className="flex-1 relative bg-background-dark dark:bg-black overflow-hidden">
@@ -234,9 +267,6 @@ export const DispatchCenter: React.FC = () => {
 
           {/* Removed Ops Center overlay per user request */}
         </div>
-
-        {/* Right Sidebar: Active Asset Detail Drawer */}
-        <VehicleDetailPanel />
       </div>
     </div>
   );

@@ -121,15 +121,44 @@ func (s *IngestionService) verifyHMAC(message, sig string) bool {
 // Ingest validates and persists a telemetry event, updates the Redis
 // live cache, and publishes a position update for WebSocket fans.
 func (s *IngestionService) Ingest(ctx context.Context, event *models.TelemetryEvent) error {
-	// Resolve VehicleID and TenantID if they are Nil (e.g. Protobuf/MQTT edge gateway ingestion)
-	if event.VehicleID == uuid.Nil || event.TenantID == uuid.Nil {
-		tenantID, vehicleID, err := s.telemRepo.ResolveDeviceAssignment(ctx, event.DeviceID)
-		if err != nil {
-			s.logger.Warn("Failed to resolve device assignment from database", zap.String("device_id", event.DeviceID), zap.Error(err))
-			return fmt.Errorf("resolve device assignment: %w", err)
+	// 1. Backpressure queue utilization check (Pillar 5)
+	if s.batcher != nil {
+		depth, capacity := s.batcher.QueueStats()
+		if depth > int(float64(capacity)*0.85) {
+			s.logger.Warn("Ingestion backpressure warning: telemetry batcher queue near capacity",
+				zap.Int("depth", depth),
+				zap.Int("capacity", capacity))
+			return fmt.Errorf("system backpressure: telemetry queue utilization exceeds 85%% (429)")
 		}
-		event.TenantID = tenantID
-		event.VehicleID = vehicleID
+	}
+
+	// 2. Resolve true registered device parameters (Pillar 4 - Multi-Tenancy Protection)
+	resolvedTenantID, resolvedVehicleID, err := s.telemRepo.ResolveDeviceAssignment(ctx, event.DeviceID)
+	if err != nil {
+		s.logger.Warn("Failed to resolve device assignment from database", zap.String("device_id", event.DeviceID), zap.Error(err))
+		return fmt.Errorf("resolve device assignment: %w", err)
+	}
+
+	// Prevent spoofed org/tenant coordinates
+	if event.TenantID == uuid.Nil {
+		event.TenantID = resolvedTenantID
+	} else if event.TenantID != resolvedTenantID {
+		s.logger.Error("SECURITY VIOLATION: tenant_id mismatch for incoming device telemetry stream",
+			zap.String("device_id", event.DeviceID),
+			zap.String("event_tenant_id", event.TenantID.String()),
+			zap.String("resolved_tenant_id", resolvedTenantID.String()))
+		return fmt.Errorf("security violation: tenant_id mismatch for device %s", event.DeviceID)
+	}
+
+	// Prevent spoofed vehicle coordinates
+	if event.VehicleID == uuid.Nil {
+		event.VehicleID = resolvedVehicleID
+	} else if event.VehicleID != resolvedVehicleID {
+		s.logger.Error("SECURITY VIOLATION: vehicle_id mismatch for incoming device telemetry stream",
+			zap.String("device_id", event.DeviceID),
+			zap.String("event_vehicle_id", event.VehicleID.String()),
+			zap.String("resolved_vehicle_id", resolvedVehicleID.String()))
+		return fmt.Errorf("security violation: vehicle_id mismatch for device %s", event.DeviceID)
 	}
 
 	// HMAC validation (if secret is configured)
@@ -151,8 +180,34 @@ func (s *IngestionService) Ingest(ctx context.Context, event *models.TelemetryEv
 		return fmt.Errorf("invalid longitude: %f", event.Lng)
 	}
 
-	// Write to TimescaleDB asynchronously via the batcher
+	// 3. Chronology Sequence Verification check (Pillar 3)
+	isChronological := true
+	latestKey := fmt.Sprintf("latest_telemetry:vehicle:%s", event.VehicleID.String())
+	latestStr, err := s.redis.Get(ctx, latestKey).Result()
+	if err == nil && latestStr != "" {
+		if latestTime, err := time.Parse(time.RFC3339, latestStr); err == nil {
+			if !event.RecordedAt.After(latestTime) {
+				isChronological = false
+				s.logger.Warn("Out-of-order telemetry event detected; writing to historical database but bypassing live cache updates",
+					zap.String("vehicle_id", event.VehicleID.String()),
+					zap.Time("recorded_at", event.RecordedAt),
+					zap.Time("latest_time", latestTime))
+			}
+		}
+	}
+
+	if isChronological {
+		// Save the latest valid timestamp in Redis with a 24-hour TTL
+		s.redis.Set(ctx, latestKey, event.RecordedAt.Format(time.RFC3339), 24*time.Hour)
+	}
+
+	// Write to TimescaleDB asynchronously via the batcher (unconditional for complete audit)
 	s.batcher.Add(*event)
+
+	// If out-of-order signal jitter was detected, exit early to preserve premium chronological visual paths
+	if !isChronological {
+		return nil
+	}
 
 	// Update Redis live cache
 	status := models.CalculateStatus(event.Speed, event.Ignition, event.RecordedAt)

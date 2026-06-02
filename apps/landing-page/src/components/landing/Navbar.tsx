@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import React from 'react';
+import React, { useState } from 'react';
 import { Language, translations } from './translations';
+import { MegaMenu } from './MegaMenu';
 
 interface NavbarProps {
   companyName: string;
@@ -13,9 +14,13 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ companyName, isDark, toggleTheme, language = 'US (EN)' }) => {
   const t = translations[language as Language]?.nav || translations['US (EN)'].nav;
+  const [megaMenuOpen, setMegaMenuOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 z-50 w-full border-b border-solid border-slate-200 dark:border-border-dark bg-white/80 dark:bg-background-dark/80 backdrop-blur-md transition-all">
+    <header 
+      className="fixed top-0 z-50 w-full border-b border-solid border-slate-200 dark:border-border-dark bg-white/80 dark:bg-background-dark/80 backdrop-blur-md transition-all"
+      onMouseLeave={() => setMegaMenuOpen(false)}
+    >
       <div className="px-4 md:px-10 flex h-16 items-center justify-between max-w-[1440px] mx-auto">
         <div className="flex items-center gap-4 text-slate-900 dark:text-white">
           <Link href="/" className="flex items-center gap-4" aria-label={`${companyName} Home`}>
@@ -27,7 +32,21 @@ const Navbar: React.FC<NavbarProps> = ({ companyName, isDark, toggleTheme, langu
         </div>
         <nav className="hidden md:flex flex-1 justify-center gap-8 font-display" role="navigation">
           <Link className="text-slate-600 dark:text-text-secondary text-sm font-medium hover:text-primary transition-colors" href="/#success-stories">{t.success}</Link>
-          <Link className="text-slate-600 dark:text-text-secondary text-sm font-medium hover:text-primary transition-colors" href="/#features">{t.platform}</Link>
+          
+          {/* Platform Mega Menu Trigger */}
+          <div 
+            className="relative"
+            onMouseEnter={() => setMegaMenuOpen(true)}
+          >
+            <button 
+              className="flex items-center gap-1 text-slate-600 dark:text-text-secondary text-sm font-medium hover:text-primary transition-colors focus:outline-none"
+              onClick={() => setMegaMenuOpen(!megaMenuOpen)}
+            >
+              <span>{t.platform}</span>
+              <span className="material-symbols-outlined !text-xs transition-transform duration-200" style={{ transform: megaMenuOpen ? 'rotate(180deg)' : 'rotate(0)' }}>expand_more</span>
+            </button>
+          </div>
+
           <Link className="text-slate-600 dark:text-text-secondary text-sm font-medium hover:text-primary transition-colors" href="/#apps">{t.apps}</Link>
           <Link className="text-slate-600 dark:text-text-secondary text-sm font-medium hover:text-primary transition-colors" href="/pricing">{t.pricing}</Link>
           <Link className="text-slate-600 dark:text-text-secondary text-sm font-medium hover:text-primary transition-colors" href="/security">{t.security}</Link>
@@ -44,8 +63,12 @@ const Navbar: React.FC<NavbarProps> = ({ companyName, isDark, toggleTheme, langu
           </button>
         </div>
       </div>
+
+      {/* Render the interactive Mega Menu Dropdown */}
+      <MegaMenu isOpen={megaMenuOpen} onClose={() => setMegaMenuOpen(false)} />
     </header>
   );
 };
 
 export default Navbar;
+

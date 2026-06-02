@@ -175,22 +175,26 @@ BEGIN
     
     -- Vehicle 1
     IF NOT EXISTS (SELECT 1 FROM vehicles WHERE id = '550e8400-e29b-41d4-a716-446655440001') THEN
-        INSERT INTO vehicles (id, tenant_id, registration_number, status, vehicle_type, make, model, year, gps_device_id)
-        VALUES ('550e8400-e29b-41d4-a716-446655440001', t_id, 'DL01AB1234', 'ACTIVE', 'TRUCK', 'FlyFleet', 'FleetMaster Pro', 2024, 'DEV-DEVICE-001');
+        INSERT INTO vehicles (id, tenant_id, registration_number, status, vehicle_type, make, model, year, capacity_tonnage, gps_device_id)
+        VALUES ('550e8400-e29b-41d4-a716-446655440001', t_id, 'DL01AB1234', 'ACTIVE', 'TRUCK', 'FlyFleet', 'FleetMaster Pro', 2024, 15.0, 'DEV-DEVICE-001');
     ELSE
-        UPDATE vehicles SET gps_device_id = 'DEV-DEVICE-001' WHERE id = '550e8400-e29b-41d4-a716-446655440001';
+        UPDATE vehicles SET gps_device_id = 'DEV-DEVICE-001', capacity_tonnage = 15.0 WHERE id = '550e8400-e29b-41d4-a716-446655440001';
     END IF;
 
     -- Vehicle 2
     IF NOT EXISTS (SELECT 1 FROM vehicles WHERE id = '550e8400-e29b-41d4-a716-446655440002') THEN
-        INSERT INTO vehicles (id, tenant_id, registration_number, status, vehicle_type, make, model, year)
-        VALUES ('550e8400-e29b-41d4-a716-446655440002', t_id, 'MH02CD5678', 'ACTIVE', 'VAN', 'Tata Motors', 'TransPorter', 2023);
+        INSERT INTO vehicles (id, tenant_id, registration_number, status, vehicle_type, make, model, year, capacity_tonnage)
+        VALUES ('550e8400-e29b-41d4-a716-446655440002', t_id, 'MH02CD5678', 'ACTIVE', 'VAN', 'Tata Motors', 'TransPorter', 2023, 5.0);
+    ELSE
+        UPDATE vehicles SET capacity_tonnage = 5.0 WHERE id = '550e8400-e29b-41d4-a716-446655440002';
     END IF;
 
     -- Vehicle 3
     IF NOT EXISTS (SELECT 1 FROM vehicles WHERE id = '550e8400-e29b-41d4-a716-446655440003') THEN
-        INSERT INTO vehicles (id, tenant_id, registration_number, status, vehicle_type, make, model, year)
-        VALUES ('550e8400-e29b-41d4-a716-446655440003', t_id, 'KA03EF9012', 'ACTIVE', 'TRUCK', 'Ashok Leyland', 'E-Truck 500', 2024);
+        INSERT INTO vehicles (id, tenant_id, registration_number, status, vehicle_type, make, model, year, capacity_tonnage)
+        VALUES ('550e8400-e29b-41d4-a716-446655440003', t_id, 'KA03EF9012', 'ACTIVE', 'TRUCK', 'Ashok Leyland', 'E-Truck 500', 2024, 15.0);
+    ELSE
+        UPDATE vehicles SET capacity_tonnage = 15.0 WHERE id = '550e8400-e29b-41d4-a716-446655440003';
     END IF;
 END $$;
 
@@ -435,4 +439,30 @@ BEGIN
     END IF;
 END $$;
 
+-- ============================================================================
+-- 9. BIDIRECTIONAL MAPPINGS & TELEMETRY SEEDING
+-- ============================================================================
+DO $$
+BEGIN
+    -- 1. Link Drivers to Vehicles
+    UPDATE vehicles SET current_driver_id = '550e8400-e29b-41d4-a716-446655440010' WHERE id = '550e8400-e29b-41d4-a716-446655440001';
+    UPDATE vehicles SET current_driver_id = '550e8400-e29b-41d4-a716-446655440011' WHERE id = '550e8400-e29b-41d4-a716-446655440002';
+    UPDATE vehicles SET current_driver_id = '550e8400-e29b-41d4-a716-446655440012' WHERE id = '550e8400-e29b-41d4-a716-446655440003';
+
+    -- 2. Link Vehicles to Drivers
+    UPDATE drivers SET current_vehicle_id = '550e8400-e29b-41d4-a716-446655440001' WHERE id = '550e8400-e29b-41d4-a716-446655440010';
+    UPDATE drivers SET current_vehicle_id = '550e8400-e29b-41d4-a716-446655440002' WHERE id = '550e8400-e29b-41d4-a716-446655440011';
+    UPDATE drivers SET current_vehicle_id = '550e8400-e29b-41d4-a716-446655440003' WHERE id = '550e8400-e29b-41d4-a716-446655440012';
+
+    -- 3. Seed gps_locations so repository fetches coordinate coordinates correctly
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'gps_locations') THEN
+        INSERT INTO gps_locations (time, vehicle_id, latitude, longitude, speed, heading, accuracy, ignition) VALUES
+            (NOW(), '550e8400-e29b-41d4-a716-446655440001', 12.9715987, 77.5945627, 0.0, 0.0, 1.0, true),
+            (NOW(), '550e8400-e29b-41d4-a716-446655440002', 12.9725987, 77.5955627, 0.0, 0.0, 1.0, true),
+            (NOW(), '550e8400-e29b-41d4-a716-446655440003', 12.9735987, 77.5965627, 0.0, 0.0, 1.0, true)
+        ON CONFLICT DO NOTHING;
+    END IF;
+END $$;
+
 COMMIT;
+

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/flyfleet/fleet-core/internal/domains/dispatch/engine"
 	"github.com/flyfleet/fleet-core/internal/domains/dispatch/service"
 	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
@@ -23,6 +24,13 @@ func NewDispatchHandler(svc service.DispatchService, eng engine.SuggestionEngine
 		suggestEng:  eng,
 		logger:      logger,
 	}
+}
+
+func (h *DispatchHandler) RegisterRoutes(r chi.Router) {
+	r.Route("/dispatch", func(r chi.Router) {
+		r.Post("/suggest", h.GetSuggestions)
+		r.Get("/dashboard", h.GetDashboard)
+	})
 }
 
 func (h *DispatchHandler) Assign(w http.ResponseWriter, r *http.Request) {
@@ -55,6 +63,13 @@ func (h *DispatchHandler) GetSuggestions(w http.ResponseWriter, r *http.Request)
 		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
 		return
 	}
+
+	tenantID, ok := ctxkeys.GetTenantID(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"missing tenant_id"}`, http.StatusUnauthorized)
+		return
+	}
+	req.TenantID = tenantID
 
 	if req.ShipmentID == uuid.Nil {
 		http.Error(w, `{"error":"invalid shipment_id"}`, http.StatusBadRequest)

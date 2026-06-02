@@ -14,6 +14,256 @@ import { BillingMetrics, Invoice } from '../../../types/billing';
 import SubscriptionPlans from './SubscriptionPlans';
 import UsageOverview from './UsageOverview';
 
+const SaaSSalesLogs: React.FC = () => {
+  const [gateLogs, setGateLogs] = useState<any[]>([]);
+  const [fintechTx, setFintechTx] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [logType, setLogType] = useState<'gate' | 'fintech'>('gate');
+  const [filterText, setFilterText] = useState('');
+
+  useEffect(() => {
+    fetchLogs();
+  }, []);
+
+  const fetchLogs = async () => {
+    setLoading(true);
+    try {
+      const [gData, fData] = await Promise.all([
+        billingService.getGateLogs(50, 0),
+        billingService.getFintechTransactions(50, 0),
+      ]);
+      setGateLogs(gData || []);
+      setFintechTx(fData || []);
+    } catch (err) {
+      console.error('Failed to fetch SaaS logs', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalCommissions = fintechTx.reduce((acc, tx) => acc + (tx.commission_earned || 0), 0);
+  const totalSales = fintechTx.reduce((acc, tx) => acc + (tx.transaction_amount || 0), 0);
+
+  const filteredGateLogs = gateLogs.filter(
+    (log) =>
+      log.gate_name?.toLowerCase().includes(filterText.toLowerCase()) ||
+      log.vehicle_registration?.toLowerCase().includes(filterText.toLowerCase())
+  );
+
+  const filteredFintechTx = fintechTx.filter(
+    (tx) =>
+      tx.service_type?.toLowerCase().includes(filterText.toLowerCase()) ||
+      tx.vehicle_registration?.toLowerCase().includes(filterText.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Visual Analytics Hub */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="bg-[#0b1329] border border-white/5 rounded-2xl p-6 relative overflow-hidden group hover:border-blue-500/30 transition-all">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <span className="material-symbols-outlined text-6xl text-blue-500">point_of_sale</span>
+          </div>
+          <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Total SaaS Transactions</p>
+          <p className="text-3xl font-extrabold text-white">{fintechTx.length + gateLogs.length}</p>
+          <div className="mt-2 text-xs text-blue-400 flex items-center gap-1 font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span>
+            Real-time Operational Stream
+          </div>
+        </div>
+
+        <div className="bg-[#0b1329] border border-white/5 rounded-2xl p-6 relative overflow-hidden group hover:border-emerald-500/30 transition-all">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <span className="material-symbols-outlined text-6xl text-emerald-500">payments</span>
+          </div>
+          <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Commission Earned</p>
+          <p className="text-3xl font-extrabold text-emerald-400">₹{totalCommissions.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+          <div className="mt-2 text-xs text-emerald-400/70 flex items-center gap-1 font-medium">
+            +3.5% Platform Margin Active
+          </div>
+        </div>
+
+        <div className="bg-[#0b1329] border border-white/5 rounded-2xl p-6 relative overflow-hidden group hover:border-purple-500/30 transition-all">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <span className="material-symbols-outlined text-6xl text-purple-500">wallet</span>
+          </div>
+          <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Fintech Gross Volume</p>
+          <p className="text-3xl font-extrabold text-purple-400">₹{totalSales.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+          <div className="mt-2 text-xs text-purple-400/70 flex items-center gap-1 font-medium">
+            FASTag, Insurance & Challan Swipes
+          </div>
+        </div>
+
+        <div className="bg-[#0b1329] border border-white/5 rounded-2xl p-6 relative overflow-hidden group hover:border-amber-500/30 transition-all">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <span className="material-symbols-outlined text-6xl text-amber-500">sensor_door</span>
+          </div>
+          <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Gate Transitions (IN / OUT)</p>
+          <p className="text-3xl font-extrabold text-amber-400">{gateLogs.length} Events</p>
+          <div className="mt-2 text-xs text-amber-400/70 flex items-center gap-1 font-medium">
+            Logistics Yards Security Scans
+          </div>
+        </div>
+      </div>
+
+      {/* Control bar */}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-[#0b1329]/40 border border-white/5 p-4 rounded-2xl">
+        <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
+          <button
+            onClick={() => setLogType('gate')}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
+              logType === 'gate'
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/10'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            Yard Gate Logs
+          </button>
+          <button
+            onClick={() => setLogType('fintech')}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
+              logType === 'fintech'
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/10'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            Fintech Commissions
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="relative w-full md:w-80">
+            <input
+              type="text"
+              placeholder={logType === 'gate' ? "Search gate name, registration..." : "Search service, registration..."}
+              value={filterText}
+              onChange={(e) => setFilterText(e.target.value)}
+              className="w-full pl-4 pr-4 py-2 bg-black/40 border border-white/5 rounded-xl text-white placeholder:text-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+            />
+          </div>
+          <button
+            onClick={fetchLogs}
+            className="p-2 bg-black/40 border border-white/5 rounded-xl text-slate-400 hover:text-white transition-all hover:bg-slate-900"
+          >
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      {/* Grid List View */}
+      {loading ? (
+        <div className="text-center py-20 text-slate-500 font-light">
+          Loading SaaS transaction streams...
+        </div>
+      ) : logType === 'gate' ? (
+        <div className="bg-[#0b1329]/20 border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-white/5 bg-black/40">
+                  <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Timestamp</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Gate Name</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Vehicle</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Action</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Cargo Status</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Weight</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {filteredGateLogs.map((log) => (
+                  <tr key={log.id} className="hover:bg-white/[0.02] transition-colors">
+                    <td className="px-6 py-4 text-sm text-slate-400 font-mono">
+                      {new Date(log.created_at).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-200 font-semibold">{log.gate_name}</td>
+                    <td className="px-6 py-4 text-sm text-blue-400 font-mono">{log.vehicle_registration}</td>
+                    <td className="px-6 py-4 text-sm">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
+                        log.action_type === 'IN'
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                          : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                      }`}>
+                        {log.action_type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-300">{log.cargo_status || 'EMPTY'}</td>
+                    <td className="px-6 py-4 text-sm text-white font-medium">{log.weight_measured ? `${log.weight_measured} Tons` : '--'}</td>
+                  </tr>
+                ))}
+                {filteredGateLogs.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center text-slate-500 font-light">
+                      No yard gate logs found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-[#0b1329]/20 border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-white/5 bg-black/40">
+                  <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Timestamp</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Service Type</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Vehicle</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Tx Amount</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Commission (3%)</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {filteredFintechTx.map((tx) => (
+                  <tr key={tx.id} className="hover:bg-white/[0.02] transition-colors">
+                    <td className="px-6 py-4 text-sm text-slate-400 font-mono">
+                      {new Date(tx.created_at).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-semibold text-slate-200">
+                      <span className={`px-2 py-0.5 rounded text-xs border ${
+                        tx.service_type === 'FASTAG'
+                          ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                          : tx.service_type === 'INSURANCE'
+                          ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                          : 'bg-red-500/10 text-red-400 border-red-500/20'
+                      }`}>
+                        {tx.service_type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-blue-400 font-mono">{tx.vehicle_registration}</td>
+                    <td className="px-6 py-4 text-sm text-white font-medium">₹{tx.transaction_amount?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    <td className="px-6 py-4 text-sm text-emerald-400 font-bold">+₹{tx.commission_earned?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    <td className="px-6 py-4 text-sm">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${
+                        tx.payment_status === 'SUCCESS'
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                          : tx.payment_status === 'PENDING'
+                          ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                          : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                      }`}>
+                        {tx.payment_status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {filteredFintechTx.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center text-slate-500 font-light">
+                      No fintech transactions found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const BillingDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -141,6 +391,7 @@ const BillingDashboard: React.FC = () => {
           'Usage',
           'Subscription Plans',
           'Invoice History',
+          'SaaS & Sales Logs',
           'Miscellaneous',
           'Payment Methods',
         ].map((tab) => (
@@ -161,17 +412,20 @@ const BillingDashboard: React.FC = () => {
                   ? tab
                   : tab === 'Invoice History'
                     ? uiStrings?.tab_history || tab
-                    : tab === 'Miscellaneous'
-                      ? 'Miscellaneous'
-                      : tab === 'Payment Methods'
-                        ? uiStrings?.tab_methods || tab
-                        : tab}
+                    : tab === 'SaaS & Sales Logs'
+                      ? tab
+                      : tab === 'Miscellaneous'
+                        ? 'Miscellaneous'
+                        : tab === 'Payment Methods'
+                          ? uiStrings?.tab_methods || tab
+                          : tab}
           </button>
         ))}
       </div>
 
       {activeTab === 'Usage' && <UsageOverview />}
       {activeTab === 'Subscription Plans' && <SubscriptionPlans />}
+      {activeTab === 'SaaS & Sales Logs' && <SaaSSalesLogs />}
 
       {activeTab === 'Overview' && (
         <>

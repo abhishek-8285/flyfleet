@@ -61,29 +61,52 @@
     scrollbar-width: none;
   }
 
-  /* Premium Custom Scrollbar - Match Canonical Styling */
+  /* Premium Custom Scrollbar - Theme Responsive */
   .custom-scrollbar::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
 
+  /* Light mode defaults */
   .custom-scrollbar::-webkit-scrollbar-track {
-    background: #111a22;
+    background: #f3f4f6;
     border-radius: 4px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #233648;
+    background: #d1d5db;
     border-radius: 4px;
     transition: all 0.2s ease;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #2d4255;
+    background: #9ca3af;
   }
 
   .custom-scrollbar {
     scrollbar-width: thin;
+    scrollbar-color: #d1d5db #f3f4f6;
+  }
+
+  /* Dark mode overrides */
+  .dark .custom-scrollbar::-webkit-scrollbar-track,
+  html.dark .custom-scrollbar::-webkit-scrollbar-track {
+    background: #111a22;
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb,
+  html.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #233648;
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover,
+  html.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #2d4255;
+  }
+
+  .dark.custom-scrollbar,
+  .dark .custom-scrollbar,
+  html.dark .custom-scrollbar {
     scrollbar-color: #233648 #111a22;
   }
 

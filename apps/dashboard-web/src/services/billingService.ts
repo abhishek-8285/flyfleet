@@ -80,6 +80,18 @@ const billingService = {
   getSubscription: async () => {
     return apiClient.get<any, any>('/admin/billing/subscription');
   },
+
+  getGateLogs: async (limit = 50, offset = 0) => {
+    return apiClient.get<any, any[]>('/admin/saas/gate-logs', {
+      params: { limit, offset },
+    });
+  },
+
+  getFintechTransactions: async (limit = 50, offset = 0) => {
+    return apiClient.get<any, any[]>('/admin/saas/fintech-transactions', {
+      params: { limit, offset },
+    });
+  },
 };
 
 export default billingService;

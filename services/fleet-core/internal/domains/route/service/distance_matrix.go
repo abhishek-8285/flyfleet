@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/flyfleet/fleet-core/internal/domains/route/models"
+	"github.com/redis/go-redis/v9"
 )
 
 // DistanceMatrixProvider defines the interface for fetching distance and travel time
@@ -21,6 +22,7 @@ type DistanceMatrixProvider interface {
 type OSRMDistanceProvider struct {
 	BaseURL  string
 	Fallback *HaversineDistanceProvider
+	Redis    redis.Cmdable
 }
 
 type osrmResponse struct {
@@ -32,6 +34,29 @@ type osrmResponse struct {
 }
 
 func (p *OSRMDistanceProvider) GetDistanceAndTime(ctx context.Context, origin, destination models.Location, vehicle *models.VehicleProfile) (float64, int, error) {
+	vehicleClass := "default"
+	if vehicle != nil && vehicle.VehicleClass != "" {
+		vehicleClass = string(vehicle.VehicleClass)
+	}
+
+	// Construct precision-clamped coordinates cache key (5 decimal places ~= 1.1 meter accuracy)
+	cacheKey := fmt.Sprintf("route:cache:%.5f,%.5f:%.5f,%.5f:%s",
+		origin.Latitude, origin.Longitude, destination.Latitude, destination.Longitude, vehicleClass)
+
+	// Attempt Redis lookup first
+	if p.Redis != nil {
+		if val, err := p.Redis.Get(ctx, cacheKey).Result(); err == nil && val != "" {
+			type cachedRoute struct {
+				DistKM      float64 `json:"dist_km"`
+				DurationMin int     `json:"duration_min"`
+			}
+			var cr cachedRoute
+			if err := json.Unmarshal([]byte(val), &cr); err == nil {
+				return cr.DistKM, cr.DurationMin, nil
+			}
+		}
+	}
+
 	if p.BaseURL == "" {
 		return p.Fallback.GetDistanceAndTime(ctx, origin, destination, vehicle)
 	}
@@ -63,6 +88,18 @@ func (p *OSRMDistanceProvider) GetDistanceAndTime(ctx context.Context, origin, d
 	// OSRM returns distance in meters and duration in seconds
 	distKM := data.Routes[0].Distance / 1000.0
 	durationMin := int(data.Routes[0].Duration / 60.0)
+
+	// Save to Redis with a 5-minute TTL on cache miss
+	if p.Redis != nil {
+		type cachedRoute struct {
+			DistKM      float64 `json:"dist_km"`
+			DurationMin int     `json:"duration_min"`
+		}
+		cr := cachedRoute{DistKM: distKM, DurationMin: durationMin}
+		if bytes, err := json.Marshal(cr); err == nil {
+			p.Redis.Set(ctx, cacheKey, string(bytes), 5*time.Minute)
+		}
+	}
 
 	return distKM, durationMin, nil
 }
