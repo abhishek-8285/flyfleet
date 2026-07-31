@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(go:*)",
+      "Shell()",
+      "Shell(git:*)",
+      "Shell(agent-browser:*)",
+      "Shell(for:*)",
+      "Shell(do:*)",
+      "Shell(done:*)"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}
