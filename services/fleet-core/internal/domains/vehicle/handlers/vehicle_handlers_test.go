@@ -100,6 +100,15 @@ func (m *MockVehicleService) SearchVehicles(ctx context.Context, params models.V
 	return args.Get(0).([]models.Vehicle), args.Get(1).(int64), args.Error(2)
 }
 
+func (m *MockVehicleService) GetAuditLogs(ctx context.Context, vehicleID uuid.UUID) ([]models.VehicleAuditLog, error) {
+	args := m.Called(ctx, vehicleID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]models.VehicleAuditLog), args.Error(1)
+}
+
+
 func setupHandlerTest(t *testing.T) (*VehicleHandlers, *MockVehicleService) {
 	logger := zap.NewNop()
 	mockService := &MockVehicleService{}
@@ -266,7 +275,7 @@ func TestVehicleHandlers_UpdateVehicle_Success(t *testing.T) {
 	model := "Updated Model"
 	expectedVehicle := &models.Vehicle{
 		ID:    vehicleID,
-		Model: &model,
+		Model: model,
 	}
 
 	// Use AnythingOfType for the request parameter

@@ -48,7 +48,9 @@ import (
 	ahandlers "github.com/flyfleet/fleet-core/internal/domains/assignment/handlers"
 	dispatchHandlers "github.com/flyfleet/fleet-core/internal/domains/dispatch/handlers"
 	dispatchEngine "github.com/flyfleet/fleet-core/internal/domains/dispatch/engine"
+	dispatchRepository "github.com/flyfleet/fleet-core/internal/domains/dispatch/repository"
 	dispatchSvc "github.com/flyfleet/fleet-core/internal/domains/dispatch/service"
+	dispatchWorker "github.com/flyfleet/fleet-core/internal/domains/dispatch/worker"
 	googleuuid "github.com/google/uuid"
 	"github.com/flyfleet/fleet-core/internal/middleware"
 	th "github.com/flyfleet/fleet-core/internal/tracking/handlers"
@@ -262,11 +264,20 @@ func main() {
 		osrmProvider,
 	)
 
-	dispatchServiceInst := dispatchSvc.NewDispatchService(nil)
-	dispatchHandler := dispatchHandlers.NewDispatchHandler(dispatchServiceInst, dispatchSuggestEng, logger)
-
 	// --- Custom Customer V2 Domain (Injected as needed) ---
 	cV2Repo := customerRepo.NewCustomerV2Repository(pool)
+
+	dispatchRepositoryInst := dispatchRepository.NewDispatchRepository(pool)
+	dispatchServiceInst := dispatchSvc.NewDispatchService(tService, cV2Repo, dispatchRepositoryInst, nil, logger)
+	dispatchHandler := dispatchHandlers.NewDispatchHandler(dispatchServiceInst, dispatchSuggestEng, logger)
+
+	// --- Auto-Status Worker (consumes telemetry pub/sub for auto start/complete) ---
+	autoStatusWorker := dispatchWorker.NewAutoStatusWorker(rdb, liveCache, tRepo, logger)
+	go func() {
+		if err := autoStatusWorker.Start(ctx); err != nil && err != context.Canceled {
+			logger.Error("auto-status worker stopped with error", zap.Error(err))
+		}
+	}()
 	custV2Svc := customerSvc.NewCustomerService(cV2Repo)
 	// Other services stubs (as required by NewCustomerV2Handler)
 	bookV2Svc := customerSvc.NewBookingService(cV2Repo)

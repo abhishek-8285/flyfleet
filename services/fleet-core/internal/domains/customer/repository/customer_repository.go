@@ -19,6 +19,9 @@ type CustomerV2Repository interface {
 	GetBookingRequestByID(ctx context.Context, id uuid.UUID) (*models.BookingRequest, error)
 	CreateShipment(ctx context.Context, s *models.Shipment) error
 	GetShipmentByID(ctx context.Context, id uuid.UUID) (*models.Shipment, error)
+	GetShipmentByTripID(ctx context.Context, tripID uuid.UUID) (*models.Shipment, error)
+	UpdateShipment(ctx context.Context, s *models.Shipment) error
+	CountPendingShipments(ctx context.Context, tenantID uuid.UUID) (int, error)
 	GetShipmentTracking(ctx context.Context, id uuid.UUID) (map[string]interface{}, error)
 	GetDashboardMetrics(ctx context.Context, customerID uuid.UUID) (map[string]interface{}, error)
 	GetAnalytics(ctx context.Context, customerID uuid.UUID) (map[string]interface{}, error)
@@ -340,6 +343,62 @@ func (r customerV2Repository) GetShipmentByID(ctx context.Context, id uuid.UUID)
 	}
 
 	return &s, nil
+}
+
+// GetShipmentByTripID retrieves a shipment by its linked trip ID.
+func (r customerV2Repository) GetShipmentByTripID(ctx context.Context, tripID uuid.UUID) (*models.Shipment, error) {
+	query := `
+		SELECT id, customer_id, trip_id, booking_id, status, origin,
+			   destination, distance_km, created_at, updated_at
+		FROM customer_v2_shipments WHERE trip_id = $1`
+
+	var s models.Shipment
+	err := r.db.QueryRow(ctx, query, tripID).Scan(
+		&s.ID, &s.CustomerID, &s.TripID, &s.BookingID, &s.Status, &s.Origin,
+		&s.Destination, &s.DistanceKm, &s.CreatedAt, &s.UpdatedAt,
+	)
+	if err != nil {
+		if err.Error() == "no rows in result set" || err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get shipment by trip ID: %w", err)
+	}
+	return &s, nil
+}
+
+// UpdateShipment updates the trip_id, status, and timestamps of a shipment.
+func (r customerV2Repository) UpdateShipment(ctx context.Context, s *models.Shipment) error {
+	query := `
+		UPDATE customer_v2_shipments
+		   SET trip_id = $1, status = $2, updated_at = NOW()
+		 WHERE id = $3`
+
+	cmd, err := r.db.Exec(ctx, query, s.TripID, s.Status, s.ID)
+	if err != nil {
+		return fmt.Errorf("failed to update shipment: %w", err)
+	}
+	if cmd.RowsAffected() == 0 {
+		return fmt.Errorf("shipment not found or update affected 0 rows")
+	}
+	return nil
+}
+
+// CountPendingShipments returns the number of shipments in CONFIRMED or BOOKED
+// status that are not yet linked to a trip, for a given tenant.
+func (r customerV2Repository) CountPendingShipments(ctx context.Context, tenantID uuid.UUID) (int, error) {
+	query := `
+		SELECT COUNT(*) FROM customer_v2_shipments s
+		JOIN customers c ON s.customer_id = c.id
+		WHERE c.tenant_id = $1
+		  AND s.status IN ('CONFIRMED', 'BOOKED')
+		  AND s.trip_id IS NULL`
+
+	var count int
+	err := r.db.QueryRow(ctx, query, tenantID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count pending shipments: %w", err)
+	}
+	return count, nil
 }
 
 // -- Shipment Tracking Method (simplified) --

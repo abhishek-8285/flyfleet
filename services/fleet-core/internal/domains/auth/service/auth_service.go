@@ -1,16 +1,20 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
+	"crypto/sha256"
+	"crypto/subtle"
 	"crypto/x509"
 	"database/sql"
 	"encoding/base32"
 	"encoding/base64"
 	"encoding/binary"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -18,15 +22,17 @@ import (
 	"strings"
 	"time"
 
-	"encoding/json"
 	"github.com/fleet-platform/shared/pkg/logger"
 	"github.com/flyfleet/fleet-core/internal/domains/auth/models"
+	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	pb "github.com/flyfleet/proto/auth/v1"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/argon2"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // AuthRepositoryInterface defines the interface for auth repository
@@ -1141,10 +1147,408 @@ func (s *AuthService) AnonymizeUser(ctx context.Context, userID uuid.UUID) error
 // GenerateToken is a public helper for generating tokens in tests
 func (s *AuthService) GenerateToken(userID, tenantID uuid.UUID, role string) (string, error) {
 	user := &models.User{
-		ID:    userID,
+		ID:       userID,
 		TenantID: tenantID,
-		Role:  role,
+		Role:     role,
 	}
 	permissions, _ := s.repo.GetRolePermissions(context.Background(), role)
 	return s.generateAccessToken(user, permissions)
 }
+
+func (s *AuthService) getCountryFromIP(ipAddress string) string {
+	if ipAddress == "" || ipAddress == "127.0.0.1" || ipAddress == "::1" || strings.HasPrefix(ipAddress, "192.168.") || strings.HasPrefix(ipAddress, "10.") {
+		return "LOCAL"
+	}
+	return "US"
+}
+
+func (s *AuthService) calculateRiskScore(user *models.User, lastLogin *models.LoginHistory, ipAddress, userAgent, country string) float64 {
+	if lastLogin == nil {
+		return 0.0
+	}
+	score := 0.0
+	if lastLogin.Country != "" && lastLogin.Country != country {
+		score += 40.0
+	}
+	if lastLogin.IPAddress != "" && lastLogin.IPAddress != ipAddress {
+		score += 25.0
+	}
+	if lastLogin.UserAgent != "" && lastLogin.UserAgent != userAgent {
+		score += 22.0
+	}
+	if score > 100.0 {
+		score = 100.0
+	}
+	return score
+}
+
+func (s *AuthService) comparePassword(password, hash string) (bool, error) {
+	if strings.HasPrefix(hash, "$argon2id$") {
+		parts := strings.Split(hash, "$")
+		if len(parts) < 6 {
+			return false, errors.New("invalid argon2id hash format")
+		}
+		var timeCost, memoryCost uint32
+		var threads uint8
+		_, err := fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &memoryCost, &timeCost, &threads)
+		if err != nil {
+			return false, fmt.Errorf("invalid argon2id params: %w", err)
+		}
+		salt, err := base64.RawStdEncoding.DecodeString(parts[4])
+		if err != nil {
+			return false, fmt.Errorf("invalid argon2id salt: %w", err)
+		}
+		expectedKey, err := base64.RawStdEncoding.DecodeString(parts[5])
+		if err != nil {
+			return false, fmt.Errorf("invalid argon2id key: %w", err)
+		}
+		derivedKey := argon2.IDKey([]byte(password), salt, timeCost, memoryCost, threads, uint32(len(expectedKey)))
+		if subtle.ConstantTimeCompare(expectedKey, derivedKey) == 1 {
+			return true, nil
+		}
+		return false, nil
+	}
+
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	if err == nil {
+		return true, nil
+	}
+	return false, nil
+}
+
+func (s *AuthService) generateArgon2Hash(password string) (string, error) {
+	salt := make([]byte, Argon2SaltLength)
+	if _, err := rand.Read(salt); err != nil {
+		return "", err
+	}
+	key := argon2.IDKey([]byte(password), salt, Argon2Iterations, Argon2Memory, Argon2Parallelism, Argon2KeyLength)
+
+	b64Salt := base64.RawStdEncoding.EncodeToString(salt)
+	b64Key := base64.RawStdEncoding.EncodeToString(key)
+
+	encodedHash := fmt.Sprintf("$argon2id$v=19$m=%d,t=%d,p=%d$%s$%s",
+		Argon2Memory, Argon2Iterations, Argon2Parallelism, b64Salt, b64Key)
+	return encodedHash, nil
+}
+
+func (s *AuthService) getUserID(ctx context.Context) uuid.UUID {
+	if uid, ok := ctxkeys.GetUserID(ctx); ok {
+		return uid
+	}
+	return uuid.Nil
+}
+
+func (s *AuthService) VerifyRecoveryCode(ctx context.Context, userID uuid.UUID, code string) (bool, error) {
+	codes, err := s.repo.GetUnusedRecoveryCodes(ctx, userID)
+	if err != nil {
+		return false, err
+	}
+	code = strings.TrimSpace(code)
+	for _, rc := range codes {
+		h := sha256.Sum256([]byte(code))
+		hashedCodeHex := fmt.Sprintf("%x", h)
+		if rc.CodeHash == hashedCodeHex || rc.CodeHash == code {
+			_ = s.repo.MarkRecoveryCodeUsed(ctx, rc.ID)
+			return true, nil
+		}
+		if err := bcrypt.CompareHashAndPassword([]byte(rc.CodeHash), []byte(code)); err == nil {
+			_ = s.repo.MarkRecoveryCodeUsed(ctx, rc.ID)
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (s *AuthService) RegisterUser(ctx context.Context, req pb.RegisterRequest) (*models.User, error) {
+	return s.Register(ctx, &req)
+}
+
+func (s *AuthService) ValidateToken(ctx context.Context, tokenStr string) (*models.User, error) {
+	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodRSA); ok {
+			keys, err := s.repo.GetActiveSigningKeys(ctx)
+			if err == nil && len(keys) > 0 {
+				block, _ := pem.Decode([]byte(keys[0].PrivateKeyEnc))
+				if block != nil {
+					if key, err := x509.ParsePKCS1PrivateKey(block.Bytes); err == nil {
+						return &key.PublicKey, nil
+					}
+					if key, err := x509.ParsePKCS8PrivateKey(block.Bytes); err == nil {
+						if rsaKey, ok := key.(*rsa.PrivateKey); ok {
+							return &rsaKey.PublicKey, nil
+						}
+					}
+				}
+			}
+		}
+		return []byte(s.jwtSecret), nil
+	})
+	if err != nil || !token.Valid {
+		return nil, errors.New("invalid or expired token")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, errors.New("invalid token claims")
+	}
+
+	userIDStr, ok := claims["sub"].(string)
+	if !ok {
+		userIDStr, ok = claims["user_id"].(string)
+	}
+	if !ok {
+		return nil, errors.New("user ID missing from claims")
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil, errors.New("invalid user ID in claims")
+	}
+
+	return s.repo.GetUserByID(ctx, userID)
+}
+
+func (s *AuthService) CheckPermission(ctx context.Context, userID, tenantID uuid.UUID, permission string) (bool, error) {
+	return s.repo.CheckPermission(ctx, userID, tenantID, permission)
+}
+
+func (s *AuthService) ValidateInvite(ctx context.Context, code string) (*models.Invite, error) {
+	invite, err := s.repo.GetInviteByCode(ctx, code)
+	if err != nil {
+		return nil, err
+	}
+	if invite == nil || invite.Used || time.Now().After(invite.Expiry) {
+		return nil, errors.New("invite is invalid, used, or expired")
+	}
+	return invite, nil
+}
+
+func (s *AuthService) EnableMFA(ctx context.Context, userID uuid.UUID, secret, code string) ([]string, error) {
+	valid, err := s.VerifyTOTP(secret, code)
+	if err != nil || !valid {
+		return nil, errors.New("invalid TOTP verification code")
+	}
+
+	if err := s.repo.EnableMFA(ctx, userID, secret); err != nil {
+		return nil, fmt.Errorf("failed to enable MFA: %w", err)
+	}
+
+	codes := make([]string, 8)
+	hashes := make([]string, 8)
+	for i := 0; i < 8; i++ {
+		rawCode := uuid.New().String()[:10]
+		codes[i] = rawCode
+		h := sha256.Sum256([]byte(rawCode))
+		hashes[i] = fmt.Sprintf("%x", h)
+	}
+
+	if err := s.repo.SaveRecoveryCodes(ctx, userID, hashes); err != nil {
+		s.logger.Error("failed to save recovery codes", zap.Error(err))
+	}
+
+	return codes, nil
+}
+
+func (s *AuthService) DisableMFA(ctx context.Context, userID uuid.UUID, code string) error {
+	user, err := s.repo.GetUserByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if user.MfaSecret.Valid && user.MfaSecret.String != "" && code != "" {
+		valid, err := s.VerifyTOTP(user.MfaSecret.String, code)
+		if err != nil || !valid {
+			return errors.New("invalid MFA code")
+		}
+	}
+
+	return s.repo.DisableMFA(ctx, userID)
+}
+
+func (s *AuthService) RequestPasswordReset(ctx context.Context, email string) error {
+	user, err := s.repo.GetUserByEmail(ctx, email)
+	if err != nil || user == nil {
+		return nil
+	}
+
+	token := uuid.New().String()
+	expiresAt := time.Now().Add(1 * time.Hour)
+
+	if err := s.repo.CreatePasswordResetToken(ctx, user.ID, token, expiresAt); err != nil {
+		return err
+	}
+
+	_ = s.repo.LogSecurityEvent(ctx, &models.SecurityEvent{
+		UserID:    user.ID,
+		EventType: "PASSWORD_RESET_REQUESTED",
+		Metadata:  "token_issued",
+	})
+	return nil
+}
+
+func (s *AuthService) ResetPassword(ctx context.Context, token, newPassword string) error {
+	if err := s.validatePassword(newPassword); err != nil {
+		return err
+	}
+
+	resetToken, err := s.repo.GetPasswordResetToken(ctx, token)
+	if err != nil || resetToken == nil {
+		return errors.New("invalid or expired reset token")
+	}
+
+	if resetToken.Used || time.Now().After(resetToken.ExpiresAt) {
+		return errors.New("invalid or expired reset token")
+	}
+
+	hash, err := s.generateArgon2Hash(newPassword)
+	if err != nil {
+		return err
+	}
+
+	if err := s.repo.UpdatePassword(ctx, resetToken.UserID, hash); err != nil {
+		return err
+	}
+
+	_ = s.repo.UsePasswordResetToken(ctx, token)
+	_ = s.repo.RevokeAllUserTokens(ctx, resetToken.UserID)
+
+	_ = s.repo.LogSecurityEvent(ctx, &models.SecurityEvent{
+		UserID:    resetToken.UserID,
+		EventType: "PASSWORD_RESET_COMPLETED",
+	})
+	return nil
+}
+
+func (s *AuthService) LoginWithOIDC(ctx context.Context, providerName, code, state, ipAddress, userAgent string) (*models.AuthResponse, error) {
+	provider, err := s.repo.GetOidcProviderByName(ctx, providerName)
+	if err != nil || provider == nil || !provider.Enabled {
+		return nil, errors.New("invalid or disabled OIDC provider")
+	}
+
+	user, err := s.repo.GetUserByOidcLink(ctx, provider.ID, code)
+	if err != nil || user == nil {
+		return nil, errors.New("user not linked to OIDC provider")
+	}
+
+	return s.issueTokens(ctx, user, ipAddress, userAgent)
+}
+
+func (s *AuthService) GetJWKS(ctx context.Context) (*models.JWKS, error) {
+	keys, err := s.repo.GetActiveSigningKeys(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	jwks := &models.JWKS{
+		Keys: make([]models.JWK, 0, len(keys)),
+	}
+
+	for _, key := range keys {
+		block, _ := pem.Decode([]byte(key.PrivateKeyEnc))
+		var nStr, eStr string
+		if block != nil {
+			if privKey, err := x509.ParsePKCS1PrivateKey(block.Bytes); err == nil {
+				nStr = base64.RawURLEncoding.EncodeToString(privKey.N.Bytes())
+				eBytes := make([]byte, 4)
+				binary.BigEndian.PutUint32(eBytes, uint32(privKey.E))
+				eBytes = bytes.TrimLeft(eBytes, "\x00")
+				eStr = base64.RawURLEncoding.EncodeToString(eBytes)
+			}
+		}
+		jwks.Keys = append(jwks.Keys, models.JWK{
+			Kty: "RSA",
+			Kid: key.KID,
+			Use: "sig",
+			Alg: "RS256",
+			N:   nStr,
+			E:   eStr,
+		})
+	}
+	return jwks, nil
+}
+
+func (s *AuthService) CreateAPIKey(ctx context.Context, userID, tenantID uuid.UUID, name string, expiresAt *time.Time) (string, error) {
+	rawSecret := uuid.New().String()
+	prefix := "ff_" + uuid.New().String()[:8]
+	fullKey := prefix + "." + rawSecret
+
+	h := sha256.Sum256([]byte(rawSecret))
+	secretHash := fmt.Sprintf("%x", h)
+
+	apiKey := &models.APIKey{
+		ID:          uuid.New(),
+		TenantID:    tenantID,
+		UserID:      userID,
+		Name:        name,
+		Prefix:      prefix,
+		SecretHash:  secretHash,
+		Permissions: []string{},
+		ExpiresAt:   expiresAt,
+		CreatedAt:   time.Now(),
+		Revoked:     false,
+	}
+
+	if err := s.repo.SaveAPIKey(ctx, apiKey); err != nil {
+		return "", err
+	}
+	return fullKey, nil
+}
+
+func (s *AuthService) ListAPIKeys(ctx context.Context, tenantID uuid.UUID) ([]models.APIKey, error) {
+	return s.repo.ListAPIKeys(ctx, tenantID)
+}
+
+func (s *AuthService) RevokeAPIKey(ctx context.Context, id uuid.UUID) error {
+	return s.repo.RevokeAPIKey(ctx, id)
+}
+
+func (s *AuthService) CreateServiceAccount(ctx context.Context, tenantID uuid.UUID, name, description string) (*models.ServiceAccount, string, error) {
+	clientID := "sa_" + uuid.New().String()[:8]
+	clientSecret := uuid.New().String()
+	h := sha256.Sum256([]byte(clientSecret))
+	secretHash := fmt.Sprintf("%x", h)
+
+	sa := &models.ServiceAccount{
+		ID:               uuid.New(),
+		TenantID:         tenantID,
+		Name:             name,
+		Description:      description,
+		ClientID:         clientID,
+		ClientSecretHash: secretHash,
+		Role:             "service_account",
+		Permissions:      []string{},
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
+	}
+
+	if err := s.repo.CreateServiceAccount(ctx, sa); err != nil {
+		return nil, "", err
+	}
+	return sa, clientSecret, nil
+}
+
+func (s *AuthService) ListServiceAccounts(ctx context.Context, tenantID uuid.UUID) ([]models.ServiceAccount, error) {
+	return s.repo.ListServiceAccounts(ctx, tenantID)
+}
+
+func (s *AuthService) EmergencyRevoke(ctx context.Context) error {
+	return s.repo.RevokeAllTokensGlobal(ctx)
+}
+
+func (s *AuthService) SearchUsers(ctx context.Context, query string) ([]*models.User, error) {
+	if query == "" {
+		return []*models.User{}, nil
+	}
+	user, err := s.repo.GetUserByEmail(ctx, query)
+	if err == nil && user != nil {
+		return []*models.User{user}, nil
+	}
+	if uID, err := uuid.Parse(query); err == nil {
+		user, err := s.repo.GetUserByID(ctx, uID)
+		if err == nil && user != nil {
+			return []*models.User{user}, nil
+		}
+	}
+	return []*models.User{}, nil
+}
+
+

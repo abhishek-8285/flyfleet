@@ -559,13 +559,16 @@ type VehicleListResponse struct {
 
 // VehicleStats provides aggregated counts for the fleet dashboard.
 type VehicleStats struct {
-	TotalVehicles   int `json:"total_vehicles"`
-	ActiveVehicles  int `json:"active_vehicles"`
-	Maintenance     int `json:"maintenance"`
-	Suspended       int `json:"suspended"`
-	Blacklisted     int `json:"blacklisted"`
-	GPSEnabledCount int `json:"gps_enabled_count"`
+	TotalVehicles   int     `json:"total_vehicles"`
+	ActiveVehicles  int     `json:"active_vehicles"`
+	Maintenance     int     `json:"maintenance"`
+	Suspended       int     `json:"suspended"`
+	Blacklisted     int     `json:"blacklisted"`
+	GPSEnabledCount int     `json:"gps_enabled_count"`
+	TotalDistance   float64 `json:"total_distance,omitempty"`
+	TotalFuel       float64 `json:"total_fuel,omitempty"`
 }
+
 
 // VehicleLocation represents a coordinate point for map visualization.
 type VehicleLocation struct {
@@ -580,3 +583,8 @@ type DriverInfo struct {
 	ID   uuid.UUID `json:"id"`
 	Name string    `json:"name"`
 }
+
+type AssignDriverRequest struct {
+	DriverID uuid.UUID `json:"driver_id"`
+}
+

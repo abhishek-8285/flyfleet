@@ -265,10 +265,12 @@ export const EditVehicle: React.FC = () => {
                 <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Vehicle Details</h3>
              </div>
               <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                <TextInput label="Registration Number (Read Only)" value={vehicle.registration_number} disabled className="opacity-50" />
-                <SelectInput label="Vehicle Type" value={form.vehicle_type} options={VEHICLE_TYPES} onChange={(e) => updateField("vehicle_type", e.target.value)} />
-                <SelectInput label="Ownership Type" value={form.ownership_type} options={OWNERSHIP_TYPES} onChange={(e) => updateField("ownership_type", e.target.value)} />
-                <SelectInput label="Vehicle Status" value={form.status} options={STATUS_OPTIONS} onChange={(e) => updateField("status", e.target.value)} />
+                <TextInput label="Registration Number (Read Only)" value={vehicle.registration_number} disabled className="opacity-50" name={""} onChange={function (e: React.ChangeEvent<HTMLInputElement>): void {
+                throw new Error("Function not implemented.");
+              } } />
+                <SelectInput label="Vehicle Type" value={form.vehicle_type} options={VEHICLE_TYPES} onChange={(e) => updateField("vehicle_type", e.target.value)} name={""} />
+                <SelectInput label="Ownership Type" value={form.ownership_type} options={OWNERSHIP_TYPES} onChange={(e) => updateField("ownership_type", e.target.value)} name={""} />
+                <SelectInput label="Vehicle Status" value={form.status} options={STATUS_OPTIONS} onChange={(e) => updateField("status", e.target.value)} name={""} />
               </div>
           </section>
 
@@ -280,23 +282,23 @@ export const EditVehicle: React.FC = () => {
             </div>
              <div className="p-8">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
-                   <TextInput label="Manufacturer" value={form.make} onChange={(e) => updateField("make", e.target.value)} />
-                   <TextInput label="Variant/Model" value={form.model} onChange={(e) => updateField("model", e.target.value)} />
-                   <TextInput label="Deployment Year" value={form.year} onChange={(e) => updateField("year", e.target.value)} />
+                   <TextInput label="Manufacturer" value={form.make} onChange={(e) => updateField("make", e.target.value)} name={""} />
+                   <TextInput label="Variant/Model" value={form.model} onChange={(e) => updateField("model", e.target.value)} name={""} />
+                   <TextInput label="Deployment Year" value={form.year} onChange={(e) => updateField("year", e.target.value)} name={""} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-                   <TextInput label="VIN Number" value={form.vin_number} onChange={(e) => updateField("vin_number", e.target.value)} />
-                   <TextInput label="Chassis Number" value={form.chassis_number} onChange={(e) => updateField("chassis_number", e.target.value)} />
+                   <TextInput label="VIN Number" value={form.vin_number} onChange={(e) => updateField("vin_number", e.target.value)} name={""} />
+                   <TextInput label="Chassis Number" value={form.chassis_number} onChange={(e) => updateField("chassis_number", e.target.value)} name={""} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-                   <TextInput label="Engine Number" value={form.engine_number} onChange={(e) => updateField("engine_number", e.target.value)} />
-                   <TextInput label="Color" value={form.color} onChange={(e) => updateField("color", e.target.value)} />
+                   <TextInput label="Engine Number" value={form.engine_number} onChange={(e) => updateField("engine_number", e.target.value)} name={""} />
+                   <TextInput label="Color" value={form.color} onChange={(e) => updateField("color", e.target.value)} name={""} />
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-10 border-t border-white/5">
-                   <TextInput label="Payload (Tons)" type="number" value={form.capacity_tonnage} onChange={(e) => updateField("capacity_tonnage", e.target.value)} />
-                   <TextInput label="Fuel Res (L)" type="number" value={form.fuel_tank_capacity} onChange={(e) => updateField("fuel_tank_capacity", e.target.value)} />
-                   <TextInput label="Odometer (KM)" type="number" value={form.odometer} onChange={(e) => updateField("odometer", e.target.value)} />
-                   <TextInput label="Speed Limit" type="number" value={form.speed_limit} onChange={(e) => updateField("speed_limit", e.target.value)} />
+                   <TextInput label="Payload (Tons)" type="number" value={form.capacity_tonnage} onChange={(e) => updateField("capacity_tonnage", e.target.value)} name={""} />
+                   <TextInput label="Fuel Res (L)" type="number" value={form.fuel_tank_capacity} onChange={(e) => updateField("fuel_tank_capacity", e.target.value)} name={""} />
+                   <TextInput label="Odometer (KM)" type="number" value={form.odometer} onChange={(e) => updateField("odometer", e.target.value)} name={""} />
+                   <TextInput label="Speed Limit" type="number" value={form.speed_limit} onChange={(e) => updateField("speed_limit", e.target.value)} name={""} />
                 </div>
              </div>
           </section>
@@ -319,16 +321,16 @@ export const EditVehicle: React.FC = () => {
 
                 {form.gps_enabled && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <TextInput label="Device IMEI" value={form.gps_device_id} onChange={(e) => updateField("gps_device_id", e.target.value)} />
-                    <SelectInput label="Link Protocol" value={form.gps_device_type} options={gpsDeviceTypes} onChange={(e) => updateField("gps_device_type", e.target.value)} />
+                    <TextInput label="Device IMEI" value={form.gps_device_id} onChange={(e) => updateField("gps_device_id", e.target.value)} name={""} />
+                    <SelectInput label="Link Protocol" value={form.gps_device_type} options={gpsDeviceTypes} onChange={(e) => updateField("gps_device_type", e.target.value)} name={""} />
                   </div>
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-10 border-t border-white/5">
-                   <SelectInput label="Operational Branch" value={form.branch_id} options={dropdowns.branches} onChange={(e) => updateField("branch_id", e.target.value)} placeholder="Ungrouped" />
-                   <SelectInput label="Cost Allocation" value={form.cost_center_id} options={dropdowns.costCenters} onChange={(e) => updateField("cost_center_id", e.target.value)} placeholder="Default" />
-                   <SelectInput label="Primary Driver" value={form.current_driver_id} options={dropdowns.drivers} onChange={(e) => updateField("current_driver_id", e.target.value)} placeholder="Unassigned" />
-                   <SelectInput label="Parent Asset Node" value={form.parent_vehicle_id} options={dropdowns.vehicles} onChange={(e) => updateField("parent_vehicle_id", e.target.value)} placeholder="Standalone" />
+                   <SelectInput label="Operational Branch" value={form.branch_id} options={dropdowns.branches} onChange={(e) => updateField("branch_id", e.target.value)} placeholder="Ungrouped" name={""} />
+                   <SelectInput label="Cost Allocation" value={form.cost_center_id} options={dropdowns.costCenters} onChange={(e) => updateField("cost_center_id", e.target.value)} placeholder="Default" name={""} />
+                   <SelectInput label="Primary Driver" value={form.current_driver_id} options={dropdowns.drivers} onChange={(e) => updateField("current_driver_id", e.target.value)} placeholder="Unassigned" name={""} />
+                   <SelectInput label="Parent Asset Node" value={form.parent_vehicle_id} options={dropdowns.vehicles} onChange={(e) => updateField("parent_vehicle_id", e.target.value)} placeholder="Standalone" name={""} />
                 </div>
              </div>
           </section>
@@ -339,13 +341,13 @@ export const EditVehicle: React.FC = () => {
                 <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">Documents & Compliance</h3>
              </div>
              <div className="p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <TextInput label="Insurance Node #" value={form.insurance} onChange={(e) => updateField("insurance", e.target.value)} />
-                <TextInput label="Insurance Expiry" type="date" value={form.insurance_expiry} onChange={(e) => updateField("insurance_expiry", e.target.value)} />
-                <TextInput label="Commercial Permit" value={form.permit_number} onChange={(e) => updateField("permit_number", e.target.value)} />
-                <TextInput label="Permit Expiry" type="date" value={form.permit_expiry} onChange={(e) => updateField("permit_expiry", e.target.value)} />
-                <TextInput label="Pollution Expiry" type="date" value={form.pollution_expiry} onChange={(e) => updateField("pollution_expiry", e.target.value)} />
-                <TextInput label="Fitness Expiry" type="date" value={form.fitness_expiry} onChange={(e) => updateField("fitness_expiry", e.target.value)} />
-                <TextInput label="Tax Validity" type="date" value={form.tax_expiry} onChange={(e) => updateField("tax_expiry", e.target.value)} />
+                <TextInput label="Insurance Node #" value={form.insurance} onChange={(e) => updateField("insurance", e.target.value)} name={""} />
+                <TextInput label="Insurance Expiry" type="date" value={form.insurance_expiry} onChange={(e) => updateField("insurance_expiry", e.target.value)} name={""} />
+                <TextInput label="Commercial Permit" value={form.permit_number} onChange={(e) => updateField("permit_number", e.target.value)} name={""} />
+                <TextInput label="Permit Expiry" type="date" value={form.permit_expiry} onChange={(e) => updateField("permit_expiry", e.target.value)} name={""} />
+                <TextInput label="Pollution Expiry" type="date" value={form.pollution_expiry} onChange={(e) => updateField("pollution_expiry", e.target.value)} name={""} />
+                <TextInput label="Fitness Expiry" type="date" value={form.fitness_expiry} onChange={(e) => updateField("fitness_expiry", e.target.value)} name={""} />
+                <TextInput label="Tax Validity" type="date" value={form.tax_expiry} onChange={(e) => updateField("tax_expiry", e.target.value)} name={""} />
              </div>
           </section>
 

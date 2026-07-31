@@ -38,6 +38,9 @@ func (m *mockRepo) CreateBookingRequest(ctx context.Context, b *models.BookingRe
 func (m *mockRepo) GetBookingRequestByID(ctx context.Context, id uuid.UUID) (*models.BookingRequest, error) { return nil, nil }
 func (m *mockRepo) CreateShipment(ctx context.Context, s *models.Shipment) error { return nil }
 func (m *mockRepo) GetShipmentByID(ctx context.Context, id uuid.UUID) (*models.Shipment, error) { return nil, nil }
+func (m *mockRepo) GetShipmentByTripID(ctx context.Context, tripID uuid.UUID) (*models.Shipment, error) { return nil, nil }
+func (m *mockRepo) UpdateShipment(ctx context.Context, s *models.Shipment) error { return nil }
+func (m *mockRepo) CountPendingShipments(ctx context.Context, tenantID uuid.UUID) (int, error) { return 0, nil }
 func (m *mockRepo) GetShipmentTracking(ctx context.Context, id uuid.UUID) (map[string]interface{}, error) { return nil, nil }
 
 // Implement other interface methods to satisfy the interface

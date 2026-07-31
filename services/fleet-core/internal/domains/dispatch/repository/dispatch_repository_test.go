@@ -205,17 +205,4 @@ func TestDispatchRepository_ActionTypeVariants(t *testing.T) {
 	}
 }
 
-// Assignment types (mirrors actual repository types)
-type AssignmentTx struct {
-	ShipmentID uuid.UUID
-	TripID     string
-	VehicleID  uuid.UUID
-	DriverID   uuid.UUID
-	TenantID      uuid.UUID
-}
-
-type AssignmentResult struct {
-	TripID         string
-	Status         string
-	ShipmentStatus string
-}
+// AssignmentTx and AssignmentResult are now defined in dispatch_repository.go.

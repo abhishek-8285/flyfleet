@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/flyfleet/fleet-core/internal/domains/dispatch/engine"
@@ -29,6 +30,8 @@ func NewDispatchHandler(svc service.DispatchService, eng engine.SuggestionEngine
 func (h *DispatchHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/dispatch", func(r chi.Router) {
 		r.Post("/suggest", h.GetSuggestions)
+		r.Post("/assign", h.Assign)
+		r.Post("/redispatch", h.Redispatch)
 		r.Get("/dashboard", h.GetDashboard)
 	})
 }
@@ -88,9 +91,32 @@ func (h *DispatchHandler) GetSuggestions(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *DispatchHandler) GetDashboard(w http.ResponseWriter, r *http.Request) {
+	tenantID, ok := ctxkeys.GetTenantID(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"missing tenant_id"}`, http.StatusUnauthorized)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
+
+	if h.dispatchSvc == nil {
+		// Graceful degradation when service is not wired (e.g. tests)
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "ok",
+			"generated_at": time.Now().Format(time.RFC3339),
+		})
+		return
+	}
+
+	data, err := h.dispatchSvc.GetDashboard(r.Context(), tenantID)
+	if err != nil {
+		http.Error(w, `{"error":"failed to get dashboard"}`, http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{"status": "ok"})
+	json.NewEncoder(w).Encode(data)
 }
 
 func (h *DispatchHandler) Redispatch(w http.ResponseWriter, r *http.Request) {

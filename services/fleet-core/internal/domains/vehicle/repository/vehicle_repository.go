@@ -8,20 +8,28 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/pgconn"
 	"go.uber.org/zap"
 
 	"github.com/flyfleet/fleet-core/internal/domains/vehicle/models"
 )
 
+type PgxPoolIface interface {
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Begin(ctx context.Context) (pgx.Tx, error)
+}
+
 type VehicleRepository struct {
-	db     *pgxpool.Pool
+	db     PgxPoolIface
 	logger *zap.Logger
 }
 
-func NewVehicleRepository(db *pgxpool.Pool, logger *zap.Logger) *VehicleRepository {
+func NewVehicleRepository(db PgxPoolIface, logger *zap.Logger) *VehicleRepository {
 	return &VehicleRepository{db: db, logger: logger}
 }
+
 
 func (r *VehicleRepository) Create(ctx context.Context, vehicle *models.Vehicle) error {
 	// 1. Initial Compliance Evaluation

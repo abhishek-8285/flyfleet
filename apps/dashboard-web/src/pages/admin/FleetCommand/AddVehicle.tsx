@@ -14,7 +14,9 @@ import {
   Settings,
   Info,
   Badge,
-  AlertTriangle
+  AlertTriangle,
+  Fuel,
+  Scale
 } from 'lucide-react';
 import apiClient from '../../../services/apiClient';
 import { FUEL_TYPES, ODOMETER_UNITS, OWNERSHIP_TYPES, VEHICLE_TYPES } from './constants';

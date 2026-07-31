@@ -56,8 +56,8 @@ apiClient.interceptors.request.use(
     if (!tenantId) {
       if ((state.auth.user as any)?.tenant_id) {
         tenantId = (state.auth.user as any).tenant_id;
-      } else if (state.auth.user?.org_id) {
-        tenantId = state.auth.user.org_id;
+      } else if (state.auth.user?.tenant_id) {
+        tenantId = state.auth.user.tenant_id;
       }
       
       if (tenantId) {

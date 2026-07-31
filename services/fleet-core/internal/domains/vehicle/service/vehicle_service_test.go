@@ -86,6 +86,15 @@ func (m *MockVehicleRepository) IsGPSAvailable(ctx context.Context, tenantID uui
 	return args.Bool(0), args.String(1), args.Error(2)
 }
 
+func (m *MockVehicleRepository) GetAuditLogs(ctx context.Context, vehicleID uuid.UUID) ([]models.VehicleAuditLog, error) {
+	args := m.Called(ctx, vehicleID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]models.VehicleAuditLog), args.Error(1)
+}
+
+
 func setupTestService(t *testing.T) (*VehicleService, *MockVehicleRepository) {
 	logger := zap.NewNop()
 	mockRepo := &MockVehicleRepository{}
@@ -224,7 +233,7 @@ func TestVehicleService_UpdateVehicle_Success(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.NotNil(t, vehicle)
-	assert.Equal(t, "Updated Model", *vehicle.Model)
+	assert.Equal(t, "Updated Model", vehicle.Model)
 	mockRepo.AssertExpectations(t)
 }
 

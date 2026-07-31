@@ -36,6 +36,10 @@ func (m *mockDispatchService) Redispatch(ctx context.Context, tenantID uuid.UUID
 	return nil, nil
 }
 
+func (m *mockDispatchService) GetDashboard(ctx context.Context, tenantID uuid.UUID) (*service.DashboardData, error) {
+	return &service.DashboardData{}, nil
+}
+
 type mockSuggestionEngine struct {
 	suggestions []engine.Suggestion
 	err         error

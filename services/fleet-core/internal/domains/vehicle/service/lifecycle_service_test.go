@@ -58,6 +58,10 @@ func (m *mockVehicleRepo) IsGPSAvailable(ctx context.Context, tenantID uuid.UUID
 	args := m.Called(ctx, tenantID, deviceID, excludingVehicleID)
 	return args.Bool(0), args.String(1), args.Error(2)
 }
+func (m *mockVehicleRepo) GetAuditLogs(ctx context.Context, vehicleID uuid.UUID) ([]models.VehicleAuditLog, error) {
+	return nil, nil
+}
+
 
 type mockComplianceRepo struct{ mock.Mock }
 

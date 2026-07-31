@@ -357,7 +357,7 @@ func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
-	var req authservice.RegisterRequest
+	var req pb.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.errorJSON(w, http.StatusBadRequest, "invalid request body")
 		return

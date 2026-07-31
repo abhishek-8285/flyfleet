@@ -24,7 +24,7 @@ func TestScoringService_Calculate(t *testing.T) {
 			distKm: 2.0,
 			vehicle: &vehicleModels.Vehicle{
 				Status:          "ACTIVE",
-				CapacityTonnage: float64Ptr(1.5),
+				CapacityTonnage: 1.5,
 			},
 			driver: &driverModels.Driver{
 				Rating: 4.8,
@@ -37,7 +37,7 @@ func TestScoringService_Calculate(t *testing.T) {
 			distKm: 18.0,
 			vehicle: &vehicleModels.Vehicle{
 				Status:          "ACTIVE",
-				CapacityTonnage: float64Ptr(3.0),
+				CapacityTonnage: 3.0,
 			},
 			driver: &driverModels.Driver{
 				Rating: 2.0,
