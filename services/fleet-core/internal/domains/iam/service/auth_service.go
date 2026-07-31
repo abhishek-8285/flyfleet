@@ -541,6 +541,60 @@ func (s *AuthService) GetUserTenants(ctx context.Context, userID uuid.UUID) ([]m
 	return s.tenantRepo.GetUserTenants(ctx, userID)
 }
 
+// GetUserByID returns a user by ID.
+func (s *AuthService) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
+	user, err := s.userRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, ErrUserNotFound
+	}
+	return user, nil
+}
+
+// GetUserPermissions returns permissions for a user within a tenant.
+func (s *AuthService) GetUserPermissions(ctx context.Context, userID, tenantID uuid.UUID) ([]string, error) {
+	roles, err := s.roleRepo.GetUserRoles(ctx, userID, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	role := "viewer"
+	if len(roles) > 0 {
+		role = roles[0].Name
+	}
+	var mask int64
+	lowerRole := strings.ToLower(role)
+	if lowerRole == "org_admin" || lowerRole == "system_admin" || lowerRole == "admin" || lowerRole == "owner" {
+		mask = 9223372036854775807
+	} else {
+		mask, err = s.roleRepo.ComputeEffectivePermissionMask(ctx, userID, tenantID)
+		if err != nil || mask == 0 {
+			user, _ := s.userRepo.GetByID(ctx, userID)
+			if user != nil {
+				mask = user.PermissionMask
+			}
+		}
+	}
+	return s.resolvePermissions(ctx, mask), nil
+}
+
+// SearchUsers searches users by query.
+func (s *AuthService) SearchUsers(ctx context.Context, query string) ([]models.UserListItem, error) {
+	resp, err := s.userRepo.ListUsers(ctx, models.ListUsersParams{
+		Search:   query,
+		Page:     1,
+		PageSize: 50,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return []models.UserListItem{}, nil
+	}
+	return resp.Users, nil
+}
+
 // Register creates a new user account with the given credentials
 func (s *AuthService) Register(ctx context.Context, email, password, name string, tenantID uuid.UUID) (*models.AuthTokensResponse, error) {
 	// Check if user already exists

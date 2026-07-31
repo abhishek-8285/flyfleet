@@ -7,7 +7,7 @@ import (
 
 	"github.com/fleet-platform/shared/pkg/api"
 	orgservice "github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/service"
-	authservice "github.com/flyfleet/fleet-core/internal/domains/auth/service"
+	authservice "github.com/flyfleet/fleet-core/internal/domains/iam/service"
 	"github.com/flyfleet/fleet-core/internal/pkg/ctxkeys"
 	"github.com/flyfleet/fleet-core/internal/repository"
 	"github.com/go-chi/chi/v5"
@@ -35,20 +35,27 @@ func (h *SupportCompatHandlers) canAccessUser(r *http.Request, targetUserID uuid
 		// Verify if target user belongs to the same org as the authenticated admin
 		authTenantID, _ := ctxkeys.GetTenantID(r.Context())
 
-		targetUser, err := h.authSvc.GetUserByID(r.Context(), targetUserID)
+		targetTenants, err := h.authSvc.GetUserTenants(r.Context(), targetUserID)
 		if err != nil {
-			h.logger.Error("Failed to fetch target user for access check",
+			h.logger.Error("Failed to fetch target user tenants for access check",
 				zap.Error(err),
 				zap.String("target_user_id", targetUserID.String()))
 			return false, err
 		}
 
-		if targetUser.TenantID != authTenantID && role != "super_admin" {
+		belongsToTenant := false
+		for _, t := range targetTenants {
+			if t.ID == authTenantID {
+				belongsToTenant = true
+				break
+			}
+		}
+
+		if !belongsToTenant && role != "super_admin" {
 			h.logger.Warn("Access denied: Admin from different tenant attempted access",
 				zap.String("auth_user_id", authUserID.String()),
 				zap.String("auth_tenant_id", authTenantID.String()),
-				zap.String("target_user_id", targetUserID.String()),
-				zap.String("target_tenant_id", targetUser.TenantID.String()))
+				zap.String("target_user_id", targetUserID.String()))
 			return false, errors.New("forbidden: user belongs to a different tenant")
 		}
 
@@ -154,13 +161,18 @@ fetchUser:
 		return
 	}
 
+	userRole := "member"
+	if len(user.Roles) > 0 {
+		userRole = user.Roles[0]
+	}
+
 	profile := map[string]interface{}{
 		"userId":      user.ID.String(),
 		"name":        user.Email,
 		"email":       user.Email,
-		"role":        user.Role,
-		"status":      "ACTIVE",
-		"verified":    true,
+		"role":        userRole,
+		"status":      string(user.Status),
+		"verified":    user.EmailVerified,
 		"memberSince": user.CreatedAt.Format("2006-01-02"),
 	}
 
@@ -200,10 +212,15 @@ func (h *SupportCompatHandlers) GetUserSecurity(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	mfaMethods := []string{}
+	if user.MFAEnabled {
+		mfaMethods = append(mfaMethods, "totp")
+	}
+
 	security := map[string]interface{}{
-		"mfaEnabled":         user.MfaEnabled,
-		"mfaMethods":         user.MfaMethods,
-		"lastPasswordChange": user.LastPasswordChange.Format("2006-01-02"),
+		"mfaEnabled":         user.MFAEnabled,
+		"mfaMethods":         mfaMethods,
+		"lastPasswordChange": user.UpdatedAt.Format("2006-01-02"),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -315,8 +332,8 @@ func (h *SupportCompatHandlers) GetUserRoles(w http.ResponseWriter, r *http.Requ
 	}
 
 	roles := []string{"User"}
-	if user != nil {
-		roles = []string{user.Role}
+	if user != nil && len(user.Roles) > 0 {
+		roles = user.Roles
 	}
 
 	w.Header().Set("Content-Type", "application/json")

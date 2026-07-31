@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/service"
-	authservice "github.com/flyfleet/fleet-core/internal/domains/auth/service"
+	authservice "github.com/flyfleet/fleet-core/internal/domains/iam/service"
 	monitoringservice "github.com/flyfleet/fleet-core/internal/domains/monitoring/service"
 	vehicleservice "github.com/flyfleet/fleet-core/internal/domains/vehicle/service"
 	"github.com/flyfleet/fleet-core/internal/repository"
@@ -200,7 +200,13 @@ func (h *DashboardHandlers) GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantID := user.TenantID
+	tenantID, _ := ctxkeys.GetTenantID(ctx)
+	if tenantID == uuid.Nil {
+		tenants, err := h.authSvc.GetUserTenants(ctx, user.ID)
+		if err == nil && len(tenants) > 0 {
+			tenantID = tenants[0].ID
+		}
+	}
 	permissions, _ := h.authSvc.GetUserPermissions(ctx, userID, tenantID)
 
 	// Use tenantSvc to get tenants

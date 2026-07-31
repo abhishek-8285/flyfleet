@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/flyfleet/fleet-core/internal/domains/auth/models"
+	"github.com/flyfleet/fleet-core/internal/domains/iam/models"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -68,27 +68,23 @@ func TestSwitchContextAuthorization(t *testing.T) {
 
 	// 1. Setup Identities
 	adminID := uuid.New()
-	adminOrg := uuid.New()
 	adminUser := &models.User{
-		ID: adminID, TenantID: adminOrg, Role: "super_admin",
+		ID: adminID, Roles: []string{"super_admin"},
 	}
 
 	parentID := uuid.New()
-	parentOrg := uuid.New()
 	parentUser := &models.User{
-		ID: parentID, TenantID: parentOrg, Role: "fleet_manager",
+		ID: parentID, Roles: []string{"fleet_manager"},
 	}
 
 	targetID := uuid.New()
-	targetOrg := uuid.New()
 	targetUser := &models.User{
-		ID: targetID, TenantID: targetOrg, Role: "org_admin", PermissionMask: 15,
+		ID: targetID, Roles: []string{"org_admin"}, PermissionMask: 15,
 	}
 
 	strangerID := uuid.New()
-	strangerOrg := uuid.New()
 	strangerUser := &models.User{
-		ID: strangerID, TenantID: strangerOrg, Role: "driver",
+		ID: strangerID, Roles: []string{"driver"},
 	}
 
 	repo.users[adminID] = adminUser
@@ -99,30 +95,31 @@ func TestSwitchContextAuthorization(t *testing.T) {
 	// Setup explicitly linked accounts
 	repo.links[parentID] = append(repo.links[parentID], targetID)
 
-	// Since we can't fully mock generateAccessToken (needs real RSA keys),
-	// we will intercept it at the authorization logic level.
-	// To do this strictly, we extract the SwitchContext authorization block into a testable unit,
-	// but here we can just test if the auth check allows it through and panics at issueTokens,
-	// or we mock the RSA key securely.
-
-	// Better yet, we can test just the Auth rules directly.
+	hasRole := func(u *models.User, r string) bool {
+		for _, role := range u.Roles {
+			if role == r {
+				return true
+			}
+		}
+		return false
+	}
 
 	// Scenario A: Super Admin shadowing (Allowed)
-	isSuperAdmin := adminUser.Role == "super_admin"
+	isSuperAdmin := hasRole(adminUser, "super_admin")
 	isLinkedAdmin := repo.IsAccountLinked(context.Background(), adminID, targetID)
 	if !isSuperAdmin && !isLinkedAdmin {
 		t.Fatalf("Super Admin should be allowed to switch")
 	}
 
 	// Scenario B: Explicitly Linked Parent shadowing Target (Allowed)
-	isSuperParent := parentUser.Role == "super_admin"
+	isSuperParent := hasRole(parentUser, "super_admin")
 	isLinkedParent := repo.IsAccountLinked(context.Background(), parentID, targetID)
 	if !isSuperParent && !isLinkedParent {
 		t.Fatalf("Linked Parent should be allowed to switch")
 	}
 
 	// Scenario C: Stranger trying to shadow Target (Denied)
-	isSuperStranger := strangerUser.Role == "super_admin"
+	isSuperStranger := hasRole(strangerUser, "super_admin")
 	isLinkedStranger := repo.IsAccountLinked(context.Background(), strangerID, targetID)
 	if isSuperStranger || isLinkedStranger {
 		t.Fatalf("Stranger should be denied context switch")
