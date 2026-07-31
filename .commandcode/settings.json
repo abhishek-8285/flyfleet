@@ -7,7 +7,11 @@
       "Shell(agent-browser:*)",
       "Shell(for:*)",
       "Shell(do:*)",
-      "Shell(done:*)"
+      "Shell(done:*)",
+      "Shell(cd /home/abhishek/Desktop/flyfleet/services/fleet-core && for d in internal/domains/*/; do name=$(basename \"$d\"); if [ -d \"$d\" ]; then echo \"=== $name ===\" && ls \"$d\" | tr '\\n' ' ' && echo \"\"; fi; done 2>&1 | head -80)",
+      "Shell(cd /home/abhishek/Desktop/flyfleet/services/fleet-core && for d in dispatch trip customer vehicle driver tracking iam billing compliance finance fuel geofencing maintenance route integrations analytics assignment governance settings india document emergency report; do if [ -d \"internal/domains/$d\" ]; then echo \"$d: $(ls internal/domains/$d/ | tr '\\n' ' ')\"; fi; done 2>&1)",
+      "Shell(rm:*)",
+      "Shell(echo:*)"
     ],
     "deny": [],
     "defaultMode": "default"
