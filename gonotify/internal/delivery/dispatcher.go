@@ -1238,7 +1238,7 @@ func isTerminalStatus(status string) bool {
 func smsTemplatesForEvent(eventType string) string {
 	switch eventType {
 	case "order.created":
-		return "Your order {{.order_id}} has been created."
+		return "Your order {{.order_id}} has been created. Amount: {{.amount}} {{.currency}}"
 	case "payment.failed":
 		return "Your payment for order {{.order_id}} failed. Please retry."
 	default:

@@ -149,7 +149,7 @@ func (b *NATSBus) Subscribe(subject string, queueGroup string, handler Handler) 
 }
 
 func (b *NATSBus) PublishTransient(subject string, data []byte) error {
-	if b.nc == nil {
+	if b == nil || b.nc == nil {
 		return errors.New("nats connection is not initialized")
 	}
 
@@ -160,7 +160,7 @@ func (b *NATSBus) SubscribeTransient(
 	subject string,
 	handler func(data []byte),
 ) (func(), error) {
-	if b.nc == nil {
+	if b == nil || b.nc == nil {
 		return nil, errors.New("nats connection is not initialized")
 	}
 
