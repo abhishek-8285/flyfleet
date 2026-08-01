@@ -19,17 +19,26 @@ import (
 	"github.com/gonotify/gonotify/internal/auth"
 	"github.com/gonotify/gonotify/internal/config"
 	"github.com/gonotify/gonotify/internal/events"
+	"github.com/gonotify/gonotify/internal/inbox"
 	"github.com/gonotify/gonotify/internal/observability"
 	"github.com/gonotify/gonotify/internal/provider"
+	"github.com/gonotify/gonotify/internal/queue"
+	"github.com/gonotify/gonotify/internal/realtime"
 	"github.com/gonotify/gonotify/internal/server"
 	"github.com/gonotify/gonotify/internal/template"
 	"github.com/gonotify/gonotify/internal/tenant"
+	"github.com/gonotify/gonotify/internal/user"
 )
 
+type publishEventOptions struct {
+	Channels []string `json:"channels"`
+}
+
 type publishEventRequest struct {
-	Event  string         `json:"event"`
-	UserID string         `json:"user_id"`
-	Data   map[string]any `json:"data"`
+	Event   string              `json:"event"`
+	UserID  string              `json:"user_id"`
+	Data    map[string]any      `json:"data"`
+	Options publishEventOptions `json:"options"`
 }
 
 func main() {
@@ -55,11 +64,34 @@ func main() {
 		os.Exit(1)
 	}
 
+	bus, err := queue.NewNATSBus(cfg.NATSURL, logger)
+	if err != nil {
+		logger.Error("failed to create nats bus", "error", err)
+		os.Exit(1)
+	}
+	defer func() {
+		_ = bus.Close()
+	}()
+
+	realtimePublisher := realtime.NewPublisher(bus, logger)
+	realtimeHandler := server.NewRealtimeHandler(bus, logger)
+
 	eventService := events.NewService(db, logger)
 	templateRepo := template.NewRepository(db)
 	adminTemplateHandler := server.NewAdminTemplateHandler(templateRepo, logger)
 	providerRepo := provider.NewRepository(db)
 	adminProviderHandler := server.NewAdminProviderHandler(providerRepo, logger)
+
+	userRepo := user.NewRepository(db)
+	userAuthHandler := server.NewUserAuthHandler(
+		userRepo,
+		cfg.JWTSecret,
+		cfg.UserTokenTTL,
+		logger,
+	)
+
+	inboxRepo := inbox.NewRepository(db)
+	inboxHandler := server.NewInboxHandler(inboxRepo, realtimePublisher, logger)
 
 	r := chi.NewRouter()
 
@@ -77,27 +109,48 @@ func main() {
 	r.Handle("/metrics", promhttp.Handler())
 
 	r.Route("/v1", func(r chi.Router) {
-		r.Use(server.APIKeyAuth(db, logger))
+		r.Group(func(r chi.Router) {
+			r.Use(server.APIKeyAuth(db, logger))
 
-		r.With(server.RequireScope("events:write")).Post("/events", handlePublishEvent(eventService, logger))
+			r.With(server.RequireScope(auth.ScopeEventsWrite)).Post("/events", handlePublishEvent(eventService, logger))
+			r.With(server.RequireScope(auth.ScopeUsersWrite)).Post("/auth/user-token", userAuthHandler.CreateToken)
 
-		r.Route("/admin/templates", func(r chi.Router) {
-			r.With(server.RequireScope("templates:write")).Post("/", adminTemplateHandler.CreateTemplate)
-			r.With(server.RequireScope("templates:read")).Get("/", adminTemplateHandler.ListTemplates)
-			r.With(server.RequireScope("templates:read")).Get("/{template_id}", adminTemplateHandler.GetTemplate)
-			r.With(server.RequireScope("templates:write")).Post("/{template_id}/versions", adminTemplateHandler.CreateVersion)
-			r.With(server.RequireScope("templates:write")).Post("/{template_id}/versions/{version_id}/publish", adminTemplateHandler.PublishVersion)
+			r.Route("/admin/templates", func(r chi.Router) {
+				r.With(server.RequireScope(auth.ScopeTemplatesWrite)).Post("/", adminTemplateHandler.CreateTemplate)
+				r.With(server.RequireScope(auth.ScopeTemplatesRead)).Get("/", adminTemplateHandler.ListTemplates)
+				r.With(server.RequireScope(auth.ScopeTemplatesRead)).Get("/{template_id}", adminTemplateHandler.GetTemplate)
+				r.With(server.RequireScope(auth.ScopeTemplatesWrite)).Post("/{template_id}/versions", adminTemplateHandler.CreateVersion)
+				r.With(server.RequireScope(auth.ScopeTemplatesWrite)).Post("/{template_id}/versions/{version_id}/publish", adminTemplateHandler.PublishVersion)
+			})
+
+			r.Route("/admin/providers", func(r chi.Router) {
+				r.With(server.RequireScope(auth.ScopeProvidersRead)).Get("/", adminProviderHandler.ListSystemProviders)
+			})
+
+			r.Route("/admin/provider-configs", func(r chi.Router) {
+				r.With(server.RequireScope(auth.ScopeProvidersWrite)).Post("/", adminProviderHandler.CreateConfig)
+				r.With(server.RequireScope(auth.ScopeProvidersRead)).Get("/", adminProviderHandler.ListConfigs)
+				r.With(server.RequireScope(auth.ScopeProvidersWrite)).Post("/{configID}/enable", adminProviderHandler.EnableConfig)
+				r.With(server.RequireScope(auth.ScopeProvidersWrite)).Post("/{configID}/disable", adminProviderHandler.DisableConfig)
+			})
 		})
 
-		r.Route("/admin/providers", func(r chi.Router) {
-			r.With(server.RequireScope("providers:read")).Get("/", adminProviderHandler.ListSystemProviders)
+		r.Route("/inbox", func(r chi.Router) {
+			r.Use(server.UserAuth(cfg.JWTSecret, logger))
+
+			r.Get("/", inboxHandler.List)
+			r.Patch("/{itemID}/read", inboxHandler.MarkRead)
+			r.Patch("/{itemID}/unread", inboxHandler.MarkUnread)
+			r.Post("/{itemID}/archive", inboxHandler.Archive)
+			r.Post("/{itemID}/unarchive", inboxHandler.Unarchive)
+			r.Post("/{itemID}/pin", inboxHandler.Pin)
+			r.Post("/{itemID}/unpin", inboxHandler.Unpin)
 		})
 
-		r.Route("/admin/provider-configs", func(r chi.Router) {
-			r.With(server.RequireScope("providers:write")).Post("/", adminProviderHandler.CreateConfig)
-			r.With(server.RequireScope("providers:read")).Get("/", adminProviderHandler.ListConfigs)
-			r.With(server.RequireScope("providers:write")).Post("/{configID}/enable", adminProviderHandler.EnableConfig)
-			r.With(server.RequireScope("providers:write")).Post("/{configID}/disable", adminProviderHandler.DisableConfig)
+		r.Route("/realtime", func(r chi.Router) {
+			r.Use(server.UserAuth(cfg.JWTSecret, logger))
+
+			r.Get("/stream", realtimeHandler.Stream)
 		})
 	})
 
@@ -180,6 +233,7 @@ func handlePublishEvent(
 				UserID:         req.UserID,
 				IdempotencyKey: idempotencyKey,
 				Data:           req.Data,
+				Channels:       req.Options.Channels,
 				Metadata: map[string]any{
 					"source":      "api",
 					"api_key_id":  apiKey.ID,

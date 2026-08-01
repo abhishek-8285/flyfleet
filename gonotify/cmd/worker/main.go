@@ -12,10 +12,13 @@ import (
 	"github.com/gonotify/gonotify/internal/config"
 	"github.com/gonotify/gonotify/internal/delivery"
 	"github.com/gonotify/gonotify/internal/events"
+	"github.com/gonotify/gonotify/internal/inbox"
 	"github.com/gonotify/gonotify/internal/observability"
 	smtpprovider "github.com/gonotify/gonotify/internal/provider/smtp"
 	"github.com/gonotify/gonotify/internal/queue"
+	"github.com/gonotify/gonotify/internal/realtime"
 	"github.com/gonotify/gonotify/internal/template"
+	"github.com/gonotify/gonotify/internal/user"
 )
 
 func main() {
@@ -50,6 +53,8 @@ func main() {
 		_ = bus.Close()
 	}()
 
+	realtimePublisher := realtime.NewPublisher(bus, logger)
+
 	relay := events.NewOutboxRelay(
 		db,
 		bus,
@@ -75,11 +80,16 @@ func main() {
 	})
 
 	templateRepository := template.NewRepository(db)
+	userRepository := user.NewRepository(db)
+	inboxRepository := inbox.NewRepository(db)
 
 	dispatcher := delivery.NewDispatcher(
 		db,
 		emailProvider,
 		templateRepository,
+		userRepository,
+		inboxRepository,
+		realtimePublisher,
 		logger,
 	)
 

@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"time"
 )
 
 type Config struct {
@@ -33,6 +34,9 @@ type Config struct {
 	SMTPFromEmail string
 	SMTPFromName  string
 	SMTPUseTLS    bool
+
+	JWTSecret    string
+	UserTokenTTL time.Duration
 }
 
 func Load() Config {
@@ -67,6 +71,9 @@ func Load() Config {
 		SMTPFromEmail: getEnv("SMTP_FROM_EMAIL", "notifications@gonotify.local"),
 		SMTPFromName:  getEnv("SMTP_FROM_NAME", "GoNotify"),
 		SMTPUseTLS:    getEnvBool("SMTP_USE_TLS", false),
+
+		JWTSecret:    getEnv("JWT_SECRET", "dev-secret-change-me"),
+		UserTokenTTL: getEnvDuration("USER_TOKEN_TTL", time.Hour),
 	}
 }
 
@@ -98,6 +105,20 @@ func getEnvBool(key string, fallback bool) bool {
 	}
 
 	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return fallback
+	}
+
+	return parsed
+}
+
+func getEnvDuration(key string, fallback time.Duration) time.Duration {
+	value, ok := os.LookupEnv(key)
+	if !ok || value == "" {
+		return fallback
+	}
+
+	parsed, err := time.ParseDuration(value)
 	if err != nil {
 		return fallback
 	}

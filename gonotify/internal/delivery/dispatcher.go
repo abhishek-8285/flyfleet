@@ -13,15 +13,21 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/gonotify/gonotify/internal/inbox"
 	"github.com/gonotify/gonotify/internal/provider"
 	"github.com/gonotify/gonotify/internal/queue"
+	"github.com/gonotify/gonotify/internal/realtime"
 	"github.com/gonotify/gonotify/internal/template"
+	"github.com/gonotify/gonotify/internal/user"
 )
 
 type Dispatcher struct {
 	db        *pgxpool.Pool
 	email     provider.Provider
 	templates *template.Repository
+	users     *user.Repository
+	inbox     *inbox.Repository
+	realtime  *realtime.Publisher
 	logger    *slog.Logger
 }
 
@@ -29,14 +35,32 @@ func NewDispatcher(
 	db *pgxpool.Pool,
 	email provider.Provider,
 	templates *template.Repository,
+	users *user.Repository,
+	inboxRepo *inbox.Repository,
+	realtimePublisher *realtime.Publisher,
 	logger *slog.Logger,
 ) *Dispatcher {
 	return &Dispatcher{
 		db:        db,
 		email:     email,
 		templates: templates,
+		users:     users,
+		inbox:     inboxRepo,
+		realtime:  realtimePublisher,
 		logger:    logger,
 	}
+}
+
+type createNotificationParams struct {
+	Msg             queue.Message
+	Channel         string
+	ToAddress       *string
+	RecipientUserID *string
+	TemplateID      *string
+	Subject         string
+	Body            string
+	Payload         map[string]any
+	IdempotencyKey  string
 }
 
 func (d *Dispatcher) HandleEvent(ctx context.Context, msg queue.Message) error {
@@ -58,10 +82,42 @@ func (d *Dispatcher) HandleEvent(ctx context.Context, msg queue.Message) error {
 	data["event"] = eventType
 	data["user_id"] = userID
 
+	channels := parseChannels(msg.Metadata["channels"])
+
+	var errs []error
+
+	for _, channel := range channels {
+		switch channel {
+		case "email":
+			if err := d.handleEmail(ctx, msg, data, eventType, userID); err != nil {
+				errs = append(errs, err)
+			}
+
+		case "in_app":
+			if err := d.handleInApp(ctx, msg, data, eventType, userID); err != nil {
+				errs = append(errs, err)
+			}
+		}
+	}
+
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+
+	return nil
+}
+
+func (d *Dispatcher) handleEmail(
+	ctx context.Context,
+	msg queue.Message,
+	data map[string]any,
+	eventType string,
+	userID string,
+) error {
 	emailTo, _ := data["email"].(string)
 
 	if emailTo == "" {
-		d.logger.WarnContext(
+		d.logger.DebugContext(
 			ctx,
 			"event missing data.email; skipping email delivery",
 			"event_id", msg.ID,
@@ -72,7 +128,7 @@ func (d *Dispatcher) HandleEvent(ctx context.Context, msg queue.Message) error {
 		return nil
 	}
 
-	subjectTemplate, htmlTemplate, textTemplate, templateID := d.resolveTemplates(
+	subjectTemplate, htmlTemplate, textTemplate, templateID := d.resolveEmailTemplates(
 		ctx,
 		msg,
 		eventType,
@@ -85,28 +141,33 @@ func (d *Dispatcher) HandleEvent(ctx context.Context, msg queue.Message) error {
 		Data:    data,
 	})
 	if err != nil {
-		return fmt.Errorf("template render failed: %w", err)
+		return fmt.Errorf("email template render failed: %w", err)
 	}
 
 	idempotencyKey := notificationKey(msg.ID, "email", emailTo)
 
 	notificationID, status, err := d.createOrGetNotification(
 		ctx,
-		msg,
-		emailTo,
-		idempotencyKey,
-		templateID,
-		rendered,
-		data,
+		createNotificationParams{
+			Msg:             msg,
+			Channel:         "email",
+			ToAddress:       &emailTo,
+			RecipientUserID: nil,
+			TemplateID:      templateID,
+			Subject:         rendered.Subject,
+			Body:            rendered.Text,
+			Payload:         data,
+			IdempotencyKey:  idempotencyKey,
+		},
 	)
 	if err != nil {
-		return fmt.Errorf("create or get notification failed: %w", err)
+		return fmt.Errorf("create or get email notification failed: %w", err)
 	}
 
 	if isTerminalSuccessStatus(status) {
 		d.logger.InfoContext(
 			ctx,
-			"notification already delivered; skipping duplicate delivery",
+			"email notification already delivered; skipping duplicate delivery",
 			"notification_id", notificationID,
 			"event_id", msg.ID,
 			"tenant_id", msg.TenantID,
@@ -118,22 +179,10 @@ func (d *Dispatcher) HandleEvent(ctx context.Context, msg queue.Message) error {
 
 	attempt, err := d.nextAttempt(ctx, notificationID)
 	if err != nil {
-		d.logger.WarnContext(
-			ctx,
-			"failed to calculate delivery attempt; defaulting to attempt 1",
-			"notification_id", notificationID,
-			"error", err,
-		)
-
 		attempt = 1
 	}
 
-	if err := d.updateNotificationStatus(
-		ctx,
-		notificationID,
-		"sending",
-		"",
-	); err != nil {
+	if err := d.updateNotificationStatus(ctx, notificationID, "sending", ""); err != nil {
 		d.logger.ErrorContext(
 			ctx,
 			"failed to update notification status to sending",
@@ -178,19 +227,14 @@ func (d *Dispatcher) HandleEvent(ctx context.Context, msg queue.Message) error {
 	); err != nil {
 		d.logger.ErrorContext(
 			ctx,
-			"failed to record delivery attempt",
+			"failed to record email delivery attempt",
 			"notification_id", notificationID,
 			"error", err,
 		)
 	}
 
 	if sendErr != nil {
-		if err := d.updateNotificationStatus(
-			ctx,
-			notificationID,
-			"failed",
-			sendErr.Error(),
-		); err != nil {
+		if err := d.updateNotificationStatus(ctx, notificationID, "failed", sendErr.Error()); err != nil {
 			d.logger.ErrorContext(
 				ctx,
 				"failed to update notification status to failed",
@@ -202,12 +246,7 @@ func (d *Dispatcher) HandleEvent(ctx context.Context, msg queue.Message) error {
 		return fmt.Errorf("email send failed: %w", sendErr)
 	}
 
-	if err := d.updateNotificationStatus(
-		ctx,
-		notificationID,
-		"sent",
-		"",
-	); err != nil {
+	if err := d.updateNotificationStatus(ctx, notificationID, "sent", ""); err != nil {
 		d.logger.ErrorContext(
 			ctx,
 			"failed to update notification status to sent",
@@ -218,11 +257,10 @@ func (d *Dispatcher) HandleEvent(ctx context.Context, msg queue.Message) error {
 
 	d.logger.InfoContext(
 		ctx,
-		"notification sent",
+		"email notification sent",
 		"notification_id", notificationID,
 		"event_id", msg.ID,
 		"tenant_id", msg.TenantID,
-		"channel", "email",
 		"to", emailTo,
 		"attempt", attempt,
 	)
@@ -230,7 +268,234 @@ func (d *Dispatcher) HandleEvent(ctx context.Context, msg queue.Message) error {
 	return nil
 }
 
-func (d *Dispatcher) resolveTemplates(
+func (d *Dispatcher) handleInApp(
+	ctx context.Context,
+	msg queue.Message,
+	data map[string]any,
+	eventType string,
+	externalUserID string,
+) error {
+	if externalUserID == "" {
+		d.logger.DebugContext(
+			ctx,
+			"event missing user_id; skipping in_app delivery",
+			"event_id", msg.ID,
+			"tenant_id", msg.TenantID,
+			"event_type", eventType,
+		)
+
+		return nil
+	}
+
+	email, _ := data["email"].(string)
+	phone, _ := data["phone"].(string)
+
+	internalUserID, err := d.users.EnsureUser(
+		ctx,
+		msg.TenantID,
+		externalUserID,
+		email,
+		phone,
+		data,
+	)
+	if err != nil {
+		return fmt.Errorf("ensure user failed: %w", err)
+	}
+
+	tpl, err := d.templates.GetPublishedVersion(
+		ctx,
+		msg.TenantID,
+		eventType,
+		"in_app",
+		"en",
+	)
+	if errors.Is(err, template.ErrTemplateNotFound) {
+		d.logger.DebugContext(
+			ctx,
+			"no published in_app template found; skipping in_app delivery",
+			"event_id", msg.ID,
+			"tenant_id", msg.TenantID,
+			"event_type", eventType,
+		)
+
+		return nil
+	}
+
+	if err != nil {
+		return fmt.Errorf("resolve in_app template failed: %w", err)
+	}
+
+	rendered, err := template.Render(template.RenderInput{
+		Subject: tpl.Subject,
+		HTML:    tpl.HTML,
+		Text:    tpl.Text,
+		Data:    data,
+	})
+	if err != nil {
+		return fmt.Errorf("in_app template render failed: %w", err)
+	}
+
+	title := strings.TrimSpace(rendered.Subject)
+	if title == "" {
+		title = eventType
+	}
+
+	body := strings.TrimSpace(rendered.Text)
+	if body == "" {
+		body = strings.TrimSpace(rendered.HTML)
+	}
+	if body == "" {
+		body = title
+	}
+
+	actionURL, _ := data["action_url"].(string)
+	imageURL, _ := data["image_url"].(string)
+	category, _ := data["category"].(string)
+
+	if category == "" {
+		category = "notification"
+	}
+
+	notificationIdempotencyKey := notificationKey(msg.ID, "in_app", internalUserID)
+	templateID := tpl.TemplateID
+
+	notificationID, status, err := d.createOrGetNotification(
+		ctx,
+		createNotificationParams{
+			Msg:             msg,
+			Channel:         "in_app",
+			ToAddress:       nil,
+			RecipientUserID: &internalUserID,
+			TemplateID:      &templateID,
+			Subject:         title,
+			Body:            body,
+			Payload:         data,
+			IdempotencyKey:  notificationIdempotencyKey,
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("create or get in_app notification failed: %w", err)
+	}
+
+	inboxIdempotencyKey := inboxKey(msg.ID, internalUserID)
+
+	itemID, created, err := d.inbox.CreateItemIdempotent(
+		ctx,
+		inbox.CreateItemParams{
+			TenantID:       msg.TenantID,
+			UserID:         internalUserID,
+			NotificationID: &notificationID,
+			Title:          title,
+			Body:           body,
+			Category:       category,
+			ActionURL:      actionURL,
+			ImageURL:       imageURL,
+			Data:           data,
+			IdempotencyKey: inboxIdempotencyKey,
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("create inbox item failed: %w", err)
+	}
+
+	if !created {
+		d.logger.InfoContext(
+			ctx,
+			"inbox item already exists; skipping duplicate in_app delivery",
+			"notification_id", notificationID,
+			"inbox_item_id", itemID,
+			"event_id", msg.ID,
+			"tenant_id", msg.TenantID,
+		)
+
+		return nil
+	}
+
+	if d.realtime != nil {
+		err := d.realtime.Publish(
+			ctx,
+			msg.TenantID,
+			internalUserID,
+			realtime.Event{
+				Type:   "inbox.item.created",
+				ItemID: itemID,
+				Data: map[string]any{
+					"title":           title,
+					"body":            body,
+					"category":        category,
+					"action_url":      actionURL,
+					"image_url":       imageURL,
+					"is_read":         false,
+					"is_archived":     false,
+					"is_pinned":       false,
+					"notification_id": notificationID,
+				},
+			},
+		)
+		if err != nil {
+			d.logger.WarnContext(
+				ctx,
+				"failed to publish realtime inbox.item.created event",
+				"notification_id", notificationID,
+				"inbox_item_id", itemID,
+				"error", err,
+			)
+		}
+	}
+
+	attempt, err := d.nextAttempt(ctx, notificationID)
+	if err != nil {
+		attempt = 1
+	}
+
+	if err := d.recordDeliveryAttempt(
+		ctx,
+		notificationID,
+		"success",
+		attempt,
+		map[string]any{
+			"channel":  "in_app",
+			"user_id":  internalUserID,
+			"inbox_id": itemID,
+		},
+		map[string]any{
+			"status": "delivered_to_inbox",
+		},
+		"",
+	); err != nil {
+		d.logger.ErrorContext(
+			ctx,
+			"failed to record in_app delivery attempt",
+			"notification_id", notificationID,
+			"error", err,
+		)
+	}
+
+	if !isTerminalSuccessStatus(status) {
+		if err := d.updateNotificationStatus(ctx, notificationID, "sent", ""); err != nil {
+			d.logger.ErrorContext(
+				ctx,
+				"failed to update in_app notification status to sent",
+				"notification_id", notificationID,
+				"error", err,
+			)
+		}
+	}
+
+	d.logger.InfoContext(
+		ctx,
+		"in_app notification delivered",
+		"notification_id", notificationID,
+		"inbox_item_id", itemID,
+		"event_id", msg.ID,
+		"tenant_id", msg.TenantID,
+		"user_id", internalUserID,
+	)
+
+	return nil
+}
+
+func (d *Dispatcher) resolveEmailTemplates(
 	ctx context.Context,
 	msg queue.Message,
 	eventType string,
@@ -247,17 +512,7 @@ func (d *Dispatcher) resolveTemplates(
 
 	if err == nil {
 		if resolved.Subject != "" || resolved.HTML != "" || resolved.Text != "" {
-			d.logger.DebugContext(
-				ctx,
-				"resolved database template",
-				"tenant_id", msg.TenantID,
-				"event_type", eventType,
-				"template_id", resolved.TemplateID,
-				"version_id", resolved.VersionID,
-			)
-
 			templateID := resolved.TemplateID
-
 			return resolved.Subject, resolved.HTML, resolved.Text, &templateID
 		}
 	}
@@ -265,7 +520,7 @@ func (d *Dispatcher) resolveTemplates(
 	if err != nil && !errors.Is(err, template.ErrTemplateNotFound) {
 		d.logger.ErrorContext(
 			ctx,
-			"template resolution failed; falling back to default template",
+			"email template resolution failed; falling back to default template",
 			"tenant_id", msg.TenantID,
 			"event_type", eventType,
 			"error", err,
@@ -279,14 +534,9 @@ func (d *Dispatcher) resolveTemplates(
 
 func (d *Dispatcher) createOrGetNotification(
 	ctx context.Context,
-	msg queue.Message,
-	toAddress string,
-	idempotencyKey string,
-	templateID *string,
-	rendered template.RenderOutput,
-	data map[string]any,
+	params createNotificationParams,
 ) (string, string, error) {
-	payload, err := json.Marshal(data)
+	payload, err := json.Marshal(params.Payload)
 	if err != nil {
 		return "", "", err
 	}
@@ -304,6 +554,7 @@ func (d *Dispatcher) createOrGetNotification(
 			channel,
 			category,
 			status,
+			recipient_user_id,
 			to_address,
 			subject,
 			body,
@@ -314,26 +565,29 @@ func (d *Dispatcher) createOrGetNotification(
 			$1::uuid,
 			$2::uuid,
 			$3::uuid,
-			'email',
+			$4,
 			'transactional',
 			'queued',
-			$4,
-			$5,
+			$5::uuid,
 			$6,
 			$7,
-			$8
+			$8,
+			$9,
+			$10
 		)
 		ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
 		RETURNING id::text, status
 		`,
-		msg.TenantID,
-		msg.ID,
-		templateID,
-		toAddress,
-		rendered.Subject,
-		rendered.Text,
+		params.Msg.TenantID,
+		params.Msg.ID,
+		params.TemplateID,
+		params.Channel,
+		params.RecipientUserID,
+		params.ToAddress,
+		params.Subject,
+		params.Body,
 		payload,
-		idempotencyKey,
+		params.IdempotencyKey,
 	).Scan(&notificationID, &status)
 
 	if err == nil {
@@ -354,8 +608,8 @@ func (d *Dispatcher) createOrGetNotification(
 		WHERE tenant_id = $1::uuid
 		  AND idempotency_key = $2
 		`,
-		msg.TenantID,
-		idempotencyKey,
+		params.Msg.TenantID,
+		params.IdempotencyKey,
 	).Scan(&notificationID, &status)
 
 	if err != nil {
@@ -370,16 +624,16 @@ func (d *Dispatcher) recordDeliveryAttempt(
 	notificationID string,
 	status string,
 	attempt int,
-	req provider.Request,
-	result provider.Result,
+	request any,
+	response any,
 	errText string,
 ) error {
-	requestJSON, err := json.Marshal(req)
+	requestJSON, err := json.Marshal(request)
 	if err != nil {
 		return err
 	}
 
-	responseJSON, err := json.Marshal(result)
+	responseJSON, err := json.Marshal(response)
 	if err != nil {
 		return err
 	}
@@ -448,34 +702,6 @@ func (d *Dispatcher) updateNotificationStatus(
 	return err
 }
 
-func notificationKey(
-	eventID string,
-	channel string,
-	toAddress string,
-) string {
-	normalized := strings.ToLower(strings.TrimSpace(toAddress))
-
-	raw := fmt.Sprintf(
-		"%s:%s:%s",
-		eventID,
-		channel,
-		normalized,
-	)
-
-	sum := sha256.Sum256([]byte(raw))
-
-	return hex.EncodeToString(sum[:])
-}
-
-func isTerminalSuccessStatus(status string) bool {
-	switch status {
-	case "sent", "delivered", "opened", "clicked":
-		return true
-	default:
-		return false
-	}
-}
-
 func (d *Dispatcher) nextAttempt(
 	ctx context.Context,
 	notificationID string,
@@ -497,6 +723,91 @@ func (d *Dispatcher) nextAttempt(
 	}
 
 	return attempt, nil
+}
+
+func notificationKey(
+	eventID string,
+	channel string,
+	recipient string,
+) string {
+	normalized := strings.ToLower(strings.TrimSpace(recipient))
+
+	raw := fmt.Sprintf(
+		"%s:%s:%s",
+		eventID,
+		channel,
+		normalized,
+	)
+
+	sum := sha256.Sum256([]byte(raw))
+
+	return hex.EncodeToString(sum[:])
+}
+
+func inboxKey(
+	eventID string,
+	internalUserID string,
+) string {
+	raw := fmt.Sprintf(
+		"%s:in_app:%s",
+		eventID,
+		internalUserID,
+	)
+
+	sum := sha256.Sum256([]byte(raw))
+
+	return hex.EncodeToString(sum[:])
+}
+
+func parseChannels(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return []string{"email", "in_app"}
+	}
+
+	parts := strings.Split(raw, ",")
+	seen := map[string]bool{}
+	channels := make([]string, 0)
+
+	for _, part := range parts {
+		channel := strings.TrimSpace(part)
+
+		if channel == "" {
+			continue
+		}
+
+		if !isValidChannel(channel) {
+			continue
+		}
+
+		if !seen[channel] {
+			seen[channel] = true
+			channels = append(channels, channel)
+		}
+	}
+
+	if len(channels) == 0 {
+		return []string{"email", "in_app"}
+	}
+
+	return channels
+}
+
+func isValidChannel(channel string) bool {
+	switch channel {
+	case "email", "in_app", "sms", "push", "webhook":
+		return true
+	default:
+		return false
+	}
+}
+
+func isTerminalSuccessStatus(status string) bool {
+	switch status {
+	case "sent", "delivered", "opened", "clicked":
+		return true
+	default:
+		return false
+	}
 }
 
 func templatesForEvent(eventType string) (string, string, string) {

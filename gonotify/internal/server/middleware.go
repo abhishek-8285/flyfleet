@@ -11,6 +11,7 @@ import (
 
 	"github.com/gonotify/gonotify/internal/auth"
 	"github.com/gonotify/gonotify/internal/tenant"
+	"github.com/gonotify/gonotify/internal/user"
 )
 
 func APIKeyAuth(
@@ -128,6 +129,57 @@ func RequireScope(scope string) func(http.Handler) http.Handler {
 			}
 
 			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func UserAuth(
+	jwtSecret string,
+	logger *slog.Logger,
+) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			authHeader := r.Header.Get("Authorization")
+			var rawToken string
+			var err error
+			if authHeader != "" {
+				rawToken, err = auth.ParseBearer(authHeader)
+			} else if qToken := r.URL.Query().Get("token"); qToken != "" {
+				rawToken = qToken
+			} else {
+				err = errors.New("missing authorization token")
+			}
+			if err != nil {
+				WriteError(
+					w,
+					http.StatusUnauthorized,
+					"unauthorized",
+					"missing or invalid authorization token",
+				)
+				return
+			}
+
+			claims, err := auth.ParseUserToken(jwtSecret, rawToken)
+			if err != nil {
+				WriteError(
+					w,
+					http.StatusUnauthorized,
+					"unauthorized",
+					"invalid user token",
+				)
+				return
+			}
+
+			authenticatedUser := user.AuthenticatedUser{
+				ID:             claims.Subject,
+				TenantID:       claims.TenantID,
+				ExternalUserID: claims.ExternalUserID,
+			}
+
+			ctx := user.WithAuthenticatedUser(r.Context(), authenticatedUser)
+			ctx = tenant.WithTenantID(ctx, claims.TenantID)
+
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }

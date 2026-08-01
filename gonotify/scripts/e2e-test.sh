@@ -9,7 +9,7 @@ echo "========================================="
 echo "  GoNotify E2E Validation Suite"
 echo "========================================="
 
-echo "[1/8] Environment & Health Check"
+echo "[1/10] Environment & Health Check"
 HEALTH_STATUS=$(curl -s -L "$API_BASE_URL/healthz" | jq -r .status || true)
 if [ "$HEALTH_STATUS" = "ok" ]; then
   echo "  ✓ API healthz OK"
@@ -18,7 +18,7 @@ else
   exit 1
 fi
 
-echo "[2/8] Authentication & Scope Enforcement"
+echo "[2/10] Authentication & Scope Enforcement"
 UNAUTH_CODE=$(curl -s -L -o /dev/null -w "%{http_code}" -X POST "$API_BASE_URL/v1/events" \
   -H 'Content-Type: application/json' \
   -d '{"event":"order.created","user_id":"123"}')
@@ -42,7 +42,7 @@ else
   exit 1
 fi
 
-echo "[3/8] Event Ingestion & Idempotency"
+echo "[3/10] Event Ingestion & Idempotency"
 IDEM_KEY="e2e-suite-$(date +%s)"
 EVENT_RESP_1=$(curl -s -L -X POST "$API_BASE_URL/v1/events" \
   -H "Authorization: Bearer $API_KEY" \
@@ -94,7 +94,7 @@ else
   exit 1
 fi
 
-echo "[4/8] Phase 1D: Admin Template API"
+echo "[4/10] Phase 1D: Admin Template API"
 ADMIN_KEY="admin.test.$(date +%s)"
 CREATE_TMPL_RESP=$(curl -s -L -X POST "$API_BASE_URL/v1/admin/templates" \
   -H "Authorization: Bearer $API_KEY" \
@@ -142,7 +142,7 @@ else
   exit 1
 fi
 
-echo "[5/8] Custom Admin Template Rendering Test"
+echo "[5/10] Custom Admin Template Rendering Test"
 TRIGGER_IDEM="e2e-admin-trigger-$(date +%s)"
 TRIGGER_RESP=$(curl -s -L -X POST "$API_BASE_URL/v1/events" \
   -H "Authorization: Bearer $API_KEY" \
@@ -165,7 +165,7 @@ else
   exit 1
 fi
 
-echo "[6/8] Phase 1E: Provider Config API"
+echo "[6/10] Phase 1E: Provider Config API"
 PROVIDERS_RESP=$(curl -s -L -X GET "$API_BASE_URL/v1/admin/providers" \
   -H "Authorization: Bearer $API_KEY")
 
@@ -182,7 +182,7 @@ CREATE_CFG_RESP=$(curl -s -L -X POST "$API_BASE_URL/v1/admin/provider-configs" \
   -H 'Content-Type: application/json' \
   -d '{
         "provider_id": "'"$SMTP_PROVIDER_ID"'",
-        "name": "Local Mailpit SMTP",
+        "name": "Local Mailpit SMTP '"$(date +%s)"'",
         "settings": {
           "host": "localhost",
           "port": 1025,
@@ -220,7 +220,7 @@ else
   exit 1
 fi
 
-echo "[7/8] Observability & Prometheus Metrics"
+echo "[7/10] Observability & Prometheus Metrics"
 METRICS_BODY=$(curl -s -L "$API_BASE_URL/metrics")
 if echo "$METRICS_BODY" | grep -q "gonotify_events_ingested_total"; then
   echo "  ✓ E2E-METRICS-001: Prometheus metrics active and reporting events_ingested_total"
@@ -229,7 +229,251 @@ else
   exit 1
 fi
 
-echo "[8/8] Overall E2E Verification Summary"
+echo "[8/10] Phase 2A: User Auth & In-App Recipient Inbox API"
+
+# 1. Create In-App Template
+INAPP_KEY="inapp.order.created.$(date +%s)"
+INAPP_TMPL_RESP=$(curl -s -L -X POST "$API_BASE_URL/v1/admin/templates" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "key": "'"$INAPP_KEY"'",
+        "name": "Order Created In-App Template",
+        "channel": "in_app",
+        "category": "transactional"
+      }')
+
+INAPP_TMPL_ID=$(echo "$INAPP_TMPL_RESP" | jq -r .id)
+
+INAPP_VER_RESP=$(curl -s -L -X POST "$API_BASE_URL/v1/admin/templates/$INAPP_TMPL_ID/versions" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "subject": "Order {{.order_id}} created",
+        "text_body": "Your order {{.order_id}} for {{.amount}} {{.currency}} has been created.",
+        "html_body": "<p>Your order <strong>{{.order_id}}</strong> has been created.</p>"
+      }')
+
+INAPP_VER_ID=$(echo "$INAPP_VER_RESP" | jq -r .id)
+
+curl -s -L -X POST "$API_BASE_URL/v1/admin/templates/$INAPP_TMPL_ID/versions/$INAPP_VER_ID/publish" \
+  -H "Authorization: Bearer $API_KEY" > /dev/null
+
+# 2. Mint User Token
+EXTERNAL_USER_ID="usr_e2e_phase2a"
+USER_TOKEN_RESP=$(curl -s -L -X POST "$API_BASE_URL/v1/auth/user-token" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "external_user_id": "'"$EXTERNAL_USER_ID"'",
+        "email": "phase2a_user@example.com"
+      }')
+
+USER_TOKEN=$(echo "$USER_TOKEN_RESP" | jq -r '.token // empty' 2>/dev/null || true)
+if [ -n "$USER_TOKEN" ]; then
+  echo "  ✓ E2E-INBOX-001: Minted User JWT successfully"
+else
+  echo "  ✗ E2E-INBOX-001 FAILED: $USER_TOKEN_RESP"
+  exit 1
+fi
+
+# Invalid token check
+INVALID_TOKEN_CODE=$(curl -s -L -o /dev/null -w "%{http_code}" "$API_BASE_URL/v1/inbox" \
+  -H "Authorization: Bearer invalid_user_token")
+
+if [ "$INVALID_TOKEN_CODE" = "401" ]; then
+  echo "  ✓ E2E-INBOX-002: Invalid user token rejected with 401"
+else
+  echo "  ✗ E2E-INBOX-002 FAILED (status: $INVALID_TOKEN_CODE)"
+  exit 1
+fi
+
+# 3. Publish Event with in_app & email channels
+INAPP_EVENT_IDEM="e2e-inapp-$(date +%s)"
+INAPP_EVENT_RESP=$(curl -s -L -X POST "$API_BASE_URL/v1/events" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H 'Content-Type: application/json' \
+  -H "Idempotency-Key: $INAPP_EVENT_IDEM" \
+  -d '{
+        "event": "'"$INAPP_KEY"'",
+        "user_id": "'"$EXTERNAL_USER_ID"'",
+        "options": {
+          "channels": ["email", "in_app"]
+        },
+        "data": {
+          "email": "phase2a_user@example.com",
+          "order_id": "ORD-2A-99",
+          "amount": 4999,
+          "currency": "INR",
+          "action_url": "https://example.com/orders/ORD-2A-99"
+        }
+      }')
+
+INAPP_EVENT_STATUS=$(echo "$INAPP_EVENT_RESP" | jq -r .status)
+if [ "$INAPP_EVENT_STATUS" = "accepted" ]; then
+  echo "  ✓ E2E-INBOX-003: Multi-channel event (email + in_app) accepted"
+else
+  echo "  ✗ E2E-INBOX-003 FAILED: $INAPP_EVENT_RESP"
+  exit 1
+fi
+
+# Allow worker time to process outbox event into inbox item
+sleep 2
+
+# 4. Fetch Inbox
+INBOX_LIST_RESP=$(curl -s -L "$API_BASE_URL/v1/inbox" \
+  -H "Authorization: Bearer $USER_TOKEN")
+
+INBOX_ITEM_ID=$(echo "$INBOX_LIST_RESP" | jq -r '.items[0].id')
+INBOX_ITEM_TITLE=$(echo "$INBOX_LIST_RESP" | jq -r '.items[0].title')
+
+if [ -n "$INBOX_ITEM_ID" ] && [ "$INBOX_ITEM_ID" != "null" ]; then
+  echo "  ✓ E2E-INBOX-004: Inbox item retrieved successfully (ID: $INBOX_ITEM_ID, Title: '$INBOX_ITEM_TITLE')"
+else
+  echo "  ✗ E2E-INBOX-004 FAILED: $INBOX_LIST_RESP"
+  exit 1
+fi
+
+# 5. Mark Read
+READ_RESP=$(curl -s -L -X PATCH "$API_BASE_URL/v1/inbox/$INBOX_ITEM_ID/read" \
+  -H "Authorization: Bearer $USER_TOKEN")
+READ_STATUS=$(echo "$READ_RESP" | jq -r .status)
+
+if [ "$READ_STATUS" = "ok" ]; then
+  echo "  ✓ E2E-INBOX-005: Inbox item marked read"
+else
+  echo "  ✗ E2E-INBOX-005 FAILED: $READ_RESP"
+  exit 1
+fi
+
+# Verify unread query returns 0 items
+UNREAD_LIST_RESP=$(curl -s -L "$API_BASE_URL/v1/inbox?unread=true" \
+  -H "Authorization: Bearer $USER_TOKEN")
+UNREAD_COUNT=$(echo "$UNREAD_LIST_RESP" | jq -r '.items | length')
+
+if [ "$UNREAD_COUNT" = "0" ]; then
+  echo "  ✓ E2E-INBOX-006: Unread inbox query filtered correctly (count: 0)"
+else
+  echo "  ✗ E2E-INBOX-006 FAILED: $UNREAD_LIST_RESP"
+  exit 1
+fi
+
+# 6. Pin & Archive
+PIN_RESP=$(curl -s -L -X POST "$API_BASE_URL/v1/inbox/$INBOX_ITEM_ID/pin" \
+  -H "Authorization: Bearer $USER_TOKEN")
+ARCHIVE_RESP=$(curl -s -L -X POST "$API_BASE_URL/v1/inbox/$INBOX_ITEM_ID/archive" \
+  -H "Authorization: Bearer $USER_TOKEN")
+
+PIN_STATUS=$(echo "$PIN_RESP" | jq -r .status)
+ARCHIVE_STATUS=$(echo "$ARCHIVE_RESP" | jq -r .status)
+
+if [ "$PIN_STATUS" = "ok" ] && [ "$ARCHIVE_STATUS" = "ok" ]; then
+  echo "  ✓ E2E-INBOX-007: Inbox item pinned and archived successfully"
+else
+  echo "  ✗ E2E-INBOX-007 FAILED (pin: $PIN_RESP, archive: $ARCHIVE_RESP)"
+  exit 1
+fi
+
+echo "[9/10] Phase 2B: Realtime SSE Stream Test"
+# 1. Reject missing / invalid token
+UNAUTH_SSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$API_BASE_URL/v1/realtime/stream")
+if [ "$UNAUTH_SSE_CODE" = "401" ]; then
+  echo "  ✓ E2E-SSE-001: SSE endpoint rejects unauthenticated request with 401"
+else
+  echo "  ✗ E2E-SSE-001 FAILED: Expected 401, got $UNAUTH_SSE_CODE"
+  exit 1
+fi
+
+# 2. Start SSE listener
+rm -f /tmp/gonotify-e2e-sse.log
+curl -N -s "$API_BASE_URL/v1/realtime/stream" \
+  -H "Authorization: Bearer $USER_TOKEN" \
+  > /tmp/gonotify-e2e-sse.log 2>&1 &
+SSE_PID=$!
+sleep 1
+
+if grep -q "event: connected" /tmp/gonotify-e2e-sse.log; then
+  echo "  ✓ E2E-SSE-002: SSE stream connected successfully"
+else
+  echo "  ✗ E2E-SSE-002 FAILED: Connected event not received"
+  kill $SSE_PID 2>/dev/null || true
+  cat /tmp/gonotify-e2e-sse.log
+  exit 1
+fi
+
+# 3. Trigger new event to verify inbox.item.created
+TIMESTAMP=$(date +%s)
+curl -s -X POST "$API_BASE_URL/v1/events" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: sse-test-event-$TIMESTAMP" \
+  -d "{
+        \"event\": \"$INAPP_KEY\",
+        \"user_id\": \"$EXTERNAL_USER_ID\",
+        \"options\": {
+          \"channels\": [\"in_app\"]
+        },
+        \"data\": {
+          \"order_id\": \"ORD-SSE-$TIMESTAMP\",
+          \"amount\": 999
+        }
+      }" > /dev/null
+sleep 2
+
+if grep -q "event: inbox.item.created" /tmp/gonotify-e2e-sse.log; then
+  echo "  ✓ E2E-SSE-003: SSE stream received inbox.item.created"
+else
+  echo "  ✗ E2E-SSE-003 FAILED: inbox.item.created event not received"
+  kill $SSE_PID 2>/dev/null || true
+  cat /tmp/gonotify-e2e-sse.log
+  exit 1
+fi
+
+# 4. State updates: Mark Read
+curl -s -L -X PATCH "$API_BASE_URL/v1/inbox/$INBOX_ITEM_ID/read" \
+  -H "Authorization: Bearer $USER_TOKEN" > /dev/null
+sleep 1
+
+if grep -q "event: inbox.item.read" /tmp/gonotify-e2e-sse.log; then
+  echo "  ✓ E2E-SSE-004: SSE stream received inbox.item.read"
+else
+  echo "  ✗ E2E-SSE-004 FAILED: inbox.item.read event not received"
+  kill $SSE_PID 2>/dev/null || true
+  cat /tmp/gonotify-e2e-sse.log
+  exit 1
+fi
+
+# 5. State updates: Archive
+curl -s -L -X POST "$API_BASE_URL/v1/inbox/$INBOX_ITEM_ID/archive" \
+  -H "Authorization: Bearer $USER_TOKEN" > /dev/null
+sleep 1
+
+if grep -q "event: inbox.item.archived" /tmp/gonotify-e2e-sse.log; then
+  echo "  ✓ E2E-SSE-005: SSE stream received inbox.item.archived"
+else
+  echo "  ✗ E2E-SSE-005 FAILED: inbox.item.archived event not received"
+  kill $SSE_PID 2>/dev/null || true
+  cat /tmp/gonotify-e2e-sse.log
+  exit 1
+fi
+
+# 6. State updates: Pin
+curl -s -L -X POST "$API_BASE_URL/v1/inbox/$INBOX_ITEM_ID/pin" \
+  -H "Authorization: Bearer $USER_TOKEN" > /dev/null
+sleep 1
+
+if grep -q "event: inbox.item.pinned" /tmp/gonotify-e2e-sse.log; then
+  echo "  ✓ E2E-SSE-006: SSE stream received inbox.item.pinned"
+else
+  echo "  ✗ E2E-SSE-006 FAILED: inbox.item.pinned event not received"
+  kill $SSE_PID 2>/dev/null || true
+  cat /tmp/gonotify-e2e-sse.log
+  exit 1
+fi
+
+kill $SSE_PID 2>/dev/null || true
+
+echo "[10/10] Overall E2E Verification Summary"
 echo "========================================="
 echo "  ALL E2E EXPECTATION CRITERIA PASSED!"
 echo "========================================="

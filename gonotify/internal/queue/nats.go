@@ -148,6 +148,34 @@ func (b *NATSBus) Subscribe(subject string, queueGroup string, handler Handler) 
 	return nil
 }
 
+func (b *NATSBus) PublishTransient(subject string, data []byte) error {
+	if b.nc == nil {
+		return errors.New("nats connection is not initialized")
+	}
+
+	return b.nc.Publish(subject, data)
+}
+
+func (b *NATSBus) SubscribeTransient(
+	subject string,
+	handler func(data []byte),
+) (func(), error) {
+	if b.nc == nil {
+		return nil, errors.New("nats connection is not initialized")
+	}
+
+	sub, err := b.nc.Subscribe(subject, func(m *nats.Msg) {
+		handler(m.Data)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return func() {
+		_ = sub.Unsubscribe()
+	}, nil
+}
+
 func (b *NATSBus) Close() error {
 	b.mu.Lock()
 	defer b.mu.Unlock()

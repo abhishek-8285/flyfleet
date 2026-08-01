@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -20,6 +21,7 @@ type PublishRequest struct {
 	UserID         string
 	IdempotencyKey string
 	Data           map[string]any
+	Channels       []string
 	Metadata       map[string]any
 }
 
@@ -135,6 +137,10 @@ func (s *Service) Publish(ctx context.Context, req PublishRequest) (PublishRespo
 			"event_type": req.EventType,
 			"user_id":    req.UserID,
 		},
+	}
+
+	if len(req.Channels) > 0 {
+		queueMessage.Metadata["channels"] = strings.Join(req.Channels, ",")
 	}
 
 	queueMessageBytes, err := json.Marshal(queueMessage)
