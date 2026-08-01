@@ -1,7 +1,7 @@
 include .env
 export
 
-DATABASE_URL ?= postgres://gonotify:gonotify@localhost:5432/gonotify?sslmode=disable
+DATABASE_URL ?= postgres://gonotify:gonotify@localhost:5433/gonotify?sslmode=disable
 
 .PHONY: help
 help:
@@ -15,6 +15,7 @@ help:
 	@echo "  make api             Run API server"
 	@echo "  make worker          Run worker"
 	@echo "  make test            Run tests"
+	@echo "  make e2e             Run E2E validation test suite"
 	@echo "  make lint            Run linter"
 	@echo "  make sqlc            Generate sqlc code"
 
@@ -32,27 +33,50 @@ logs:
 
 .PHONY: migrate-up
 migrate-up:
-	migrate -path migrations -database "$(DATABASE_URL)" up
+	@if command -v migrate >/dev/null 2>&1; then \
+		migrate -path migrations -database "$(DATABASE_URL)" up; \
+	elif [ -f "$$(go env GOPATH)/bin/migrate" ]; then \
+		$$(go env GOPATH)/bin/migrate -path migrations -database "$(DATABASE_URL)" up; \
+	else \
+		docker run --rm -v $$(pwd)/migrations:/migrations --network host migrate/migrate -path=/migrations/ -database "$(DATABASE_URL)" up; \
+	fi
 
 .PHONY: migrate-down
 migrate-down:
-	migrate -path migrations -database "$(DATABASE_URL)" down 1
+	@if command -v migrate >/dev/null 2>&1; then \
+		migrate -path migrations -database "$(DATABASE_URL)" down 1; \
+	elif [ -f "$$(go env GOPATH)/bin/migrate" ]; then \
+		$$(go env GOPATH)/bin/migrate -path migrations -database "$(DATABASE_URL)" down 1; \
+	else \
+		docker run --rm -v $$(pwd)/migrations:/migrations --network host migrate/migrate -path=/migrations/ -database "$(DATABASE_URL)" down 1; \
+	fi
 
 .PHONY: migrate-create
 migrate-create:
-	migrate create -ext sql -dir migrations -seq $(name)
+	@if command -v migrate >/dev/null 2>&1; then \
+		migrate create -ext sql -dir migrations -seq $(name); \
+	elif [ -f "$$(go env GOPATH)/bin/migrate" ]; then \
+		$$(go env GOPATH)/bin/migrate create -ext sql -dir migrations -seq $(name); \
+	else \
+		docker run --rm -v $$(pwd)/migrations:/migrations migrate/migrate create -ext sql -dir /migrations -seq $(name); \
+	fi
 
 .PHONY: api
 api:
-	go run ./cmd/api
+	GOWORK=off go run ./cmd/api
 
 .PHONY: worker
 worker:
-	go run ./cmd/worker
+	GOWORK=off go run ./cmd/worker
 
 .PHONY: test
 test:
-	go test ./...
+	GOWORK=off go test ./...
+
+.PHONY: e2e
+e2e:
+	chmod +x scripts/e2e-test.sh
+	./scripts/e2e-test.sh
 
 .PHONY: lint
 lint:

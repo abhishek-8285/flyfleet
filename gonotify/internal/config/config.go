@@ -1,6 +1,9 @@
 package config
 
-import "os"
+import (
+	"os"
+	"strconv"
+)
 
 type Config struct {
 	AppEnv   string
@@ -16,12 +19,20 @@ type Config struct {
 
 	NATSURL string
 
-	StorageDriver   string
-	StorageBucket   string
-	StorageEndpoint string
+	StorageDriver    string
+	StorageBucket    string
+	StorageEndpoint  string
 	StorageAccessKey string
 	StorageSecretKey string
-	StorageUseSSL   bool
+	StorageUseSSL    bool
+
+	SMTPHost      string
+	SMTPPort      int
+	SMTPUsername  string
+	SMTPPassword  string
+	SMTPFromEmail string
+	SMTPFromName  string
+	SMTPUseTLS    bool
 }
 
 func Load() Config {
@@ -42,12 +53,20 @@ func Load() Config {
 
 		NATSURL: getEnv("NATS_URL", "nats://localhost:4222"),
 
-		StorageDriver:   getEnv("STORAGE_DRIVER", "minio"),
-		StorageBucket:   getEnv("STORAGE_BUCKET", "gonotify"),
-		StorageEndpoint: getEnv("STORAGE_ENDPOINT", "localhost:9000"),
+		StorageDriver:    getEnv("STORAGE_DRIVER", "minio"),
+		StorageBucket:    getEnv("STORAGE_BUCKET", "gonotify"),
+		StorageEndpoint:  getEnv("STORAGE_ENDPOINT", "localhost:9000"),
 		StorageAccessKey: getEnv("STORAGE_ACCESS_KEY", "gonotify"),
 		StorageSecretKey: getEnv("STORAGE_SECRET_KEY", "gonotify123"),
-		StorageUseSSL:   getEnv("STORAGE_USE_SSL", "false") == "true",
+		StorageUseSSL:    getEnvBool("STORAGE_USE_SSL", false),
+
+		SMTPHost:      getEnv("SMTP_HOST", "localhost"),
+		SMTPPort:      getEnvInt("SMTP_PORT", 1025),
+		SMTPUsername:  getEnv("SMTP_USERNAME", ""),
+		SMTPPassword:  getEnv("SMTP_PASSWORD", ""),
+		SMTPFromEmail: getEnv("SMTP_FROM_EMAIL", "notifications@gonotify.local"),
+		SMTPFromName:  getEnv("SMTP_FROM_NAME", "GoNotify"),
+		SMTPUseTLS:    getEnvBool("SMTP_USE_TLS", false),
 	}
 }
 
@@ -56,4 +75,32 @@ func getEnv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func getEnvInt(key string, fallback int) int {
+	value, ok := os.LookupEnv(key)
+	if !ok || value == "" {
+		return fallback
+	}
+
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return fallback
+	}
+
+	return parsed
+}
+
+func getEnvBool(key string, fallback bool) bool {
+	value, ok := os.LookupEnv(key)
+	if !ok || value == "" {
+		return fallback
+	}
+
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return fallback
+	}
+
+	return parsed
 }

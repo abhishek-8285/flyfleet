@@ -10,9 +10,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/gonotify/gonotify/internal/config"
+	"github.com/gonotify/gonotify/internal/delivery"
 	"github.com/gonotify/gonotify/internal/events"
 	"github.com/gonotify/gonotify/internal/observability"
+	smtpprovider "github.com/gonotify/gonotify/internal/provider/smtp"
 	"github.com/gonotify/gonotify/internal/queue"
+	"github.com/gonotify/gonotify/internal/template"
 )
 
 func main() {
@@ -61,29 +64,29 @@ func main() {
 		}
 	}()
 
+	emailProvider := smtpprovider.New(smtpprovider.Config{
+		Host:      cfg.SMTPHost,
+		Port:      cfg.SMTPPort,
+		Username:  cfg.SMTPUsername,
+		Password:  cfg.SMTPPassword,
+		FromEmail: cfg.SMTPFromEmail,
+		FromName:  cfg.SMTPFromName,
+		UseTLS:    cfg.SMTPUseTLS,
+	})
+
+	templateRepository := template.NewRepository(db)
+
+	dispatcher := delivery.NewDispatcher(
+		db,
+		emailProvider,
+		templateRepository,
+		logger,
+	)
+
 	err = bus.Subscribe(
 		"gn.events.received",
-		"workflow-worker",
-		func(ctx context.Context, msg queue.Message) error {
-			logger.InfoContext(
-				ctx,
-				"received event",
-				"message_id", msg.ID,
-				"tenant_id", msg.TenantID,
-				"type", msg.Type,
-				"event_type", msg.Metadata["event_type"],
-				"user_id", msg.Metadata["user_id"],
-				"payload", string(msg.Payload),
-			)
-
-			// Phase 1:
-			// - match workflow
-			// - create notification
-			// - render template
-			// - dispatch to provider
-
-			return nil
-		},
+		"dispatch-worker",
+		dispatcher.HandleEvent,
 	)
 	if err != nil {
 		logger.Error("failed to subscribe to events", "error", err)

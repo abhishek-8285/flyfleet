@@ -18,7 +18,7 @@ help:  ## Show this help message
 	@echo 'Usage: make [target]'
 	@echo ''
 	@echo 'Targets:'
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(BLUE)%-30s$(RESET) %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(BLUE)%-30s$(RESET) %s\n", $$1, $$2}'
 	@echo ''
 
 dev: bootstrap ## Start development environment (same as bootstrap)
@@ -69,27 +69,27 @@ test: ## Run all tests (Go unit + integration, frontend tests)
 	@npm run test --workspaces --if-present
 .PHONY: test
 
-test:unit: ## Run Go unit tests only
+test-unit: ## Run Go unit tests only
 	go test ./... -short -count=1
-.PHONY: test:unit
+.PHONY: test-unit
 
-test:integration: ## Run integration tests (requires docker-compose up)
+test-integration: ## Run integration tests (requires docker-compose up)
 	go test ./... -tags=integration -count=1 -timeout=10m
-.PHONY: test:integration
+.PHONY: test-integration
 
-test:coverage: ## Generate test coverage report
+test-coverage: ## Generate test coverage report
 	go test ./... -coverprofile=coverage.out -covermode=atomic
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
-.PHONY: test:coverage
+.PHONY: test-coverage
 
-test:coverage:gate ## Run tests and enforce coverage threshold (default: 70%)
+test-coverage-gate: ## Run tests and enforce coverage threshold (default: 70%)
 	@echo "$(YELLOW)Running tests with coverage enforcement...$(RESET)"
 	@go test ./... -coverprofile=coverage.out -covermode=atomic
 	@bash scripts/check_coverage.sh
-.PHONY: test:coverage:gate
+.PHONY: test-coverage-gate
 
-coverage: test:coverage:gate ## Alias for test:coverage:gate
+coverage: test-coverage-gate ## Alias for test-coverage-gate
 .PHONY: coverage
 
 lint: ## Run all linters (Go staticcheck, golint, frontend eslint)
@@ -100,13 +100,13 @@ lint: ## Run all linters (Go staticcheck, golint, frontend eslint)
 	@npm run lint --workspaces --if-present
 .PHONY: lint
 
-lint:go: ## Run Go linters only
+lint-go: ## Run Go linters only
 	golangci-lint run ./...
-.PHONY: lint:go
+.PHONY: lint-go
 
-lint:js: ## Run JavaScript/TypeScript linters
+lint-js: ## Run JavaScript/TypeScript linters
 	npm run lint --workspaces --if-present
-.PHONY: lint:js
+.PHONY: lint-js
 
 build: ## Build all services and applications
 	@echo "$(YELLOW)Building Go services...$(RESET)"
@@ -156,9 +156,6 @@ tidy: ## Update Go dependencies and remove unused ones
 #=====================================================================
 # Governance & Quality Gates (existing targets)
 #=====================================================================
-
-bff-build:
-	cd services/microservices/web-bff && GOCACHE=/tmp/go-build-cache go build ./...
 
 bff-build:
 	cd services/microservices/web-bff && GOCACHE=/tmp/go-build-cache go build ./...
@@ -401,11 +398,6 @@ full-stack-logs: ## Show logs from all services
 	@docker-compose -f docker-compose.full.yml logs -f
 .PHONY: full-stack-logs
 
-full-stack-logs-[a-z]*: ## Show logs for specific service (e.g., make full-stack-logs-grafana)
-	@service=$(subst full-stack-logs-,,$@); \
-	docker-compose -f docker-compose.full.yml logs -f $$service
-.PHONY: full-stack-logs-[a-z]*
-
 full-stack-health: ## Check health of all services
 	@./infrastructure/health-check.sh
 .PHONY: full-stack-health
@@ -417,4 +409,3 @@ full-stack-status: ## Show status of all containers
 # Quick alias
 obs: full-stack-up ## Alias for full-stack-up
 .PHONY: obs
-

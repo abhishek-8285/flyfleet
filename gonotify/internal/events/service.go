@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/gonotify/gonotify/internal/observability"
 	"github.com/gonotify/gonotify/internal/queue"
 )
 
@@ -59,6 +60,8 @@ func (s *Service) Publish(ctx context.Context, req PublishRequest) (PublishRespo
 	if req.IdempotencyKey != "" {
 		existing, err := s.findByIdempotencyKey(ctx, req.TenantID, req.IdempotencyKey)
 		if err == nil {
+			observability.EventsIngested.WithLabelValues(req.TenantID, req.EventType, "deduplicated").Inc()
+
 			return PublishResponse{
 				EventID: existing.ID,
 				Status:  existing.Status,
@@ -162,6 +165,8 @@ func (s *Service) Publish(ctx context.Context, req PublishRequest) (PublishRespo
 	if err := tx.Commit(ctx); err != nil {
 		return PublishResponse{}, err
 	}
+
+	observability.EventsIngested.WithLabelValues(req.TenantID, req.EventType, "accepted").Inc()
 
 	s.logger.InfoContext(
 		ctx,

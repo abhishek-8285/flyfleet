@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,12 +16,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/gonotify/gonotify/internal/auth"
 	"github.com/gonotify/gonotify/internal/config"
 	"github.com/gonotify/gonotify/internal/events"
 	"github.com/gonotify/gonotify/internal/observability"
+	"github.com/gonotify/gonotify/internal/server"
+	"github.com/gonotify/gonotify/internal/template"
+	"github.com/gonotify/gonotify/internal/tenant"
 )
-
-const bootstrapTenantID = "00000000-0000-0000-0000-000000000001"
 
 type publishEventRequest struct {
 	Event  string         `json:"event"`
@@ -52,6 +55,8 @@ func main() {
 	}
 
 	eventService := events.NewService(db, logger)
+	templateRepo := template.NewRepository(db)
+	adminTemplateHandler := server.NewAdminTemplateHandler(templateRepo, logger)
 
 	r := chi.NewRouter()
 
@@ -61,10 +66,7 @@ func main() {
 	r.Use(middleware.Timeout(30 * time.Second))
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-
-		_ = json.NewEncoder(w).Encode(map[string]string{
+		server.WriteJSON(w, http.StatusOK, map[string]string{
 			"status": "ok",
 		})
 	})
@@ -72,50 +74,20 @@ func main() {
 	r.Handle("/metrics", promhttp.Handler())
 
 	r.Route("/v1", func(r chi.Router) {
-		r.Post("/events", func(w http.ResponseWriter, r *http.Request) {
-			var req publishEventRequest
+		r.Use(server.APIKeyAuth(db, logger))
 
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				writeError(w, http.StatusBadRequest, "invalid request body")
-				return
-			}
+		r.With(server.RequireScope("events:write")).Post("/events", handlePublishEvent(eventService, logger))
 
-			if req.Event == "" {
-				writeError(w, http.StatusBadRequest, "event is required")
-				return
-			}
-
-			idempotencyKey := r.Header.Get("Idempotency-Key")
-
-			resp, err := eventService.Publish(r.Context(), events.PublishRequest{
-				TenantID:       bootstrapTenantID,
-				EventType:      req.Event,
-				UserID:         req.UserID,
-				IdempotencyKey: idempotencyKey,
-				Data:           req.Data,
-				Metadata: map[string]any{
-					"source": "api",
-				},
-			})
-			if err != nil {
-				logger.ErrorContext(
-					r.Context(),
-					"failed to publish event",
-					"error", err,
-				)
-
-				writeError(w, http.StatusInternalServerError, "failed to publish event")
-				return
-			}
-
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusAccepted)
-
-			_ = json.NewEncoder(w).Encode(resp)
+		r.Route("/admin/templates", func(r chi.Router) {
+			r.With(server.RequireScope("templates:write")).Post("/", adminTemplateHandler.CreateTemplate)
+			r.With(server.RequireScope("templates:read")).Get("/", adminTemplateHandler.ListTemplates)
+			r.With(server.RequireScope("templates:read")).Get("/{template_id}", adminTemplateHandler.GetTemplate)
+			r.With(server.RequireScope("templates:write")).Post("/{template_id}/versions", adminTemplateHandler.CreateVersion)
+			r.With(server.RequireScope("templates:write")).Post("/{template_id}/versions/{version_id}/publish", adminTemplateHandler.PublishVersion)
 		})
 	})
 
-	server := &http.Server{
+	httpServer := &http.Server{
 		Addr:         cfg.HTTPAddr,
 		Handler:      r,
 		ReadTimeout:  10 * time.Second,
@@ -126,7 +98,7 @@ func main() {
 	go func() {
 		logger.Info("api server starting", "addr", cfg.HTTPAddr)
 
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error("api server failed", "error", err)
 			os.Exit(1)
 		}
@@ -137,19 +109,89 @@ func main() {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	if err := server.Shutdown(shutdownCtx); err != nil {
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		logger.Error("failed to shutdown api server", "error", err)
 	}
 }
 
-func writeError(w http.ResponseWriter, status int, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
+func handlePublishEvent(
+	eventService *events.Service,
+	logger *slog.Logger,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 
-	_ = json.NewEncoder(w).Encode(map[string]any{
-		"error": map[string]any{
-			"status":  status,
-			"message": message,
-		},
-	})
+		var req publishEventRequest
+
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			server.WriteError(
+				w,
+				http.StatusBadRequest,
+				"invalid_request",
+				"invalid request body",
+			)
+			return
+		}
+
+		if req.Event == "" {
+			server.WriteError(
+				w,
+				http.StatusBadRequest,
+				"validation_failed",
+				"event is required",
+			)
+			return
+		}
+
+		tenantID, ok := tenant.FromContext(r.Context())
+		if !ok {
+			server.WriteError(
+				w,
+				http.StatusInternalServerError,
+				"missing_tenant",
+				"tenant not found in request context",
+			)
+			return
+		}
+
+		apiKey, _ := auth.APIKeyFromContext(r.Context())
+
+		idempotencyKey := r.Header.Get("Idempotency-Key")
+
+		resp, err := eventService.Publish(
+			r.Context(),
+			events.PublishRequest{
+				TenantID:       tenantID,
+				EventType:      req.Event,
+				UserID:         req.UserID,
+				IdempotencyKey: idempotencyKey,
+				Data:           req.Data,
+				Metadata: map[string]any{
+					"source":      "api",
+					"api_key_id":  apiKey.ID,
+					"environment": apiKey.Environment,
+					"idempotency": idempotencyKey,
+				},
+			},
+		)
+		if err != nil {
+			logger.ErrorContext(
+				r.Context(),
+				"failed to publish event",
+				"tenant_id", tenantID,
+				"event_type", req.Event,
+				"error", err,
+			)
+
+			server.WriteError(
+				w,
+				http.StatusInternalServerError,
+				"publish_failed",
+				"failed to publish event",
+			)
+			return
+		}
+
+		server.WriteJSON(w, http.StatusAccepted, resp)
+	}
 }
