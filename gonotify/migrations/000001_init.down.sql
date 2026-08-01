@@ -1,0 +1,20 @@
+DROP TABLE IF EXISTS audit_logs;
+DROP TABLE IF EXISTS suppressions;
+DROP TABLE IF EXISTS quiet_hours;
+DROP TABLE IF EXISTS user_preferences;
+DROP TABLE IF EXISTS inbox_items;
+DROP TABLE IF EXISTS delivery_attempts;
+DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS provider_health;
+DROP TABLE IF EXISTS provider_configs;
+DROP TABLE IF EXISTS providers;
+DROP TABLE IF EXISTS template_localizations;
+DROP TABLE IF EXISTS template_versions;
+DROP TABLE IF EXISTS templates;
+DROP TABLE IF EXISTS outbox_messages;
+DROP TABLE IF EXISTS events;
+DROP TABLE IF EXISTS api_keys;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS tenants;
+
+DROP FUNCTION IF EXISTS set_updated_at();
