@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -21,9 +23,12 @@ import (
 	"github.com/gonotify/gonotify/internal/user"
 )
 
+var e164Regex = regexp.MustCompile(`^\+[1-9]\d{1,14}$`)
+
 type Dispatcher struct {
 	db        *pgxpool.Pool
 	email     provider.Provider
+	sms       provider.Provider
 	templates *template.Repository
 	users     *user.Repository
 	inbox     *inbox.Repository
@@ -34,6 +39,7 @@ type Dispatcher struct {
 func NewDispatcher(
 	db *pgxpool.Pool,
 	email provider.Provider,
+	sms provider.Provider,
 	templates *template.Repository,
 	users *user.Repository,
 	inboxRepo *inbox.Repository,
@@ -43,6 +49,7 @@ func NewDispatcher(
 	return &Dispatcher{
 		db:        db,
 		email:     email,
+		sms:       sms,
 		templates: templates,
 		users:     users,
 		inbox:     inboxRepo,
@@ -95,6 +102,21 @@ func (d *Dispatcher) HandleEvent(ctx context.Context, msg queue.Message) error {
 
 		case "in_app":
 			if err := d.handleInApp(ctx, msg, data, eventType, userID); err != nil {
+				errs = append(errs, err)
+			}
+
+		case "sms":
+			if d.sms == nil {
+				d.logger.DebugContext(
+					ctx,
+					"sms channel requested but no sms provider configured; skipping",
+					"event_id", msg.ID,
+					"tenant_id", msg.TenantID,
+				)
+				continue
+			}
+
+			if err := d.handleSMS(ctx, msg, data, eventType, userID); err != nil {
 				errs = append(errs, err)
 			}
 		}
@@ -853,3 +875,374 @@ Event {{.event}} was received.
 		return subject, html, text
 	}
 }
+
+func (d *Dispatcher) handleSMS(
+	ctx context.Context,
+	msg queue.Message,
+	data map[string]any,
+	eventType string,
+	externalUserID string,
+) error {
+	phone := normalizePhone(stringValue(data["phone"]))
+
+	if phone == "" {
+		d.logger.DebugContext(
+			ctx,
+			"event missing data.phone; skipping sms delivery",
+			"event_id", msg.ID,
+			"tenant_id", msg.TenantID,
+			"event_type", eventType,
+		)
+
+		return nil
+	}
+
+	if !e164Regex.MatchString(phone) {
+		d.logger.WarnContext(
+			ctx,
+			"invalid phone number; skipping sms delivery",
+			"event_id", msg.ID,
+			"tenant_id", msg.TenantID,
+			"event_type", eventType,
+			"phone", phone,
+		)
+
+		return nil
+	}
+
+	suppressed, err := d.isSuppressed(ctx, msg.TenantID, "sms", phone)
+	if err != nil {
+		return fmt.Errorf("sms suppression check failed: %w", err)
+	}
+
+	textTemplate := d.resolveSMSTemplate(ctx, msg, eventType)
+
+	rendered, err := template.Render(template.RenderInput{
+		Subject: "",
+		HTML:    "",
+		Text:    textTemplate,
+		Data:    data,
+	})
+	if err != nil {
+		return fmt.Errorf("sms template render failed: %w", err)
+	}
+
+	smsBody := strings.TrimSpace(rendered.Text)
+	if smsBody == "" {
+		d.logger.WarnContext(
+			ctx,
+			"sms template rendered empty body; skipping sms delivery",
+			"event_id", msg.ID,
+			"tenant_id", msg.TenantID,
+			"event_type", eventType,
+		)
+
+		return nil
+	}
+
+	var recipientUserID *string
+
+	if externalUserID != "" {
+		internalUserID, err := d.users.EnsureUser(
+			ctx,
+			msg.TenantID,
+			externalUserID,
+			stringValue(data["email"]),
+			phone,
+			data,
+		)
+		if err != nil {
+			return fmt.Errorf("ensure user for sms failed: %w", err)
+		}
+
+		recipientUserID = &internalUserID
+	}
+
+	idempotencyKey := notificationKey(msg.ID, "sms", phone)
+
+	notificationID, status, err := d.createOrGetNotification(
+		ctx,
+		createNotificationParams{
+			Msg:             msg,
+			Channel:         "sms",
+			ToAddress:       &phone,
+			RecipientUserID: recipientUserID,
+			TemplateID:      nil,
+			Subject:         "",
+			Body:            smsBody,
+			Payload:         data,
+			IdempotencyKey:  idempotencyKey,
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("create or get sms notification failed: %w", err)
+	}
+
+	if isTerminalStatus(status) {
+		d.logger.InfoContext(
+			ctx,
+			"sms notification already terminal; skipping duplicate delivery",
+			"notification_id", notificationID,
+			"event_id", msg.ID,
+			"tenant_id", msg.TenantID,
+			"status", status,
+		)
+
+		return nil
+	}
+
+	if suppressed {
+		if err := d.updateNotificationStatus(ctx, notificationID, "suppressed", ""); err != nil {
+			d.logger.ErrorContext(
+				ctx,
+				"failed to update sms notification status to suppressed",
+				"notification_id", notificationID,
+				"error", err,
+			)
+		}
+
+		if err := d.recordDeliveryAttempt(
+			ctx,
+			notificationID,
+			"suppressed",
+			1,
+			map[string]any{
+				"channel": "sms",
+				"phone":   phone,
+			},
+			map[string]any{
+				"reason": "suppressed_address",
+			},
+			"",
+		); err != nil {
+			d.logger.ErrorContext(
+				ctx,
+				"failed to record suppressed sms attempt",
+				"notification_id", notificationID,
+				"error", err,
+			)
+		}
+
+		d.logger.InfoContext(
+			ctx,
+			"sms suppressed",
+			"notification_id", notificationID,
+			"event_id", msg.ID,
+			"tenant_id", msg.TenantID,
+			"phone", phone,
+		)
+
+		return nil
+	}
+
+	attempt, err := d.nextAttempt(ctx, notificationID)
+	if err != nil {
+		attempt = 1
+	}
+
+	if err := d.updateNotificationStatus(ctx, notificationID, "sending", ""); err != nil {
+		d.logger.ErrorContext(
+			ctx,
+			"failed to update sms notification status to sending",
+			"notification_id", notificationID,
+			"error", err,
+		)
+	}
+
+	req := provider.Request{
+		TenantID:       msg.TenantID,
+		NotificationID: notificationID,
+		Channel:        provider.ChannelSMS,
+		To: provider.Recipient{
+			UserID: externalUserID,
+			Phone:  phone,
+		},
+		Text:     smsBody,
+		Data:     data,
+		Metadata: msg.Metadata,
+	}
+
+	result, sendErr := d.sms.Send(ctx, req)
+
+	attemptStatus := "success"
+	errText := ""
+
+	if sendErr != nil {
+		attemptStatus = "failed"
+		errText = sendErr.Error()
+	}
+
+	if err := d.recordDeliveryAttempt(
+		ctx,
+		notificationID,
+		attemptStatus,
+		attempt,
+		req,
+		result,
+		errText,
+	); err != nil {
+		d.logger.ErrorContext(
+			ctx,
+			"failed to record sms delivery attempt",
+			"notification_id", notificationID,
+			"error", err,
+		)
+	}
+
+	if sendErr != nil {
+		if err := d.updateNotificationStatus(ctx, notificationID, "failed", sendErr.Error()); err != nil {
+			d.logger.ErrorContext(
+				ctx,
+				"failed to update sms notification status to failed",
+				"notification_id", notificationID,
+				"error", err,
+			)
+		}
+
+		return fmt.Errorf("sms send failed: %w", sendErr)
+	}
+
+	if err := d.updateNotificationStatus(ctx, notificationID, "sent", ""); err != nil {
+		d.logger.ErrorContext(
+			ctx,
+			"failed to update sms notification status to sent",
+			"notification_id", notificationID,
+			"error", err,
+		)
+	}
+
+	d.logger.InfoContext(
+		ctx,
+		"sms notification sent",
+		"notification_id", notificationID,
+		"event_id", msg.ID,
+		"tenant_id", msg.TenantID,
+		"phone", phone,
+		"attempt", attempt,
+	)
+
+	return nil
+}
+
+func (d *Dispatcher) isSuppressed(
+	ctx context.Context,
+	tenantID string,
+	channel string,
+	address string,
+) (bool, error) {
+	var id string
+
+	err := d.db.QueryRow(
+		ctx,
+		`
+		SELECT id::text
+		FROM suppressions
+		WHERE tenant_id = $1::uuid
+		  AND channel = $2
+		  AND address = $3
+		`,
+		tenantID,
+		channel,
+		address,
+	).Scan(&id)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (d *Dispatcher) resolveSMSTemplate(
+	ctx context.Context,
+	msg queue.Message,
+	eventType string,
+) string {
+	locale := "en"
+
+	resolved, err := d.templates.GetPublishedVersion(
+		ctx,
+		msg.TenantID,
+		eventType,
+		"sms",
+		locale,
+	)
+
+	if err == nil {
+		if strings.TrimSpace(resolved.Text) != "" {
+			return resolved.Text
+		}
+	}
+
+	if err != nil && !errors.Is(err, template.ErrTemplateNotFound) {
+		d.logger.ErrorContext(
+			ctx,
+			"sms template resolution failed; falling back to default sms template",
+			"tenant_id", msg.TenantID,
+			"event_type", eventType,
+			"error", err,
+		)
+	}
+
+	return smsTemplatesForEvent(eventType)
+}
+
+func normalizePhone(raw string) string {
+	phone := strings.TrimSpace(raw)
+
+	if phone == "" {
+		return ""
+	}
+
+	phone = strings.ReplaceAll(phone, " ", "")
+	phone = strings.ReplaceAll(phone, "-", "")
+	phone = strings.ReplaceAll(phone, "(", "")
+	phone = strings.ReplaceAll(phone, ")", "")
+	phone = strings.ReplaceAll(phone, ".", "")
+
+	return phone
+}
+
+func stringValue(value any) string {
+	switch v := value.(type) {
+	case string:
+		return v
+	case float64:
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	case json.Number:
+		return v.String()
+	case nil:
+		return ""
+	default:
+		return fmt.Sprintf("%v", v)
+	}
+}
+
+func isTerminalStatus(status string) bool {
+	if isTerminalSuccessStatus(status) {
+		return true
+	}
+
+	switch status {
+	case "suppressed", "canceled", "expired":
+		return true
+	default:
+		return false
+	}
+}
+
+func smsTemplatesForEvent(eventType string) string {
+	switch eventType {
+	case "order.created":
+		return "Your order {{.order_id}} has been created."
+	case "payment.failed":
+		return "Your payment for order {{.order_id}} failed. Please retry."
+	default:
+		return "Notification: {{.event}}"
+	}
+}
+

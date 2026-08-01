@@ -14,7 +14,10 @@ import (
 	"github.com/gonotify/gonotify/internal/events"
 	"github.com/gonotify/gonotify/internal/inbox"
 	"github.com/gonotify/gonotify/internal/observability"
+	"github.com/gonotify/gonotify/internal/provider"
+	"github.com/gonotify/gonotify/internal/provider/fakesms"
 	smtpprovider "github.com/gonotify/gonotify/internal/provider/smtp"
+	"github.com/gonotify/gonotify/internal/provider/twilio"
 	"github.com/gonotify/gonotify/internal/queue"
 	"github.com/gonotify/gonotify/internal/realtime"
 	"github.com/gonotify/gonotify/internal/template"
@@ -79,6 +82,19 @@ func main() {
 		UseTLS:    cfg.SMTPUseTLS,
 	})
 
+	var smsProvider provider.Provider
+
+	switch cfg.SMSProvider {
+	case "twilio":
+		smsProvider = twilio.New(twilio.Config{
+			AccountSID: cfg.TwilioAccountSID,
+			AuthToken:  cfg.TwilioAuthToken,
+			From:       cfg.TwilioFrom,
+		})
+	default:
+		smsProvider = fakesms.New(db)
+	}
+
 	templateRepository := template.NewRepository(db)
 	userRepository := user.NewRepository(db)
 	inboxRepository := inbox.NewRepository(db)
@@ -86,6 +102,7 @@ func main() {
 	dispatcher := delivery.NewDispatcher(
 		db,
 		emailProvider,
+		smsProvider,
 		templateRepository,
 		userRepository,
 		inboxRepository,

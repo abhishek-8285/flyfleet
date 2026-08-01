@@ -9,7 +9,7 @@ echo "========================================="
 echo "  GoNotify E2E Validation Suite"
 echo "========================================="
 
-echo "[1/10] Environment & Health Check"
+echo "[1/11] Environment & Health Check"
 HEALTH_STATUS=$(curl -s -L "$API_BASE_URL/healthz" | jq -r .status || true)
 if [ "$HEALTH_STATUS" = "ok" ]; then
   echo "  ✓ API healthz OK"
@@ -18,7 +18,7 @@ else
   exit 1
 fi
 
-echo "[2/10] Authentication & Scope Enforcement"
+echo "[2/11] Authentication & Scope Enforcement"
 UNAUTH_CODE=$(curl -s -L -o /dev/null -w "%{http_code}" -X POST "$API_BASE_URL/v1/events" \
   -H 'Content-Type: application/json' \
   -d '{"event":"order.created","user_id":"123"}')
@@ -42,7 +42,7 @@ else
   exit 1
 fi
 
-echo "[3/10] Event Ingestion & Idempotency"
+echo "[3/11] Event Ingestion & Idempotency"
 IDEM_KEY="e2e-suite-$(date +%s)"
 EVENT_RESP_1=$(curl -s -L -X POST "$API_BASE_URL/v1/events" \
   -H "Authorization: Bearer $API_KEY" \
@@ -94,7 +94,7 @@ else
   exit 1
 fi
 
-echo "[4/10] Phase 1D: Admin Template API"
+echo "[4/11] Phase 1D: Admin Template API"
 ADMIN_KEY="admin.test.$(date +%s)"
 CREATE_TMPL_RESP=$(curl -s -L -X POST "$API_BASE_URL/v1/admin/templates" \
   -H "Authorization: Bearer $API_KEY" \
@@ -142,7 +142,7 @@ else
   exit 1
 fi
 
-echo "[5/10] Custom Admin Template Rendering Test"
+echo "[5/11] Custom Admin Template Rendering Test"
 TRIGGER_IDEM="e2e-admin-trigger-$(date +%s)"
 TRIGGER_RESP=$(curl -s -L -X POST "$API_BASE_URL/v1/events" \
   -H "Authorization: Bearer $API_KEY" \
@@ -165,7 +165,7 @@ else
   exit 1
 fi
 
-echo "[6/10] Phase 1E: Provider Config API"
+echo "[6/11] Phase 1E: Provider Config API"
 PROVIDERS_RESP=$(curl -s -L -X GET "$API_BASE_URL/v1/admin/providers" \
   -H "Authorization: Bearer $API_KEY")
 
@@ -220,7 +220,7 @@ else
   exit 1
 fi
 
-echo "[7/10] Observability & Prometheus Metrics"
+echo "[7/11] Observability & Prometheus Metrics"
 METRICS_BODY=$(curl -s -L "$API_BASE_URL/metrics")
 if echo "$METRICS_BODY" | grep -q "gonotify_events_ingested_total"; then
   echo "  ✓ E2E-METRICS-001: Prometheus metrics active and reporting events_ingested_total"
@@ -229,7 +229,7 @@ else
   exit 1
 fi
 
-echo "[8/10] Phase 2A: User Auth & In-App Recipient Inbox API"
+echo "[8/11] Phase 2A: User Auth & In-App Recipient Inbox API"
 
 # 1. Create In-App Template
 INAPP_KEY="inapp.order.created.$(date +%s)"
@@ -260,7 +260,7 @@ curl -s -L -X POST "$API_BASE_URL/v1/admin/templates/$INAPP_TMPL_ID/versions/$IN
   -H "Authorization: Bearer $API_KEY" > /dev/null
 
 # 2. Mint User Token
-EXTERNAL_USER_ID="usr_e2e_phase2a"
+EXTERNAL_USER_ID="usr_e2e_phase2a_$(date +%s)"
 USER_TOKEN_RESP=$(curl -s -L -X POST "$API_BASE_URL/v1/auth/user-token" \
   -H "Authorization: Bearer $API_KEY" \
   -H 'Content-Type: application/json' \
@@ -374,7 +374,7 @@ else
   exit 1
 fi
 
-echo "[9/10] Phase 2B: Realtime SSE Stream Test"
+echo "[9/11] Phase 2B: Realtime SSE Stream Test"
 # 1. Reject missing / invalid token
 UNAUTH_SSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$API_BASE_URL/v1/realtime/stream")
 if [ "$UNAUTH_SSE_CODE" = "401" ]; then
@@ -473,7 +473,142 @@ fi
 
 kill $SSE_PID 2>/dev/null || true
 
-echo "[10/10] Overall E2E Verification Summary"
+echo "[10/11] Phase 2C: SMS Channel & Fake SMS Delivery Test"
+
+# 1. Create SMS Admin Template
+SMS_KEY="sms.order.created.$(date +%s)"
+SMS_TMPL_RESP=$(curl -s -L -X POST "$API_BASE_URL/v1/admin/templates" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "key": "'"$SMS_KEY"'",
+        "name": "SMS Order Created Template",
+        "channel": "sms",
+        "category": "transactional"
+      }')
+
+SMS_TMPL_ID=$(echo "$SMS_TMPL_RESP" | jq -r .id)
+
+SMS_VER_RESP=$(curl -s -L -X POST "$API_BASE_URL/v1/admin/templates/$SMS_TMPL_ID/versions" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "subject": "",
+        "html_body": "",
+        "text_body": "Your order {{.order_id}} has been created. Amount: {{.amount}} {{.currency}}"
+      }')
+
+SMS_VER_ID=$(echo "$SMS_VER_RESP" | jq -r .id)
+
+curl -s -L -X POST "$API_BASE_URL/v1/admin/templates/$SMS_TMPL_ID/versions/$SMS_VER_ID/publish" \
+  -H "Authorization: Bearer $API_KEY" > /dev/null
+
+# 2. Trigger SMS Event
+SMS_IDEM="e2e-sms-$(date +%s)"
+SMS_TEST_PHONE="+10000$(date +%s)"
+SMS_SUPP_PHONE="+10001$(date +%s)"
+
+SMS_EVENT_RESP=$(curl -s -L -X POST "$API_BASE_URL/v1/events" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H 'Content-Type: application/json' \
+  -H "Idempotency-Key: $SMS_IDEM" \
+  -d '{
+        "event": "'"$SMS_KEY"'",
+        "user_id": "usr_sms_test",
+        "options": {
+          "channels": ["sms"]
+        },
+        "data": {
+          "phone": "'"$SMS_TEST_PHONE"'",
+          "order_id": "SMS-001",
+          "amount": 4999,
+          "currency": "INR"
+        }
+      }')
+
+SMS_STATUS=$(echo "$SMS_EVENT_RESP" | jq -r .status)
+if [ "$SMS_STATUS" = "accepted" ]; then
+  echo "  ✓ E2E-SMS-001: SMS event accepted"
+else
+  echo "  ✗ E2E-SMS-001 FAILED: $SMS_EVENT_RESP"
+  exit 1
+fi
+
+sleep 2
+
+# 3. Verify Fake SMS Outbox DB record
+SMS_BODY=$(psql "$DB_URL" -t -A -c "SELECT body FROM fake_sms_outbox WHERE to_phone = '$SMS_TEST_PHONE' ORDER BY created_at DESC LIMIT 1;" 2>/dev/null || true)
+
+if echo "$SMS_BODY" | grep -q "Your order SMS-001 has been created. Amount: 4999 INR"; then
+  echo "  ✓ E2E-SMS-002: Fake SMS outbox received correctly rendered message"
+else
+  echo "  ✗ E2E-SMS-002 FAILED: SMS body mismatch: '$SMS_BODY'"
+  exit 1
+fi
+
+# 4. Duplicate Event Idempotency Check for SMS
+curl -s -L -X POST "$API_BASE_URL/v1/events" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H 'Content-Type: application/json' \
+  -H "Idempotency-Key: $SMS_IDEM" \
+  -d '{
+        "event": "'"$SMS_KEY"'",
+        "user_id": "usr_sms_test",
+        "options": {
+          "channels": ["sms"]
+        },
+        "data": {
+          "phone": "'"$SMS_TEST_PHONE"'",
+          "order_id": "SMS-001",
+          "amount": 4999,
+          "currency": "INR"
+        }
+      }' > /dev/null
+
+sleep 1
+
+SMS_COUNT=$(psql "$DB_URL" -t -A -c "SELECT count(*) FROM fake_sms_outbox WHERE to_phone = '$SMS_TEST_PHONE';" 2>/dev/null || true)
+if [ "$SMS_COUNT" = "1" ]; then
+  echo "  ✓ E2E-SMS-003: Idempotent duplicate event did not create duplicate SMS"
+else
+  echo "  ✗ E2E-SMS-003 FAILED: Count is $SMS_COUNT (expected 1)"
+  exit 1
+fi
+
+# 5. SMS Suppression Check
+psql "$DB_URL" -c "INSERT INTO suppressions (tenant_id, channel, address, reason) SELECT id, 'sms', '$SMS_SUPP_PHONE', 'manual_test' FROM tenants WHERE slug = 'default';" > /dev/null 2>&1
+
+SMS_SUPPRESSED_IDEM="e2e-sms-supp-$(date +%s)"
+curl -s -L -X POST "$API_BASE_URL/v1/events" \
+  -H "Authorization: Bearer $API_KEY" \
+  -H 'Content-Type: application/json' \
+  -H "Idempotency-Key: $SMS_SUPPRESSED_IDEM" \
+  -d '{
+        "event": "'"$SMS_KEY"'",
+        "user_id": "usr_sms_test",
+        "options": {
+          "channels": ["sms"]
+        },
+        "data": {
+          "phone": "'"$SMS_SUPP_PHONE"'",
+          "order_id": "SMS-SUPPRESSED-001"
+        }
+      }' > /dev/null
+
+sleep 2
+
+SUPP_STATUS=$(psql "$DB_URL" -t -A -c "SELECT status FROM notifications WHERE to_address = '$SMS_SUPP_PHONE' ORDER BY created_at DESC LIMIT 1;" 2>/dev/null || true)
+SUPP_OUTBOX_COUNT=$(psql "$DB_URL" -t -A -c "SELECT count(*) FROM fake_sms_outbox WHERE to_phone = '$SMS_SUPP_PHONE';" 2>/dev/null || true)
+
+if [ "$SUPP_STATUS" = "suppressed" ] && [ "$SUPP_OUTBOX_COUNT" = "0" ]; then
+  echo "  ✓ E2E-SMS-004: Suppressed phone number marked suppressed and excluded from SMS outbox"
+else
+  echo "  ✗ E2E-SMS-004 FAILED: status=$SUPP_STATUS outbox_count=$SUPP_OUTBOX_COUNT"
+  exit 1
+fi
+
+echo "[11/11] Overall E2E Verification Summary"
 echo "========================================="
 echo "  ALL E2E EXPECTATION CRITERIA PASSED!"
 echo "========================================="
+

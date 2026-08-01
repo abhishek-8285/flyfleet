@@ -37,6 +37,11 @@ type Config struct {
 
 	JWTSecret    string
 	UserTokenTTL time.Duration
+
+	SMSProvider      string
+	TwilioAccountSID string
+	TwilioAuthToken  string
+	TwilioFrom       string
 }
 
 func Load() Config {
@@ -74,6 +79,11 @@ func Load() Config {
 
 		JWTSecret:    getEnv("JWT_SECRET", "dev-secret-change-me"),
 		UserTokenTTL: getEnvDuration("USER_TOKEN_TTL", time.Hour),
+
+		SMSProvider:      getEnv("SMS_PROVIDER", "fake"),
+		TwilioAccountSID: getEnv("TWILIO_ACCOUNT_SID", ""),
+		TwilioAuthToken:  getEnv("TWILIO_AUTH_TOKEN", ""),
+		TwilioFrom:       getEnv("TWILIO_FROM", ""),
 	}
 }
 
