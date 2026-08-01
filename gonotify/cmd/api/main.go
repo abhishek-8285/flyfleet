@@ -20,6 +20,7 @@ import (
 	"github.com/gonotify/gonotify/internal/config"
 	"github.com/gonotify/gonotify/internal/events"
 	"github.com/gonotify/gonotify/internal/observability"
+	"github.com/gonotify/gonotify/internal/provider"
 	"github.com/gonotify/gonotify/internal/server"
 	"github.com/gonotify/gonotify/internal/template"
 	"github.com/gonotify/gonotify/internal/tenant"
@@ -57,6 +58,8 @@ func main() {
 	eventService := events.NewService(db, logger)
 	templateRepo := template.NewRepository(db)
 	adminTemplateHandler := server.NewAdminTemplateHandler(templateRepo, logger)
+	providerRepo := provider.NewRepository(db)
+	adminProviderHandler := server.NewAdminProviderHandler(providerRepo, logger)
 
 	r := chi.NewRouter()
 
@@ -84,6 +87,17 @@ func main() {
 			r.With(server.RequireScope("templates:read")).Get("/{template_id}", adminTemplateHandler.GetTemplate)
 			r.With(server.RequireScope("templates:write")).Post("/{template_id}/versions", adminTemplateHandler.CreateVersion)
 			r.With(server.RequireScope("templates:write")).Post("/{template_id}/versions/{version_id}/publish", adminTemplateHandler.PublishVersion)
+		})
+
+		r.Route("/admin/providers", func(r chi.Router) {
+			r.With(server.RequireScope("providers:read")).Get("/", adminProviderHandler.ListSystemProviders)
+		})
+
+		r.Route("/admin/provider-configs", func(r chi.Router) {
+			r.With(server.RequireScope("providers:write")).Post("/", adminProviderHandler.CreateConfig)
+			r.With(server.RequireScope("providers:read")).Get("/", adminProviderHandler.ListConfigs)
+			r.With(server.RequireScope("providers:write")).Post("/{configID}/enable", adminProviderHandler.EnableConfig)
+			r.With(server.RequireScope("providers:write")).Post("/{configID}/disable", adminProviderHandler.DisableConfig)
 		})
 	})
 
