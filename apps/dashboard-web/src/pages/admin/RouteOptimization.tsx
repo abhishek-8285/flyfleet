@@ -191,6 +191,32 @@ const MapBoundsController: React.FC<{ request: any }> = ({ request }) => {
   return null;
 };
 
+const ResizeHandler: React.FC = () => {
+  const map = useMap();
+  useEffect(() => {
+    const container = map.getContainer();
+    if (!container) return;
+
+    map.invalidateSize();
+
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+
+    resizeObserver.observe(container);
+
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 300);
+
+    return () => {
+      resizeObserver.disconnect();
+      clearTimeout(timer);
+    };
+  }, [map]);
+  return null;
+};
+
 const RouteOptimization: React.FC = () => {
   const [requests, setRequests] = useState<RouteRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<RouteRequest | null>(
@@ -656,6 +682,7 @@ const RouteOptimization: React.FC = () => {
                   style={{ height: "100%", width: "100%" }}
                   className="z-0"
                 >
+                  <ResizeHandler />
                   <TileLayer
                     attribution='&copy; Google Maps'
                     url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&gl=IN"

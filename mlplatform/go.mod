@@ -1,6 +1,6 @@
 module github.com/flyfleet/mlplatform
 
-go 1.23.0
+go 1.26
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.30.0
@@ -13,7 +13,7 @@ require (
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/rs/zerolog v1.33.0
 	github.com/segmentio/kafka-go v0.4.47
-	github.com/yalue/onnxruntime_go v1.13.0
+	github.com/yalue/onnxruntime_go v1.31.0
 	go.temporal.io/sdk v1.29.0
 	gopkg.in/yaml.v3 v3.0.1
 )

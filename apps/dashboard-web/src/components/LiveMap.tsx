@@ -9,6 +9,7 @@ import {
     Polyline,
     Popup,
     TileLayer,
+    useMap,
 } from "react-leaflet";
 import { useUIStrings } from "../hooks/useUIStrings";
 import { Trip, Vehicle } from "../types";
@@ -79,6 +80,32 @@ const VehicleMarker: React.FC<{
   );
 };
 
+const ResizeHandler: React.FC = () => {
+  const map = useMap();
+  useEffect(() => {
+    const container = map.getContainer();
+    if (!container) return;
+
+    map.invalidateSize();
+
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+
+    resizeObserver.observe(container);
+
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 300);
+
+    return () => {
+      resizeObserver.disconnect();
+      clearTimeout(timer);
+    };
+  }, [map]);
+  return null;
+};
+
 const LiveMap: React.FC<LiveMapProps> = ({
   trips = [],
   vehicles = [],
@@ -118,6 +145,7 @@ const LiveMap: React.FC<LiveMapProps> = ({
       }}
       className="shadow-lg border border-gray-200 dark:border-gray-700"
     >
+      <ResizeHandler />
       <TileLayer
         attribution='&copy; Google Maps'
         url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&gl=IN"

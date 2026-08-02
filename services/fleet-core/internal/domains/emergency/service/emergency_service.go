@@ -10,7 +10,8 @@ import (
 	"github.com/flyfleet/fleet-core/internal/domains/emergency"
 	"github.com/flyfleet/fleet-core/internal/domains/emergency/models"
 	"github.com/flyfleet/fleet-core/internal/domains/emergency/repository"
-	trackingRepo "github.com/flyfleet/fleet-core/internal/domains/tracking/repository"
+	trackingRepo "github.com/flyfleet/fleet-core/internal/tracking/repository"
+	gofrsUUID "github.com/gofrs/uuid/v5"
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
@@ -27,7 +28,7 @@ const (
 
 type EmergencyService struct {
 	repo           repository.EmergencyRepository
-	trackingRepo   trackingRepo.LiveCacheRepository
+	trackingRepo   *trackingRepo.LiveCacheRepository
 	nc             *nats.Conn
 	redis          *redis.Client
 	log            *zap.Logger
@@ -102,7 +103,7 @@ func (s *EmergencyService) CheckHealth(ctx context.Context) (map[string]string, 
 
 func NewEmergencyService(
 	repo repository.EmergencyRepository,
-	trackingRepo trackingRepo.LiveCacheRepository,
+	trackingRepo *trackingRepo.LiveCacheRepository,
 	nc *nats.Conn,
 	rdb *redis.Client,
 	log *zap.Logger,
@@ -300,11 +301,12 @@ func (s *EmergencyService) TriggerSOS(ctx context.Context, req models.CreateSOSR
 
 	// 4.5 Capture vehicle snapshot (best effort)
 	if s.trackingRepo != nil {
-		if liveLoc, err := s.trackingRepo.GetLiveLocation(ctx, vehicleID); err == nil && liveLoc != nil {
+		gofrsVID, _ := gofrsUUID.FromString(vehicleID.String())
+		if liveLoc, err := s.trackingRepo.GetLiveLocation(ctx, gofrsVID); err == nil && liveLoc != nil {
 			snapshot := &models.IncidentVehicleSnapshot{
 				IncidentID:   incident.ID,
 				Speed:        int(liveLoc.Speed),
-				Heading:      liveLoc.Heading,
+				Heading:      int(liveLoc.Heading),
 				EngineStatus: liveLoc.Ignition,
 				CreatedAt:    time.Now(),
 			}

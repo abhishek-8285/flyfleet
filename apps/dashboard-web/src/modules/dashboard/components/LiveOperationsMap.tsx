@@ -93,10 +93,28 @@ const createAlertIcon = () => L.divIcon({
 const ResizeHandler: React.FC = () => {
   const map = useMap();
   React.useEffect(() => {
+    const container = map.getContainer();
+    if (!container) return;
+
+    // Recalculate map size immediately on mount
+    map.invalidateSize();
+
+    // Use ResizeObserver to detect layout, sidebar, devtools, or flexbox container size changes
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+
+    resizeObserver.observe(container);
+
+    // Fallback timer for smooth CSS transitions (e.g. sidebar collapse animations)
     const timer = setTimeout(() => {
       map.invalidateSize();
-    }, 300); // Wait for sidebar transition
-    return () => clearTimeout(timer);
+    }, 300);
+
+    return () => {
+      resizeObserver.disconnect();
+      clearTimeout(timer);
+    };
   }, [map]);
   return null;
 };

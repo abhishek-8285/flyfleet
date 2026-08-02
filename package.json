@@ -62,7 +62,14 @@
     "packages/*"
   ],
   "dependencies": {
-    "framer-motion": "^12.34.0"
+    "axios": "^0.31.0",
+    "esbuild": "0.28.0",
+    "framer-motion": "^12.34.0",
+    "jodit": "^4.13.10",
+    "jodit-react": "^5.3.21",
+    "next": "^16.2.10",
+    "react-router-dom": "^7.11.0",
+    "vitest": "4.1.4"
   },
   "devDependencies": {
     "@changesets/cli": "^2.30.0",
@@ -70,12 +77,13 @@
     "@types/react": "^19.2.11",
     "@types/react-dom": "^19.2.3",
     "prettier": "^3.8.1",
-    "turbo": "^2.3.3",
+    "turbo": "^1.0.29",
     "typescript": "^5.0.4",
-    "vite": "^4.5.5"
+    "vite": "^8.0.8"
   },
   "overrides": {
     "lodash": "4.17.21",
-    "express": "4.18.2"
+    "express": "4.18.2",
+    "@vitejs/plugin-react": "^4.3.4"
   }
 }

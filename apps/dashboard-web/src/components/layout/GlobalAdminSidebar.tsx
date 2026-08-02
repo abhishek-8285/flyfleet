@@ -176,7 +176,7 @@ export const GlobalAdminSidebar: React.FC = () => {
         </ul>
       </nav>
 
-      {/* Quick Access Context Items (Support/Settings) */}
+      {/* Quick Access Context Items (Support/Settings)
       <div className="pt-2 border-t border-outline">
         <button className="w-full flex items-center px-6 py-3 text-on-surface-variant hover:bg-surface-container-high hover:text-white transition-colors">
           <span className="material-symbols-outlined mr-3 text-lg">help</span>
@@ -186,7 +186,7 @@ export const GlobalAdminSidebar: React.FC = () => {
           <span className="material-symbols-outlined mr-3 text-lg">settings</span>
           {!collapsed && <span className="text-sm font-medium">Settings</span>}
         </button>
-      </div>
+      </div> */}
 
       {/* Profile Footer */}
       <div className="p-4 border-t border-outline bg-surface-container-lowest/30">
