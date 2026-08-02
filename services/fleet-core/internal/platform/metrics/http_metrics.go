@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"time"
@@ -9,8 +10,6 @@ import (
 	"go.uber.org/zap"
 
 	sharedmetrics "github.com/fleet-platform/shared/pkg/metrics"
-
-	"github.com/flyfleet/fleet-core/internal/middleware" // for GetTraceID
 )
 
 // statusWriter captures response status code (local copy, as middleware.StatusWriter is unexported)
@@ -62,11 +61,26 @@ func HTTPMetricsMiddleware(logger *zap.Logger) func(http.Handler) http.Handler {
 					zap.String("pattern", routePattern),
 					zap.Duration("duration", duration),
 					zap.Int("status", status),
-					zap.String("trace_id", middleware.GetTraceID(r.Context())),
+					zap.String("trace_id", getTraceIDFromContext(r.Context())),
 				)
 			}
 		})
 	}
+}
+
+func getTraceIDFromContext(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	keys := []any{"trace_id", "request_id"}
+	for _, k := range keys {
+		if val := ctx.Value(k); val != nil {
+			if idStr, ok := val.(string); ok && idStr != "" {
+				return idStr
+			}
+		}
+	}
+	return ""
 }
 
 // getRoutePattern extracts the chi route pattern if available, otherwise returns the raw path

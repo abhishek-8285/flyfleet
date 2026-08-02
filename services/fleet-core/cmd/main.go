@@ -53,6 +53,7 @@ import (
 	dispatchWorker "github.com/flyfleet/fleet-core/internal/domains/dispatch/worker"
 	googleuuid "github.com/google/uuid"
 	"github.com/flyfleet/fleet-core/internal/middleware"
+	platformMiddleware "github.com/flyfleet/fleet-core/internal/platform/middleware"
 	th "github.com/flyfleet/fleet-core/internal/tracking/handlers"
 	tr "github.com/flyfleet/fleet-core/internal/tracking/repository"
 	ts "github.com/flyfleet/fleet-core/internal/tracking/service"
@@ -320,6 +321,9 @@ func main() {
 		MaxAge:           300,
 	}))
 
+	// Request ID / Trace ID assignment
+	r.Use(platformMiddleware.RequestID)
+
 	// Request logging
 	r.Use(requestLogger(logger))
 
@@ -554,13 +558,15 @@ func (t *pgTenantChecker) VehicleBelongsToOrg(ctx context.Context, tenantID, veh
 	return exists, err
 }
 
-// requestLogger is a simple chi middleware that logs each request.
+// requestLogger is a simple chi middleware that logs each request with trace_id.
 func requestLogger(logger *zap.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 			next.ServeHTTP(w, r)
+			traceID := platformMiddleware.GetRequestID(r.Context())
 			logger.Debug("request completed",
+				zap.String("trace_id", traceID),
 				zap.String("method", r.Method),
 				zap.String("path", r.URL.Path),
 				zap.Duration("elapsed", time.Since(start)),

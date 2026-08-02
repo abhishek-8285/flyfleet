@@ -90,7 +90,17 @@ func (j *JWKSAuthHandler) Handler(next http.Handler) http.Handler {
 		ctx = context.WithValue(ctx, ctxkeys.RoleKey, role)
 		ctx = context.WithValue(ctx, ctxkeys.RolesKey, claims.Roles)
 		ctx = context.WithValue(ctx, ctxkeys.PermissionMaskKey, uint64(claims.PermissionMask))
+		traceID, _ := ctx.Value("trace_id").(string)
+		if traceID == "" {
+			traceID, _ = ctx.Value("request_id").(string)
+		}
+		if traceID == "" {
+			if u, ok := ctxkeys.GetRequestID(ctx); ok {
+				traceID = u.String()
+			}
+		}
 		j.logger.Info("JWT Auth Context Set",
+			zap.String("trace_id", traceID),
 			zap.Uint64("permission_mask", uint64(claims.PermissionMask)),
 			zap.String("user_id", claims.UserID.String()),
 			zap.String("tenant_id", effectiveTenantID.String()))
