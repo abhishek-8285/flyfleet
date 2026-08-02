@@ -36,4 +36,54 @@ var (
 		},
 		[]string{"tenant_id", "channel", "status"},
 	)
+
+	RetriesScheduled = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "gonotify",
+			Subsystem: "notifications",
+			Name:      "retry_scheduled_total",
+			Help:      "Total number of notifications scheduled for retry",
+		},
+		[]string{"tenant_id", "channel"},
+	)
+
+	DeadLetterMoved = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "gonotify",
+			Subsystem: "notifications",
+			Name:      "dead_letter_total",
+			Help:      "Total number of notifications moved to dead-letter",
+		},
+		[]string{"tenant_id", "channel"},
+	)
+
+	DeadLetterPending = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "gonotify",
+			Subsystem: "notifications",
+			Name:      "dead_letter_pending",
+			Help:      "Current number of dead-letter notifications",
+		},
+		[]string{"tenant_id"},
+	)
+
+	RetryProcessed = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "gonotify",
+			Subsystem: "notifications",
+			Name:      "retry_processed_total",
+			Help:      "Total number of retry attempts processed by the retry worker",
+		},
+		[]string{"tenant_id", "channel"},
+	)
+
+	RetryFailed = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "gonotify",
+			Subsystem: "notifications",
+			Name:      "retry_failed_total",
+			Help:      "Total number of retry attempts that failed during processing",
+		},
+		[]string{"tenant_id", "channel"},
+	)
 )

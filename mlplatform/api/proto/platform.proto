@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package mlplatform;
+
+option go_package = "github.com/flyfleet/mlplatform/api/proto";
+
+import "google/protobuf/timestamp.proto";
+
+message Event {
+  string id = 1;
+  string type = 2;
+  string source = 3;
+  string subject = 4;
+  google.protobuf.Timestamp timestamp = 5;
+  bytes data = 6;
+  map<string, string> metadata = 7;
+  string trace_id = 8;
+}
+
+message ScoreRequest {
+  string model_name = 1;
+  string entity_type = 2;
+  string entity_id = 3;
+  repeated string feature_names = 4;
+  map<string, string> context = 5;
+}
+
+message ScoreResponse {
+  double score = 1;
+  string model_name = 2;
+  string model_version = 3;
+  string experiment = 4;
+  string variant = 5;
+  map<string, double> features = 6;
+  int64 latency_micros = 7;
+}
+
+service Platform {
+  rpc Ingest(Event) returns (google.protobuf.Empty);
+  rpc Score(ScoreRequest) returns (ScoreResponse);
+  rpc GetOnlineFeatures(OnlineFeatureRequest) returns (FeatureVector);
+}
+
+message OnlineFeatureRequest {
+  string entity_type = 1;
+  string entity_id = 2;
+  repeated string feature_names = 3;
+}
+
+message FeatureValue {
+  string name = 1;
+  double value = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}
+
+message FeatureVector {
+  string entity_id = 1;
+  string entity_type = 2;
+  repeated FeatureValue features = 3;
+}

@@ -9,6 +9,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	appcrypto "github.com/gonotify/gonotify/internal/crypto"
 )
 
 var (
@@ -41,19 +43,21 @@ type ProviderConfigView struct {
 }
 
 type CreateProviderConfigRequest struct {
-	ProviderID string         `json:"provider_id"`
-	Name       string         `json:"name"`
-	Settings   map[string]any `json:"settings"`
-	Priority   int            `json:"priority"`
-	Weight     int            `json:"weight"`
+	ProviderID  string           `json:"provider_id"`
+	Name        string           `json:"name"`
+	Settings    map[string]any   `json:"settings"`
+	Credentials map[string]string `json:"credentials"`
+	Priority    int              `json:"priority"`
+	Weight      int              `json:"weight"`
 }
 
 type Repository struct {
-	db *pgxpool.Pool
+	db            *pgxpool.Pool
+	encryptionKey []byte
 }
 
-func NewRepository(db *pgxpool.Pool) *Repository {
-	return &Repository{db: db}
+func NewRepository(db *pgxpool.Pool, encryptionKey []byte) *Repository {
+	return &Repository{db: db, encryptionKey: encryptionKey}
 }
 
 func (r *Repository) ListSystemProviders(ctx context.Context) ([]SystemProvider, error) {
@@ -99,6 +103,18 @@ func (r *Repository) CreateProviderConfig(
 		return ProviderConfigView{}, fmt.Errorf("marshal settings: %w", err)
 	}
 
+	var credentialsEncrypted []byte
+	if len(req.Credentials) > 0 {
+		credJSON, err := json.Marshal(req.Credentials)
+		if err != nil {
+			return ProviderConfigView{}, fmt.Errorf("marshal credentials: %w", err)
+		}
+		credentialsEncrypted, err = appcrypto.Encrypt(credJSON, r.encryptionKey)
+		if err != nil {
+			return ProviderConfigView{}, fmt.Errorf("encrypt credentials: %w", err)
+		}
+	}
+
 	var view ProviderConfigView
 	var viewSettingsBytes []byte
 
@@ -110,11 +126,12 @@ func (r *Repository) CreateProviderConfig(
 			provider_id,
 			name,
 			settings,
+			credentials_encrypted,
 			enabled,
 			priority,
 			weight
 		)
-		VALUES ($1::uuid, $2::uuid, $3, $4, true, $5, $6)
+		VALUES ($1::uuid, $2::uuid, $3, $4, $5, true, $6, $7)
 		RETURNING
 			id::text,
 			tenant_id::text,
@@ -131,6 +148,7 @@ func (r *Repository) CreateProviderConfig(
 		req.ProviderID,
 		req.Name,
 		settingsBytes,
+		credentialsEncrypted,
 		req.Priority,
 		req.Weight,
 	).Scan(

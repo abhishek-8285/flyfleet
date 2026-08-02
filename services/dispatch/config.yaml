@@ -1,0 +1,15 @@
+server:
+  host: "0.0.0.0"
+  port: 8081
+
+mlplatform:
+  url: "http://localhost:8080"
+
+dispatch:
+  high_confidence: 0.85
+  medium_confidence: 0.60
+  parallel_count: 3
+  max_sequential: 5
+  offer_timeout_s: 15
+  widen_step_km: 2.0
+  max_radius_km: 10.0

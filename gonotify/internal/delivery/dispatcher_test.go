@@ -3,6 +3,8 @@ package delivery
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/gonotify/gonotify/internal/queue"
 )
 
 func TestNormalizePhone(t *testing.T) {
@@ -233,3 +235,26 @@ func TestIsValidChannel(t *testing.T) {
 		}
 	}
 }
+
+func TestEventCategory(t *testing.T) {
+	msgWithMeta := queue.Message{
+		Metadata: map[string]string{
+			"category": "security",
+		},
+	}
+	if got := eventCategory(msgWithMeta, nil); got != "security" {
+		t.Errorf("eventCategory metadata = %q; want security", got)
+	}
+
+	msgWithData := queue.Message{Metadata: map[string]string{}}
+	data := map[string]any{"category": "marketing"}
+	if got := eventCategory(msgWithData, data); got != "marketing" {
+		t.Errorf("eventCategory data = %q; want marketing", got)
+	}
+
+	msgDefault := queue.Message{Metadata: map[string]string{}}
+	if got := eventCategory(msgDefault, map[string]any{}); got != "transactional" {
+		t.Errorf("eventCategory default = %q; want transactional", got)
+	}
+}
+

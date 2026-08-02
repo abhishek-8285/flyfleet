@@ -16,15 +16,20 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/gonotify/gonotify/internal/audit"
 	"github.com/gonotify/gonotify/internal/auth"
+	"github.com/gonotify/gonotify/internal/consent"
 	"github.com/gonotify/gonotify/internal/config"
+	appcrypto "github.com/gonotify/gonotify/internal/crypto"
 	"github.com/gonotify/gonotify/internal/events"
 	"github.com/gonotify/gonotify/internal/inbox"
 	"github.com/gonotify/gonotify/internal/observability"
+	"github.com/gonotify/gonotify/internal/preference"
 	"github.com/gonotify/gonotify/internal/provider"
 	"github.com/gonotify/gonotify/internal/queue"
 	"github.com/gonotify/gonotify/internal/realtime"
 	"github.com/gonotify/gonotify/internal/server"
+	"github.com/gonotify/gonotify/internal/suppression"
 	"github.com/gonotify/gonotify/internal/template"
 	"github.com/gonotify/gonotify/internal/tenant"
 	"github.com/gonotify/gonotify/internal/user"
@@ -35,10 +40,11 @@ type publishEventOptions struct {
 }
 
 type publishEventRequest struct {
-	Event   string              `json:"event"`
-	UserID  string              `json:"user_id"`
-	Data    map[string]any      `json:"data"`
-	Options publishEventOptions `json:"options"`
+	Event       string              `json:"event"`
+	UserID      string              `json:"user_id"`
+	ScheduledAt *time.Time          `json:"scheduled_at"`
+	Data        map[string]any      `json:"data"`
+	Options     publishEventOptions `json:"options"`
 }
 
 func main() {
@@ -79,7 +85,12 @@ func main() {
 	eventService := events.NewService(db, logger)
 	templateRepo := template.NewRepository(db)
 	adminTemplateHandler := server.NewAdminTemplateHandler(templateRepo, logger)
-	providerRepo := provider.NewRepository(db)
+	encryptionKey, err := appcrypto.LoadKeyFromEnv()
+	if err != nil {
+		logger.Warn("failed to load provider encryption key", "error", err)
+	}
+
+	providerRepo := provider.NewRepository(db, encryptionKey)
 	adminProviderHandler := server.NewAdminProviderHandler(providerRepo, logger)
 
 	userRepo := user.NewRepository(db)
@@ -92,6 +103,17 @@ func main() {
 
 	inboxRepo := inbox.NewRepository(db)
 	inboxHandler := server.NewInboxHandler(inboxRepo, realtimePublisher, logger)
+
+	preferenceRepo := preference.NewRepository(db)
+	consentRepo := consent.NewRepository(db)
+	suppressionRepo := suppression.NewRepository(db)
+	auditLogger := audit.NewLogger(db)
+
+	preferenceHandler := server.NewPreferenceHandler(preferenceRepo, consentRepo, auditLogger, logger)
+	quietHoursHandler := server.NewQuietHoursHandler(preferenceRepo, auditLogger, logger)
+	suppressionHandler := server.NewSuppressionHandler(suppressionRepo, auditLogger, logger)
+	adminNotificationHandler := server.NewAdminNotificationHandler(db, auditLogger, logger)
+		consentHandler := server.NewConsentHandler(consentRepo, auditLogger, logger)
 
 	r := chi.NewRouter()
 
@@ -133,6 +155,19 @@ func main() {
 				r.With(server.RequireScope(auth.ScopeProvidersWrite)).Post("/{configID}/enable", adminProviderHandler.EnableConfig)
 				r.With(server.RequireScope(auth.ScopeProvidersWrite)).Post("/{configID}/disable", adminProviderHandler.DisableConfig)
 			})
+
+			r.Route("/admin/notifications", func(r chi.Router) {
+				r.With(server.RequireScope(auth.ScopeNotificationsRead)).Get("/", adminNotificationHandler.ListDeadLetter)
+				r.With(server.RequireScope(auth.ScopeNotificationsRead)).Get("/{id}", adminNotificationHandler.GetNotification)
+				r.With(server.RequireScope(auth.ScopeNotificationsRead)).Get("/{id}/attempts", adminNotificationHandler.GetAttempts)
+				r.With(server.RequireScope(auth.ScopeNotificationsWrite)).Post("/{id}/retry", adminNotificationHandler.Retry)
+			})
+
+			r.Route("/admin/suppressions", func(r chi.Router) {
+				r.With(server.RequireScope(auth.ScopeSuppressionsRead)).Get("/", suppressionHandler.List)
+				r.With(server.RequireScope(auth.ScopeSuppressionsWrite)).Post("/", suppressionHandler.Create)
+				r.With(server.RequireScope(auth.ScopeSuppressionsWrite)).Delete("/{id}", suppressionHandler.Delete)
+			})
 		})
 
 		r.Route("/inbox", func(r chi.Router) {
@@ -145,6 +180,22 @@ func main() {
 			r.Post("/{itemID}/unarchive", inboxHandler.Unarchive)
 			r.Post("/{itemID}/pin", inboxHandler.Pin)
 			r.Post("/{itemID}/unpin", inboxHandler.Unpin)
+		})
+
+		r.Group(func(r chi.Router) {
+			r.Use(server.UserAuth(cfg.JWTSecret, logger))
+
+			r.Get("/preferences", preferenceHandler.Get)
+			r.Patch("/preferences", preferenceHandler.Update)
+
+			r.Get("/preferences/quiet-hours", quietHoursHandler.Get)
+			r.Patch("/preferences/quiet-hours", quietHoursHandler.Update)
+
+			r.Route("/consent", func(r chi.Router) {
+				r.With(server.RequireScope(auth.ScopeConsentRead)).Get("/", consentHandler.Get)
+				r.With(server.RequireScope(auth.ScopeConsentRead)).Get("/status", consentHandler.GetStatus)
+				r.With(server.RequireScope(auth.ScopeConsentWrite)).Post("/", consentHandler.Record)
+			})
 		})
 
 		r.Route("/realtime", func(r chi.Router) {
@@ -232,6 +283,7 @@ func handlePublishEvent(
 				EventType:      req.Event,
 				UserID:         req.UserID,
 				IdempotencyKey: idempotencyKey,
+				ScheduledAt:    req.ScheduledAt,
 				Data:           req.Data,
 				Channels:       req.Options.Channels,
 				Metadata: map[string]any{

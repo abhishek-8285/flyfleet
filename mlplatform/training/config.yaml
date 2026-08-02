@@ -1,0 +1,9 @@
+clickhouse_dsn: "localhost"
+clickhouse_port: 8123
+mlplatform_url: "http://localhost:8080"
+model_name: "dispatch_ranker"
+model_dir: "./models"
+training_days: 90
+min_samples: 10000
+test_fraction: 0.15
+min_success_rate_delta: 0.005

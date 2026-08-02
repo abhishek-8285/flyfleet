@@ -9,13 +9,20 @@ import (
 	"github.com/gonotify/gonotify/internal/provider"
 )
 
-type Provider struct {
-	db *pgxpool.Pool
+type Config struct {
+	DB         *pgxpool.Pool
+	ForceError bool
 }
 
-func New(db *pgxpool.Pool) *Provider {
+type Provider struct {
+	db         *pgxpool.Pool
+	forceError bool
+}
+
+func New(cfg Config) *Provider {
 	return &Provider{
-		db: db,
+		db:         cfg.DB,
+		forceError: cfg.ForceError,
 	}
 }
 
@@ -28,6 +35,10 @@ func (p *Provider) Channel() provider.Channel {
 }
 
 func (p *Provider) Send(ctx context.Context, req provider.Request) (provider.Result, error) {
+	if p.forceError {
+		return provider.Result{}, fmt.Errorf("fake sms provider forced error")
+	}
+
 	if req.To.Phone == "" {
 		return provider.Result{}, fmt.Errorf("recipient phone is required")
 	}

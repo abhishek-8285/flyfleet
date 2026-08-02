@@ -1,0 +1,33 @@
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+nats:
+  url: "nats://localhost:4222"
+  stream: "mlplatform"
+
+clickhouse:
+  dsn: "localhost:9000"
+
+redis:
+  addr: "localhost:6379"
+  db: 0
+
+temporal:
+  host_port: "localhost:7233"
+  namespace: "default"
+  task_queue: "ml-batch"
+
+inference:
+  model_dir: "./models"
+  hot_swap_enabled: true
+  timeout: 5s
+
+feature_store:
+  online_backend: "redis"
+  offline_backend: "clickhouse"
+
+drift:
+  check_interval: 1h
+  threshold: 0.1
+  window_size: 1000

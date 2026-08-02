@@ -23,6 +23,7 @@ type PublishRequest struct {
 	Data           map[string]any
 	Channels       []string
 	Metadata       map[string]any
+	ScheduledAt    *time.Time
 }
 
 type PublishResponse struct {
@@ -128,11 +129,12 @@ func (s *Service) Publish(ctx context.Context, req PublishRequest) (PublishRespo
 	}
 
 	queueMessage := queue.Message{
-		ID:         eventID,
-		TenantID:   req.TenantID,
-		Type:       "event.received",
-		OccurredAt: time.Now().UTC(),
-		Payload:    queuePayload,
+		ID:          eventID,
+		TenantID:    req.TenantID,
+		Type:        "event.received",
+		OccurredAt:  time.Now().UTC(),
+		ScheduledAt: req.ScheduledAt,
+		Payload:     queuePayload,
 		Metadata: map[string]string{
 			"event_type": req.EventType,
 			"user_id":    req.UserID,

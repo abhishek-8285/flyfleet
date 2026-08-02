@@ -3,8 +3,10 @@ go 1.26.1
 use (
 	.
 	./gonotify
+	./mlplatform
 	./packages/common/go
 	./proto
+	./services/dispatch
 	./services/fleet-core
 	./services/microservices/admin-support-service
 	./services/microservices/fleet-ml-service

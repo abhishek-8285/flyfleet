@@ -11,14 +11,19 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/gonotify/gonotify/internal/consent"
 	"github.com/gonotify/gonotify/internal/inbox"
+	"github.com/gonotify/gonotify/internal/observability"
+	"github.com/gonotify/gonotify/internal/preference"
 	"github.com/gonotify/gonotify/internal/provider"
 	"github.com/gonotify/gonotify/internal/queue"
 	"github.com/gonotify/gonotify/internal/realtime"
+	"github.com/gonotify/gonotify/internal/suppression"
 	"github.com/gonotify/gonotify/internal/template"
 	"github.com/gonotify/gonotify/internal/user"
 )
@@ -26,41 +31,82 @@ import (
 var e164Regex = regexp.MustCompile(`^\+[1-9]\d{1,14}$`)
 
 type Dispatcher struct {
-	db        *pgxpool.Pool
-	email     provider.Provider
-	sms       provider.Provider
-	templates *template.Repository
-	users     *user.Repository
-	inbox     *inbox.Repository
-	realtime  *realtime.Publisher
-	logger    *slog.Logger
+	db          *pgxpool.Pool
+	selector    channelProviderSelector
+	templates   *template.Repository
+	users       *user.Repository
+	inbox       *inbox.Repository
+	realtime    *realtime.Publisher
+	preferences *preference.Repository
+	consent     consent.Repository
+	suppressions *suppression.Repository
+	logger      *slog.Logger
 }
 
 func NewDispatcher(
 	db *pgxpool.Pool,
-	email provider.Provider,
-	sms provider.Provider,
+	selector channelProviderSelector,
 	templates *template.Repository,
 	users *user.Repository,
 	inboxRepo *inbox.Repository,
 	realtimePublisher *realtime.Publisher,
+	preferences *preference.Repository,
+	consentRepo consent.Repository,
+	suppressionsRepo *suppression.Repository,
 	logger *slog.Logger,
 ) *Dispatcher {
-	return &Dispatcher{
-		db:        db,
-		email:     email,
-		sms:       sms,
-		templates: templates,
-		users:     users,
-		inbox:     inboxRepo,
-		realtime:  realtimePublisher,
-		logger:    logger,
+	if selector == nil {
+		panic("dispatcher requires a channelProviderSelector")
 	}
+	return &Dispatcher{
+		db:           db,
+		selector:     selector,
+		templates:    templates,
+		users:        users,
+		inbox:        inboxRepo,
+		realtime:     realtimePublisher,
+		preferences:  preferences,
+		consent:      consentRepo,
+		suppressions: suppressionsRepo,
+		logger:       logger,
+	}
+}
+
+// checkConsent enforces that marketing and digest categories require an
+// explicit opt-in consent log. For transactional and other categories, consent
+// is not required and the method returns true.
+func (d *Dispatcher) checkConsent(
+	ctx context.Context,
+	tenantID string,
+	internalUserID *string,
+	category string,
+	channel string,
+) (bool, error) {
+	if d.consent == nil {
+		return true, nil
+	}
+
+	if category != "marketing" && category != "digest" {
+		return true, nil
+	}
+
+	if internalUserID == nil {
+		return false, nil
+	}
+
+	return d.consent.HasActiveConsent(
+		ctx,
+		tenantID,
+		*internalUserID,
+		category,
+		channel,
+	)
 }
 
 type createNotificationParams struct {
 	Msg             queue.Message
 	Channel         string
+	Category        string
 	ToAddress       *string
 	RecipientUserID *string
 	TemplateID      *string
@@ -68,6 +114,8 @@ type createNotificationParams struct {
 	Body            string
 	Payload         map[string]any
 	IdempotencyKey  string
+	Status          string
+	ScheduledAt     *time.Time
 }
 
 func (d *Dispatcher) HandleEvent(ctx context.Context, msg queue.Message) error {
@@ -106,16 +154,6 @@ func (d *Dispatcher) HandleEvent(ctx context.Context, msg queue.Message) error {
 			}
 
 		case "sms":
-			if d.sms == nil {
-				d.logger.DebugContext(
-					ctx,
-					"sms channel requested but no sms provider configured; skipping",
-					"event_id", msg.ID,
-					"tenant_id", msg.TenantID,
-				)
-				continue
-			}
-
 			if err := d.handleSMS(ctx, msg, data, eventType, userID); err != nil {
 				errs = append(errs, err)
 			}
@@ -125,6 +163,224 @@ func (d *Dispatcher) HandleEvent(ctx context.Context, msg queue.Message) error {
 	if len(errs) > 0 {
 		return errors.Join(errs...)
 	}
+
+	return nil
+}
+
+func eventCategory(msg queue.Message, data map[string]any) string {
+	if category, ok := msg.Metadata["category"]; ok && category != "" {
+		return category
+	}
+
+	if category, ok := data["category"].(string); ok && category != "" {
+		return category
+	}
+
+	return "transactional"
+}
+
+func (d *Dispatcher) isChannelAllowedForUser(
+	ctx context.Context,
+	tenantID string,
+	userID *string,
+	category string,
+	channel string,
+) (bool, error) {
+	if userID == nil {
+		if category == "marketing" || category == "digest" {
+			return false, nil
+		}
+		return true, nil
+	}
+
+	if d.preferences == nil {
+		return true, nil
+	}
+
+	d.logger.DebugContext(
+		ctx,
+		"preference check",
+		"tenant_id", tenantID,
+		"user_id", *userID,
+		"category", category,
+		"channel", channel,
+	)
+
+	return d.preferences.IsAllowed(
+		ctx,
+		tenantID,
+		*userID,
+		category,
+		channel,
+	)
+}
+
+func (d *Dispatcher) suppressNotification(
+	ctx context.Context,
+	params createNotificationParams,
+	reason string,
+) error {
+	notificationID, status, _, err := d.createOrGetNotification(ctx, params)
+	if err != nil {
+		return err
+	}
+
+	if isTerminalStatus(status) {
+		return nil
+	}
+
+	if err := d.updateNotificationStatus(ctx, notificationID, "suppressed", ""); err != nil {
+		d.logger.ErrorContext(
+			ctx,
+			"failed to update notification status to suppressed",
+			"notification_id", notificationID,
+			"error", err,
+		)
+	}
+
+	if err := d.setSuppressionReason(ctx, notificationID, reason); err != nil {
+		d.logger.ErrorContext(
+			ctx,
+			"failed to record suppression reason",
+			"notification_id", notificationID,
+			"reason", reason,
+			"error", err,
+		)
+	}
+
+	if err := d.recordDeliveryAttempt(
+		ctx,
+		notificationID,
+		"",
+		"suppressed",
+		1,
+		map[string]any{
+			"channel": params.Channel,
+			"reason":  reason,
+		},
+		map[string]any{
+			"suppressed": true,
+			"reason":     reason,
+		},
+		"",
+	); err != nil {
+		d.logger.ErrorContext(
+			ctx,
+			"failed to record suppressed delivery attempt",
+			"notification_id", notificationID,
+			"error", err,
+		)
+	}
+
+	d.logger.InfoContext(
+		ctx,
+		"notification suppressed",
+		"notification_id", notificationID,
+		"event_id", params.Msg.ID,
+		"tenant_id", params.Msg.TenantID,
+		"channel", params.Channel,
+		"reason", reason,
+	)
+
+	return nil
+}
+
+// resolveDeferment determines whether delivery should be deferred instead of
+// sent immediately. It returns a scheduled-at time and a reason string when the
+// notification should be deferred (either because of an explicit future
+// scheduled_at on the message or because the user is currently within their
+// quiet-hours window). A nil result means the notification should be delivered
+// now.
+func (d *Dispatcher) resolveDeferment(
+	ctx context.Context,
+	msg queue.Message,
+	internalUserID *string,
+	category string,
+	now time.Time,
+) (*time.Time, string) {
+	var scheduledAt *time.Time
+	reason := ""
+
+	if msg.ScheduledAt != nil && !msg.ScheduledAt.IsZero() && msg.ScheduledAt.After(now) {
+		scheduledAt = msg.ScheduledAt
+		reason = "scheduled_delivery"
+	}
+
+	if internalUserID != nil && d.preferences != nil {
+		qh, err := d.preferences.GetQuietHours(ctx, *internalUserID)
+		if err == nil && qh.Enabled && qh.IsActive(now) {
+			quietEnd := qh.End(now)
+			if scheduledAt == nil || quietEnd.After(*scheduledAt) {
+				scheduledAt = &quietEnd
+				reason = "quiet_hours"
+			}
+		}
+	}
+
+	return scheduledAt, reason
+}
+
+// scheduleNotification records a notification as "scheduled" for later delivery
+// without sending it immediately. It is used when delivery is deferred due to a
+// future scheduled_at or active quiet-hours window.
+func (d *Dispatcher) scheduleNotification(
+	ctx context.Context,
+	params createNotificationParams,
+	reason string,
+) error {
+	notificationID, status, created, err := d.createOrGetNotification(ctx, params)
+	if err != nil {
+		return err
+	}
+
+	if !created {
+		if status != "queued" && status != "sending" {
+			d.logger.DebugContext(
+				ctx,
+				"notification already scheduled or terminal; skipping",
+				"notification_id", notificationID,
+				"status", status,
+			)
+		}
+
+		return nil
+	}
+
+	if err := d.recordDeliveryAttempt(
+		ctx,
+		notificationID,
+		"",
+		"scheduled",
+		1,
+		map[string]any{
+			"channel":      params.Channel,
+			"reason":       reason,
+			"scheduled_at": params.ScheduledAt,
+		},
+		map[string]any{
+			"deferral_reason": reason,
+			"scheduled_at":    params.ScheduledAt,
+		},
+		"",
+	); err != nil {
+		d.logger.ErrorContext(
+			ctx,
+			"failed to record scheduled delivery attempt",
+			"notification_id", notificationID,
+			"error", err,
+		)
+	}
+
+	d.logger.InfoContext(
+		ctx,
+		"notification scheduled for later delivery",
+		"notification_id", notificationID,
+		"event_id", params.Msg.ID,
+		"tenant_id", params.Msg.TenantID,
+		"channel", params.Channel,
+		"reason", reason,
+		"scheduled_at", params.ScheduledAt,
+	)
 
 	return nil
 }
@@ -150,6 +406,129 @@ func (d *Dispatcher) handleEmail(
 		return nil
 	}
 
+	category := eventCategory(msg, data)
+
+	var internalUserID *string
+
+	if userID != "" {
+		resolvedUserID, err := d.users.EnsureUser(
+			ctx,
+			msg.TenantID,
+			userID,
+			emailTo,
+			stringValue(data["phone"]),
+			data,
+		)
+		if err != nil {
+			return fmt.Errorf("ensure user for email failed: %w", err)
+		}
+
+		internalUserID = &resolvedUserID
+	}
+
+	allowed, err := d.isChannelAllowedForUser(
+		ctx,
+		msg.TenantID,
+		internalUserID,
+		category,
+		"email",
+	)
+	if err != nil {
+		return fmt.Errorf("email preference check failed: %w", err)
+	}
+
+	if !allowed {
+		return d.suppressNotification(
+			ctx,
+			createNotificationParams{
+				Msg:             msg,
+				Channel:         "email",
+				Category:        category,
+				ToAddress:       &emailTo,
+				RecipientUserID: internalUserID,
+				TemplateID:      nil,
+				Subject:         "",
+				Body:            "",
+				Payload:         data,
+				IdempotencyKey:  notificationKey(msg.ID, "email", emailTo),
+				Status:          "queued",
+			},
+			"preference_disabled",
+		)
+	}
+
+	hasConsent, err := d.checkConsent(ctx, msg.TenantID, internalUserID, category, "email")
+	if err != nil {
+		return fmt.Errorf("email consent check failed: %w", err)
+	}
+
+	if !hasConsent {
+		return d.suppressNotification(
+			ctx,
+			createNotificationParams{
+				Msg:             msg,
+				Channel:         "email",
+				Category:        category,
+				ToAddress:       &emailTo,
+				RecipientUserID: internalUserID,
+				TemplateID:      nil,
+				Subject:         "",
+				Body:            "",
+				Payload:         data,
+				IdempotencyKey:  notificationKey(msg.ID, "email", emailTo),
+				Status:          "queued",
+			},
+			"missing_consent",
+		)
+	}
+
+	suppressed, err := d.suppressions.IsSuppressed(ctx, msg.TenantID, "email", emailTo)
+	if err != nil {
+		return fmt.Errorf("email suppression check failed: %w", err)
+	}
+
+	if suppressed {
+		return d.suppressNotification(
+			ctx,
+			createNotificationParams{
+				Msg:             msg,
+				Channel:         "email",
+				Category:        category,
+				ToAddress:       &emailTo,
+				RecipientUserID: internalUserID,
+				TemplateID:      nil,
+				Subject:         "",
+				Body:            "",
+				Payload:         data,
+				IdempotencyKey:  notificationKey(msg.ID, "email", emailTo),
+				Status:          "queued",
+			},
+			"suppressed_address",
+		)
+	}
+
+	scheduledAt, deferReason := d.resolveDeferment(ctx, msg, internalUserID, category, time.Now().UTC())
+	if scheduledAt != nil {
+		return d.scheduleNotification(
+			ctx,
+			createNotificationParams{
+				Msg:             msg,
+				Channel:         "email",
+				Category:        category,
+				ToAddress:       &emailTo,
+				RecipientUserID: internalUserID,
+				TemplateID:      nil,
+				Subject:         "",
+				Body:            "",
+				Payload:         data,
+				IdempotencyKey:  notificationKey(msg.ID, "email", emailTo),
+				Status:          "scheduled",
+				ScheduledAt:     scheduledAt,
+			},
+			deferReason,
+		)
+	}
+
 	subjectTemplate, htmlTemplate, textTemplate, templateID := d.resolveEmailTemplates(
 		ctx,
 		msg,
@@ -168,18 +547,20 @@ func (d *Dispatcher) handleEmail(
 
 	idempotencyKey := notificationKey(msg.ID, "email", emailTo)
 
-	notificationID, status, err := d.createOrGetNotification(
+	notificationID, status, _, err := d.createOrGetNotification(
 		ctx,
 		createNotificationParams{
 			Msg:             msg,
 			Channel:         "email",
+			Category:        category,
 			ToAddress:       &emailTo,
-			RecipientUserID: nil,
+			RecipientUserID: internalUserID,
 			TemplateID:      templateID,
 			Subject:         rendered.Subject,
 			Body:            rendered.Text,
 			Payload:         data,
 			IdempotencyKey:  idempotencyKey,
+			Status:          "queued",
 		},
 	)
 	if err != nil {
@@ -228,44 +609,32 @@ func (d *Dispatcher) handleEmail(
 		Metadata: msg.Metadata,
 	}
 
-	result, sendErr := d.email.Send(ctx, req)
-
-	attemptStatus := "success"
-	errText := ""
+	_, sendErr := d.trySend(ctx, notificationID, attempt, req)
 
 	if sendErr != nil {
-		attemptStatus = "failed"
-		errText = sendErr.Error()
-	}
-
-	if err := d.recordDeliveryAttempt(
-		ctx,
-		notificationID,
-		attemptStatus,
-		attempt,
-		req,
-		result,
-		errText,
-	); err != nil {
-		d.logger.ErrorContext(
-			ctx,
-			"failed to record email delivery attempt",
-			"notification_id", notificationID,
-			"error", err,
-		)
-	}
-
-	if sendErr != nil {
-		if err := d.updateNotificationStatus(ctx, notificationID, "failed", sendErr.Error()); err != nil {
-			d.logger.ErrorContext(
+		if errors.Is(sendErr, ErrNoProviderForChannel) {
+			d.logger.DebugContext(
 				ctx,
-				"failed to update notification status to failed",
+				"no email provider configured; skipping",
 				"notification_id", notificationID,
-				"error", err,
+				"event_id", msg.ID,
+				"tenant_id", msg.TenantID,
 			)
+			return nil
 		}
 
-		return fmt.Errorf("email send failed: %w", sendErr)
+		if retryErr := d.handleSendFailure(ctx, notificationID, msg.TenantID, "email", sendErr); retryErr != nil {
+			d.logger.ErrorContext(
+				ctx,
+				"failed to handle send failure",
+				"notification_id", notificationID,
+				"error", retryErr,
+			)
+
+			return fmt.Errorf("email send failed: %w", sendErr)
+		}
+
+		return nil
 	}
 
 	if err := d.updateNotificationStatus(ctx, notificationID, "sent", ""); err != nil {
@@ -276,6 +645,8 @@ func (d *Dispatcher) handleEmail(
 			"error", err,
 		)
 	}
+
+	observability.NotificationsProcessed.WithLabelValues(msg.TenantID, "email", "sent").Inc()
 
 	d.logger.InfoContext(
 		ctx,
@@ -322,6 +693,92 @@ func (d *Dispatcher) handleInApp(
 	)
 	if err != nil {
 		return fmt.Errorf("ensure user failed: %w", err)
+	}
+
+	category := eventCategory(msg, data)
+
+	allowed, err := d.isChannelAllowedForUser(
+		ctx,
+		msg.TenantID,
+		&internalUserID,
+		category,
+		"in_app",
+	)
+	if err != nil {
+		return fmt.Errorf("in_app preference check failed: %w", err)
+	}
+
+	if !allowed {
+		return d.suppressNotification(
+			ctx,
+			createNotificationParams{
+				Msg:             msg,
+				Channel:         "in_app",
+				Category:        category,
+				ToAddress:       nil,
+				RecipientUserID: &internalUserID,
+				TemplateID:      nil,
+				Subject:         "",
+				Body:            "",
+				Payload:         data,
+				IdempotencyKey:  notificationKey(msg.ID, "in_app", internalUserID),
+				Status:          "queued",
+			},
+			"preference_disabled",
+		)
+	}
+
+	hasConsent, err := d.checkConsent(ctx, msg.TenantID, &internalUserID, category, "in_app")
+	if err != nil {
+		return fmt.Errorf("in_app consent check failed: %w", err)
+	}
+
+	if !hasConsent {
+		return d.suppressNotification(
+			ctx,
+			createNotificationParams{
+				Msg:             msg,
+				Channel:         "in_app",
+				Category:        category,
+				ToAddress:       nil,
+				RecipientUserID: &internalUserID,
+				TemplateID:      nil,
+				Subject:         "",
+				Body:            "",
+				Payload:         data,
+				IdempotencyKey:  notificationKey(msg.ID, "in_app", internalUserID),
+				Status:          "queued",
+			},
+			"missing_consent",
+		)
+	}
+
+	scheduledAt, deferReason := d.resolveDeferment(
+		ctx,
+		msg,
+		&internalUserID,
+		category,
+		time.Now().UTC(),
+	)
+	if scheduledAt != nil {
+		return d.scheduleNotification(
+			ctx,
+			createNotificationParams{
+				Msg:             msg,
+				Channel:         "in_app",
+				Category:        category,
+				ToAddress:       nil,
+				RecipientUserID: &internalUserID,
+				TemplateID:      nil,
+				Subject:         "",
+				Body:            "",
+				Payload:         data,
+				IdempotencyKey:  notificationKey(msg.ID, "in_app", internalUserID),
+				Status:          "scheduled",
+				ScheduledAt:     scheduledAt,
+			},
+			deferReason,
+		)
 	}
 
 	tpl, err := d.templates.GetPublishedVersion(
@@ -372,20 +829,21 @@ func (d *Dispatcher) handleInApp(
 
 	actionURL, _ := data["action_url"].(string)
 	imageURL, _ := data["image_url"].(string)
-	category, _ := data["category"].(string)
+	inboxCategory, _ := data["category"].(string)
 
-	if category == "" {
-		category = "notification"
+	if inboxCategory == "" {
+		inboxCategory = "notification"
 	}
 
 	notificationIdempotencyKey := notificationKey(msg.ID, "in_app", internalUserID)
 	templateID := tpl.TemplateID
 
-	notificationID, status, err := d.createOrGetNotification(
+	notificationID, status, _, err := d.createOrGetNotification(
 		ctx,
 		createNotificationParams{
 			Msg:             msg,
 			Channel:         "in_app",
+			Category:        category,
 			ToAddress:       nil,
 			RecipientUserID: &internalUserID,
 			TemplateID:      &templateID,
@@ -393,6 +851,7 @@ func (d *Dispatcher) handleInApp(
 			Body:            body,
 			Payload:         data,
 			IdempotencyKey:  notificationIdempotencyKey,
+			Status:          "queued",
 		},
 	)
 	if err != nil {
@@ -409,7 +868,7 @@ func (d *Dispatcher) handleInApp(
 			NotificationID: &notificationID,
 			Title:          title,
 			Body:           body,
-			Category:       category,
+			Category:       inboxCategory,
 			ActionURL:      actionURL,
 			ImageURL:       imageURL,
 			Data:           data,
@@ -417,7 +876,18 @@ func (d *Dispatcher) handleInApp(
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("create inbox item failed: %w", err)
+		if retryErr := d.handleSendFailure(ctx, notificationID, msg.TenantID, "in_app", err); retryErr != nil {
+			d.logger.ErrorContext(
+				ctx,
+				"failed to handle in_app send failure",
+				"notification_id", notificationID,
+				"error", retryErr,
+			)
+
+			return fmt.Errorf("create inbox item failed: %w", err)
+		}
+
+		return nil
 	}
 
 	if !created {
@@ -473,10 +943,11 @@ func (d *Dispatcher) handleInApp(
 	if err := d.recordDeliveryAttempt(
 		ctx,
 		notificationID,
+		"",
 		"success",
 		attempt,
 		map[string]any{
-			"channel":  "in_app",
+			"channel": "in_app",
 			"user_id":  internalUserID,
 			"inbox_id": itemID,
 		},
@@ -557,14 +1028,11 @@ func (d *Dispatcher) resolveEmailTemplates(
 func (d *Dispatcher) createOrGetNotification(
 	ctx context.Context,
 	params createNotificationParams,
-) (string, string, error) {
+) (notificationID string, status string, created bool, err error) {
 	payload, err := json.Marshal(params.Payload)
 	if err != nil {
-		return "", "", err
+		return "", "", false, err
 	}
-
-	var notificationID string
-	var status string
 
 	err = d.db.QueryRow(
 		ctx,
@@ -581,21 +1049,23 @@ func (d *Dispatcher) createOrGetNotification(
 			subject,
 			body,
 			payload,
-			idempotency_key
+			idempotency_key,
+			scheduled_at
 		)
 		VALUES (
 			$1::uuid,
 			$2::uuid,
 			$3::uuid,
 			$4,
-			'transactional',
-			'queued',
-			$5::uuid,
+			$5,
 			$6,
-			$7,
+			$7::uuid,
 			$8,
 			$9,
-			$10
+			$10,
+			$11,
+			$12,
+			$13
 		)
 		ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
 		RETURNING id::text, status
@@ -604,20 +1074,23 @@ func (d *Dispatcher) createOrGetNotification(
 		params.Msg.ID,
 		params.TemplateID,
 		params.Channel,
+		params.Category,
+		params.Status,
 		params.RecipientUserID,
 		params.ToAddress,
 		params.Subject,
 		params.Body,
 		payload,
 		params.IdempotencyKey,
+		params.ScheduledAt,
 	).Scan(&notificationID, &status)
 
 	if err == nil {
-		return notificationID, status, nil
+		return notificationID, status, true, nil
 	}
 
 	if !errors.Is(err, pgx.ErrNoRows) {
-		return "", "", err
+		return "", "", false, err
 	}
 
 	err = d.db.QueryRow(
@@ -635,15 +1108,195 @@ func (d *Dispatcher) createOrGetNotification(
 	).Scan(&notificationID, &status)
 
 	if err != nil {
-		return "", "", err
+		return "", "", false, err
 	}
 
-	return notificationID, status, nil
+	return notificationID, status, false, nil
+}
+
+// trySend selects providers for the request's channel via the routing
+// engine and tries each one in order of priority/weight. It records a
+// delivery attempt for every provider tried and returns the result of
+// the first successful send.
+func (d *Dispatcher) trySend(
+	ctx context.Context,
+	notificationID string,
+	attempt int,
+	req provider.Request,
+) (provider.Result, error) {
+	selected, err := d.selector.ProvidersForChannel(ctx, req.TenantID, string(req.Channel))
+	if err != nil {
+		return provider.Result{}, fmt.Errorf("select %s providers: %w", req.Channel, err)
+	}
+
+	if len(selected) == 0 {
+		return provider.Result{}, ErrNoProviderForChannel
+	}
+
+	var lastErr error
+	var lastResult provider.Result
+
+	for _, sp := range selected {
+		d.logger.DebugContext(ctx, "trying provider",
+			"notification_id", notificationID,
+			"provider", sp.Provider.Name(),
+			"channel", req.Channel,
+			"config_id", sp.ConfigID,
+		)
+
+		result, sendErr := sp.Provider.Send(ctx, req)
+
+		var attemptStatus string
+		var errText string
+		if sendErr != nil {
+			attemptStatus = "failed"
+			errText = sendErr.Error()
+			lastErr = sendErr
+		} else {
+			attemptStatus = "success"
+		}
+
+		lastResult = result
+
+		if recordErr := d.recordDeliveryAttempt(
+			ctx,
+			notificationID,
+			sp.ConfigID,
+			attemptStatus,
+			attempt,
+			req,
+			result,
+			errText,
+		); recordErr != nil {
+			d.logger.WarnContext(ctx, "failed to record delivery attempt",
+				"notification_id", notificationID,
+				"error", recordErr,
+			)
+		}
+
+		if sendErr == nil {
+			d.logger.InfoContext(ctx, "provider send succeeded",
+				"notification_id", notificationID,
+				"provider", sp.Provider.Name(),
+				"channel", req.Channel,
+			)
+			return result, nil
+		}
+
+		d.logger.WarnContext(ctx, "provider send failed, trying next",
+			"notification_id", notificationID,
+			"provider", sp.Provider.Name(),
+			"channel", req.Channel,
+			"error", sendErr,
+		)
+	}
+
+	return lastResult, fmt.Errorf("all %s providers failed: %w", req.Channel, lastErr)
+}
+
+// handleSendFailure classifies a provider send error and either schedules
+// a retry, moves the notification to dead_letter, or marks it as permanently
+// failed (non-retryable). Returns nil on success; non-nil if the DB update
+// fails (signalling NATS to redeliver).
+func (d *Dispatcher) handleSendFailure(
+	ctx context.Context,
+	notificationID string,
+	tenantID string,
+	channel string,
+	sendErr error,
+) error {
+	var attemptCount int
+	var maxAttempts int
+	var retryPolicy string
+
+	err := d.db.QueryRow(ctx, `
+		SELECT attempt_count, max_attempts, retry_policy
+		FROM notifications
+		WHERE id = $1::uuid
+	`, notificationID).Scan(&attemptCount, &maxAttempts, &retryPolicy)
+	if err != nil {
+		return fmt.Errorf("load notification for retry: %w", err)
+	}
+
+	if !isRetryableError(sendErr) {
+		d.logger.InfoContext(ctx, "notification failed permanently (non-retryable)",
+			"notification_id", notificationID,
+			"error", sendErr,
+		)
+
+		observability.NotificationsProcessed.WithLabelValues(tenantID, channel, "failed").Inc()
+
+		_, err := d.db.Exec(ctx, `
+			UPDATE notifications
+			SET
+				status = 'failed',
+				error = $2,
+				failed_at = now(),
+				next_retry_at = NULL
+			WHERE id = $1::uuid
+		`, notificationID, sendErr.Error())
+
+		return err
+	}
+
+	attemptCount++
+
+	if attemptCount >= maxAttempts {
+		d.logger.InfoContext(ctx, "notification exhausted retries; moving to dead_letter",
+			"notification_id", notificationID,
+			"attempt_count", attemptCount,
+			"max_attempts", maxAttempts,
+		)
+
+		observability.DeadLetterMoved.WithLabelValues(tenantID, channel).Inc()
+		observability.DeadLetterPending.WithLabelValues(tenantID).Inc()
+
+		_, err := d.db.Exec(ctx, `
+			UPDATE notifications
+			SET
+				status = 'dead_letter',
+				attempt_count = $2,
+				error = $3,
+				failed_at = now(),
+				next_retry_at = NULL
+			WHERE id = $1::uuid
+		`, notificationID, attemptCount, sendErr.Error())
+
+		return err
+	}
+
+	observability.RetriesScheduled.WithLabelValues(tenantID, channel).Inc()
+
+	delay := RetryDelay(attemptCount, retryPolicy)
+
+	_, err = d.db.Exec(ctx, `
+		UPDATE notifications
+		SET
+			status = 'retry_pending',
+			attempt_count = $2,
+			error = $3,
+			next_retry_at = now() + $4::interval
+		WHERE id = $1::uuid
+	`, notificationID, attemptCount, sendErr.Error(), delay.String())
+
+	if err != nil {
+		return err
+	}
+
+	d.logger.InfoContext(ctx, "notification scheduled for retry",
+		"notification_id", notificationID,
+		"attempt_count", attemptCount,
+		"max_attempts", maxAttempts,
+		"delay", delay.String(),
+	)
+
+	return nil
 }
 
 func (d *Dispatcher) recordDeliveryAttempt(
 	ctx context.Context,
 	notificationID string,
+	providerConfigID string,
 	status string,
 	attempt int,
 	request any,
@@ -674,15 +1327,16 @@ func (d *Dispatcher) recordDeliveryAttempt(
 		)
 		VALUES (
 			$1::uuid,
-			NULL,
-			$2,
+			NULLIF($2::text, '')::uuid,
 			$3,
 			$4,
 			$5,
-			NULLIF($6, '')
+			$6,
+			NULLIF($7, '')
 		)
 		`,
 		notificationID,
+		providerConfigID,
 		status,
 		attempt,
 		requestJSON,
@@ -719,6 +1373,21 @@ func (d *Dispatcher) updateNotificationStatus(
 		notificationID,
 		status,
 		errText,
+	)
+
+	return err
+}
+
+func (d *Dispatcher) setSuppressionReason(
+	ctx context.Context,
+	notificationID string,
+	reason string,
+) error {
+	_, err := d.db.Exec(
+		ctx,
+		`UPDATE notifications SET suppress_reason = $2 WHERE id = $1::uuid`,
+		notificationID,
+		reason,
 	)
 
 	return err
@@ -910,7 +1579,7 @@ func (d *Dispatcher) handleSMS(
 		return nil
 	}
 
-	suppressed, err := d.isSuppressed(ctx, msg.TenantID, "sms", phone)
+	suppressed, err := d.suppressions.IsSuppressed(ctx, msg.TenantID, "sms", phone)
 	if err != nil {
 		return fmt.Errorf("sms suppression check failed: %w", err)
 	}
@@ -958,13 +1627,102 @@ func (d *Dispatcher) handleSMS(
 		recipientUserID = &internalUserID
 	}
 
+	category := eventCategory(msg, data)
+
+	allowed, err := d.isChannelAllowedForUser(
+		ctx,
+		msg.TenantID,
+		recipientUserID,
+		category,
+		"sms",
+	)
+	if err != nil {
+		return fmt.Errorf("sms preference check failed: %w", err)
+	}
+
+	if !allowed {
+		return d.suppressNotification(
+			ctx,
+			createNotificationParams{
+				Msg:             msg,
+				Channel:         "sms",
+				Category:        category,
+				ToAddress:       &phone,
+				RecipientUserID: recipientUserID,
+				TemplateID:      nil,
+				Subject:         "",
+				Body:            "",
+				Payload:         data,
+				IdempotencyKey:  notificationKey(msg.ID, "sms", phone),
+				Status:          "queued",
+			},
+			"preference_disabled",
+		)
+	}
+
+	hasConsent, err := d.checkConsent(ctx, msg.TenantID, recipientUserID, category, "sms")
+	if err != nil {
+		return fmt.Errorf("sms consent check failed: %w", err)
+	}
+
+	if !hasConsent {
+		return d.suppressNotification(
+			ctx,
+			createNotificationParams{
+				Msg:             msg,
+				Channel:         "sms",
+				Category:        category,
+				ToAddress:       &phone,
+				RecipientUserID: recipientUserID,
+				TemplateID:      nil,
+				Subject:         "",
+				Body:            "",
+				Payload:         data,
+				IdempotencyKey:  notificationKey(msg.ID, "sms", phone),
+				Status:          "queued",
+			},
+			"missing_consent",
+		)
+	}
+
+	if !suppressed {
+		scheduledAt, deferReason := d.resolveDeferment(
+			ctx,
+			msg,
+			recipientUserID,
+			category,
+			time.Now().UTC(),
+		)
+		if scheduledAt != nil {
+			return d.scheduleNotification(
+				ctx,
+				createNotificationParams{
+					Msg:             msg,
+					Channel:         "sms",
+					Category:        category,
+					ToAddress:       &phone,
+					RecipientUserID: recipientUserID,
+					TemplateID:      nil,
+					Subject:         "",
+					Body:            "",
+					Payload:         data,
+					IdempotencyKey:  notificationKey(msg.ID, "sms", phone),
+					Status:          "scheduled",
+					ScheduledAt:     scheduledAt,
+				},
+				deferReason,
+			)
+		}
+	}
+
 	idempotencyKey := notificationKey(msg.ID, "sms", phone)
 
-	notificationID, status, err := d.createOrGetNotification(
+	notificationID, status, _, err := d.createOrGetNotification(
 		ctx,
 		createNotificationParams{
 			Msg:             msg,
 			Channel:         "sms",
+			Category:        category,
 			ToAddress:       &phone,
 			RecipientUserID: recipientUserID,
 			TemplateID:      nil,
@@ -972,6 +1730,7 @@ func (d *Dispatcher) handleSMS(
 			Body:            smsBody,
 			Payload:         data,
 			IdempotencyKey:  idempotencyKey,
+			Status:          "queued",
 		},
 	)
 	if err != nil {
@@ -1004,6 +1763,7 @@ func (d *Dispatcher) handleSMS(
 		if err := d.recordDeliveryAttempt(
 			ctx,
 			notificationID,
+			"",
 			"suppressed",
 			1,
 			map[string]any{
@@ -1062,44 +1822,33 @@ func (d *Dispatcher) handleSMS(
 		Metadata: msg.Metadata,
 	}
 
-	result, sendErr := d.sms.Send(ctx, req)
-
-	attemptStatus := "success"
-	errText := ""
+	_, sendErr := d.trySend(ctx, notificationID, attempt, req)
 
 	if sendErr != nil {
-		attemptStatus = "failed"
-		errText = sendErr.Error()
-	}
-
-	if err := d.recordDeliveryAttempt(
-		ctx,
-		notificationID,
-		attemptStatus,
-		attempt,
-		req,
-		result,
-		errText,
-	); err != nil {
-		d.logger.ErrorContext(
-			ctx,
-			"failed to record sms delivery attempt",
-			"notification_id", notificationID,
-			"error", err,
-		)
-	}
-
-	if sendErr != nil {
-		if err := d.updateNotificationStatus(ctx, notificationID, "failed", sendErr.Error()); err != nil {
-			d.logger.ErrorContext(
+		if errors.Is(sendErr, ErrNoProviderForChannel) {
+			d.logger.DebugContext(
 				ctx,
-				"failed to update sms notification status to failed",
+				"no sms provider configured; skipping",
 				"notification_id", notificationID,
-				"error", err,
+				"event_id", msg.ID,
+				"tenant_id", msg.TenantID,
+				"phone", phone,
 			)
+			return nil
 		}
 
-		return fmt.Errorf("sms send failed: %w", sendErr)
+		if retryErr := d.handleSendFailure(ctx, notificationID, msg.TenantID, "sms", sendErr); retryErr != nil {
+			d.logger.ErrorContext(
+				ctx,
+				"failed to handle send failure",
+				"notification_id", notificationID,
+				"error", retryErr,
+			)
+
+			return fmt.Errorf("sms send failed: %w", sendErr)
+		}
+
+		return nil
 	}
 
 	if err := d.updateNotificationStatus(ctx, notificationID, "sent", ""); err != nil {
@@ -1110,6 +1859,8 @@ func (d *Dispatcher) handleSMS(
 			"error", err,
 		)
 	}
+
+	observability.NotificationsProcessed.WithLabelValues(msg.TenantID, "sms", "sent").Inc()
 
 	d.logger.InfoContext(
 		ctx,
@@ -1122,39 +1873,6 @@ func (d *Dispatcher) handleSMS(
 	)
 
 	return nil
-}
-
-func (d *Dispatcher) isSuppressed(
-	ctx context.Context,
-	tenantID string,
-	channel string,
-	address string,
-) (bool, error) {
-	var id string
-
-	err := d.db.QueryRow(
-		ctx,
-		`
-		SELECT id::text
-		FROM suppressions
-		WHERE tenant_id = $1::uuid
-		  AND channel = $2
-		  AND address = $3
-		`,
-		tenantID,
-		channel,
-		address,
-	).Scan(&id)
-
-	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil
-	}
-
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
 }
 
 func (d *Dispatcher) resolveSMSTemplate(
@@ -1245,4 +1963,3 @@ func smsTemplatesForEvent(eventType string) string {
 		return "Notification: {{.event}}"
 	}
 }
-

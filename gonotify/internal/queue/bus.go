@@ -11,6 +11,7 @@ type Message struct {
 	TenantID   string            `json:"tenant_id"`
 	Type       string            `json:"type"`
 	OccurredAt time.Time         `json:"occurred_at"`
+	ScheduledAt *time.Time       `json:"scheduled_at,omitempty"`
 	Payload    json.RawMessage   `json:"payload"`
 	Metadata   map[string]string `json:"metadata,omitempty"`
 }

@@ -8,7 +8,7 @@ import (
 )
 
 func TestFakeSMSMetadata(t *testing.T) {
-	p := New(nil)
+	p := New(Config{})
 
 	if p.Name() != "fake_sms" {
 		t.Errorf("Name() = %q; want 'fake_sms'", p.Name())
@@ -24,7 +24,7 @@ func TestFakeSMSMetadata(t *testing.T) {
 }
 
 func TestFakeSMSSendValidation(t *testing.T) {
-	p := New(nil)
+	p := New(Config{})
 	ctx := context.Background()
 
 	// Missing phone

@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package dispatch.v1;
+
+option go_package = "github.com/flyfleet/proto/dispatch/v1;dispatchv1";
+
+import "google/protobuf/timestamp.proto";
+
+service DispatchService {
+  rpc Dispatch (DispatchRequest) returns (DispatchResponse);
+  rpc OfferRide (OfferRideRequest) returns (OfferRideResponse);
+  rpc FindNearbyDrivers (FindNearbyDriversRequest) returns (FindNearbyDriversResponse);
+  rpc GetDispatchResult (GetDispatchResultRequest) returns (GetDispatchResultResponse);
+}
+
+message DispatchRequest {
+  string ride_id = 1;
+  string rider_id = 2;
+  string zone_id = 3;
+  double pickup_lat = 4;
+  double pickup_lng = 5;
+  double search_radius_km = 6;
+  double surge_multiplier = 7;
+  map<string, double> driver_distances = 8;
+  map<string, double> driver_ratings = 9;
+}
+
+message DispatchResponse {
+  string driver_id = 1;
+  double score = 2;
+  string variant = 3;
+  DispatchStrategy strategy = 4;
+  int32 attempt = 5;
+  string offer_type = 6;
+  int32 total_candidates = 7;
+  int64 dispatch_latency_ms = 8;
+}
+
+enum DispatchStrategy {
+  SEQUENTIAL = 0;
+  PARALLEL = 1;
+  WIDEN = 2;
+}
+
+message OfferRideRequest {
+  string ride_id = 1;
+  string driver_id = 2;
+  string rider_id = 3;
+  double pickup_lat = 4;
+  double pickup_lng = 5;
+  int32 timeout_seconds = 6;
+}
+
+message OfferRideResponse {
+  bool accepted = 1;
+  string driver_id = 2;
+  string ride_id = 3;
+}
+
+message FindNearbyDriversRequest {
+  string ride_id = 1;
+  string rider_id = 2;
+  string zone_id = 3;
+  double pickup_lat = 4;
+  double pickup_lng = 5;
+  double search_radius_km = 6;
+}
+
+message FindNearbyDriversResponse {
+  repeated string driver_ids = 1;
+  int32 total_found = 2;
+}
+
+message GetDispatchResultRequest {
+  string ride_id = 1;
+}
+
+message GetDispatchResultResponse {
+  DispatchResponse result = 1;
+  google.protobuf.Timestamp dispatched_at = 2;
+}
