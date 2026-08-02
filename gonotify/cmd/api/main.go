@@ -192,9 +192,11 @@ func main() {
 			r.Patch("/preferences/quiet-hours", quietHoursHandler.Update)
 
 			r.Route("/consent", func(r chi.Router) {
-				r.With(server.RequireScope(auth.ScopeConsentRead)).Get("/", consentHandler.Get)
-				r.With(server.RequireScope(auth.ScopeConsentRead)).Get("/status", consentHandler.GetStatus)
-				r.With(server.RequireScope(auth.ScopeConsentWrite)).Post("/", consentHandler.Record)
+				r.Use(server.UserAuth(cfg.JWTSecret, logger))
+
+				r.Get("/", consentHandler.Get)
+				r.Get("/status", consentHandler.GetStatus)
+				r.Post("/", consentHandler.Record)
 			})
 		})
 

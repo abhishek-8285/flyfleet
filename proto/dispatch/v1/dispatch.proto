@@ -26,14 +26,17 @@ message DispatchRequest {
 }
 
 message DispatchResponse {
-  string driver_id = 1;
-  double score = 2;
-  string variant = 3;
-  DispatchStrategy strategy = 4;
-  int32 attempt = 5;
-  string offer_type = 6;
-  int32 total_candidates = 7;
-  int64 dispatch_latency_ms = 8;
+  string dispatch_id = 1;
+  string ride_id = 2;
+  string driver_id = 3;
+  string state = 4;
+  double score = 5;
+  string variant = 6;
+  DispatchStrategy strategy = 7;
+  int32 attempt = 8;
+  string offer_type = 9;
+  int32 total_candidates = 10;
+  int64 dispatch_latency_ms = 11;
 }
 
 enum DispatchStrategy {

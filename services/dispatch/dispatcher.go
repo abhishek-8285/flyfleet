@@ -19,16 +19,64 @@ type Dispatcher struct {
 	events        *EventEmitter
 	policy        PolicyConfig
 	fleetCoreURL  string
+	store         *InMemoryStore
 	httpClient    *http.Client
 }
 
-func NewDispatcher(mlURL, fleetCoreURL string, emitter *EventEmitter) *Dispatcher {
+type RideRequest struct {
+	RideID          string             `json:"ride_id"`
+	RiderID         string             `json:"rider_id"`
+	ZoneID          string             `json:"zone_id"`
+	Lat             float64            `json:"lat"`
+	Lng             float64            `json:"lng"`
+	SearchRadiusKm  float64            `json:"search_radius_km"`
+	SurgeMultiplier float64            `json:"surge_multiplier"`
+	DriverDistances map[string]float64 `json:"driver_distances"`
+	DriverRatings   map[string]float64 `json:"driver_ratings"`
+}
+
+type DispatchResult struct {
+	DispatchID     string           `json:"dispatch_id"`
+	RideID         string           `json:"ride_id"`
+	DriverID       string           `json:"driver_id"`
+	State          RideState        `json:"state"`
+	Score          float64          `json:"score"`
+	Variant        string           `json:"variant"`
+	Strategy       DispatchStrategy `json:"strategy"`
+	Attempt        int              `json:"attempt"`
+	OfferType      string           `json:"offer_type"`
+	TotalCandidates int             `json:"total_candidates"`
+	DispatchLatencyMs int64         `json:"dispatch_latency_ms"`
+	DispatchedAt   *time.Time       `json:"dispatched_at,omitempty"`
+}
+
+type TripOffer struct {
+	ID        string `json:"id"`
+	TripID    string `json:"trip_id"`
+	DriverID  string `json:"driver_id"`
+	Status    string `json:"status"`
+}
+
+type FleetCoreSuggestion struct {
+	DriverID   string  `json:"driver_id"`
+	DriverName string  `json:"driver_name"`
+	Score      float64 `json:"score"`
+	DistKm     float64 `json:"dist_km"`
+}
+
+var (
+	ErrNoDriversAvailable = fmt.Errorf("no drivers available")
+	ErrAllDriversRejected = fmt.Errorf("all drivers rejected")
+)
+
+func NewDispatcher(mlURL, fleetCoreURL string, emitter *EventEmitter, store *InMemoryStore) *Dispatcher {
 	return &Dispatcher{
 		ranker:       NewRanker(mlURL),
 		fallback:     NewFallbackRanker(),
 		events:       emitter,
 		policy:       DefaultPolicy,
 		fleetCoreURL: fleetCoreURL,
+		store:        store,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -37,15 +85,58 @@ func NewDispatcher(mlURL, fleetCoreURL string, emitter *EventEmitter) *Dispatche
 
 // Dispatch is the main entry point. Called when a rider requests a ride.
 // Returns the matched driver ID, or an error if no driver could be matched.
+// Supports idempotency via the Idempotency-Key header (passed in ctx via IdempotencyKey).
 func (d *Dispatcher) Dispatch(ctx context.Context, req *RideRequest) (*DispatchResult, error) {
 	start := time.Now()
 
+	rideID := req.RideID
+	if rideID == "" {
+		rideID = "ride-" + time.Now().UTC().Format("20060102-150405-") + req.RiderID
+		req.RideID = rideID
+	}
+
+	idempotencyKey := IdempotencyKeyFromContext(ctx)
+	if idempotencyKey != "" {
+		if record, ok := d.store.GetIdempotencyResult(idempotencyKey); ok {
+			log.Info().Str("idempotency_key", idempotencyKey).Str("ride_id", record.RideID).Msg("idempotency hit")
+			return record.Result, nil
+		}
+	}
+
+	ride := &RideStatus{
+		RideID:       rideID,
+		State:        RideRequested,
+		RiderID:      req.RiderID,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+		StateEntered: time.Now(),
+	}
+
+	if err := d.store.CreateRide(ride); err != nil {
+		return nil, fmt.Errorf("create ride: %w", err)
+	}
+
+	if idempotencyKey != "" {
+		d.store.StoreIdempotencyResult(idempotencyKey, rideID, "", nil)
+	}
+
+	if err := ride.TransitionTo(DriverSearching); err != nil {
+		return nil, fmt.Errorf("transition to searching: %w", err)
+	}
+	if err := d.store.UpdateRide(ride); err != nil {
+		return nil, fmt.Errorf("update ride state: %w", err)
+	}
+
 	drivers, err := d.findNearbyDrivers(ctx, req)
 	if err != nil {
+		ride.TransitionTo(RideFailed)
+		d.store.UpdateRide(ride)
 		return nil, fmt.Errorf("find drivers: %w", err)
 	}
 
 	if len(drivers) == 0 {
+		ride.TransitionTo(RideExpired)
+		d.store.UpdateRide(ride)
 		return nil, ErrNoDriversAvailable
 	}
 
@@ -81,12 +172,40 @@ func (d *Dispatcher) Dispatch(ctx context.Context, req *RideRequest) (*DispatchR
 	}
 
 	if err != nil {
+		ride.TransitionTo(RideFailed)
+		d.store.UpdateRide(ride)
 		return nil, err
 	}
 
+	if err := ride.TransitionTo(DriverAssigned); err != nil {
+		return nil, fmt.Errorf("transition to assigned: %w", err)
+	}
+	ride.DriverID = result.DriverID
+	if err := d.store.UpdateRide(ride); err != nil {
+		return nil, fmt.Errorf("update ride state: %w", err)
+	}
+
+	dispatchID := "dispatch-" + rideID
+	result.DispatchID = dispatchID
+	result.RideID = rideID
+	result.State = DriverAssigned
 	result.Strategy = strategy
 	result.TotalCandidates = len(drivers)
 	result.DispatchLatencyMs = time.Since(start).Milliseconds()
+	now := time.Now()
+	result.DispatchedAt = &now
+
+	assignment := &DispatchAssignment{
+		DispatchID: dispatchID,
+		RideID:     rideID,
+		DriverID:   result.DriverID,
+		Status:     DriverAssigned,
+		Score:      result.Score,
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+	}
+	d.store.CreateAssignment(assignment)
+
 	d.events.EmitDispatchResult(ctx, req, result)
 
 	log.Info().
@@ -369,6 +488,57 @@ func h3RingForRadius(radiusKm float64) int {
 	return rings
 }
 
+// OfferRide offers a ride to a specific driver and waits for acceptance.
+// It atomically claims the driver before offering to prevent double assignment.
+func (d *Dispatcher) OfferRide(ctx context.Context, req *RideRequest, driverID string, timeoutSec int) (bool, error) {
+	lock := d.store.GetDriverLock(driverID)
+	lock.Lock()
+	defer lock.Unlock()
+
+	if err := d.store.ClaimDriver(driverID); err != nil {
+		return false, err
+	}
+
+	defer func() {
+		if err := d.store.ReleaseDriver(driverID); err != nil {
+			log.Warn().Str("driver_id", driverID).Err(err).Msg("failed to release driver")
+		}
+	}()
+
+	return d.offerRide(ctx, req, driverID, timeoutSec)
+}
+
+// FindNearbyDrivers finds drivers near the pickup location using H3 spatial indexing.
+func (d *Dispatcher) FindNearbyDrivers(ctx context.Context, req *RideRequest) ([]string, error) {
+	return d.findNearbyDrivers(ctx, req)
+}
+
+// GetDispatchResult retrieves the dispatch result for a ride by ride ID.
+func (d *Dispatcher) GetDispatchResult(ctx context.Context, rideID string) (*DispatchResult, error) {
+	ride, err := d.store.GetRide(rideID)
+	if err != nil {
+		return nil, err
+	}
+
+	if ride.State != DriverAssigned && ride.State != DriverAccepted && ride.State != RideCompleted {
+		return nil, fmt.Errorf("ride %s is in state %s, no driver assigned yet", rideID, ride.State)
+	}
+
+	assignment, err := d.store.GetAssignment("dispatch-" + rideID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DispatchResult{
+		DispatchID: assignment.DispatchID,
+		RideID:     ride.RideID,
+		DriverID:   assignment.DriverID,
+		State:      ride.State,
+		Score:      assignment.Score,
+		DispatchedAt: &ride.StateEntered,
+	}, nil
+}
+
 // createTrip creates a minimal trip in fleet-core for the ride request.
 func (d *Dispatcher) createTrip(ctx context.Context, req *RideRequest) (string, error) {
 	tripReq := map[string]any{
@@ -412,4 +582,15 @@ func (d *Dispatcher) createTrip(ctx context.Context, req *RideRequest) (string, 
 		return "", err
 	}
 	return trip.ID, nil
+}
+
+type idempotencyKeyCtxKey struct{}
+
+func WithIdempotencyKey(ctx context.Context, key string) context.Context {
+	return context.WithValue(ctx, idempotencyKeyCtxKey{}, key)
+}
+
+func IdempotencyKeyFromContext(ctx context.Context) string {
+	key, _ := ctx.Value(idempotencyKeyCtxKey{}).(string)
+	return key
 }

@@ -80,7 +80,6 @@ type retryNotification struct {
 	ToAddress       *string
 	RecipientUserID *string
 	Payload         []byte
-	NextRetryAt     time.Time
 }
 
 // processDueRetries atomically claims due retry_pending notifications,
@@ -109,8 +108,7 @@ func (w *RetryWorker) processDueRetries(ctx context.Context) error {
 			notifications.category,
 			notifications.to_address,
 			notifications.recipient_user_id,
-			notifications.payload,
-			notifications.next_retry_at
+			notifications.payload
 	`, w.batchSize)
 	if err != nil {
 		return fmt.Errorf("claim due retries: %w", err)
@@ -129,7 +127,6 @@ func (w *RetryWorker) processDueRetries(ctx context.Context) error {
 			&n.ToAddress,
 			&n.RecipientUserID,
 			&n.Payload,
-			&n.NextRetryAt,
 		); err != nil {
 			return fmt.Errorf("scan retry notification: %w", err)
 		}
