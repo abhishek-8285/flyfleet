@@ -75,6 +75,9 @@ export const metadata: Metadata = {
     shortcut: "/shortcut-icon.png",
     apple: "/apple-touch-icon.png",
   },
+  verification: {
+    google: "C79XYq2b1ZDDpm2lDWImcI6VUPHh31JrXxYA2Ryv8mo",
+  },
   manifest: "/site.webmanifest",
 };
 
