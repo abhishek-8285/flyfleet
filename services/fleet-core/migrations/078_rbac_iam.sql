@@ -103,18 +103,18 @@ BEGIN
     END IF;
 END $$;
 
--- 5. Seed default permissions
-INSERT INTO permissions (name, category, description) VALUES
-('fleet.vehicle.read', 'vehicle', 'Read vehicle data'),
-('fleet.vehicle.write', 'vehicle', 'Create/Update vehicle data'),
-('fleet.vehicle.delete', 'vehicle', 'Delete vehicle data'),
-('fleet.driver.read', 'driver', 'Read driver data'),
-('fleet.driver.write', 'driver', 'Create/Update driver data'),
-('fleet.compliance.read', 'compliance', 'Read compliance data'),
-('fleet.compliance.write', 'compliance', 'Update compliance status'),
-('fleet.finance.read', 'finance', 'Read financial data'),
-('fleet.admin.all', 'admin', 'Full administrative access')
-ON CONFLICT (name) DO NOTHING;
+-- 5. Seed default permissions (only if not already seeded by migration 058)
+INSERT INTO permissions (resource, action, description, bit_position) VALUES
+('vehicle', 'read', 'Read vehicle data', 100),
+('vehicle', 'write', 'Create/Update vehicle data', 101),
+('vehicle', 'delete', 'Delete vehicle data', 102),
+('driver', 'read', 'Read driver data', 103),
+('driver', 'write', 'Create/Update driver data', 104),
+('compliance', 'read', 'Read compliance data', 105),
+('compliance', 'write', 'Update compliance status', 106),
+('finance', 'read', 'Read financial data', 107),
+('admin', 'all', 'Full administrative access', 108)
+ON CONFLICT (resource, action) DO NOTHING;
 
 -- 6. Seed system roles
 INSERT INTO roles (name, is_system, description) VALUES

@@ -9,52 +9,53 @@ import (
 
 // Config holds the fleet-core service configuration.
 type Config struct {
-	Port        string   `mapstructure:"port"`
-	DatabaseURL string   `mapstructure:"database_url"`
-	RedisURL    string   `mapstructure:"redis_url"`
-	NatsURL     string   `mapstructure:"nats_url"`
-	JWTSecret   string   `mapstructure:"jwt_secret"`
-	JWKSURL     string   `mapstructure:"jwks_url"`
-	LogLevel    string   `mapstructure:"log_level"`
-	Environment string   `mapstructure:"environment"`
-	Flags       FeatureFlags `mapstructure:"feature_flags"`
-	IAM         IAMConfig    `mapstructure:"iam"`
-	Billing     BillingConfig `mapstructure:"billing"`
-	TelemetryHMACSecret string `mapstructure:"telemetry_hmac_secret"`
+	Port                string        `mapstructure:"port"`
+	DatabaseURL         string        `mapstructure:"database_url"`
+	RedisURL            string        `mapstructure:"redis_url"`
+	NatsURL             string        `mapstructure:"nats_url"`
+	JWTSecret           string        `mapstructure:"jwt_secret"`
+	JWKSURL             string        `mapstructure:"jwks_url"`
+	LogLevel            string        `mapstructure:"log_level"`
+	Environment         string        `mapstructure:"environment"`
+	Flags               FeatureFlags  `mapstructure:"feature_flags"`
+	IAM                 IAMConfig     `mapstructure:"iam"`
+	Billing             BillingConfig `mapstructure:"billing"`
+	TelemetryHMACSecret string        `mapstructure:"telemetry_hmac_secret"`
 }
 
 // BillingConfig configures the invoice generator and billing services
 type BillingConfig struct {
-	Enabled               bool `mapstructure:"enabled"`
-	ChromeTimeoutSeconds  int  `mapstructure:"chrome_timeout_seconds"`
+	Enabled              bool `mapstructure:"enabled"`
+	ChromeTimeoutSeconds int  `mapstructure:"chrome_timeout_seconds"`
 }
 
 // FeatureFlags controls runtime toggles for the tracking feature.
 type FeatureFlags struct {
-	VehicleMapEnabled  bool `mapstructure:"vehicle_map_enabled"`
-	RealTimeUpdates    bool `mapstructure:"real_time_updates"`
-	GeofenceAlerts     bool `mapstructure:"geofence_alerts"`
-	HistoryTrail       bool `mapstructure:"history_trail"`
-	MaxVehiclesOnMap   int  `mapstructure:"max_vehicles_on_map"`
+	VehicleMapEnabled bool `mapstructure:"vehicle_map_enabled"`
+	RealTimeUpdates   bool `mapstructure:"real_time_updates"`
+	GeofenceAlerts    bool `mapstructure:"geofence_alerts"`
+	HistoryTrail      bool `mapstructure:"history_trail"`
+	MaxVehiclesOnMap  int  `mapstructure:"max_vehicles_on_map"`
+	StandardizeSchema bool `mapstructure:"standardize_schema"`
 }
 
 // IAMConfig holds configuration for the IAM (Identity & Access Management) domain.
 type IAMConfig struct {
-	Enabled             bool          `mapstructure:"enabled"`
-	BcryptCost          int           `mapstructure:"bcrypt_cost"`
-	MaxLoginAttempts    int           `mapstructure:"max_login_attempts"`
-	LockoutDuration     time.Duration `mapstructure:"lockout_duration"`
-	PasswordHistoryLen  int           `mapstructure:"password_history_length"`
-	JWTAccessTTL        time.Duration `mapstructure:"jwt_access_ttl"`
-	JWTRefreshTTL       time.Duration `mapstructure:"jwt_refresh_ttl"`
-	EmailProvider       string        `mapstructure:"email_provider"`
-	EmailSendGridKey    string        `mapstructure:"email_sendgrid_key"`
-	EmailSMTPHost       string        `mapstructure:"email_smtp_host"`
-	EmailSMTPPort       int           `mapstructure:"email_smtp_port"`
-	EmailSMTPUser       string        `mapstructure:"email_smtp_user"`
-	EmailSMTPPassword   string        `mapstructure:"email_smtp_password"`
-	EmailFromAddress    string        `mapstructure:"email_from_address"`
-	EmailFromName       string        `mapstructure:"email_from_name"`
+	Enabled            bool          `mapstructure:"enabled"`
+	BcryptCost         int           `mapstructure:"bcrypt_cost"`
+	MaxLoginAttempts   int           `mapstructure:"max_login_attempts"`
+	LockoutDuration    time.Duration `mapstructure:"lockout_duration"`
+	PasswordHistoryLen int           `mapstructure:"password_history_length"`
+	JWTAccessTTL       time.Duration `mapstructure:"jwt_access_ttl"`
+	JWTRefreshTTL      time.Duration `mapstructure:"jwt_refresh_ttl"`
+	EmailProvider      string        `mapstructure:"email_provider"`
+	EmailSendGridKey   string        `mapstructure:"email_sendgrid_key"`
+	EmailSMTPHost      string        `mapstructure:"email_smtp_host"`
+	EmailSMTPPort      int           `mapstructure:"email_smtp_port"`
+	EmailSMTPUser      string        `mapstructure:"email_smtp_user"`
+	EmailSMTPPassword  string        `mapstructure:"email_smtp_password"`
+	EmailFromAddress   string        `mapstructure:"email_from_address"`
+	EmailFromName      string        `mapstructure:"email_from_name"`
 }
 
 func Load() *Config {
@@ -76,6 +77,7 @@ func Load() *Config {
 	v.SetDefault("feature_flags.geofence_alerts", true)
 	v.SetDefault("feature_flags.history_trail", true)
 	v.SetDefault("feature_flags.max_vehicles_on_map", 500)
+	v.SetDefault("feature_flags.standardize_schema", true)
 
 	// IAM defaults
 	v.SetDefault("iam.enabled", true)
@@ -113,11 +115,12 @@ func Load() *Config {
 		LogLevel:    v.GetString("log_level"),
 		Environment: v.GetString("environment"),
 		Flags: FeatureFlags{
-			VehicleMapEnabled:  v.GetBool("feature_flags.vehicle_map_enabled"),
-			RealTimeUpdates:    v.GetBool("feature_flags.real_time_updates"),
-			GeofenceAlerts:     v.GetBool("feature_flags.geofence_alerts"),
-			HistoryTrail:       v.GetBool("feature_flags.history_trail"),
-			MaxVehiclesOnMap:   v.GetInt("feature_flags.max_vehicles_on_map"),
+			VehicleMapEnabled: v.GetBool("feature_flags.vehicle_map_enabled"),
+			RealTimeUpdates:   v.GetBool("feature_flags.real_time_updates"),
+			GeofenceAlerts:    v.GetBool("feature_flags.geofence_alerts"),
+			HistoryTrail:      v.GetBool("feature_flags.history_trail"),
+			MaxVehiclesOnMap:  v.GetInt("feature_flags.max_vehicles_on_map"),
+			StandardizeSchema: v.GetBool("feature_flags.standardize_schema"),
 		},
 		IAM: IAMConfig{
 			Enabled:            v.GetBool("iam.enabled"),

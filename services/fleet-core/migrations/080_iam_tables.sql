@@ -97,12 +97,12 @@ BEGIN
     END IF;
 END $$;
 
--- Initial Permissions
-INSERT INTO permissions (resource, action) VALUES 
-    ('vehicle', 'read'),
-    ('vehicle', 'write'),
-    ('driver', 'read'),
-    ('driver', 'write'),
-    ('billing', 'read'),
-    ('billing', 'write')
+-- Initial Permissions (with bit_position to satisfy NOT NULL constraint)
+INSERT INTO permissions (resource, action, description, bit_position) VALUES 
+    ('vehicle', 'read', 'Read vehicle data', 200),
+    ('vehicle', 'write', 'Write vehicle data', 201),
+    ('driver', 'read', 'Read driver data', 202),
+    ('driver', 'write', 'Write driver data', 203),
+    ('billing', 'read', 'Read billing data', 204),
+    ('billing', 'write', 'Write billing data', 205)
 ON CONFLICT (resource, action) DO NOTHING;

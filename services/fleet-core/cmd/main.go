@@ -21,13 +21,21 @@ import (
 
 	"github.com/flyfleet/fleet-core/internal/config"
 	"github.com/flyfleet/fleet-core/internal/database"
+	"github.com/flyfleet/fleet-core/internal/database/schemalib"
 	tenantHandlers "github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/handlers"
 	tenantRepo "github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/repository"
 	tenantSvc "github.com/flyfleet/fleet-core/internal/domains/admin_support/domains/organizations/service"
+	ahandlers "github.com/flyfleet/fleet-core/internal/domains/assignment/handlers"
+	aservice "github.com/flyfleet/fleet-core/internal/domains/assignment/service"
 	"github.com/flyfleet/fleet-core/internal/domains/billing"
 	customerHandlers "github.com/flyfleet/fleet-core/internal/domains/customer/handlers"
 	customerRepo "github.com/flyfleet/fleet-core/internal/domains/customer/repository"
 	customerSvc "github.com/flyfleet/fleet-core/internal/domains/customer/service"
+	dispatchEngine "github.com/flyfleet/fleet-core/internal/domains/dispatch/engine"
+	dispatchHandlers "github.com/flyfleet/fleet-core/internal/domains/dispatch/handlers"
+	dispatchRepository "github.com/flyfleet/fleet-core/internal/domains/dispatch/repository"
+	dispatchSvc "github.com/flyfleet/fleet-core/internal/domains/dispatch/service"
+	dispatchWorker "github.com/flyfleet/fleet-core/internal/domains/dispatch/worker"
 	driverHandlers "github.com/flyfleet/fleet-core/internal/domains/driver/handlers"
 	driverMiddleware "github.com/flyfleet/fleet-core/internal/domains/driver/middleware"
 	driverModels "github.com/flyfleet/fleet-core/internal/domains/driver/models"
@@ -38,30 +46,24 @@ import (
 	invoicingHandlers "github.com/flyfleet/fleet-core/internal/domains/invoicing/handlers"
 	invoicingRepo "github.com/flyfleet/fleet-core/internal/domains/invoicing/repository/postgres"
 	invoicingSvc "github.com/flyfleet/fleet-core/internal/domains/invoicing/service"
+	routeHandlers "github.com/flyfleet/fleet-core/internal/domains/route/handlers"
+	routeRepo "github.com/flyfleet/fleet-core/internal/domains/route/repository"
+	routeSvc "github.com/flyfleet/fleet-core/internal/domains/route/service"
 	tripHandlers "github.com/flyfleet/fleet-core/internal/domains/trip/handlers"
 	tripRepo "github.com/flyfleet/fleet-core/internal/domains/trip/repository"
 	tripService "github.com/flyfleet/fleet-core/internal/domains/trip/service"
 	vh "github.com/flyfleet/fleet-core/internal/domains/vehicle/handlers"
 	vrepo "github.com/flyfleet/fleet-core/internal/domains/vehicle/repository"
 	vs "github.com/flyfleet/fleet-core/internal/domains/vehicle/service"
-	aservice "github.com/flyfleet/fleet-core/internal/domains/assignment/service"
-	ahandlers "github.com/flyfleet/fleet-core/internal/domains/assignment/handlers"
-	dispatchHandlers "github.com/flyfleet/fleet-core/internal/domains/dispatch/handlers"
-	dispatchEngine "github.com/flyfleet/fleet-core/internal/domains/dispatch/engine"
-	dispatchRepository "github.com/flyfleet/fleet-core/internal/domains/dispatch/repository"
-	dispatchSvc "github.com/flyfleet/fleet-core/internal/domains/dispatch/service"
-	dispatchWorker "github.com/flyfleet/fleet-core/internal/domains/dispatch/worker"
-	googleuuid "github.com/google/uuid"
 	"github.com/flyfleet/fleet-core/internal/middleware"
 	platformMiddleware "github.com/flyfleet/fleet-core/internal/platform/middleware"
 	th "github.com/flyfleet/fleet-core/internal/tracking/handlers"
 	tr "github.com/flyfleet/fleet-core/internal/tracking/repository"
 	ts "github.com/flyfleet/fleet-core/internal/tracking/service"
 	"github.com/flyfleet/fleet-core/internal/tracking/worker"
-	routeHandlers "github.com/flyfleet/fleet-core/internal/domains/route/handlers"
-	routeRepo "github.com/flyfleet/fleet-core/internal/domains/route/repository"
-	routeSvc "github.com/flyfleet/fleet-core/internal/domains/route/service"
+	googleuuid "github.com/google/uuid"
 )
+
 // force restart
 
 // force restart DEFINITIVE FINAL
@@ -86,7 +88,7 @@ func main() {
 	defer logger.Sync()
 
 	cfg.Port = "8110" // FORCE OVERRIDE to bypass zombie processes
-	
+
 	logger.Info("starting fleet-core service",
 		zap.String("port", cfg.Port),
 		zap.String("environment", cfg.Environment),
@@ -105,9 +107,25 @@ func main() {
 	// We run this BEFORE migrations to ensure table names (tenants) and base columns are harmonized.
 	syncAllSchemas(ctx, pool, logger)
 
+	// Universal schema sync + column-type enforcement BEFORE migrations — catches
+	// legacy tables that migrations may never touch and creates the canonical
+	// tables defined in the declarative registry.
+	if cfg.Flags.StandardizeSchema {
+		schemalib.Sync(ctx, pool, logger)
+		database.StandardizeColumnTypes(ctx, pool, logger)
+	}
+
 	// --- DATABASE MIGRATIONS (Auto-apply on startup) ---
 	if err := database.RunMigrations(cfg.DatabaseURL, logger); err != nil {
 		logger.Fatal("database migrations failed", zap.Error(err))
+	}
+
+	// Universal schema sync + column-type enforcement AFTER migrations — the
+	// authoritative final pass that guarantees no column-type discrepancy
+	// remains, regardless of what any individual migration declared.
+	if cfg.Flags.StandardizeSchema {
+		schemalib.Sync(ctx, pool, logger)
+		database.StandardizeColumnTypes(ctx, pool, logger)
 	}
 
 	// --- DEV DATA SEEDING ---
@@ -126,7 +144,7 @@ func main() {
 	telemRepo := tr.NewTelemetryRepository(pool, logger)
 	liveCache := tr.NewLiveCacheRepository(rdb)
 	geoRepo := tr.NewGeofenceRepository(pool)
-	vehicleRepo := tr.NewVehicleRepository(pool)               // tracking layer
+	vehicleRepo := tr.NewVehicleRepository(pool)                  // tracking layer
 	vehicleDomainRepo := vrepo.NewVehicleRepository(pool, logger) // vehicle domain (CRUD)
 
 	// --- Services ---
@@ -237,7 +255,7 @@ func main() {
 	tenantRepository := tenantRepo.NewTenantRepository(pool, logger)
 	tenantService := tenantSvc.NewTenantService(tenantRepository, logger)
 	tenantHandler := tenantHandlers.NewTenantHandlers(tenantService, logger)
-	
+
 	// --- Trip Domain ---
 	tRepo := tripRepo.NewTripRepository(pool)
 	tService := tripService.NewTripService(tRepo, logger)
@@ -250,7 +268,7 @@ func main() {
 		Fallback: &routeSvc.HaversineDistanceProvider{},
 		Redis:    rdb,
 	}
-	
+
 	dispatchDriverAdapter := &dispatchDriverRepoAdapter{realRepo: driverRepo}
 	dispatchTripAdapter := &dispatchTripRepoAdapter{realRepo: tRepo}
 	dispatchLiveCacheAdapterInst := &dispatchLiveCacheAdapter{realCache: liveCache}
@@ -288,13 +306,13 @@ func main() {
 	slaV2Svc := customerSvc.NewSLAService(cV2Repo)
 
 	custV2Handler := customerHandlers.NewCustomerV2Handler(
-		custV2Svc, 
-		bookV2Svc, 
-		shipV2Svc, 
-		priceV2Svc, 
-		creditV2Svc, 
-		slaV2Svc, 
-		cV2Repo, 
+		custV2Svc,
+		bookV2Svc,
+		shipV2Svc,
+		priceV2Svc,
+		creditV2Svc,
+		slaV2Svc,
+		cV2Repo,
 		logger,
 	)
 
@@ -414,7 +432,7 @@ func main() {
 		// Landing page data
 		landingHandler := th.NewLandingHandler()
 		r.Get("/data", landingHandler.ServeHTTP)
-		
+
 		// 1.5 Authenticated API routes
 		r.Group(func(r chi.Router) {
 			authGate := middleware.NewJWKSAuthGate("FlyFleet", "fleet-dashboard", cfg.JWTSecret, logger)
@@ -438,7 +456,7 @@ func main() {
 				if cfg.Flags.HistoryTrail {
 					r.Get("/vehicles/{id}/telemetry/history", historyHandler.ServeHTTP)
 				}
-				
+
 				// WebSockets moved to main router if starting with /ws
 				// Handled below if needed
 			}
@@ -577,7 +595,7 @@ func requestLogger(logger *zap.Logger) func(http.Handler) http.Handler {
 
 func syncAllSchemas(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
 	logger.Info("🚀 Initiating Self-Stabilizing Global Schema Harmonization...")
-	
+
 	// Define the stabilization sequence with visual feedback
 	plan := []struct {
 		log string
@@ -765,13 +783,13 @@ func globalSchemaHarmonizer(ctx context.Context, pool *pgxpool.Pool, logger *zap
 }
 
 func ensureComplianceSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
-	
+
 	setupStatements := []string{
 		"CREATE TABLE IF NOT EXISTS duty_status_logs (id UUID PRIMARY KEY DEFAULT gen_random_uuid())",
 		"ALTER TABLE duty_status_logs ADD COLUMN IF NOT EXISTS tenant_id UUID",
 		"ALTER TABLE duty_status_logs ADD COLUMN IF NOT EXISTS driver_id UUID",
 		"ALTER TABLE duty_status_logs ADD COLUMN IF NOT EXISTS status VARCHAR(50)",
-		
+
 		"CREATE TABLE IF NOT EXISTS hos_daily_limits (id UUID PRIMARY KEY DEFAULT gen_random_uuid())",
 		"ALTER TABLE hos_daily_limits ADD COLUMN IF NOT EXISTS tenant_id UUID",
 		"ALTER TABLE hos_daily_limits ADD COLUMN IF NOT EXISTS driver_id UUID",
@@ -798,7 +816,7 @@ func ensureComplianceSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap
 }
 
 func ensureIAMSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
- 
+
 	tableRenames := []string{
 		"DROP VIEW IF EXISTS organizations CASCADE",
 		"DROP VIEW IF EXISTS user_organizations CASCADE",
@@ -818,7 +836,7 @@ func ensureIAMSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger
 	for _, stmt := range tableRenames {
 		pool.Exec(ctx, stmt)
 	}
- 
+
 	statements := []string{
 		"ALTER TABLE roles ADD COLUMN IF NOT EXISTS tenant_id UUID",
 		"ALTER TABLE user_roles ADD COLUMN IF NOT EXISTS tenant_id UUID",
@@ -909,7 +927,7 @@ func ensureDriverSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Log
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS resignation_date DATE",
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS first_name VARCHAR(100)",
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS last_name VARCHAR(100)",
-		
+
 		// Driver Metadata and Compliance metrics
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS license_issue_date DATE",
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS license_type VARCHAR(20)",
@@ -928,7 +946,7 @@ func ensureDriverSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Log
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP",
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP",
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ",
-		
+
 		// Legacy compatibility for Migration 214
 		"ALTER TABLE drivers ADD COLUMN IF NOT EXISTS org_id UUID",
 		"UPDATE drivers SET org_id = tenant_id WHERE org_id IS NULL AND tenant_id IS NOT NULL",
@@ -1170,14 +1188,14 @@ func ensureAnalyticsSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.
 	statements := []string{
 		"CREATE TABLE IF NOT EXISTS analytics_reports (id UUID PRIMARY KEY DEFAULT gen_random_uuid())",
 		"ALTER TABLE analytics_reports ADD COLUMN IF NOT EXISTS tenant_id UUID",
-		
+
 		"CREATE TABLE IF NOT EXISTS predictive_models (id UUID PRIMARY KEY DEFAULT gen_random_uuid())",
 		"ALTER TABLE predictive_models ADD COLUMN IF NOT EXISTS tenant_id UUID",
 		"ALTER TABLE predictive_models ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'draft'",
-		
+
 		"CREATE TABLE IF NOT EXISTS prediction_results (id UUID PRIMARY KEY DEFAULT gen_random_uuid())",
 		"ALTER TABLE prediction_results ADD COLUMN IF NOT EXISTS tenant_id UUID",
-		
+
 		"CREATE TABLE IF NOT EXISTS analytics_jobs (id UUID PRIMARY KEY DEFAULT gen_random_uuid())",
 		"ALTER TABLE analytics_jobs ADD COLUMN IF NOT EXISTS tenant_id UUID",
 
@@ -1226,7 +1244,7 @@ func ensureSaaSSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logge
 	statements := []string{
 		// Gated Entry/Exit Transactions
 		"CREATE TABLE IF NOT EXISTS yard_gate_logs (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id UUID NOT NULL, vehicle_id UUID NOT NULL, gate_name VARCHAR(100) NOT NULL, gatekeeper_id UUID, action_type VARCHAR(10) NOT NULL, cargo_status VARCHAR(50), weight_measured NUMERIC(10, 2), created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW())",
-		
+
 		// Fintech Commission Audit Ledger
 		"CREATE TABLE IF NOT EXISTS fintech_transactions (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id UUID NOT NULL, vehicle_id UUID NOT NULL, service_type VARCHAR(30) NOT NULL, transaction_amount NUMERIC(10, 2) NOT NULL, commission_earned NUMERIC(10, 2) NOT NULL, payment_status VARCHAR(20) NOT NULL, created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW())",
 	}
@@ -1246,7 +1264,7 @@ func ensureSaaSSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logge
 		if err != nil || vehicleID == "" {
 			vehicleID = "550e8400-e29b-41d4-a716-446655440001"
 		}
-		
+
 		seedStmts := []string{
 			fmt.Sprintf("INSERT INTO yard_gate_logs (tenant_id, vehicle_id, gate_name, action_type, cargo_status, weight_measured, created_at) VALUES ('8285521b-bfeb-4581-8072-000000000000', '%s', 'Gate 1 - Main Inbound', 'IN', 'LADEN', 42.5, NOW() - INTERVAL '2 hours')", vehicleID),
 			fmt.Sprintf("INSERT INTO yard_gate_logs (tenant_id, vehicle_id, gate_name, action_type, cargo_status, weight_measured, created_at) VALUES ('8285521b-bfeb-4581-8072-000000000000', '%s', 'Gate 2 - Main Outbound', 'OUT', 'EMPTY', 18.2, NOW() - INTERVAL '1 hours')", vehicleID),
@@ -1281,7 +1299,7 @@ func ensureTrackingSchema(ctx context.Context, pool *pgxpool.Pool, logger *zap.L
 	statements := []string{
 		"CREATE TABLE IF NOT EXISTS tracking_sessions (id UUID PRIMARY KEY DEFAULT gen_random_uuid())",
 		"ALTER TABLE tracking_sessions ADD COLUMN IF NOT EXISTS tenant_id UUID",
-		
+
 		// Geofencing Baseline (Hardened for Migration 301 & Seeding)
 		"CREATE TABLE IF NOT EXISTS geofences (id UUID PRIMARY KEY DEFAULT gen_random_uuid())",
 		"ALTER TABLE geofences ADD COLUMN IF NOT EXISTS tenant_id UUID",
@@ -1388,7 +1406,7 @@ func runSeedData(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
 	}
 
 	rawSQL := string(content)
-	
+
 	// Diagnostic: check user_tenants structure
 	var hasPK bool
 	pool.QueryRow(ctx, "SELECT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'user_tenants' AND constraint_type = 'PRIMARY KEY')").Scan(&hasPK)
@@ -1398,7 +1416,7 @@ func runSeedData(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
 	// If the script contains DO $$, we split by it.
 	// But a simpler way: run the whole thing as one Exec.
 	// If it fails, we'll see the error.
-	
+
 	_, err = pool.Exec(ctx, rawSQL)
 	if err != nil {
 		logger.Error("failed to execute seed data", zap.Error(err))
@@ -1411,7 +1429,7 @@ func runSeedData(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
 	pool.QueryRow(ctx, "SELECT COUNT(*) FROM tenants").Scan(&tCount)
 	pool.QueryRow(ctx, "SELECT COUNT(*) FROM users").Scan(&uCount)
 	pool.QueryRow(ctx, "SELECT COUNT(*) FROM vehicles").Scan(&vCount)
-	
+
 	// Final High-Assurance Verification
 	var vCountFinal, dCount, cCount, sCount, aCount, tripCount int
 	pool.QueryRow(ctx, "SELECT count(*) FROM vehicles").Scan(&vCountFinal)
@@ -1420,8 +1438,8 @@ func runSeedData(ctx context.Context, pool *pgxpool.Pool, logger *zap.Logger) {
 	pool.QueryRow(ctx, "SELECT count(*) FROM shipments").Scan(&sCount)
 	pool.QueryRow(ctx, "SELECT count(*) FROM alerts").Scan(&aCount)
 	pool.QueryRow(ctx, "SELECT count(*) FROM trips").Scan(&tripCount)
-	
-	logger.Info("🛡️ FINAL VERIFICATION COMPLETE", 
+
+	logger.Info("🛡️ FINAL VERIFICATION COMPLETE",
 		zap.Int("vehicles", vCountFinal),
 		zap.Int("drivers", dCount),
 		zap.Int("customers", cCount),
