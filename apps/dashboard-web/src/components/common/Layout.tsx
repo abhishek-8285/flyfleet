@@ -378,7 +378,7 @@ const Layout: React.FC = () => {
                 </button>
 
                 {isNotifOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-80 bg-surface-dark border border-border-color rounded-lg shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="fixed top-16 left-3 right-3 max-w-sm mx-auto sm:mx-0 sm:max-w-none sm:left-auto sm:right-0 sm:absolute sm:top-full sm:mt-2 sm:w-80 bg-surface-dark border border-border-color rounded-lg shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="p-3 border-b border-border-color flex justify-between items-center bg-surface-darker rounded-t-lg">
                       <span className="text-sm font-semibold text-white">
                         Notifications
